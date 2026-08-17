@@ -1,5 +1,6 @@
 "use client"
 
+import type { CollectionView } from "@tfv/ui"
 import {
   Button,
   Checkbox,
@@ -38,6 +39,7 @@ export interface ToolbarProps {
   filters?: readonly FilterSpec[]
   /** Ofrecer rejilla además de lista. Hay colecciones a las que la rejilla no les aporta nada. */
   views?: boolean
+  defaultView?: CollectionView
 }
 
 /**
@@ -47,13 +49,18 @@ export interface ToolbarProps {
  * dirección, y de volver a resolver los datos se encarga el servidor. Por eso no hay aquí ni
  * consulta, ni caché, ni invalidación.
  */
-export function CollectionToolbar({ searchPlaceholder, filters = [], views = true }: ToolbarProps) {
+export function CollectionToolbar({
+  searchPlaceholder,
+  filters = [],
+  views = true,
+  defaultView = "list",
+}: ToolbarProps) {
   const t = useTranslations()
   const format = useFormatter()
   const { params, apply, pending } = useCollection()
 
   const applied = readSearch(params)
-  const view = readView(params)
+  const view = readView(params, defaultView)
 
   /**
    * Lo escrito, que va por delante de la dirección.

@@ -29,6 +29,8 @@ export interface CollectionProps<T> {
   /** Ausente: el recurso no admite búsqueda y no se ofrece el campo. */
   searchPlaceholder?: string
   views?: boolean
+  /** Disposición inicial cuando la dirección todavía no contiene una preferencia explícita. */
+  defaultView?: CollectionView
   /** Qué se dice cuando la colección está genuinamente vacía. */
   emptyTitle: string
   emptyBody?: string
@@ -64,13 +66,14 @@ export async function Collection<T>({
   filters = [],
   searchPlaceholder,
   views = true,
+  defaultView = "list",
   emptyTitle,
   emptyBody,
   emptyAction,
   children,
 }: CollectionProps<T>) {
   const t = await getTranslations()
-  const view = readView(params)
+  const view = readView(params, defaultView)
   const filtered = hasActiveFilters(params, filters)
 
   const toolbar = (
@@ -78,6 +81,7 @@ export async function Collection<T>({
       {...(searchPlaceholder === undefined ? {} : { searchPlaceholder })}
       filters={filters}
       views={views}
+      defaultView={defaultView}
     />
   )
 

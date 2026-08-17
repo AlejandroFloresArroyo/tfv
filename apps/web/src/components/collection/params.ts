@@ -71,8 +71,12 @@ export function readLimit(params: URLSearchParams): number {
   return LIMIT_OPTIONS.includes(raw as (typeof LIMIT_OPTIONS)[number]) ? raw : DEFAULT_LIMIT
 }
 
-export function readView(params: URLSearchParams): "grid" | "list" {
-  return params.get(VIEW_KEY) === "grid" ? "grid" : "list"
+export function readView(
+  params: URLSearchParams,
+  fallback: "grid" | "list" = "list",
+): "grid" | "list" {
+  const value = params.get(VIEW_KEY)
+  return value === "grid" || value === "list" ? value : fallback
 }
 
 /**

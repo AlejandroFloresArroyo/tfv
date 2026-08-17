@@ -73,6 +73,11 @@ describe("lectura", () => {
     expect(readView(params(""))).toBe("list")
     expect(readView(params("_view=grid"))).toBe("grid")
   })
+
+  it("permite que una colección elija rejilla por omisión sin ocultar una elección explícita", () => {
+    expect(readView(params(""), "grid")).toBe("grid")
+    expect(readView(params("_view=list"), "grid")).toBe("list")
+  })
 })
 
 describe("lo que se le manda a la API", () => {
