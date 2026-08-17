@@ -106,13 +106,13 @@ Lo construido hasta ahora, medido y no estimado:
 | | |
 |---|---|
 | Rebanadas | 8 de 30 empezadas, **ninguna cerrada del todo** |
-| Código sin pruebas | 21 110 líneas |
-| Código de prueba | 5 639 líneas |
-| Pruebas | **337** — 59 contratos, 59 datos, 152 API, 28 web, 39 de extremo a extremo |
+| Código sin pruebas | 24 909 líneas |
+| Código de prueba | 7 054 líneas |
+| Pruebas | **359** — 59 contratos, 59 datos, 174 API, 28 web, 39 de extremo a extremo |
 | Esquema | 91 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
 | Aislamiento | 195 políticas · 91/91 tablas · 0 con identidad cruda |
 | Migraciones | 10, replicadas desde cero en cada verificación |
-| Rutas | **61** registradas, 39 con permiso declarado, 10 públicas y enumeradas |
+| Rutas | **73** registradas, 51 con permiso declarado, 10 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
 | Pantallas | 17, en español e inglés (261 mensajes, sin desalinear) |
 
@@ -171,7 +171,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 12 | `migrate-warehouse-catalog` | 🟡 | Almacén y árbol de ubicaciones. Faltan el catálogo, las medidas, los precios y las unidades |
+| 12 | `migrate-warehouse-catalog` | 🟡 | Almacén, ubicaciones, taxonomía y catálogo con medidas. Faltan las listas de precios y la gestión de unidades |
 | 13 | `add-transactional-stock-reservation` | ⬜ | **Bloqueada**: decisión M-04 |
 | 14 | `add-server-side-quotation-pricing` | ⬜ | **Bloqueada**: decisión M-05 |
 | 15 | `migrate-warehouse-orders` | ⬜ | |
@@ -210,9 +210,9 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 En este orden, y con el motivo de que sea ése:
 
-1. **Lo que queda de almacenes** (rebanada 12): el catálogo con variantes y accesorios, las
-   medidas, las listas de precios y las unidades de existencia. El almacén y sus ubicaciones ya
-   están, así que todo lo demás tiene dónde colgarse.
+1. **Lo que queda de almacenes** (rebanada 12): las listas de precios con su precedencia, y la
+   gestión de unidades de existencia —los once estados, las transiciones, las etiquetas y el
+   historial—. El catálogo ya materializa unidades; lo que falta es moverlas.
 2. **Las pantallas de almacenes** (29b), empezando por el árbol de ubicaciones como jerarquía
    navegable, que es lo único de la 12 que no se puede comprobar sin pantalla.
 3. **Lo que queda de la 10**: prospectos, cambio de correo, y las comprobaciones de «en uso» que
@@ -1293,3 +1293,70 @@ serializar. Ahora lo recursivo aporta **sólo el orden** y las filas las lee la 
 El catálogo, las medidas, los precios y las unidades. Y dos cosas que no dependen de escribir más
 código aquí: impedir la baja de un almacén con trabajo en curso necesita las cotizaciones y los
 pedidos, y presentar el árbol como jerarquía navegable es pantalla.
+
+### 2026-08-17 · El catálogo
+
+Segunda parte de la rebanada **12**: la taxonomía del almacén, el catálogo con variantes y
+accesorios, y las medidas con su ficha de sastrería. Doce rutas más —**73** en total— y **22
+pruebas**. Total **359**.
+
+**El cambio de fondo, y cómo se comprueba**
+
+Crear un producto con toda su estructura es **atómico**. La implementación anterior creaba de forma
+recursiva medidas, unidades, tarifas, variantes y accesorios **sin transacción**: un fallo a mitad
+dejaba un producto existente, listable, y con la mitad de sus medidas. Eso no se detecta mirando la
+pantalla; se detecta semanas después, cuando alguien cotiza y las cuentas no salen.
+
+La prueba tiene que fallar **durante** la escritura o no comprueba nada: un cuerpo que el esquema
+rechaza falla sin haber tocado la base. Así que la segunda variante lleva una medida cuyo ajuste de
+precio no cabe en la columna, y el motor la rechaza cuando ya están escritos el producto, sus tres
+medidas y la primera variante entera. La prueba afirma **`500` y no `400`** justamente por eso: un
+`400` significaría que nunca se escribió nada.
+
+**Tres niveles que conviene no confundir**
+
+| Nivel | Qué es | Ejemplo |
+|---|---|---|
+| Producto | El artículo del catálogo | «Cámara Sony FX6» |
+| Medida | La variante mensurable a la que se lleva existencia | «Cuerpo», «Kit con óptica» |
+| Unidad | Un objeto físico concreto | La cámara con número de serie tal |
+
+Y de ahí sale una decisión que parece de implementación y es de negocio: **la cantidad inicial de
+una medida materializa unidades**. No es un número guardado, son filas. Sin fila no hay nada que
+etiquetar, mover ni reservar, y un inventario que sólo cuenta no puede decir *cuál* está prestada.
+
+**La herencia es una copia, no una referencia**
+
+Una variante nace con el almacén, la ubicación, la clasificación y el responsable de su padre, y
+puede divergir después. Eso es lo que la hace una variante y no una vista del padre.
+
+La contrapartida es que reclasificar al padre tiene que propagarse, o la herencia dejaría de servir
+para lo único que existe: no reclasificar veinte variantes a mano. Se propagan **sólo los tres
+campos que se heredan como clasificación**; el nombre y el precio de una variante son suyos.
+
+**El código de un producto va en una etiqueta**
+
+Doce caracteres del alfabeto de Crockford: sin `I`, `L` ni `O`, que se confunden con `1` y `0` en
+una etiqueta impresa y dictada por teléfono, y sin `U`. **La garantía de unicidad es el índice, no
+la aleatoriedad**: sesenta bits hacen la colisión despreciable, y si alguna vez ocurriera, la
+inserción falla y la operación entera se revierte. Falla ruidosamente, que es lo contrario de dos
+productos compartiendo etiqueta.
+
+**Filtrar por una categoría trae las de sus descendientes**
+
+`query-and-pagination` lo exige, y la gramática genérica no puede hacerlo: no sabe qué campos son
+jerárquicos. Se resuelve en el catálogo, expandiendo el filtro al subárbol antes de construir la
+condición, y retirándolo del conjunto genérico para que no se aplique dos veces.
+
+**Y la nave dejó de estar vacía**
+
+La siembra crea ahora un almacén con doce cajas repartidas en dos pisos y seis racks, cuatro ramas
+de taxonomía, veinticuatro productos y ciento treinta y dos unidades. Los tipos de ubicación se
+mezclan a propósito: con una lista plana de cajas, el código autogenerado, el camino a la raíz y la
+eliminación recursiva se comportan igual estén bien o mal.
+
+**Abierto de la 12**
+
+Las listas de precios con su precedencia, y la gestión de unidades —los once estados, las
+transiciones, las etiquetas y el historial—. Y las dos comprobaciones de compromiso —no eliminar un
+producto ni una medida con unidades reservadas— que necesitan las cotizaciones y los pedidos.

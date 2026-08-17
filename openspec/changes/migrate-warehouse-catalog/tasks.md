@@ -2,8 +2,8 @@
 
 Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falta anotada.
 
-Hechos **el almacén y su árbol de ubicaciones**. El catálogo, las medidas, los precios y las
-unidades siguen sin empezar.
+Hechos **el almacén, su árbol de ubicaciones, su taxonomía y el catálogo con medidas**. Faltan las
+listas de precios y la gestión de unidades de existencia.
 
 ## Almacén
 
@@ -37,23 +37,39 @@ unidades siguen sin empezar.
 
 ## Catálogo
 
-- [ ] Producto con su código identificativo único e inmutable
-- [ ] Variantes y accesorios como hijos, con herencia
-- [ ] Creación con estructura completa **en una transacción**
-- [ ] Propagación de la reclasificación a los hijos
-- [ ] Listados que muestran sólo los productos raíz
-- [ ] Eliminación que arrastra la estructura, con comprobación de compromisos
-- [ ] Clasificación doble: categoría de almacén y global
-- [ ] Publicación e identificador legible
-- [ ] Disponibilidad independiente para venta y para renta
-- [ ] Búsqueda y filtrado
+- [x] Producto con su código identificativo único e inmutable. Doce caracteres del alfabeto de
+      Crockford —sin `I`, `L`, `O` ni `U`, que se confunden en una etiqueta impresa y dictada por
+      teléfono—. La garantía de unicidad **es el índice**, no la aleatoriedad
+- [x] Variantes y accesorios como hijos, con herencia de almacén, ubicación, clasificación y
+      responsable. La herencia es **una copia al crearse**, no una referencia: poder divergir es lo
+      que hace que una variante sea una variante y no una vista del padre
+- [x] Creación con estructura completa **en una transacción**. Comprobado con un fallo del motor a
+      mitad de la segunda variante, cuando ya están escritos el producto, sus tres medidas y la
+      primera variante entera
+- [x] Propagación de la reclasificación a los hijos, a cualquier profundidad. Sólo los tres campos
+      que se heredan; el nombre y el precio de una variante son suyos
+- [x] Listados que muestran sólo los productos raíz
+- [~] Eliminación que arrastra la estructura. **Falta la comprobación de compromisos**: necesita las
+      cotizaciones (14) y los pedidos (15), que son quienes reservarían
+- [x] Clasificación doble: categoría de almacén y global, independientes
+- [x] Publicación e identificador legible
+- [x] Disponibilidad independiente para venta y para renta
+- [x] Búsqueda y filtrado, **con el filtro de categoría incluyendo las descendientes**. Esa
+      expansión no la hace la gramática genérica, que no sabe qué campos son jerárquicos
+
+## Taxonomía del almacén
+
+- [x] Árbol propio por almacén, con identificador legible único **dentro de su almacén** y no del
+      mundo: es como cada casa de renta organiza su nave
+- [x] Rechazo de ciclos, y eliminación recursiva que deja los productos sin clasificar
 
 ## Medidas
 
-- [ ] Dimensiones, peso y unidades de longitud y masa
-- [ ] Ficha de sastrería, con todos los campos opcionales
-- [ ] Cantidad inicial que materializa unidades
-- [ ] Eliminación con comprobación de compromisos
+- [x] Dimensiones, peso y unidades de longitud y masa
+- [x] Ficha de sastrería, con todos los campos opcionales
+- [x] Cantidad inicial que **materializa unidades**: no es un número guardado, son filas. Sin fila
+      no hay nada que etiquetar, mover ni reservar
+- [~] Eliminación que arrastra sus unidades. **Falta la comprobación de compromisos**, por lo mismo
 
 ## Precios
 
