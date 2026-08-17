@@ -21,10 +21,20 @@
  * fila es desproporcionado y no deja rastro de qué alcance se pretendía.
  */
 
-import { ConflictError, NotFoundError, newId, UnprocessableError } from "@tfv/contracts"
+import {
+  buildPage,
+  ConflictError,
+  NotFoundError,
+  newId,
+  type Page,
+  type ParsedQuery,
+  type QuerySchema,
+  UnprocessableError,
+} from "@tfv/contracts"
 import { db, type Transaction, withRequester, withSystem } from "@tfv/db"
 import { companies, companyMembers, roles, users } from "@tfv/db/schema"
-import { and, asc, count, eq, isNull, ne } from "drizzle-orm"
+import { and, count, eq, isNull, ne } from "drizzle-orm"
+import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 
 /** Quién realiza la operación. Lo mismo que el motor necesita para resolver la identidad. */
 export interface Actor {
@@ -101,16 +111,50 @@ export async function createCompany(
   })
 }
 
+/**
+ * Qué se puede pedir de la colección de empresas.
+ *
+ * Ver `openspec/specs/query-and-pagination/spec.md`. La declaración es cerrada: filtrar por un campo
+ * que no esté aquí responde `400`, y no hay forma de expresar un operador desde la URL.
+ */
+export const companyQuery: QuerySchema = {
+  filters: {},
+  searchable: ["name"],
+  sortable: ["name", "createdAt"],
+  defaultSort: [{ field: "name", direction: "asc" }],
+}
+
+const companyFields = {
+  name: companies.name,
+  createdAt: companies.createdAt,
+}
+
 /** Las empresas del solicitante. El filtro lo pone el motor, no un `where` de la aplicación. */
-export async function listCompanies(actor: Actor): Promise<CompanyRecord[]> {
+export async function listCompanies(
+  actor: Actor,
+  query: ParsedQuery,
+): Promise<Page<CompanyRecord>> {
+  const mapping = {
+    fields: companyFields,
+    searchable: [companies.name],
+    tiebreak: companies.id,
+  }
+  const { limit, offset, page } = windowOf(query)
+
   return withRequester(actor, async (tx) => {
+    const where = and(isNull(companies.deletedAt), ...collectionConditions(query, mapping))
+
+    const [total] = await tx.select({ value: count() }).from(companies).where(where)
+
     const rows = await tx
       .select()
       .from(companies)
-      .where(isNull(companies.deletedAt))
-      .orderBy(asc(companies.name))
+      .where(where)
+      .orderBy(...collectionOrder(query, mapping))
+      .limit(limit)
+      .offset(offset)
 
-    return rows.map(toCompanyRecord)
+    return buildPage(rows.map(toCompanyRecord), total?.value ?? 0, page, limit)
   })
 }
 
@@ -184,9 +228,59 @@ export async function deleteCompany(actor: Actor, companyId: string): Promise<vo
 
 // ─── Membresías ──────────────────────────────────────────────────────────────
 
-export async function listMembers(actor: Actor, companyId: string): Promise<MemberRecord[]> {
+/**
+ * Qué se puede pedir de la colección de miembros.
+ *
+ * Los tres filtros son los que la pantalla ofrece: por rol, por estado y por propiedad. Son también
+ * los tres que se necesitan para responder «quién quedó sin rol» y «quién sigue desactivado», que
+ * es lo que se pregunta de una lista de miembros.
+ */
+export const memberQuery: QuerySchema = {
+  filters: {
+    roleId: { type: "id", set: true, label: "Rol" },
+    isActive: { type: "boolean", label: "Estado" },
+    isOwner: { type: "boolean", label: "Propiedad" },
+    createdAt: { type: "date", range: true, label: "Alta" },
+  },
+  searchable: ["name", "lastname", "email"],
+  sortable: ["name", "email", "createdAt"],
+  defaultSort: [{ field: "name", direction: "asc" }],
+}
+
+export async function listMembers(
+  actor: Actor,
+  companyId: string,
+  query: ParsedQuery,
+): Promise<Page<MemberRecord>> {
+  const mapping = {
+    fields: {
+      roleId: companyMembers.roleId,
+      isActive: companyMembers.isActive,
+      isOwner: companyMembers.isOwner,
+      name: users.name,
+      email: users.email,
+      createdAt: companyMembers.createdAt,
+    },
+    searchable: [users.name, users.lastname, users.email],
+    tiebreak: companyMembers.id,
+  }
+  const { limit, offset, page } = windowOf(query)
+
   return withRequester(actor, async (tx) => {
     await loadCompany(tx, companyId)
+
+    const where = and(
+      eq(companyMembers.companyId, companyId),
+      ...collectionConditions(query, mapping),
+    )
+
+    // El recuento repite las uniones porque la búsqueda toca columnas de `users`: contar sin ellas
+    // devolvería el total sin filtrar y la paginación anunciaría páginas que están vacías.
+    const [total] = await tx
+      .select({ value: count() })
+      .from(companyMembers)
+      .innerJoin(users, eq(users.id, companyMembers.userId))
+      .where(where)
 
     const rows = await tx
       .select({
@@ -204,10 +298,12 @@ export async function listMembers(actor: Actor, companyId: string): Promise<Memb
       .from(companyMembers)
       .innerJoin(users, eq(users.id, companyMembers.userId))
       .leftJoin(roles, eq(roles.id, companyMembers.roleId))
-      .where(eq(companyMembers.companyId, companyId))
-      .orderBy(asc(users.name), asc(users.email))
+      .where(where)
+      .orderBy(...collectionOrder(query, mapping))
+      .limit(limit)
+      .offset(offset)
 
-    return rows
+    return buildPage(rows, total?.value ?? 0, page, limit)
   })
 }
 

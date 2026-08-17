@@ -10,11 +10,20 @@
  * «sí tiene» el permiso.
  */
 
-import { NotFoundError, newId, type PermissionKey } from "@tfv/contracts"
+import {
+  buildPage,
+  NotFoundError,
+  newId,
+  type Page,
+  type ParsedQuery,
+  type PermissionKey,
+  type QuerySchema,
+} from "@tfv/contracts"
 import { type Transaction, withRequester } from "@tfv/db"
 import { companies, companyMembers, roles } from "@tfv/db/schema"
-import { and, asc, eq, isNull } from "drizzle-orm"
+import { and, count, eq, isNull } from "drizzle-orm"
 import { assertKnownPermissions } from "../auth/authorization.ts"
+import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 import type { Actor } from "./companies.ts"
 
 export interface RoleRecord {
@@ -27,19 +36,50 @@ export interface RoleRecord {
   readonly updatedAt: Date
 }
 
-export async function listRoles(actor: Actor, companyId: string): Promise<RoleRecord[]> {
+/**
+ * Qué se puede pedir de la colección de roles.
+ *
+ * El registro de búsqueda de la spec no traía «rol», y era una omisión y no una decisión: la lista
+ * de recursos deliberadamente sin búsqueda está enumerada aparte y no lo incluye. Buscar un rol por
+ * su nombre es lo primero que se hace en una empresa con veinte.
+ */
+export const roleQuery: QuerySchema = {
+  filters: {},
+  searchable: ["name"],
+  sortable: ["name", "createdAt"],
+  defaultSort: [{ field: "name", direction: "asc" }],
+}
+
+export async function listRoles(
+  actor: Actor,
+  companyId: string,
+  query: ParsedQuery,
+): Promise<Page<RoleRecord>> {
+  const mapping = {
+    fields: { name: roles.name, createdAt: roles.createdAt },
+    searchable: [roles.name],
+    tiebreak: roles.id,
+  }
+  const { limit, offset, page } = windowOf(query)
+
   return withRequester(actor, async (tx) => {
     await assertCompany(tx, companyId)
+
+    const where = and(eq(roles.companyId, companyId), ...collectionConditions(query, mapping))
+
+    const [total] = await tx.select({ value: count() }).from(roles).where(where)
 
     const rows = await tx
       .select()
       .from(roles)
-      .where(eq(roles.companyId, companyId))
-      .orderBy(asc(roles.name))
+      .where(where)
+      .orderBy(...collectionOrder(query, mapping))
+      .limit(limit)
+      .offset(offset)
 
     const counts = await memberCounts(tx, companyId)
 
-    return rows.map((row) => ({
+    const items = rows.map((row) => ({
       id: row.id,
       name: row.name,
       permissions: row.permissions,
@@ -47,6 +87,8 @@ export async function listRoles(actor: Actor, companyId: string): Promise<RoleRe
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }))
+
+    return buildPage(items, total?.value ?? 0, page, limit)
   })
 }
 

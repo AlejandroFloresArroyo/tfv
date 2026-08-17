@@ -20,6 +20,7 @@ import { ForbiddenError, toInstant } from "@tfv/contracts"
 import { requireSession } from "../auth/middleware.ts"
 import {
   type AddressBook,
+  addressQuery,
   createAddress,
   deleteAddress,
   listAddresses,
@@ -34,12 +35,14 @@ import {
 } from "../companies/categories.ts"
 import type { Actor } from "../companies/companies.ts"
 import {
+  counterpartyQuery,
   createCounterparty,
   deleteCounterparty,
   listCounterparties,
   updateCounterparty,
 } from "../companies/counterparties.ts"
 import { AUTHENTICATED, defineRoute, PUBLIC, REQUIRES } from "../runtime/route.ts"
+import { collectionQuery, pageSchema, queryOf, serializePage } from "./pagination.ts"
 
 // ─── Esquemas ────────────────────────────────────────────────────────────────
 
@@ -156,16 +159,17 @@ export const listUserAddressesRoute = defineRoute({
     path: "/me/addresses",
     summary: "Mi libreta de direcciones",
     tags: ["Direcciones"],
+    request: { query: collectionQuery(addressQuery) },
     responses: {
       200: {
         description: "Direcciones propias, la primaria primero",
-        content: { "application/json": { schema: z.object({ items: z.array(addressSchema) }) } },
+        content: { "application/json": { schema: pageSchema(addressSchema) } },
       },
     },
   },
   handler: async (c) => {
-    const items = await listAddresses(actorOf(c), userBook(c))
-    return c.json({ items: items.map(serializeAddress) }, 200)
+    const page = await listAddresses(actorOf(c), userBook(c), queryOf(c, addressQuery))
+    return c.json(serializePage(page, serializeAddress), 200)
   },
 })
 
@@ -247,18 +251,22 @@ export const listCompanyAddressesRoute = defineRoute({
     path: "/companies/{companyId}/addresses",
     summary: "Libreta de direcciones de la empresa",
     tags: ["Direcciones"],
-    request: { params: companyParams },
+    request: { params: companyParams, query: collectionQuery(addressQuery) },
     responses: {
       200: {
         description: "Direcciones de la empresa, la primaria primero",
-        content: { "application/json": { schema: z.object({ items: z.array(addressSchema) }) } },
+        content: { "application/json": { schema: pageSchema(addressSchema) } },
       },
     },
   },
   handler: async (c) => {
     const companyId = c.req.valid("param").companyId
-    const items = await listAddresses(actorOf(c), { kind: "company", companyId })
-    return c.json({ items: items.map(serializeAddress) }, 200)
+    const page = await listAddresses(
+      actorOf(c),
+      { kind: "company", companyId },
+      queryOf(c, addressQuery),
+    )
+    return c.json(serializePage(page, serializeAddress), 200)
   },
 })
 
@@ -369,19 +377,22 @@ function counterpartyRoutes(role: "client" | "provider") {
       path: `/companies/{companyId}/${segment}`,
       summary: `Listar ${label}`,
       tags: ["Contrapartes"],
-      request: { params: companyParams },
+      request: { params: companyParams, query: collectionQuery(counterpartyQuery) },
       responses: {
         200: {
           description: `Los ${label} de la empresa`,
-          content: {
-            "application/json": { schema: z.object({ items: z.array(counterpartySchema) }) },
-          },
+          content: { "application/json": { schema: pageSchema(counterpartySchema) } },
         },
       },
     },
     handler: async (c) => {
-      const items = await listCounterparties(actorOf(c), c.req.valid("param").companyId, role)
-      return c.json({ items: items.map(serializeCounterparty) }, 200)
+      const page = await listCounterparties(
+        actorOf(c),
+        c.req.valid("param").companyId,
+        role,
+        queryOf(c, counterpartyQuery),
+      )
+      return c.json(serializePage(page, serializeCounterparty), 200)
     },
   })
 

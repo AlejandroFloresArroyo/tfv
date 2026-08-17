@@ -19,10 +19,19 @@
  * crearían dos parejas.
  */
 
-import { ConflictError, NotFoundError, newId } from "@tfv/contracts"
+import {
+  buildPage,
+  ConflictError,
+  NotFoundError,
+  newId,
+  type Page,
+  type ParsedQuery,
+  type QuerySchema,
+} from "@tfv/contracts"
 import { db, type Transaction, withRequester, withSystem } from "@tfv/db"
 import { type CounterpartySnapshot, companies, counterparties, users } from "@tfv/db/schema"
-import { and, asc, eq, isNull } from "drizzle-orm"
+import { and, count, eq, isNull, sql } from "drizzle-orm"
+import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 import type { Actor } from "./companies.ts"
 
 export type CounterpartyRole = "client" | "provider"
@@ -43,27 +52,81 @@ export interface CounterpartyRecord {
 
 // ─── Gestión desde la empresa ────────────────────────────────────────────────
 
+/**
+ * Qué se puede pedir de una cartera.
+ *
+ * El registro de búsqueda de la spec decía «alias, nombre y apellido del usuario». Media cartera no
+ * tiene usuario —son externos, y ese es justo el caso que la entidad existe para admitir—, así que
+ * buscar por el usuario dejaría fuera precisamente a quien no está en la plataforma. Se busca sobre
+ * el alias y sobre los datos copiados, que es donde vive el nombre en los dos casos.
+ *
+ * Los datos copiados viven en una columna JSON, así que la búsqueda extrae cada campo con `->>`.
+ * No es una consulta indexable; con carteras de cientos habrá que añadir un índice de expresión, y
+ * `app.norm` se declaró inmutable precisamente para que ese día no haya que reescribir nada.
+ */
+export const counterpartyQuery: QuerySchema = {
+  filters: {
+    /** `?userId=null` responde «los que no están en la plataforma». */
+    userId: { type: "id", label: "Cuenta" },
+    counterpartyCompanyId: { type: "id", label: "Empresa" },
+    createdAt: { type: "date", range: true, label: "Alta" },
+  },
+  searchable: ["alias", "name", "lastname", "email", "companyName"],
+  sortable: ["alias", "createdAt"],
+  defaultSort: [{ field: "alias", direction: "asc" }],
+}
+
+const snapshotField = (key: string) => sql`${counterparties.snapshot} ->> ${key}`
+
+const counterpartyMapping = {
+  fields: {
+    userId: counterparties.userId,
+    counterpartyCompanyId: counterparties.counterpartyCompanyId,
+    alias: counterparties.alias,
+    createdAt: counterparties.createdAt,
+  },
+  searchable: [
+    counterparties.alias,
+    snapshotField("name"),
+    snapshotField("lastname"),
+    snapshotField("email"),
+    snapshotField("companyName"),
+  ],
+  tiebreak: counterparties.id,
+}
+
 export async function listCounterparties(
   actor: Actor,
   companyId: string,
   role: CounterpartyRole,
-): Promise<CounterpartyRecord[]> {
+  query: ParsedQuery,
+): Promise<Page<CounterpartyRecord>> {
+  const { limit, offset, page } = windowOf(query)
+
   return withRequester(actor, async (tx) => {
     await assertCompany(tx, companyId)
+
+    // El papel **no** es un filtro de la gramática: es una colección distinta, con su propio
+    // permiso. Que se pudiera cambiar desde la URL convertiría el permiso de proveedores en la
+    // llave de la cartera de clientes.
+    const where = and(
+      eq(counterparties.companyId, companyId),
+      eq(counterparties.role, role),
+      isNull(counterparties.deletedAt),
+      ...collectionConditions(query, counterpartyMapping),
+    )
+
+    const [total] = await tx.select({ value: count() }).from(counterparties).where(where)
 
     const rows = await tx
       .select()
       .from(counterparties)
-      .where(
-        and(
-          eq(counterparties.companyId, companyId),
-          eq(counterparties.role, role),
-          isNull(counterparties.deletedAt),
-        ),
-      )
-      .orderBy(asc(counterparties.alias))
+      .where(where)
+      .orderBy(...collectionOrder(query, counterpartyMapping))
+      .limit(limit)
+      .offset(offset)
 
-    return rows.map(toRecord)
+    return buildPage(rows.map(toRecord), total?.value ?? 0, page, limit)
   })
 }
 

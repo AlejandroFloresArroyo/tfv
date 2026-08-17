@@ -24,10 +24,18 @@
  * es el que usa el cálculo de envío para decidir que no hay origen.
  */
 
-import { NotFoundError, newId } from "@tfv/contracts"
+import {
+  buildPage,
+  NotFoundError,
+  newId,
+  type Page,
+  type ParsedQuery,
+  type QuerySchema,
+} from "@tfv/contracts"
 import { type Transaction, withRequester } from "@tfv/db"
 import { companies, companyAddresses, userAddresses } from "@tfv/db/schema"
-import { and, asc, eq, isNull, ne } from "drizzle-orm"
+import { and, asc, count, eq, isNull, ne } from "drizzle-orm"
+import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 import type { Actor } from "./companies.ts"
 
 export interface AddressInput {
@@ -85,19 +93,72 @@ function ownerFilter(book: Book) {
 
 // ─── Lectura ─────────────────────────────────────────────────────────────────
 
-export async function listAddresses(actor: Actor, book: Book): Promise<AddressRecord[]> {
+/**
+ * Qué se puede pedir de una libreta.
+ *
+ * **La primaria primero es el orden por defecto, no un reordenado posterior.** Antes se pedía la
+ * libreta entera y se movía la primaria arriba en memoria; con paginación eso deja de funcionar,
+ * porque la primaria puede estar en la página nueve y subirla dentro de la página uno la pondría
+ * primera entre las que no lo son.
+ *
+ * El registro de búsqueda de la spec decía «nombre» para una dirección. En esta base el «nombre» de
+ * una dirección es su etiqueta, que casi siempre está vacía: nadie bautiza sus direcciones, y en
+ * cambio todo el mundo las reconoce por su calle y su ciudad. Se buscan las tres.
+ */
+export const addressQuery: QuerySchema = {
+  filters: {
+    isPrimary: { type: "boolean", label: "Primaria" },
+    city: { type: "string", label: "Ciudad" },
+    countryCode: { type: "string", label: "País" },
+  },
+  searchable: ["label", "street", "city"],
+  sortable: ["label", "city", "isPrimary", "createdAt"],
+  defaultSort: [
+    { field: "isPrimary", direction: "desc" },
+    { field: "createdAt", direction: "asc" },
+  ],
+}
+
+function mappingFor(book: Book) {
+  const table = tableOf(book)
+  return {
+    fields: {
+      isPrimary: table.isPrimary,
+      city: table.city,
+      countryCode: table.countryCode,
+      label: table.label,
+      createdAt: table.createdAt,
+    },
+    searchable: [table.label, table.street, table.city],
+    tiebreak: table.id,
+  }
+}
+
+export async function listAddresses(
+  actor: Actor,
+  book: Book,
+  query: ParsedQuery,
+): Promise<Page<AddressRecord>> {
+  const table = tableOf(book)
+  const mapping = mappingFor(book)
+  const { limit, offset, page } = windowOf(query)
+
   return withRequester(actor, async (tx) => {
     if (book.kind === "company") await assertCompany(tx, book.companyId)
 
-    // La primaria primero: es la que casi siempre se busca, y así el listado no obliga a leerlo
-    // entero para encontrarla.
+    const where = and(ownerFilter(book), ...collectionConditions(query, mapping))
+
+    const [total] = await tx.select({ value: count() }).from(table).where(where)
+
     const rows = await tx
       .select()
-      .from(tableOf(book))
-      .where(ownerFilter(book))
-      .orderBy(asc(tableOf(book).createdAt))
+      .from(table)
+      .where(where)
+      .orderBy(...collectionOrder(query, mapping))
+      .limit(limit)
+      .offset(offset)
 
-    return rows.map(toRecord).sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
+    return buildPage(rows.map(toRecord), total?.value ?? 0, page, limit)
   })
 }
 

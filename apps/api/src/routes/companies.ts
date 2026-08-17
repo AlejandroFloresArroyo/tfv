@@ -22,17 +22,20 @@ import { requireSession } from "../auth/middleware.ts"
 import {
   type Actor,
   addMember,
+  companyQuery,
   createCompany,
   deleteCompany,
   getCompany,
   listCompanies,
   listMembers,
+  memberQuery,
   removeMember,
   updateCompany,
   updateMember,
 } from "../companies/companies.ts"
-import { createRole, deleteRole, listRoles, updateRole } from "../companies/roles.ts"
+import { createRole, deleteRole, listRoles, roleQuery, updateRole } from "../companies/roles.ts"
 import { AUTHENTICATED, defineRoute, REQUIRES } from "../runtime/route.ts"
+import { collectionQuery, pageSchema, queryOf, serializePage } from "./pagination.ts"
 
 // ─── Esquemas ────────────────────────────────────────────────────────────────
 
@@ -119,18 +122,17 @@ export const listCompaniesRoute = defineRoute({
     path: "/companies",
     summary: "Listar las empresas del solicitante",
     tags: ["Empresas"],
+    request: { query: collectionQuery(companyQuery) },
     responses: {
       200: {
         description: "Empresas con membresía activa",
-        content: {
-          "application/json": { schema: z.object({ items: z.array(companySchema) }) },
-        },
+        content: { "application/json": { schema: pageSchema(companySchema) } },
       },
     },
   },
   handler: async (c) => {
-    const items = await listCompanies(actorOf(c))
-    return c.json({ items: items.map(serializeCompany) }, 200)
+    const page = await listCompanies(actorOf(c), queryOf(c, companyQuery))
+    return c.json(serializePage(page, serializeCompany), 200)
   },
 })
 
@@ -235,17 +237,21 @@ export const listMembersRoute = defineRoute({
     path: "/companies/{companyId}/members",
     summary: "Listar los miembros de una empresa",
     tags: ["Empresas"],
-    request: { params: companyParams },
+    request: { params: companyParams, query: collectionQuery(memberQuery) },
     responses: {
       200: {
         description: "Miembros, activos e inactivos",
-        content: { "application/json": { schema: z.object({ items: z.array(memberSchema) }) } },
+        content: { "application/json": { schema: pageSchema(memberSchema) } },
       },
     },
   },
   handler: async (c) => {
-    const items = await listMembers(actorOf(c), c.req.valid("param").companyId)
-    return c.json({ items: items.map(serializeMember) }, 200)
+    const page = await listMembers(
+      actorOf(c),
+      c.req.valid("param").companyId,
+      queryOf(c, memberQuery),
+    )
+    return c.json(serializePage(page, serializeMember), 200)
   },
 })
 
@@ -364,17 +370,17 @@ export const listRolesRoute = defineRoute({
     path: "/companies/{companyId}/roles",
     summary: "Listar los roles de una empresa",
     tags: ["Empresas"],
-    request: { params: companyParams },
+    request: { params: companyParams, query: collectionQuery(roleQuery) },
     responses: {
       200: {
         description: "Roles, con cuántas personas tienen cada uno",
-        content: { "application/json": { schema: z.object({ items: z.array(roleSchema) }) } },
+        content: { "application/json": { schema: pageSchema(roleSchema) } },
       },
     },
   },
   handler: async (c) => {
-    const items = await listRoles(actorOf(c), c.req.valid("param").companyId)
-    return c.json({ items: items.map(serializeRole) }, 200)
+    const page = await listRoles(actorOf(c), c.req.valid("param").companyId, queryOf(c, roleQuery))
+    return c.json(serializePage(page, serializeRole), 200)
   },
 })
 
