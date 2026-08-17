@@ -188,7 +188,10 @@
     "makeOwner": "Make owner",
     "revokeOwner": "Revoke ownership",
     "ownerHint": "An owner can do anything within the company. There must always be one.",
-    "activeHint": "A deactivated membership keeps the record and loses access."
+    "activeHint": "A deactivated membership keeps the record and loses access.",
+    "ownership": "Ownership",
+    "notOwner": "Member",
+    "searchPlaceholder": "Search by name or email…"
   },
   "roles": {
     "title": "Roles",
@@ -209,6 +212,39 @@
     "permissionsHint": "Tick what this role grants. Anyone without a key gets a 403 when they try.",
     "selectAll": "All",
     "searchPlaceholder": "Search permission…",
-    "noMatches": "No permission matches."
+    "noMatches": "No permission matches.",
+    "searchRolePlaceholder": "Search role…",
+    "peopleCount": "{count, plural, =0 {Nobody has it} one {# person} other {# people}}"
+  },
+  "collection": {
+    "searchLabel": "Search the list",
+    "clearSearch": "Clear the search",
+    "filters": "Filters",
+    "filtersHint": "They apply when you press “Apply”. Unapplied changes filter nothing.",
+    "apply": "Apply",
+    "clearFilters": "Clear",
+    "clearAll": "Clear all",
+    "any": "Any",
+    "removeFilter": "Remove the {field}: {value} filter",
+    "viewList": "View as list",
+    "viewGrid": "View as grid",
+    "pagination": "Pagination",
+    "summary": "Page {page} of {totalPages} · {totalItems} items",
+    "itemCount": "{count} items",
+    "perPage": "Per page",
+    "firstPage": "First page",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "lastPage": "Last page",
+    "goToPage": "Go to page {page}",
+    "loading": "Loading the list",
+    "noResultsTitle": "Nothing matches",
+    "noResultsBody": "Try other terms, or remove a filter.",
+    "errorTitle": "The list couldn't be loaded",
+    "errorBody": "It may be a momentary outage. Try again.",
+    "from": "From",
+    "to": "To",
+    "results": "Results",
+    "clearAndShowAll": "Clear the filters and show everything"
   }
 }

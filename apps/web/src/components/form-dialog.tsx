@@ -31,8 +31,11 @@ export function FormDialog<T>({
   children,
   tone = "primary",
   size,
+  open: controlledOpen,
+  onOpenChange,
 }: {
-  trigger: ReactNode
+  /** Ausente cuando el diálogo lo abre otra cosa —un elemento de menú— desde fuera. */
+  trigger?: ReactNode
   title: string
   description?: string
   submitLabel: string
@@ -41,9 +44,21 @@ export function FormDialog<T>({
   children: (state: SubmitState) => ReactNode
   tone?: "primary" | "danger"
   size?: "sm" | "md" | "lg"
+  /**
+   * Apertura gobernada desde fuera.
+   *
+   * Hace falta para las acciones agrupadas en un menú: el elemento de menú desaparece al elegirlo,
+   * así que no puede ser también el disparador del diálogo. Ausente, el diálogo se gobierna solo,
+   * que es lo que quieren los botones sueltos.
+   */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   const t = useTranslations()
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+
+  const open = controlledOpen ?? uncontrolledOpen
+  const setOpen = onOpenChange ?? setUncontrolledOpen
 
   const form = useSubmit(action, { onDone: () => setOpen(false) })
 

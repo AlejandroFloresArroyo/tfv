@@ -7,8 +7,13 @@ import type { ReactNode } from "react"
  * Se extrajo al escribir la tercera: la de sesiones ya llevaba su encabezado y su desplazamiento a
  * mano, y copiarlos dos veces más habría dejado tres tablas que se parecen y no coinciden.
  *
- * **No es la exploración de colecciones** de la 28d: no tiene búsqueda, ni filtros, ni paginación,
- * ni ordenación. Es una tabla. Cuando llegue la 28d con el componente de verdad, esto se retira.
+ * **No es la exploración de colecciones**: no tiene búsqueda, ni filtros, ni paginación, ni
+ * ordenación, y no habla el sobre de paginación de la API. Es una tabla.
+ *
+ * Llegada la 28d, lo que era una colección se pasó a `components/collection`. Esto se queda para lo
+ * que **no** lo es: las sesiones abiertas de una cuenta son las de sus dispositivos, un puñado como
+ * mucho, y la spec de consulta las nombra entre los recursos sin búsqueda. Darles paginación sería
+ * ceremonia sobre cuatro filas.
  */
 export function DataTable<T>({
   columns,

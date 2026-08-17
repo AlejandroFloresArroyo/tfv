@@ -2,6 +2,7 @@
 
 import { Button, DialogTrigger, Field, Input } from "@tfv/ui"
 import { useTranslations } from "next-intl"
+import { type ItemAction, ItemActions } from "~/components/collection/item-actions.tsx"
 import { ConfirmDestructive } from "~/components/confirm-destructive.tsx"
 import { FormDialog } from "~/components/form-dialog.tsx"
 import { text } from "~/components/use-submit.ts"
@@ -62,10 +63,14 @@ export function EditRole({
   companyId,
   role,
   catalog,
+  open,
+  onOpenChange,
 }: {
   companyId: string
   role: RoleSummary
   catalog: Catalog
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }) {
   const t = useTranslations()
 
@@ -74,13 +79,8 @@ export function EditRole({
       title={t("roles.editTitle", { name: role.name })}
       submitLabel={t("common.save")}
       size="lg"
-      trigger={
-        <DialogTrigger asChild>
-          <Button size="sm" variant="ghost">
-            {t("common.edit")}
-          </Button>
-        </DialogTrigger>
-      }
+      open={open}
+      onOpenChange={onOpenChange}
       action={(data) =>
         api(`/companies/${companyId}/roles/${role.id}`, {
           method: "PATCH",
@@ -103,7 +103,17 @@ export function EditRole({
   )
 }
 
-export function DeleteRole({ companyId, role }: { companyId: string; role: RoleSummary }) {
+export function DeleteRole({
+  companyId,
+  role,
+  open,
+  onOpenChange,
+}: {
+  companyId: string
+  role: RoleSummary
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
   const t = useTranslations()
 
   return (
@@ -114,14 +124,55 @@ export function DeleteRole({ companyId, role }: { companyId: string; role: RoleS
       // enumerar antes de pulsar, y aquí el número sale del servidor, no de una suposición.
       cascade={[t("roles.deleteCascade", { count: role.memberCount })]}
       confirmLabel={t("common.delete")}
-      trigger={
-        <DialogTrigger asChild>
-          <Button size="sm" variant="ghost" className="text-danger hover:text-danger">
-            {t("common.delete")}
-          </Button>
-        </DialogTrigger>
-      }
+      open={open}
+      onOpenChange={onOpenChange}
       action={() => api(`/companies/${companyId}/roles/${role.id}`, { method: "DELETE" })}
     />
   )
+}
+
+/**
+ * Las acciones de un rol, agrupadas.
+ *
+ * Las que la persona no puede hacer no llegan aquí: se omiten en lugar de mostrarse desactivadas.
+ */
+export function RoleActions({
+  companyId,
+  role,
+  catalog,
+  canEdit,
+  canDelete,
+}: {
+  companyId: string
+  role: RoleSummary
+  catalog: Catalog
+  canEdit: boolean
+  canDelete: boolean
+}) {
+  const t = useTranslations()
+
+  const actions: ItemAction[] = []
+
+  if (canEdit) {
+    actions.push({
+      key: "edit",
+      label: t("common.edit"),
+      dialog: (control) => (
+        <EditRole key="edit" companyId={companyId} role={role} catalog={catalog} {...control} />
+      ),
+    })
+  }
+
+  if (canDelete) {
+    actions.push({
+      key: "delete",
+      label: t("common.delete"),
+      danger: true,
+      dialog: (control) => (
+        <DeleteRole key="delete" companyId={companyId} role={role} {...control} />
+      ),
+    })
+  }
+
+  return <ItemActions label={t("common.actions")} actions={actions} />
 }

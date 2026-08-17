@@ -29,16 +29,24 @@ export function ConfirmDestructive({
   cascade = [],
   confirmLabel,
   action,
+  open: controlledOpen,
+  onOpenChange,
 }: {
-  trigger: ReactNode
+  /** Ausente cuando lo abre un elemento de menú desde fuera. */
+  trigger?: ReactNode
   title: string
   entity: string
   cascade?: readonly string[]
   confirmLabel: string
   action: () => Promise<unknown>
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   const t = useTranslations()
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+
+  const open = controlledOpen ?? uncontrolledOpen
+  const setOpen = onOpenChange ?? setUncontrolledOpen
 
   const form = useSubmit(async () => action(), { onDone: () => setOpen(false) })
 

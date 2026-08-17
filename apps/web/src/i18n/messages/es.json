@@ -188,7 +188,10 @@
     "makeOwner": "Nombrar propietaria",
     "revokeOwner": "Retirar la propiedad",
     "ownerHint": "Una propietaria puede todo dentro de la empresa. Siempre tiene que quedar una.",
-    "activeHint": "Una membresía desactivada conserva el registro y pierde el acceso."
+    "activeHint": "Una membresía desactivada conserva el registro y pierde el acceso.",
+    "ownership": "Propiedad",
+    "notOwner": "Miembro",
+    "searchPlaceholder": "Buscar por nombre o correo…"
   },
   "roles": {
     "title": "Roles",
@@ -209,6 +212,39 @@
     "permissionsHint": "Marca lo que este rol concede. Quien no tenga una clave recibe 403 al intentarlo.",
     "selectAll": "Todo",
     "searchPlaceholder": "Buscar permiso…",
-    "noMatches": "Ningún permiso coincide."
+    "noMatches": "Ningún permiso coincide.",
+    "searchRolePlaceholder": "Buscar rol…",
+    "peopleCount": "{count, plural, =0 {Nadie lo tiene} one {# persona} other {# personas}}"
+  },
+  "collection": {
+    "searchLabel": "Buscar en la lista",
+    "clearSearch": "Limpiar la búsqueda",
+    "filters": "Filtros",
+    "filtersHint": "Se aplican al pulsar «Aplicar». Los cambios no aplicados no filtran nada.",
+    "apply": "Aplicar",
+    "clearFilters": "Limpiar",
+    "clearAll": "Limpiar todo",
+    "any": "Cualquiera",
+    "removeFilter": "Quitar el filtro {field}: {value}",
+    "viewList": "Ver como lista",
+    "viewGrid": "Ver como rejilla",
+    "pagination": "Paginación",
+    "summary": "Página {page} de {totalPages} · {totalItems} elementos",
+    "itemCount": "{count} elementos",
+    "perPage": "Por página",
+    "firstPage": "Primera página",
+    "previousPage": "Página anterior",
+    "nextPage": "Página siguiente",
+    "lastPage": "Última página",
+    "goToPage": "Ir a la página {page}",
+    "loading": "Cargando la lista",
+    "noResultsTitle": "Ningún elemento coincide",
+    "noResultsBody": "Prueba con otros términos, o quita algún filtro.",
+    "errorTitle": "No se pudo cargar la lista",
+    "errorBody": "Puede ser un corte momentáneo. Vuelve a intentarlo.",
+    "from": "Desde",
+    "to": "Hasta",
+    "results": "Resultados",
+    "clearAndShowAll": "Quitar los filtros y ver todo"
   }
 }

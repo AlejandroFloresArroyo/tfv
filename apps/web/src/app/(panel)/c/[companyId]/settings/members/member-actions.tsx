@@ -3,6 +3,7 @@
 import { Button, Checkbox, DialogTrigger, Field, Input, Select, Switch } from "@tfv/ui"
 import { useTranslations } from "next-intl"
 import { useId, useState } from "react"
+import { type ItemAction, ItemActions } from "~/components/collection/item-actions.tsx"
 import { ConfirmDestructive } from "~/components/confirm-destructive.tsx"
 import { FormDialog } from "~/components/form-dialog.tsx"
 import { optional, text } from "~/components/use-submit.ts"
@@ -90,12 +91,16 @@ export function EditMember({
   member,
   roles,
   canMoveOwnership,
+  open,
+  onOpenChange,
 }: {
   companyId: string
   member: MemberSummary
   roles: RoleOption[]
   /** Sólo una propietaria mueve la propiedad. No hay clave de permiso para esto. */
   canMoveOwnership: boolean
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }) {
   const t = useTranslations()
   const [isOwner, setIsOwner] = useState(member.isOwner)
@@ -109,13 +114,8 @@ export function EditMember({
       title={t("members.editTitle", { name: member.name })}
       submitLabel={t("common.save")}
       size="sm"
-      trigger={
-        <DialogTrigger asChild>
-          <Button size="sm" variant="ghost">
-            {t("common.edit")}
-          </Button>
-        </DialogTrigger>
-      }
+      open={open}
+      onOpenChange={onOpenChange}
       action={(data) =>
         api(`/companies/${companyId}/members/${member.id}`, {
           method: "PATCH",
@@ -174,7 +174,17 @@ export function EditMember({
   )
 }
 
-export function RemoveMember({ companyId, member }: { companyId: string; member: MemberSummary }) {
+export function RemoveMember({
+  companyId,
+  member,
+  open,
+  onOpenChange,
+}: {
+  companyId: string
+  member: MemberSummary
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
   const t = useTranslations()
 
   return (
@@ -183,14 +193,66 @@ export function RemoveMember({ companyId, member }: { companyId: string; member:
       entity={member.name || member.email}
       cascade={[t("members.removeCascade")]}
       confirmLabel={t("members.remove")}
-      trigger={
-        <DialogTrigger asChild>
-          <Button size="sm" variant="ghost" className="text-danger hover:text-danger">
-            {t("members.remove")}
-          </Button>
-        </DialogTrigger>
-      }
+      open={open}
+      onOpenChange={onOpenChange}
       action={() => api(`/companies/${companyId}/members/${member.id}`, { method: "DELETE" })}
     />
   )
+}
+
+/**
+ * Las acciones de un miembro, agrupadas.
+ *
+ * Las que la persona no puede hacer **no llegan aquí**: quien no tiene la clave de cambio de rol no
+ * ve «editar», y quien no tiene la de retirada no ve «retirar». No aparecen desactivadas, que es
+ * pedirle a alguien que descubra por su cuenta por qué no funciona.
+ */
+export function MemberActions({
+  companyId,
+  member,
+  roles,
+  canEdit,
+  canRemove,
+  canMoveOwnership,
+}: {
+  companyId: string
+  member: MemberSummary
+  roles: RoleOption[]
+  canEdit: boolean
+  canRemove: boolean
+  canMoveOwnership: boolean
+}) {
+  const t = useTranslations()
+
+  const actions: ItemAction[] = []
+
+  if (canEdit) {
+    actions.push({
+      key: "edit",
+      label: t("common.edit"),
+      dialog: (control) => (
+        <EditMember
+          key="edit"
+          companyId={companyId}
+          member={member}
+          roles={roles}
+          canMoveOwnership={canMoveOwnership}
+          {...control}
+        />
+      ),
+    })
+  }
+
+  if (canRemove) {
+    actions.push({
+      key: "remove",
+      label: t("members.remove"),
+      danger: true,
+      dialog: (control) => (
+        <RemoveMember key="remove" companyId={companyId} member={member} {...control} />
+      ),
+    })
+  }
+
+  return <ItemActions label={t("common.actions")} actions={actions} />
 }
