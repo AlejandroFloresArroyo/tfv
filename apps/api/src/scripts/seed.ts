@@ -28,8 +28,14 @@ import {
   roles,
   services,
   users,
+  warehouseCategories,
+  warehouseMeasurements,
+  warehouseProducts,
+  warehouseStockUnits,
+  warehouseStorages,
+  warehouses,
 } from "@tfv/db/schema"
-import { and, eq, inArray, isNull } from "drizzle-orm"
+import { and, count, eq, inArray, isNull } from "drizzle-orm"
 import { hashPassword } from "../auth/password.ts"
 import { env } from "../env.ts"
 
@@ -409,6 +415,8 @@ interface VolumeReport {
   readonly clients: number
   readonly providers: number
   readonly addresses: number
+  readonly products: number
+  readonly units: number
 }
 
 /**
@@ -439,7 +447,9 @@ async function seedVolume(
 ): Promise<VolumeReport> {
   const primary = companyIds.get("Renta Fílmica del Norte")
   const secondary = companyIds.get("Estudios Mariposa")
-  if (!primary || !secondary) return { teammates: 0, clients: 0, providers: 0, addresses: 0 }
+  if (!primary || !secondary) {
+    return { teammates: 0, clients: 0, providers: 0, addresses: 0, products: 0, units: 0 }
+  }
 
   const teammates = await seedTeammates(passwordHash, primary)
   const clients = await seedCounterparties(primary, "client", VOLUME.clients, 0)
@@ -448,8 +458,231 @@ async function seedVolume(
   // parecería romper el listado en lugar de cambiar de alcance.
   await seedCounterparties(secondary, "client", 40, 900)
   const addresses = await seedAddresses(primary)
+  const catalog = await seedCatalogFor(primary)
 
-  return { teammates, clients, providers, addresses }
+  return { teammates, clients, providers, addresses, ...catalog }
+}
+
+// ─── Almacén con catálogo ────────────────────────────────────────────────────
+
+/**
+ * Un almacén con su nave, su taxonomía y su catálogo.
+ *
+ * Los tipos de ubicación se mezclan a propósito —pisos, racks, estantes y cajas— porque el árbol
+ * sólo se ve funcionar cuando tiene profundidad: con una lista plana de cajas, el código
+ * autogenerado, el camino a la raíz y la eliminación recursiva se comportan igual estén bien o mal.
+ */
+const CATEGORIES = [
+  { name: "Cámaras", children: ["Cuerpos", "Ópticas", "Monitores"] },
+  { name: "Iluminación", children: ["LED", "Tungsteno", "Accesorios de luz"] },
+  { name: "Grip", children: ["Tripiés", "Dollies"] },
+  { name: "Vestuario", children: ["Época", "Contemporáneo"] },
+] as const
+
+const GEAR = [
+  "Cámara Sony FX6",
+  "Cámara RED Komodo",
+  "Lente Zeiss 50mm",
+  "Lente Sigma 18-35",
+  "Monitor Atomos Ninja",
+  "Panel Aputure 300x",
+  "Fresnel Arri 650",
+  "Kino Flo 4Bank",
+  "Tripié Sachtler",
+  "Dolly Dana",
+  "Grúa Jimmy Jib",
+  "Estabilizador Ronin",
+  "Micrófono Sennheiser",
+  "Grabadora Zoom F8",
+  "Claqueta digital",
+  "Slider Rhino",
+  "Batería V-Mount",
+  "Cargador cuádruple",
+  "Difusor Chimera",
+  "Bandera 4x4",
+  "Rebotador 8x8",
+  "Traje de época 1920",
+  "Vestido de gala",
+  "Uniforme militar",
+] as const
+
+async function seedCatalogFor(companyId: string): Promise<{ products: number; units: number }> {
+  const [existing] = await db
+    .select({ id: warehouses.id })
+    .from(warehouses)
+    .where(and(eq(warehouses.companyId, companyId), isNull(warehouses.deletedAt)))
+    .limit(1)
+
+  const warehouseId = existing?.id ?? newId()
+
+  if (!existing) {
+    await db.insert(warehouses).values({
+      id: warehouseId,
+      companyId,
+      name: "Nave Monterrey",
+      description: "El almacén principal. Equipo de cámara, iluminación, grip y vestuario.",
+      slug: "nave-monterrey",
+      isPublished: true,
+      priority: "10",
+    })
+  }
+
+  const storageIds = await seedStorages(warehouseId)
+  const categoryIds = await seedWarehouseCategories(warehouseId)
+
+  const [already] = await db
+    .select({ value: count() })
+    .from(warehouseProducts)
+    .where(eq(warehouseProducts.warehouseId, warehouseId))
+
+  if ((already?.value ?? 0) > 0) {
+    const [units] = await db.select({ value: count() }).from(warehouseStockUnits)
+    return { products: already?.value ?? 0, units: units?.value ?? 0 }
+  }
+
+  let units = 0
+
+  for (const [index, name] of GEAR.entries()) {
+    const productId = newId()
+    await db.insert(warehouseProducts).values({
+      id: productId,
+      warehouseId,
+      name,
+      description: `${name}. Equipo de la nave, disponible para renta.`,
+      code: labelCode(),
+      slug: `${plain(name)
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")}`,
+      cost: String((index + 1) * 1500),
+      price: String((index + 1) * 350),
+      availableForRent: true,
+      availableForSale: index % 4 === 0,
+      isPublished: index % 3 !== 0,
+      storageId: storageIds[index % storageIds.length] ?? null,
+      categoryId: categoryIds[index % categoryIds.length] ?? null,
+      responsibleId: null,
+    })
+
+    // Dos medidas por producto, con existencias distintas: la disponibilidad por medida sólo se
+    // ve funcionar cuando las medidas no tienen el mismo número.
+    for (const [suffix, quantity] of [
+      ["Cuerpo", 2 + (index % 4)],
+      ["Kit completo", 1 + (index % 3)],
+    ] as const) {
+      const measurementId = newId()
+      await db.insert(warehouseMeasurements).values({
+        id: measurementId,
+        productId,
+        name: suffix,
+        dimensions: { height: 20 + index, width: 30, length: 40, weight: 2000 + index * 100 },
+      })
+
+      await db.insert(warehouseStockUnits).values(
+        Array.from({ length: quantity }, () => ({
+          id: newId(),
+          measurementId,
+          code: labelCode(),
+        })),
+      )
+      units += quantity
+    }
+  }
+
+  return { products: GEAR.length, units }
+}
+
+async function seedStorages(warehouseId: string): Promise<string[]> {
+  const existing = await db
+    .select({ id: warehouseStorages.id })
+    .from(warehouseStorages)
+    .where(eq(warehouseStorages.warehouseId, warehouseId))
+
+  if (existing.length > 0) return existing.map((row) => row.id)
+
+  const ids: string[] = []
+  let boxes = 0
+
+  for (const [floorIndex, floorName] of ["Planta baja", "Entrepiso"].entries()) {
+    const floorId = newId()
+    await db.insert(warehouseStorages).values({
+      id: floorId,
+      warehouseId,
+      kind: "floor",
+      code: `FLR${floorIndex + 1}`,
+      name: floorName,
+    })
+
+    for (let rackIndex = 0; rackIndex < 3; rackIndex++) {
+      const rackId = newId()
+      await db.insert(warehouseStorages).values({
+        id: rackId,
+        warehouseId,
+        parentId: floorId,
+        kind: "rack",
+        code: `RCK${floorIndex * 3 + rackIndex + 1}`,
+        name: `Rack ${floorIndex * 3 + rackIndex + 1}`,
+      })
+
+      for (let boxIndex = 0; boxIndex < 2; boxIndex++) {
+        boxes += 1
+        const boxId = newId()
+        await db.insert(warehouseStorages).values({
+          id: boxId,
+          warehouseId,
+          parentId: rackId,
+          kind: "box",
+          code: `BOX${boxes}`,
+          name: `Caja ${boxes}`,
+        })
+        ids.push(boxId)
+      }
+    }
+  }
+
+  return ids
+}
+
+async function seedWarehouseCategories(warehouseId: string): Promise<string[]> {
+  const existing = await db
+    .select({ id: warehouseCategories.id })
+    .from(warehouseCategories)
+    .where(eq(warehouseCategories.warehouseId, warehouseId))
+
+  if (existing.length > 0) return existing.map((row) => row.id)
+
+  const leaves: string[] = []
+
+  for (const entry of CATEGORIES) {
+    const parentId = newId()
+    await db.insert(warehouseCategories).values({
+      id: parentId,
+      warehouseId,
+      name: entry.name,
+      slug: plain(entry.name),
+    })
+
+    for (const child of entry.children) {
+      const childId = newId()
+      await db.insert(warehouseCategories).values({
+        id: childId,
+        warehouseId,
+        parentId,
+        name: child,
+        slug: plain(child).replace(/[^a-z0-9]+/g, "-"),
+      })
+      leaves.push(childId)
+    }
+  }
+
+  return leaves
+}
+
+/** Mismo alfabeto que el catálogo: sin caracteres que se confundan en una etiqueta impresa. */
+const LABEL_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+function labelCode(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(12))
+  return Array.from(bytes, (byte) => LABEL_ALPHABET[byte % LABEL_ALPHABET.length]).join("")
 }
 
 async function seedTeammates(passwordHash: string, companyId: string): Promise<number> {
@@ -647,6 +880,7 @@ function report(companyIds: Map<string, string>, volume: VolumeReport): void {
     "",
     "  Volumen en Renta Fílmica del Norte, para que las colecciones se comporten como tales:",
     `    ${volume.teammates} personas · ${volume.clients} clientes · ${volume.providers} proveedores · ${volume.addresses} direcciones`,
+    `    Nave Monterrey: ${volume.products} productos · ${volume.units} unidades · 12 cajas en dos pisos`,
     "",
     `  Identificadores: ${[...companyIds.values()].join(", ")}`,
     "",
