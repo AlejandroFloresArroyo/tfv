@@ -106,13 +106,13 @@ Lo construido hasta ahora, medido y no estimado:
 | | |
 |---|---|
 | Rebanadas | 8 de 30 empezadas, **ninguna cerrada del todo** |
-| Código sin pruebas | 24 909 líneas |
-| Código de prueba | 7 054 líneas |
-| Pruebas | **359** — 59 contratos, 59 datos, 174 API, 28 web, 39 de extremo a extremo |
+| Código sin pruebas | 26 787 líneas |
+| Código de prueba | 7 861 líneas |
+| Pruebas | **385** — 59 contratos, 59 datos, 200 API, 28 web, 39 de extremo a extremo |
 | Esquema | 91 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
 | Aislamiento | 195 políticas · 91/91 tablas · 0 con identidad cruda |
 | Migraciones | 10, replicadas desde cero en cada verificación |
-| Rutas | **73** registradas, 51 con permiso declarado, 10 públicas y enumeradas |
+| Rutas | **88** registradas, 66 con permiso declarado, 10 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
 | Pantallas | 17, en español e inglés (261 mensajes, sin desalinear) |
 
@@ -171,7 +171,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 12 | `migrate-warehouse-catalog` | 🟡 | Almacén, ubicaciones, taxonomía y catálogo con medidas. Faltan las listas de precios y la gestión de unidades |
+| 12 | `migrate-warehouse-catalog` | 🟡 | Entera salvo lo que depende de documentos que no existen: las comprobaciones de compromiso necesitan las rebanadas 14 y 15 |
 | 13 | `add-transactional-stock-reservation` | ⬜ | **Bloqueada**: decisión M-04 |
 | 14 | `add-server-side-quotation-pricing` | ⬜ | **Bloqueada**: decisión M-05 |
 | 15 | `migrate-warehouse-orders` | ⬜ | |
@@ -210,11 +210,12 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 En este orden, y con el motivo de que sea ése:
 
-1. **Lo que queda de almacenes** (rebanada 12): las listas de precios con su precedencia, y la
-   gestión de unidades de existencia —los once estados, las transiciones, las etiquetas y el
-   historial—. El catálogo ya materializa unidades; lo que falta es moverlas.
-2. **Las pantallas de almacenes** (29b), empezando por el árbol de ubicaciones como jerarquía
-   navegable, que es lo único de la 12 que no se puede comprobar sin pantalla.
+1. **Las pantallas de almacenes** (29b): el catálogo con su rejilla, el árbol de ubicaciones como
+   jerarquía navegable, y el detalle de producto con sus medidas y su disponibilidad. Es todo lo que
+   la 12 dejó hecho y no se puede mirar.
+2. **Reserva transaccional de existencias** (rebanada 13) y **cotizaciones** (14). Son lo que
+   convierte el inventario en comercio, y lo que desbloquea las tres comprobaciones de compromiso
+   que la 12 dejó anotadas. La 13 espera la decisión M-04.
 3. **Lo que queda de la 10**: prospectos, cambio de correo, y las comprobaciones de «en uso» que
    necesitan documentos que aún no existen. El cambio de correo bloquea además la pantalla de
    perfil, que hoy no lo ofrece.
@@ -1360,3 +1361,78 @@ eliminación recursiva se comportan igual estén bien o mal.
 Las listas de precios con su precedencia, y la gestión de unidades —los once estados, las
 transiciones, las etiquetas y el historial—. Y las dos comprobaciones de compromiso —no eliminar un
 producto ni una medida con unidades reservadas— que necesitan las cotizaciones y los pedidos.
+
+### 2026-08-17 · Los precios y las existencias
+
+Cierre de la parte de la rebanada **12** que no depende de nadie: listas de precios con su
+precedencia, y la gestión de unidades. Quince rutas más —**88** en total— y **26 pruebas**. Total
+**385**.
+
+**La precedencia vive en un solo sitio**
+
+| # | Origen | Aplica a |
+|---|---|---|
+| 1 | Tarifa del producto en la lista aplicable | Venta y renta |
+| 2 | Precio escalar del producto | Sólo venta |
+| 3 | Cero | Último recurso |
+
+Escrita una vez. Repartida por las cotizaciones, la tienda pública y el punto de venta, se convierte
+en tres reglas que coinciden hasta que alguien toca una — y entonces el mismo producto vale distinto
+según por dónde se mire, que es la clase de discrepancia que nadie atribuye a su causa.
+
+Dos consecuencias que conviene tener escritas:
+
+- **El escalar no aplica a la renta.** Cobrar el precio de venta por un día de renta es un error de
+  tres órdenes de magnitud, y de los que se descubren después de emitir la factura.
+- **El cero no es un precio, es la ausencia de uno.** Se devuelve marcado como tal, porque un
+  producto a cero en una cotización casi siempre es un producto sin tarifa, no un regalo.
+
+**L-04, corregido y con su prueba**
+
+Establecer el conjunto de productos de una lista añadía los que faltaban y **no retiraba los que
+sobraban**: la implementación anterior calculaba altas y bajas con el mismo criterio, así que la
+lista de bajas salía siempre vacía. Retirar un producto de una lista no surtía efecto nunca, y se
+descubría al facturar.
+
+Ahora las dos direcciones se calculan con criterios opuestos —lo pedido que no está, y lo que está y
+no se pidió—, y hay una prueba que empieza con A, B y C, pide A y D, y comprueba que quedan
+exactamente A y D. Quien ya tenía tarifa la conserva: «establecer el conjunto» no es «rehacer la
+lista».
+
+**Los once estados, en tres grupos**
+
+| Grupo | Estados | Qué significan juntos |
+|---|---|---|
+| Compromiso | disponible, en cotización, en pedido | Reversibles, y los dos últimos los mueve un documento |
+| Salida | rentada, vendida, gastada | La unidad no está en la nave |
+| Incidencia | perdida, dañada, robada, incompleta, modificada | Está o no está, pero no sirve |
+
+Y dos reglas que separan los grupos, las dos para que el inventario y los documentos no se
+contradigan:
+
+- **Un compromiso vigente bloquea el cambio manual.** Liberar una unidad reservada se hace
+  deshaciendo el compromiso, no marcándola disponible por detrás.
+- **Una salida definitiva no vuelve.** Una vendida no se recupera con un cambio de estado; una
+  dañada sí, porque se repara. La distinción es la que decide qué se puede arreglar y qué hay que
+  dar de alta de nuevo.
+
+«Rentada» **no** cuenta como compromiso a estos efectos, y es deliberado: la unidad ya salió de la
+nave, y marcarla perdida o dañada al volver es exactamente lo que hay que poder hacer a mano.
+
+**La modificación masiva comprueba antes de escribir**
+
+Aunque la transacción revertiría igual, comprobar todas antes permite decir en el mensaje cuántas y
+cuáles fallan, en lugar de sólo la primera. Con veinte unidades seleccionadas, saber que son tres y
+cuáles es la diferencia entre corregir y volver a intentarlo a ciegas.
+
+**Y el alta también deja rastro**
+
+Sin el momento inicial, el historial de una unidad empieza en su segundo estado y no se puede
+reconstruir de dónde salió. Es el requisito que la pila anterior no cumplía en absoluto: allí sólo
+se conocía el estado final, y por eso **el historial no se puede reconstruir retroactivamente en el
+corte**. Empieza donde empiece la pila nueva.
+
+**Abierto de la 12**
+
+Las tres comprobaciones de compromiso sobre productos y medidas —las de unidades ya están— y las
+etiquetas imprimibles, que son pantalla. El código ya usa el alfabeto que la etiqueta necesita.

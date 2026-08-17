@@ -2,8 +2,9 @@
 
 Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falta anotada.
 
-Hechos **el almacén, su árbol de ubicaciones, su taxonomía y el catálogo con medidas**. Faltan las
-listas de precios y la gestión de unidades de existencia.
+**Hecha entera salvo lo que depende de documentos que aún no existen**: las tres comprobaciones de
+compromiso necesitan las cotizaciones (14) y los pedidos (15), y las etiquetas imprimibles son
+pantalla (29b).
 
 ## Almacén
 
@@ -50,7 +51,8 @@ listas de precios y la gestión de unidades de existencia.
       que se heredan; el nombre y el precio de una variante son suyos
 - [x] Listados que muestran sólo los productos raíz
 - [~] Eliminación que arrastra la estructura. **Falta la comprobación de compromisos**: necesita las
-      cotizaciones (14) y los pedidos (15), que son quienes reservarían
+      cotizaciones (14) y los pedidos (15), que son quienes reservarían. Lo que sí está es la
+      comprobación sobre las **unidades**, que ya se rechaza si están comprometidas
 - [x] Clasificación doble: categoría de almacén y global, independientes
 - [x] Publicación e identificador legible
 - [x] Disponibilidad independiente para venta y para renta
@@ -73,22 +75,37 @@ listas de precios y la gestión de unidades de existencia.
 
 ## Precios
 
-- [ ] Listas de precios por almacén
-- [ ] Tarifas de venta, renta y penalización, fijas o por periodicidad
-- [ ] Precedencia de precio, en un solo lugar del código
-- [ ] **Corregir la asignación masiva para que ejecute las bajas**
-- [ ] Eliminar una lista no borra los productos
+- [x] Listas de precios por almacén, con cuántos productos tienen tarifa en cada una
+- [x] Tarifas de venta, renta y penalización, fijas o por periodicidad. **Una tarifa fija ignora la
+      frecuencia**, y por eso se mira primero: mirarla después haría que una fija con un importe
+      diario suelto cobrara el diario
+- [x] Precedencia de precio, **en un solo lugar del código**. Repartida por cotizaciones, tienda y
+      punto de venta, se convierte en tres reglas que coinciden hasta que alguien toca una
+- [x] **Corregir la asignación masiva para que ejecute las bajas** (L-04). Las dos direcciones se
+      calculan ahora con criterios opuestos; antes se calculaban con el mismo y la lista de bajas
+      salía siempre vacía
+- [x] Eliminar una lista no borra los productos. Lo que desaparece es el precio que la lista les
+      daba, y quien resuelva después cae al escalar o a cero: es la precedencia funcionando
+- [x] El cero se devuelve **marcado como ausencia de precio**, no como precio: un producto a cero en
+      una cotización casi siempre es un producto sin tarifa, no un regalo
+- [x] El ajuste de la medida se suma **en centavos y con enteros**: `0.1 + 0.2` no es `0.3` en coma
+      flotante, y mil productos convierten eso en una factura que no cuadra por unos pesos
 
 ## Unidades
 
-- [ ] Una fila por objeto físico, con código único e inmutable
-- [ ] Once estados
-- [ ] Alta individual y masiva
-- [ ] Modificación individual y masiva, atómica
-- [ ] Rechazo del cambio manual sobre unidad comprometida
-- [ ] Estados terminales no vuelven a comprometerse
-- [ ] Recuperación explícita de las unidades de incidencia
-- [ ] Etiquetas individuales y en lote, en ambos formatos
-- [ ] Localización por código
-- [ ] Historial de cambio de estado con motivo y responsable
-- [ ] Decidir si el historial se reconstruye en el corte
+- [x] Una fila por objeto físico, con código único e inmutable
+- [x] Once estados, en tres grupos: compromiso, salida e incidencia
+- [x] Alta individual y masiva — es la misma operación, porque son la misma fila repetida
+- [x] Modificación individual y masiva, **atómica**: si una no admite el cambio, no cambia ninguna
+- [x] Rechazo del cambio manual sobre unidad comprometida. Liberarla se hace deshaciendo el
+      compromiso, o la cotización seguiría diciendo que la tiene
+- [x] Estados terminales no vuelven. Una vendida no se recupera con un cambio de estado
+- [x] Recuperación explícita de las unidades de incidencia: las dañadas se reparan y vuelven
+- [ ] Etiquetas individuales y en lote, en ambos formatos — es pantalla (29b). El código ya usa el
+      alfabeto de Crockford, que es lo que la etiqueta necesita del servidor
+- [x] Localización por código, con producto, medida, ubicación y estado. Cuelga del almacén y no de
+      la medida: quien lee la etiqueta **no sabe** de qué producto es, para eso la lee
+- [x] Historial de cambio de estado con motivo y responsable, **incluida el alta**: sin el momento
+      inicial el historial empieza en el segundo estado
+- [ ] Decidir si el historial se reconstruye en el corte — no se puede con fidelidad: de la pila
+      anterior sólo se conoce el estado final
