@@ -121,6 +121,26 @@ describe("filtros", () => {
     expect(query.filters.price).toEqual({ kind: "range", from: 100, to: 500 })
   })
 
+  it("el extremo superior de un intervalo de fechas incluye el día entero", () => {
+    // Sin esto, `hasta=2026-12-31` significa «hasta la medianoche del 31» y deja fuera todo lo
+    // ocurrido ese día — el día que la persona acaba de pedir en el calendario.
+    const query = parse({ createdAt: ["2026-01-01", "2026-12-31"] })
+    const range = query.filters.createdAt
+
+    expect(range?.kind).toBe("range")
+    if (range?.kind !== "range") return
+    expect((range.from as Date).toISOString()).toBe("2026-01-01T00:00:00.000Z")
+    expect((range.to as Date).toISOString()).toBe("2026-12-31T23:59:59.999Z")
+  })
+
+  it("un extremo superior con hora se respeta tal cual", () => {
+    const query = parse({ createdAt: ["2026-01-01", "2026-12-31T08:00:00Z"] })
+    const range = query.filters.createdAt
+
+    if (range?.kind !== "range") throw new Error("debería ser un intervalo")
+    expect((range.to as Date).toISOString()).toBe("2026-12-31T08:00:00.000Z")
+  })
+
   it("rechaza un intervalo en un campo que no lo admite", () => {
     expect(() => parse({ published: ["true", "false"] })).toThrow(ValidationError)
   })

@@ -273,6 +273,22 @@ function parseFilters(
   return filters
 }
 
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * El extremo superior de un intervalo de fechas incluye el día entero.
+ *
+ * `2026-12-31` se convierte en la medianoche de ese día, así que un intervalo que termine ahí
+ * dejaría fuera todo lo ocurrido durante el 31 — el día que el usuario acaba de pedir. El intervalo
+ * es cerrado por contrato, y para una fecha sin hora eso significa hasta el último instante.
+ *
+ * Sólo aplica cuando el valor viene **sin hora**: si alguien escribió una hora, la respetamos.
+ */
+function endOfBound(raw: string, value: ScalarValue | undefined): ScalarValue | undefined {
+  if (!(value instanceof Date) || !DATE_ONLY_PATTERN.test(raw.trim())) return value
+  return new Date(value.getTime() + 24 * 60 * 60 * 1000 - 1)
+}
+
 function parseFilterValue(
   key: string,
   values: readonly string[],
@@ -288,7 +304,7 @@ function parseFilterValue(
       return undefined
     }
     const from = coerce(values[0] as string, definition, key, issues)
-    const to = coerce(values[1] as string, definition, key, issues)
+    const to = endOfBound(values[1] as string, coerce(values[1] as string, definition, key, issues))
     if (from === undefined || to === undefined) return undefined
     return { kind: "range", from, to }
   }
