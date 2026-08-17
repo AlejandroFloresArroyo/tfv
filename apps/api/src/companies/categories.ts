@@ -21,7 +21,7 @@
  * restricción, y la consulta que lo detecta es recursiva.
  */
 
-import { NotFoundError, newId, UnprocessableError } from "@tfv/contracts"
+import { NotFoundError, newId, slugCandidate, slugify, UnprocessableError } from "@tfv/contracts"
 import { type Transaction, withElevated, withRequester } from "@tfv/db"
 import { globalCategories, services } from "@tfv/db/schema"
 import { and, asc, eq, isNull, sql } from "drizzle-orm"
@@ -268,10 +268,10 @@ async function countSubtree(tx: Transaction, categoryId: string): Promise<number
  * una decisión de negocio.
  */
 async function freeSlug(tx: Transaction, name: string): Promise<string> {
-  const base = slugify(name)
+  const base = slugify(name, "categoria")
 
-  for (let suffix = 0; suffix < 100; suffix++) {
-    const candidate = suffix === 0 ? base : `${base}-${suffix + 1}`
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const candidate = slugCandidate(base, attempt)
 
     const [taken] = await tx
       .select({ id: globalCategories.id })
@@ -284,19 +284,6 @@ async function freeSlug(tx: Transaction, name: string): Promise<string> {
 
   // Cien colisiones del mismo nombre no es un caso de negocio: es un error o un abuso.
   throw new UnprocessableError("Demasiadas categorías con ese nombre")
-}
-
-function slugify(name: string): string {
-  return (
-    name
-      .normalize("NFD")
-      // Se retiran los diacríticos, no las letras: «Iluminación» da `iluminacion`, no `iluminacin`.
-      .replace(/[̀-ͯ]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "categoria"
-  )
 }
 
 async function findServiceId(tx: Transaction, keycode: string): Promise<string> {
