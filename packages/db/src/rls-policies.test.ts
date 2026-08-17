@@ -1,0 +1,457 @@
+/**
+ * Políticas de aislamiento sobre las tablas reales.
+ *
+ * Ver `openspec/specs/access-control/spec.md` y `drizzle/0005_rls_policies.sql`.
+ *
+ * `tenant-context.test.ts` comprueba el **mecanismo** —cómo llega la identidad al motor— sobre una
+ * tabla de sonda. Esto comprueba las **políticas del dominio**: que la composición padre → hijo
+ * llega hasta el fondo, que leer no implica escribir, y que las excepciones deliberadas —el chat
+ * con el cliente, el directorio de locaciones, el catálogo de plataforma— son las únicas que hay.
+ *
+ * Ninguna consulta de aquí lleva filtro de aplicación. Lo que devuelvan sale sólo de las políticas.
+ *
+ * Requiere la pila local de Supabase: `pnpm db:up`.
+ */
+
+import { newId } from "@tfv/contracts"
+import { sql } from "drizzle-orm"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { closeConnection, db, type Transaction, withRequester, withSystem } from "./index.ts"
+
+// ─── Sembrado ────────────────────────────────────────────────────────────────
+
+/**
+ * Dos arrendatarios completos, y un tercer principal que no es miembro de ninguno.
+ *
+ * `cliente` es la figura interesante: compra en la tienda de A y es la contraparte de un pedido de
+ * A. Ve cosas de A sin ser miembro de A, que es justo el caso que las políticas tienen que acotar.
+ */
+const seed = {
+  ana: newId(),
+  beto: newId(),
+  cliente: newId(),
+  admin: newId(),
+  companyA: newId(),
+  companyB: newId(),
+  warehouseA: newId(),
+  warehouseB: newId(),
+  productA: newId(),
+  productionA: newId(),
+  productionB: newId(),
+  recordingA: newId(),
+  continuityA: newId(),
+  itemA: newId(),
+  propA: newId(),
+  counterpartyA: newId(),
+  orderA: newId(),
+  buyerOrderA: newId(),
+  networkB: newId(),
+  locationB: newId(),
+  categoryG: newId(),
+  sessionAna: newId(),
+  sessionBeto: newId(),
+  sessionCliente: newId(),
+  sessionAdmin: newId(),
+  sessionCerrada: newId(),
+}
+
+/** Cada principal opera con su sesión: el motor comprueba que sigue viva en cada transacción. */
+const identity = (userId: string) => ({ userId, sessionId: sessionOf[userId] as string })
+
+const sessionOf: Record<string, string> = {}
+
+async function reset() {
+  const rows = await db.execute<{ relname: string }>(sql`
+    select c.relname from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind = 'r'
+  `)
+  const tables = [...rows].map((r) => `public."${r.relname}"`).join(", ")
+  await db.execute(sql.raw(`truncate table ${tables} cascade`))
+}
+
+const live = "now() + interval '1 hour', now() + interval '1 day'"
+
+async function sow() {
+  const s = seed
+  sessionOf[s.ana] = s.sessionAna
+  sessionOf[s.beto] = s.sessionBeto
+  sessionOf[s.cliente] = s.sessionCliente
+  sessionOf[s.admin] = s.sessionAdmin
+  await db.execute(
+    sql.raw(`
+    insert into users (id, email, username, is_platform_admin) values
+      ('${s.ana}',     'ana@a.mx',     'ana',     false),
+      ('${s.beto}',    'beto@b.mx',    'beto',    false),
+      ('${s.cliente}', 'cliente@c.mx', 'cliente', false),
+      ('${s.admin}',   'admin@tfv.mx', 'admin',   true);
+
+    insert into companies (id, name) values
+      ('${s.companyA}', 'Empresa A'), ('${s.companyB}', 'Empresa B');
+
+    insert into company_members (id, company_id, user_id) values
+      ('${newId()}', '${s.companyA}', '${s.ana}'),
+      ('${newId()}', '${s.companyB}', '${s.beto}');
+
+    insert into warehouses (id, company_id, name) values
+      ('${s.warehouseA}', '${s.companyA}', 'Almacén A'),
+      ('${s.warehouseB}', '${s.companyB}', 'Almacén B');
+
+    insert into warehouse_products (id, warehouse_id, name, code) values
+      ('${s.productA}', '${s.warehouseA}', 'Cámara', 'CAM-1');
+
+    insert into productions (id, company_id, name) values
+      ('${s.productionA}', '${s.companyA}', 'Rodaje A'),
+      ('${s.productionB}', '${s.companyB}', 'Rodaje B');
+
+    -- Cuatro saltos hasta la empresa: utilería → continuidad → jornada → producción → empresa.
+    insert into production_recordings (id, production_id, name)
+      values ('${s.recordingA}', '${s.productionA}', 'Jornada 1');
+    insert into production_continuities (id, recording_id)
+      values ('${s.continuityA}', '${s.recordingA}');
+    insert into production_items (id, production_id, name, code)
+      values ('${s.itemA}', '${s.productionA}', 'Reloj', 'UTL-1');
+    insert into production_props (id, continuity_id, item_id)
+      values ('${s.propA}', '${s.continuityA}', '${s.itemA}');
+
+    insert into counterparties (id, company_id, role, alias, user_id)
+      values ('${s.counterpartyA}', '${s.companyA}', 'client', 'Cliente', '${s.cliente}');
+
+    insert into warehouse_orders (id, warehouse_id, code, origin, client_id)
+      values ('${s.orderA}', '${s.warehouseA}', 'PED-1', 'storefront', '${s.counterpartyA}');
+
+    insert into buyer_orders (id, buyer_id, company_id, reference, subtotal, total)
+      values ('${s.buyerOrderA}', '${s.cliente}', '${s.companyA}', 'REF-1', '100.00', '100.00');
+
+    insert into location_networks (id, company_id, name)
+      values ('${s.networkB}', '${s.companyB}', 'Red B');
+    insert into locations (id, network_id, name)
+      values ('${s.locationB}', '${s.networkB}', 'Nave industrial');
+
+    insert into global_categories (id, name) values ('${s.categoryG}', 'Cine');
+
+    insert into sessions
+      (id, user_id, chain_id, access_token_hash, refresh_token_hash, access_expires_at, expires_at,
+       revoked_at)
+      values
+      ('${s.sessionAna}',     '${s.ana}',     '${newId()}', 'a1', 'r1', ${live}, null),
+      ('${s.sessionBeto}',    '${s.beto}',    '${newId()}', 'a2', 'r2', ${live}, null),
+      ('${s.sessionCliente}', '${s.cliente}', '${newId()}', 'a3', 'r3', ${live}, null),
+      ('${s.sessionAdmin}',   '${s.admin}',   '${newId()}', 'a4', 'r4', ${live}, null),
+      -- Cerrada: el token seguiría siendo válido por su cuenta, y aun así no debe servir.
+      ('${s.sessionCerrada}', '${s.ana}',     '${newId()}', 'a5', 'r5', ${live}, now());
+  `),
+  )
+}
+
+// ─── Utilidades ──────────────────────────────────────────────────────────────
+
+/** Cuenta filas **sin filtro de aplicación**: el resultado sale sólo de las políticas. */
+async function countAs(userId: string, table: string, where = "true") {
+  return withRequester(identity(userId), (tx) => count(tx, table, where))
+}
+
+async function count(tx: Transaction, table: string, where = "true") {
+  const rows = await tx.execute<{ total: number }>(
+    sql.raw(`select count(*)::int as total from ${table} where ${where}`),
+  )
+  return [...rows][0]?.total ?? -1
+}
+
+/** Lee un valor esquivando las políticas, para comprobar si una escritura llegó a ocurrir. */
+async function readElevated(query: string) {
+  const rows = await db.execute<Record<string, unknown>>(sql.raw(query))
+  return [...rows][0]
+}
+
+/**
+ * Comprueba que la escritura la rechazó una política, no otra cosa.
+ *
+ * Drizzle envuelve el error del controlador, así que el mensaje visible es «Failed query»; el
+ * código real vive en `cause`. `42501` es `insufficient_privilege`, con el que Postgres rechaza una
+ * fila que no satisface el `with check` de ninguna política aplicable.
+ */
+async function expectRejectedByPolicy(work: Promise<unknown>) {
+  let raised: unknown
+  try {
+    await work
+  } catch (error) {
+    raised = error
+  }
+
+  expect(raised, "se esperaba que una política rechazara la escritura").toBeDefined()
+  const cause = (raised as { cause?: { code?: string; message?: string } }).cause
+  expect(cause?.code, cause?.message).toBe("42501")
+}
+
+beforeAll(async () => {
+  await reset()
+  await sow()
+})
+
+afterAll(closeConnection)
+
+// ─── Estructura ──────────────────────────────────────────────────────────────
+
+describe("cobertura", () => {
+  it("todas las tablas tienen las políticas activadas y al menos una", async () => {
+    // **No borrar esta prueba.** La composición padre → hijo hace que una tabla intermedia sin
+    // políticas abra a todos sus descendientes sin que nada más lo delate.
+    const rows = await db.execute<{ relname: string; rls: boolean; politicas: number }>(sql`
+      select c.relname,
+             c.relrowsecurity as rls,
+             (select count(*)::int from pg_policy p where p.polrelid = c.oid) as politicas
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relkind = 'r'
+      order by c.relname
+    `)
+    const tablas = [...rows]
+
+    expect(tablas.length).toBe(91)
+    expect(tablas.filter((t) => !t.rls).map((t) => t.relname)).toEqual([])
+    expect(tablas.filter((t) => t.politicas === 0).map((t) => t.relname)).toEqual([])
+  })
+})
+
+// ─── Aislamiento ─────────────────────────────────────────────────────────────
+
+describe("aislamiento entre arrendatarios", () => {
+  it("sin identidad propagada no se devuelve ninguna fila de dominio", async () => {
+    const visible = await db.transaction(async (tx) => {
+      await tx.execute(sql`set local role authenticated`)
+      return count(tx, "productions")
+    })
+
+    expect(visible).toBe(0)
+  })
+
+  it("la composición llega hasta el cuarto salto", async () => {
+    // La política de `production_props` no menciona ninguna empresa: se apoya en la de su padre,
+    // que se apoya en la del suyo. Si algún eslabón se rompiera, esto devolvería 1 para Beto.
+    expect(await countAs(seed.ana, "production_props")).toBe(1)
+    expect(await countAs(seed.beto, "production_props")).toBe(0)
+  })
+
+  it("no se escribe en el almacén de otra empresa", async () => {
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.ana), (tx) =>
+        tx.execute(
+          sql.raw(`insert into warehouse_products (id, warehouse_id, name, code)
+                 values ('${newId()}', '${seed.warehouseB}', 'Intruso', 'X-1')`),
+        ),
+      ),
+    )
+  })
+
+  it("no se escribe en la jornada de otra empresa", async () => {
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.beto), (tx) =>
+        tx.execute(
+          sql.raw(`insert into production_props (id, continuity_id, item_id)
+                 values ('${newId()}', '${seed.continuityA}', '${seed.itemA}')`),
+        ),
+      ),
+    )
+  })
+})
+
+// ─── Leer no es escribir ─────────────────────────────────────────────────────
+
+describe("leer no implica escribir", () => {
+  it("el comercio lee al comprador de su pedido", async () => {
+    expect(await countAs(seed.ana, "users", `id = '${seed.cliente}'`)).toBe(1)
+  })
+
+  it("pero no puede modificarlo", async () => {
+    await withRequester(identity(seed.ana), (tx) =>
+      tx.execute(sql.raw(`update users set username = 'secuestrado' where id = '${seed.cliente}'`)),
+    )
+
+    const fila = await readElevated(`select username from users where id = '${seed.cliente}'`)
+    expect(fila?.["username"]).toBe("cliente")
+  })
+
+  it("el comprador lee su pedido", async () => {
+    expect(await countAs(seed.cliente, "buyer_orders")).toBe(1)
+  })
+
+  it("pero no puede añadirle líneas", async () => {
+    // El hijo atraviesa hasta la empresa justamente para que esto falle: si compusiera con
+    // `buyer_orders` a secas, la lectura del comprador bastaría para escribir.
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.cliente), (tx) =>
+        tx.execute(
+          sql.raw(`insert into buyer_order_lines (id, order_id, line)
+                 values ('${newId()}', '${seed.buyerOrderA}', '{}'::jsonb)`),
+        ),
+      ),
+    )
+  })
+
+  it("nadie se da de alta a sí mismo en una empresa ajena", async () => {
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.cliente), (tx) =>
+        tx.execute(
+          sql.raw(`insert into company_members (id, company_id, user_id)
+                 values ('${newId()}', '${seed.companyA}', '${seed.cliente}')`),
+        ),
+      ),
+    )
+  })
+})
+
+// ─── La contraparte ──────────────────────────────────────────────────────────
+
+describe("la contraparte de un documento", () => {
+  it("ve el pedido que le hicieron, aunque la ficha de contraparte no sea suya", async () => {
+    expect(await countAs(seed.cliente, "warehouse_orders")).toBe(1)
+    // La fila que la enlaza pertenece al proveedor y sigue oculta para ella.
+    expect(await countAs(seed.cliente, "counterparties")).toBe(0)
+  })
+
+  it("no lo modifica", async () => {
+    await withRequester(identity(seed.cliente), (tx) =>
+      tx.execute(
+        sql.raw(`update warehouse_orders set code = 'MANIPULADO'
+                          where id = '${seed.orderA}'`),
+      ),
+    )
+
+    const fila = await readElevated(`select code from warehouse_orders where id = '${seed.orderA}'`)
+    expect(fila?.["code"]).toBe("PED-1")
+  })
+
+  it("sí escribe en el chat, que es la única superficie donde puede", async () => {
+    await withRequester(identity(seed.cliente), (tx) =>
+      tx.execute(
+        sql.raw(`insert into warehouse_order_messages (id, order_id, side, author_id, body)
+                 values ('${newId()}', '${seed.orderA}', 'client', '${seed.cliente}', 'Hola')`),
+      ),
+    )
+
+    expect(await countAs(seed.cliente, "warehouse_order_messages")).toBe(1)
+    expect(await countAs(seed.ana, "warehouse_order_messages")).toBe(1)
+    expect(await countAs(seed.beto, "warehouse_order_messages")).toBe(0)
+  })
+})
+
+// ─── Superficies abiertas a propósito ────────────────────────────────────────
+
+describe("catálogo de plataforma", () => {
+  it("lo lee cualquiera", async () => {
+    expect(await countAs(seed.beto, "global_categories")).toBe(1)
+  })
+
+  it("no lo escribe cualquiera", async () => {
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.beto), (tx) =>
+        tx.execute(
+          sql.raw(`insert into global_categories (id, name) values ('${newId()}', 'Falsa')`),
+        ),
+      ),
+    )
+  })
+})
+
+describe("directorio de locaciones", () => {
+  it("una empresa ve las locaciones de otra: para eso es un directorio", async () => {
+    expect(await countAs(seed.ana, "locations")).toBe(1)
+  })
+
+  it("pero no cuelga nada de ellas", async () => {
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.ana), (tx) =>
+        tx.execute(
+          sql.raw(`insert into location_tags (id, location_id, category_id)
+                 values ('${newId()}', '${seed.locationB}', '${seed.categoryG}')`),
+        ),
+      ),
+    )
+  })
+
+  it("ni ve la red a la que pertenecen", async () => {
+    expect(await countAs(seed.ana, "location_networks")).toBe(0)
+  })
+})
+
+// ─── Administración de plataforma ────────────────────────────────────────────
+
+describe("administrador de plataforma", () => {
+  it("cruza empresas", async () => {
+    expect(await countAs(seed.admin, "productions")).toBe(2)
+    expect(await countAs(seed.admin, "production_props")).toBe(1)
+  })
+
+  it("no alcanza las sesiones de nadie más que las suyas", async () => {
+    // El requisito le concede el papel de propietario **de una empresa**. La credencial de otra
+    // persona no es dato de ninguna empresa.
+    expect(await countAs(seed.admin, "sessions", `user_id <> '${seed.admin}'`)).toBe(0)
+    expect(await countAs(seed.beto, "sessions")).toBe(1)
+  })
+
+  it("no alcanza las credenciales de un solo uso", async () => {
+    expect(await countAs(seed.admin, "one_time_credentials")).toBe(0)
+  })
+})
+
+// ─── Revocación ──────────────────────────────────────────────────────────────
+
+describe("revocación inmediata", () => {
+  it("una sesión cerrada no ve nada, aunque su token siga sin caducar", async () => {
+    // El caso que decidió pagar la consulta: el token es válido por sí mismo y aun así no sirve.
+    const cerrada = { userId: seed.ana, sessionId: seed.sessionCerrada }
+
+    expect(await withRequester(cerrada, (tx) => count(tx, "productions"))).toBe(0)
+    expect(await withRequester(cerrada, (tx) => count(tx, "users"))).toBe(0)
+  })
+
+  it("y tampoco escribe", async () => {
+    await expectRejectedByPolicy(
+      withRequester({ userId: seed.ana, sessionId: seed.sessionCerrada }, (tx) =>
+        tx.execute(
+          sql.raw(`insert into warehouse_products (id, warehouse_id, name, code)
+                   values ('${newId()}', '${seed.warehouseA}', 'Tras cerrar', 'X-2')`),
+        ),
+      ),
+    )
+  })
+
+  it("una sesión que no existe tampoco sirve", async () => {
+    const inventada = { userId: seed.ana, sessionId: newId() }
+
+    expect(await withRequester(inventada, (tx) => count(tx, "productions"))).toBe(0)
+  })
+
+  it("desactivar la cuenta corta el acceso en la petición siguiente", async () => {
+    expect(await countAs(seed.beto, "productions")).toBe(1)
+
+    await db.execute(sql.raw(`update users set is_active = false where id = '${seed.beto}'`))
+    expect(await countAs(seed.beto, "productions")).toBe(0)
+
+    // Y reactivarla lo devuelve, sin tocar la sesión: la identidad se resuelve viva, no en el token.
+    await db.execute(sql.raw(`update users set is_active = true where id = '${seed.beto}'`))
+    expect(await countAs(seed.beto, "productions")).toBe(1)
+  })
+
+  it("un administrador con la sesión cerrada deja de cruzar empresas", async () => {
+    expect(await countAs(seed.admin, "productions")).toBe(2)
+
+    await db.execute(
+      sql.raw(`update sessions set revoked_at = now()
+                              where id = '${seed.sessionAdmin}'`),
+    )
+    expect(await countAs(seed.admin, "productions")).toBe(0)
+
+    await db.execute(
+      sql.raw(`update sessions set revoked_at = null
+                              where id = '${seed.sessionAdmin}'`),
+    )
+  })
+
+  it("el contexto de sistema no necesita sesión", async () => {
+    // No hay usuario que revocar: su alcance lo declara y lo hace cumplir `app.system_scope()`.
+    const visible = await withSystem("prueba", [seed.companyA], (tx) => count(tx, "productions"))
+
+    expect(visible).toBe(1)
+  })
+})
