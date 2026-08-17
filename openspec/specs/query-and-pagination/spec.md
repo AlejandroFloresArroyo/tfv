@@ -167,10 +167,12 @@ Este es el registro; es parte del contrato y no un detalle de implementación:
 | Recurso | Campos de búsqueda |
 |---|---|
 | Usuario, prospecto | nombre, apellido |
-| Cliente, proveedor | alias, nombre y apellido del usuario |
-| Empresa, dirección, envío, pago, checkout | nombre |
+| Cliente, proveedor | alias y los datos copiados: nombre, apellido, correo, razón social |
+| Empresa, envío, pago, checkout | nombre |
+| Dirección | etiqueta, calle, ciudad |
+| Rol | nombre |
 | Actividad de empresa | nombre, descripción |
-| Membresía | nombre y apellido del usuario |
+| Membresía | nombre y apellido del usuario, correo |
 | Servicio | nombre, descripción, keycode |
 | Almacén, lista de precios | nombre, descripción |
 | Categoría de almacén, de producción | nombre, descripción, slug |
@@ -196,7 +198,21 @@ Este es el registro; es parte del contrato y no un detalle de implementación:
 | Tienda pública | nombre, descripción, slug, nombre de la categoría |
 
 Los recursos que no aparecen en el registro **no admiten búsqueda por texto**: unidades de stock,
-ubicaciones, ventas, sesiones de caja, categorías globales y mensajes de chat.
+ubicaciones, ventas, sesiones de caja, sesiones de cuenta, categorías globales y mensajes de chat.
+
+> **Cuatro entradas corregidas al implementarlas** (2026-08-17, rebanada 28d). Las tres primeras
+> nombraban campos que en esta base no existen o no sirven; la cuarta faltaba.
+>
+> - **Cliente y proveedor** decían «nombre y apellido del usuario». Media cartera **no tiene
+>   usuario** —son contrapartes externas, que es el caso que la entidad existe para admitir—, así
+>   que buscar por el usuario dejaba fuera precisamente a quien no está en la plataforma. Se busca
+>   sobre los datos copiados, que es donde vive el nombre en los dos casos.
+> - **Dirección** decía «nombre». El «nombre» de una dirección es su etiqueta, y casi siempre está
+>   vacía: nadie bautiza sus direcciones, y en cambio todo el mundo las reconoce por su calle y su
+>   ciudad.
+> - **Membresía** decía «nombre y apellido del usuario». El correo es como se incorpora a alguien y
+>   lo que la pantalla muestra bajo su nombre; buscar una lista por lo que enseña es el mínimo.
+> - **Rol** no aparecía, y no estaba entre las exclusiones deliberadas de abajo: era una omisión.
 
 #### Scenario: La búsqueda ignora acentos y mayúsculas
 

@@ -46,19 +46,52 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 
 ## 28d · Exploración de colecciones
 
-Sin empezar. Llega cuando haya colecciones que explorar — hoy no hay ningún manejador de dominio.
+**El estado de exploración vive en la dirección.** Búsqueda, filtros, página y tamaño son
+parámetros de la URL, no estado de un componente; de ahí salen las tres propiedades que la spec
+pide —compartir por enlace, retroceder para deshacer, recargar sin perder— sin escribir código para
+ninguna. La pantalla es de servidor y no guarda nada.
 
-- [ ] Búsqueda con retardo, que reinicia la página
-- [ ] Filtros con los nueve tipos de control
-- [ ] Indicadores de filtro activo, con retirada individual
-- [ ] Limpieza total de filtros y búsqueda
-- [ ] Paginación con ventana según ancho y selector de tamaño
-- [ ] Supresión del reinicio de página con diálogo abierto
-- [ ] Rejilla, lista y carrusel
-- [ ] Tarjeta universal
-- [ ] Estados de carga, vacío, sin resultados y error
-- [ ] **Invalidación por recurso, sustituyendo las llamadas manuales de refresco**
-- [ ] Retirar el reflejo global de resultados de consulta
+Antes hizo falta que la API supiera hablar: los seis listados devolvían una lista pelada. Ahora
+hablan el lenguaje de `query-and-pagination`, con la gramática cerrada y el sobre uniforme.
+
+- [x] Búsqueda con retardo, que reinicia la página. **Insensible a acentos en el motor**, no en el
+      cliente: normalizar sólo el término buscado no encuentra «Cámara» al escribir «camara»,
+      porque lo que hay que comparar son las mil filas
+- [~] Filtros por tipo de control. Están **los cinco que algún recurso declara**: texto, selección
+      simple, selección múltiple, booleano e intervalo de fechas. Faltan número, intervalo numérico
+      y fecha suelta — ningún recurso los declara todavía, y un control sin nada que filtrar se
+      escribe a ciegas. La spec enumera **ocho**, no nueve; esta lista decía nueve por error
+- [x] Indicadores de filtro activo, con retirada individual — de una selección múltiple se quita
+      **un** valor y los demás siguen
+- [x] Limpieza total de filtros y búsqueda, conservando vista y tamaño de página: son cómo se mira
+      la colección, no qué parte se mira
+- [x] Paginación con ventana según ancho y selector de tamaño. La ventana se estrecha **con clases**
+      y no midiendo, para que el servidor pinte ya lo correcto
+- [x] Supresión del reinicio de página con diálogo abierto. Sale gratis: guardar vuelve a resolver
+      el árbol de servidor y **no toca la dirección**, y la página es la dirección
+- [~] Rejilla y lista, con la misma tarjeta y las mismas acciones. **Falta el carrusel**: ninguna
+      pantalla lo pide, y las que lo pedirán —tiendas públicas, 29e— traen sus propias medidas
+- [x] Tarjeta universal, con el nombre en un encabezado y una lista de verdad debajo
+- [x] Estados de vacío, sin resultados y error, con reintento sin recargar. **Sin estado de carga
+      del listado**: lo resuelve el servidor, así que cuando se pinta los datos están; la espera que
+      sí existe —volver a resolver tras cambiar un filtro— la lleva la barra, sin mover nada
+- [x] **Invalidación por recurso**: `router.refresh()` vuelve a resolver el árbol entero desde el
+      servidor. Una llamada por mutación, no una por consulta afectada
+- [x] Retirar el reflejo global de resultados de consulta — no hay ninguno que retirar: con
+      pantallas de servidor no hay caché de cliente que sincronizar
+
+### Lo que la API tuvo que aprender
+
+- [x] Puente del lenguaje de consulta a SQL, con **cuatro operadores y ni uno más**: igual,
+      intervalo, conjunto y nulo. No hay forma de expresar otro desde la barra de direcciones
+- [x] Declaración de recurso —qué se filtra, qué se busca, por qué se ordena— junto a cada listado
+- [x] **Orden estable obligatorio**: el desempate va siempre al final, porque sin él paginar repite
+      elementos en una página y se salta otros en la siguiente
+- [x] Normalización de texto en el motor (`app.norm`, migración 0009), **inmutable** por si un día
+      se indexa
+- [x] Sobre de paginación uniforme y parámetros documentados en el contrato publicado
+- [ ] La taxonomía global sigue sin paginar: su listado por defecto son **las raíces**, y «ausente»
+      no es «nulo» en la gramática. Llega con las taxonomías de almacén y producción (12 y 20)
 
 ## 28e · Formularios
 
@@ -118,10 +151,26 @@ así se prueba lo que se despliega, y correr las pruebas no interfiere con el `p
       red los pone la prueba y contar es fiable
 - [x] Crear un elemento lo hace aparecer en su listado **sin recargar**, y persiste
 - [x] La confirmación destructiva nombra la entidad y enumera la cascada
-- [ ] Editar desde una página interior no devuelve a la primera — necesita paginación (28d)
+- [x] **Editar desde una página interior no devuelve a la primera** — lo que faltaba era paginación
+- [x] Un listado filtrado se comparte por enlace, retroceder deshace y recargar conserva
+- [x] **Escribir ocho caracteres dispara una sola consulta** — contadas las peticiones que salen de
+      verdad, que es lo único que distingue un retardo puesto de uno que no se aplica
+- [x] Buscar «nunez» encuentra a Núñez
+- [x] Sin resultados se ofrece limpiar y **no** crear
+- [x] El panel aplica al confirmar, no a cada casilla
+- [x] Un filtro que la gramática no admite responde `400` y la pantalla lo presenta con reintento
+- [x] Cambiar el tamaño de página vuelve a la primera
+- [x] Cambiar de vista no cambia el conjunto ni toca la consulta
 - [ ] Medición del peso del paquete servido, antes y después
 
-**18 pruebas de extremo a extremo** en unos 8 segundos, más **9 del transporte** en Vitest.
+**31 pruebas de extremo a extremo** en unos 9 segundos, más **28 en Vitest** entre el transporte y
+la lógica de exploración, y **19 de la API** sobre la colección.
+
+> **La siembra creció con la 28d, y no es cosmético.** Con cuatro cuentas y cero clientes la
+> búsqueda siempre encuentra, los filtros nunca quitan nada y la paginación no aparece: las tres se
+> ven funcionar sólo cuando hay más elementos que los que caben en una página. Ahora hay treinta y
+> seis personas, ciento veintiocho clientes, sesenta proveedores y veintiocho direcciones — y los
+> nombres llevan acentos a propósito.
 
 ## Hallazgos
 
@@ -150,3 +199,23 @@ cierran sesión abren la suya.
 «companies.users 0 de 8» —incluía el contador—, así que **cambiaba al marcarla**. Un lector de
 pantalla anunciaría un nombre distinto para el mismo control cada vez que se vuelve a él. El
 recuento pasó a la descripción: el nombre es la identidad, el contador es estado.
+
+**Un indicador que se leía «Estado:Inactiva».** El nombre del campo y su valor iban en dos cajas de
+disposición separadas, con el espacio puesto por CSS. Visualmente perfecto; el texto leído no lleva
+espacio. Un lector de pantalla anuncia las dos palabras pegadas y una búsqueda en la página no
+encuentra la frase que se ve. **El espacio entre palabras es texto, no separación**: se arregló
+metiendo las dos partes en un único nodo con su espacio de verdad.
+
+**Y dos botones llamados igual en la misma pantalla.** Sin resultados, la barra ofrecía «Limpiar
+todo» y el estado vacío ofrecía otro «Limpiar todo». No se pueden distinguir al recorrer la página
+ni nombrar por voz. El del estado vacío pasó a decir qué hace de verdad: «Quitar los filtros y ver
+todo».
+
+**Y el intervalo de fechas, roto por debajo del análisis.** Es el único tipo de filtro que ninguna
+pantalla usaba, así que se descubrió mirándolo a mano. El esquema publicado declaraba cada parámetro
+como cadena, y un intervalo es la misma clave dos veces: el validador del transporte lo mataba antes
+de llegar a la gramática. Pasada esa, la traducción a SQL envolvía la columna en una expresión y con
+ello **perdía el codificador de la columna**, así que la fecha llegaba al conductor como objeto y
+respondía `500`. Las pruebas de `parseQuery` pasaban las dos veces: el análisis era correcto, y el
+defecto estaba en las capas que lo rodean. Ahora hay pruebas que atraviesan el transporte y llegan
+al motor.

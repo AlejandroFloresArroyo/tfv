@@ -106,25 +106,30 @@ Lo construido hasta ahora, medido y no estimado:
 | | |
 |---|---|
 | Rebanadas | 8 de 30 empezadas, **ninguna cerrada del todo** |
-| Código sin pruebas | 17 444 líneas |
-| Código de prueba | 4 853 líneas |
-| Pruebas | **254** — 51 contratos, 59 datos, 117 API, 9 transporte, 18 de extremo a extremo |
+| Código sin pruebas | 21 110 líneas |
+| Código de prueba | 5 639 líneas |
+| Pruebas | **307** — 53 contratos, 59 datos, 136 API, 28 web, 31 de extremo a extremo |
 | Esquema | 91 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
 | Aislamiento | 195 políticas · 91/91 tablas · 0 con identidad cruda |
-| Migraciones | 9, replicadas desde cero en cada verificación |
+| Migraciones | 10, replicadas desde cero en cada verificación |
 | Rutas | **49** registradas, 27 con permiso declarado, 10 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 14, en español e inglés (164 mensajes, sin desalinear) |
+| Pantallas | 14, en español e inglés (198 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
-y **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—. La
-parte ancha del trabajo siguen siendo las rebanadas 08 a 27; la 10 está casi entera y las demás sin
-tocar.
+**los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía— y **las
+colecciones explorables**. La parte ancha del trabajo siguen siendo las rebanadas 08 a 27; la 10
+está casi entera y las demás sin tocar.
 
-**La interfaz ya tiene red.** Dieciocho pruebas de extremo a extremo con Playwright, en unos ocho
-segundos, sobre un build de producción. Cubren tema, idioma, las tres guardas, la renovación
-transparente, el cierre de sesión sin recarga y el recorrido de escritura completo. Lo que aún no
-cubren está enumerado en el `tasks.md` de la 28.
+**Las colecciones ya se comportan como colecciones.** Los seis listados hablan el lenguaje de
+consulta —búsqueda insensible a acentos, filtros de gramática cerrada, orden estable, sobre de
+paginación uniforme— y la interfaz guarda su estado **en la dirección**: un listado filtrado se
+comparte por enlace, retroceder deshace el último filtro y recargar no pierde nada.
+
+**La interfaz ya tiene red.** Treinta y una pruebas de extremo a extremo con Playwright, en unos
+nueve segundos, sobre un build de producción. Cubren tema, idioma, las tres guardas, la renovación
+transparente, el cierre de sesión sin recarga, el recorrido de escritura completo y la exploración
+de colecciones entera. Lo que aún no cubren está enumerado en el `tasks.md` de la 28.
 
 ## Estado
 
@@ -205,15 +210,16 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 En este orden, y con el motivo de que sea ése:
 
-1. **Colecciones** (28d). Ya hay seis listados reales —empresas, miembros, roles, direcciones,
-   clientes, proveedores— y ninguno tiene búsqueda, filtros ni paginación. Es lo primero que se va a
-   notar en cuanto una empresa tenga trescientos clientes.
+1. **Pantallas de direcciones, clientes y proveedores** (29a). Sus rutas y su exploración están
+   hechas y probadas, y no hay ninguna pantalla que las use: hoy la cartera de ciento veintiocho
+   clientes de la siembra sólo se ve por `curl`. Es lo más barato que queda y lo más visible.
 2. **Almacenes** (rebanada 12). Es la primera columna de comercio y ya no le falta nada: tiene
-   empresas, permisos, contrapartes, direcciones y taxonomía debajo.
+   empresas, permisos, contrapartes, direcciones, taxonomía y colecciones debajo.
 3. **Lo que queda de la 10**: prospectos, cambio de correo, y las comprobaciones de «en uso» que
    necesitan documentos que aún no existen.
 4. **Base de pruebas separada de la de desarrollo.** Sigue estorbando: `pnpm test` borra los datos
-   con los que se está mirando la aplicación.
+   con los que se está mirando la aplicación, y ahora borra además la siembra de volumen que hace
+   falta para ver funcionar las colecciones.
 5. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
    **recepción verificada de eventos de cobro** (07), que cierra el bloque crítico.
 
@@ -1072,3 +1078,106 @@ añadió a la lista con su motivo escrito al lado.
 Los prospectos, el cambio de correo, y las tres comprobaciones de «en uso» —dirección, contraparte,
 categoría— que necesitan documentos que todavía no existen. Fingirlas ahora sería peor que
 declararlas pendientes.
+
+### 2026-08-17 · Las colecciones
+
+Rebanada **28d**. Seis listados que devolvían una lista pelada ahora hablan el lenguaje de
+`query-and-pagination`, y la interfaz que los muestra guarda su estado **en la dirección**.
+
+**53 pruebas nuevas** — 19 de la API, 21 de la lógica de exploración, 13 en el navegador. Total
+**307**.
+
+**La regla de la que sale todo lo demás**
+
+Búsqueda, filtros, página y tamaño son **parámetros de la URL**, no estado de un componente. De ahí
+salen tres propiedades que la persona da por hechas, sin escribir código para ninguna:
+
+- un listado filtrado se comparte por enlace;
+- el botón de atrás deshace el último filtro;
+- recargar no pierde nada.
+
+Y sale gratis lo que la 28 tenía pendiente por falta de paginación: **editar desde la página cuatro
+no devuelve a la primera**. Guardar vuelve a resolver el árbol de servidor y no toca la dirección —
+y la página *es* la dirección, así que no hay estado que reiniciar.
+
+**Dónde va la búsqueda sin acentos**
+
+En el motor, no en el cliente. Normalizar del lado de la aplicación sólo normaliza el término
+buscado, no las mil filas contra las que se compara: quien escriba «camara» seguiría sin encontrar
+«Cámara». La migración `0009` añade `app.norm`, y se declaró **inmutable** —con la variante de dos
+argumentos de `unaccent`— por si algún día hay que indexarla; elegir hoy la que no se puede indexar
+obligaría a reescribir cada consulta el día que los volúmenes lo pidan.
+
+La coincidencia usa `strpos` y no `like`. Con `like` habría que interpolar comodines alrededor del
+término, y entonces un `%` escrito por alguien deja de ser una letra y pasa a ser sintaxis. No es
+una inyección —el valor sigue siendo un parámetro—, pero sí un resultado que nadie pidió.
+
+**El orden estable no es un detalle**
+
+El desempate va siempre al final de todo criterio de orden. Sin él, dos filas que empatan pueden
+salir en orden distinto en cada consulta, y entonces paginar **repite elementos en una página y se
+salta otros en la siguiente**. El síntoma —una fila que falta— no se parece en nada a la causa, y
+por eso el mapa de columnas exige declararlo: no se puede olvidar.
+
+**La gramática sigue siendo cerrada**
+
+Cuatro operadores y ni uno más: igual, intervalo, conjunto y nulo. El análisis vive en los
+contratos y no toca la base; la traducción a SQL no ve texto de la URL, sólo valores ya validados
+contra el tipo declarado del campo. Filtrar por un campo que el recurso no declara responde `400`
+nombrándolo.
+
+Un detalle que se corrigió al usarlo: **el extremo superior de un intervalo de fechas incluye el día
+entero**. `hasta=2026-12-31` se convertía en la medianoche del 31 y dejaba fuera todo lo ocurrido
+ese día — el día que la persona acababa de elegir en el calendario.
+
+**La siembra creció, y no por adorno**
+
+Con cuatro cuentas y cero clientes la búsqueda siempre encuentra, los filtros nunca quitan nada y la
+paginación no aparece nunca: las tres se ven funcionar sólo cuando hay más elementos que los que
+caben en una página. Ahora hay treinta y seis personas, ciento veintiocho clientes, sesenta
+proveedores y veintiocho direcciones, con acentos a propósito.
+
+**Cuatro entradas del registro de búsqueda estaban mal**
+
+La spec decía que un cliente se busca por «nombre y apellido del usuario». Media cartera **no tiene
+usuario** —son contrapartes externas, que es el caso que la entidad existe para admitir—, así que
+buscar por el usuario dejaba fuera precisamente a quien no está en la plataforma. Lo mismo con las
+direcciones («nombre», que es la etiqueta, y casi siempre está vacía) y con las membresías (sin el
+correo, que es lo que la pantalla enseña). Y los roles no aparecían, sin estar entre las exclusiones
+deliberadas: era una omisión. Corregidas las cuatro en la spec, con el motivo.
+
+**El intervalo de fechas estaba roto de dos maneras, y ninguna era de la gramática**
+
+Es el único tipo de filtro que ninguna pantalla usaba, así que se descubrió mirándolo a mano al
+final. Las dos causas están **por debajo** del análisis, que es donde estaban las pruebas.
+
+La primera: el esquema publicado declaraba cada parámetro como cadena. Un intervalo es la misma
+clave dos veces, y el validador del transporte —que corre **antes** que el análisis— lo mataba con
+«se esperaba una cadena, llegó una lista». Un mensaje del transporte sobre una petición
+perfectamente válida.
+
+La segunda, ya pasada esa: la traducción a SQL envolvía cada columna en una expresión para que
+encajara en una unión de tipos. Drizzle usa el lado izquierdo de una comparación para saber **cómo
+codificar el derecho**; envuelta, la columna pierde esa información y el conductor recibe un objeto
+`Date` que no sabe serializar. `500`. Y sólo para los tipos que no son texto, que es lo que lo hace
+fácil de no ver.
+
+Las pruebas de `parseQuery` pasaban en verde las dos veces, porque el análisis es correcto: el
+defecto estaba en las capas que lo rodean. Ahora hay dos pruebas que **atraviesan el transporte y
+llegan al motor**, que es la única forma de comprobar lo que hay entre medias.
+
+**Dos defectos de accesibilidad, encontrados por las pruebas**
+
+Un indicador de filtro se leía **«Estado:Inactiva»**, sin espacio: el campo y su valor iban en dos
+cajas de disposición separadas y el espacio lo ponía el CSS. Se ve perfecto y se lee pegado. El
+espacio entre palabras es texto, no separación.
+
+Y sin resultados había **dos botones llamados «Limpiar todo»** en la misma pantalla, uno en la barra
+y otro en el estado vacío. No se pueden distinguir al recorrer la página ni nombrar por voz.
+
+**Abierto de la 28d**
+
+El carrusel —ninguna pantalla lo pide— y tres tipos de control de filtro: número, intervalo numérico
+y fecha suelta. Ningún recurso los declara todavía, y un control sin nada que filtrar se escribe a
+ciegas y se descubre equivocado el día que tenga usuario. La taxonomía global tampoco pagina: su
+listado por defecto son las raíces, y «ausente» no es «nulo» en esta gramática.
