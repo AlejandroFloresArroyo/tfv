@@ -1,0 +1,12 @@
+/*
+ * Hoja de estilos de la aplicación.
+ *
+ * Los tokens vienen del sistema de diseño; aquí sólo se declara qué archivos hay que rastrear en
+ * busca de clases. El rastreo automático de Tailwind no sale del paquete que lo importa, así que
+ * sin la segunda línea las clases que usan los componentes de `@tfv/ui` no se generarían.
+ */
+
+@import "@tfv/ui/styles.css";
+
+@source "../../src";
+@source "../../../../packages/ui/src";
