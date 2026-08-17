@@ -240,18 +240,25 @@ export const massUnit = pgEnum("mass_unit", ["g", "kg", "lb", "oz"])
  * porque se lee entera y nunca se consulta por un campo suelto.
  */
 export interface ClothingSheet {
-  readonly garment?: string
-  readonly size?: string
-  readonly custom?: string
-  readonly measurements?: Readonly<Record<string, number>>
+  readonly garment?: string | undefined
+  readonly size?: string | undefined
+  readonly custom?: string | undefined
+  readonly measurements?: Readonly<Record<string, number>> | undefined
 }
 
-/** Dimensiones y peso, en las unidades que declara la medida. */
+/**
+ * Dimensiones y peso, en las unidades que declara la medida.
+ *
+ * Los campos llevan `| undefined` explícito: con `exactOptionalPropertyTypes`, «ausente» y
+ * «presente con valor indefinido» son tipos distintos, y lo que llega de un esquema de ruta es lo
+ * segundo. Sin ello, cada llamada tendría que limpiar el objeto antes de escribirlo. Es el mismo
+ * caso que la copia de datos de una contraparte.
+ */
 export interface Dimensions {
-  readonly height?: number
-  readonly width?: number
-  readonly length?: number
-  readonly weight?: number
+  readonly height?: number | undefined
+  readonly width?: number | undefined
+  readonly length?: number | undefined
+  readonly weight?: number | undefined
 }
 
 export const warehouseMeasurements = pgTable(
