@@ -39,7 +39,7 @@ test.describe("crear un rol", () => {
     await page.getByRole("button", { name: "Crear", exact: true }).click()
 
     await expect(page.getByRole("dialog")).toBeHidden()
-    await expect(page.getByRole("cell", { name, exact: true })).toBeVisible()
+    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible()
 
     const survived = await page.evaluate(
       () => (window as unknown as { __marca?: string }).__marca === "misma-carga",
@@ -103,10 +103,12 @@ test.describe("eliminar un rol", () => {
     await page.getByRole("button", { name: "Crear rol" }).click()
     await page.getByLabel("Nombre").fill(name)
     await page.getByRole("button", { name: "Crear", exact: true }).click()
-    await expect(page.getByRole("cell", { name, exact: true })).toBeVisible()
+    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible()
 
-    const row = page.getByRole("row").filter({ hasText: name })
-    await row.getByRole("button", { name: "Eliminar" }).click()
+    // Las acciones van agrupadas en un único punto de acceso, no repartidas por la tarjeta.
+    const card = page.getByRole("listitem").filter({ hasText: name })
+    await card.getByRole("button", { name: "Acciones" }).click()
+    await page.getByRole("menuitem", { name: "Eliminar" }).click()
 
     const dialog = page.getByRole("dialog")
     await expect(dialog).toContainText(name)
@@ -116,7 +118,7 @@ test.describe("eliminar un rol", () => {
     await dialog.getByRole("button", { name: "Eliminar" }).click()
 
     await expect(page.getByRole("dialog")).toBeHidden()
-    await expect(page.getByRole("cell", { name, exact: true })).toBeHidden()
+    await expect(page.getByRole("heading", { name, exact: true })).toBeHidden()
   })
 
   test("cancelar no elimina nada", async ({ as, companies }) => {
@@ -125,12 +127,13 @@ test.describe("eliminar un rol", () => {
 
     await page.goto(`/c/${companies[WAREHOUSE_COMPANY]}/settings/roles`)
 
-    const row = page.getByRole("row").filter({ hasText: "Almacén" })
-    await row.getByRole("button", { name: "Eliminar" }).click()
+    const card = page.getByRole("listitem").filter({ hasText: "Almacén" })
+    await card.getByRole("button", { name: "Acciones" }).click()
+    await page.getByRole("menuitem", { name: "Eliminar" }).click()
     await page.getByRole("dialog").getByRole("button", { name: "Cancelar" }).click()
 
     await expect(page.getByRole("dialog")).toBeHidden()
-    await expect(page.getByRole("cell", { name: "Almacén", exact: true })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Almacén", exact: true })).toBeVisible()
   })
 })
 
@@ -142,8 +145,9 @@ test.describe("quien no puede, no ve el botón", () => {
     await page.goto(`/c/${companies[WAREHOUSE_COMPANY]}/settings/members`)
     await expect(page.getByRole("heading", { name: "Miembros" })).toBeVisible()
 
-    // Tiene `companies.users.view` y ninguna de escritura.
+    // Tiene `companies.users.view` y ninguna de escritura. Sin acciones permitidas, el punto de
+    // acceso a las acciones no se pinta siquiera: no es un menú vacío, es que no hay menú.
     await expect(page.getByRole("button", { name: "Incorporar" })).toBeHidden()
-    await expect(page.getByRole("button", { name: "Editar" })).toBeHidden()
+    await expect(page.getByRole("button", { name: "Acciones" })).toBeHidden()
   })
 })
