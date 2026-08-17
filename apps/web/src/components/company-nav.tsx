@@ -9,7 +9,15 @@ import {
   MenuRadioItem,
   MenuTrigger,
 } from "@tfv/ui"
-import { ChevronsUpDown, LayoutDashboard, ShieldCheck, Users } from "lucide-react"
+import {
+  ChevronsUpDown,
+  Handshake,
+  LayoutDashboard,
+  MapPin,
+  ShieldCheck,
+  Truck,
+  Users,
+} from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
@@ -42,6 +50,24 @@ export function CompanyNav({
   /** La sección dentro de la empresa: `/c/<id>/warehouses/x` → `warehouses/x`. */
   const section = pathname.split("/").slice(3).join("/")
 
+  /** Con quién comercia la empresa. No depende de ningún servicio: toda empresa tiene cartera. */
+  const directory = [
+    {
+      section: "directory/clients",
+      href: `/c/${company.id}/directory/clients`,
+      label: t("directory.clients.title"),
+      icon: <Handshake className="size-4" aria-hidden="true" />,
+      permission: "companies.clients.view",
+    },
+    {
+      section: "directory/providers",
+      href: `/c/${company.id}/directory/providers`,
+      label: t("directory.providers.title"),
+      icon: <Truck className="size-4" aria-hidden="true" />,
+      permission: "companies.providers.view",
+    },
+  ].filter((entry) => can(company, entry.permission))
+
   const settings = [
     {
       section: "settings/members",
@@ -57,15 +83,31 @@ export function CompanyNav({
       icon: <ShieldCheck className="size-4" aria-hidden="true" />,
       permission: "companies.roles.view",
     },
+    {
+      section: "settings/addresses",
+      href: `/c/${company.id}/settings/addresses`,
+      label: t("addresses.title"),
+      icon: <MapPin className="size-4" aria-hidden="true" />,
+      permission: "companies.addresses.view",
+    },
   ].filter((entry) => can(company, entry.permission))
 
+  /**
+   * Cambiar de empresa conserva la sección **cuando la destino también la tiene**.
+   *
+   * Hay dos maneras de tenerla. Las secciones de servicio dependen de lo contratado, así que se
+   * comprueba; el directorio y la configuración existen en toda empresa, así que se conservan sin
+   * preguntar. Antes caían a la portada por no ser un servicio, y cambiar de empresa desde
+   * «Miembros» dejaba a la persona en otro sitio sin haber pedido moverse.
+   */
   function switchTo(targetId: string) {
     const target = companies.find((candidate) => candidate.id === targetId)
     if (!target) return
 
     const keycode = section.split("/")[0]
+    const universal = keycode === "directory" || keycode === "settings"
     const equivalent =
-      keycode && target.services.some((service) => service.keycode === keycode)
+      universal || (keycode && target.services.some((service) => service.keycode === keycode))
         ? `/c/${target.id}/${section}`
         : `/c/${target.id}`
 
@@ -136,6 +178,25 @@ export function CompanyNav({
             </NavLink>
           )
         })}
+
+        {directory.length > 0 ? (
+          <li className="hidden pt-4 pb-1 laptop:block">
+            <span className="px-2.5 text-body3 font-semibold tracking-wide text-content-faint uppercase">
+              {t("directory.title")}
+            </span>
+          </li>
+        ) : null}
+
+        {directory.map((entry) => (
+          <NavLink
+            key={entry.href}
+            href={entry.href}
+            active={section === entry.section}
+            icon={entry.icon}
+          >
+            {entry.label}
+          </NavLink>
+        ))}
 
         {/*
           Configuración. Cada entrada se pinta sólo si su permiso la respalda, que es lo que pide
