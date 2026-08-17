@@ -405,13 +405,18 @@ export const warehousePriceLists = pgTable(
   (table) => [index("warehouse_price_lists_warehouse_idx").on(table.warehouseId)],
 )
 
-/** Tarifa de renta o de penalización: fija, o distinta por periodicidad. */
+/**
+ * Tarifa de renta o de penalización: fija, o distinta por periodicidad.
+ *
+ * Con `| undefined` explícito por lo mismo que las dimensiones y la copia de una contraparte: lo
+ * que llega de un esquema de ruta es «presente con valor indefinido», no «ausente».
+ */
 export interface RateSchedule {
   readonly isFixed: boolean
-  readonly fixed?: string
-  readonly daily?: string
-  readonly weekly?: string
-  readonly monthly?: string
+  readonly fixed?: string | undefined
+  readonly daily?: string | undefined
+  readonly weekly?: string | undefined
+  readonly monthly?: string | undefined
 }
 
 /** El precio de un producto dentro de una lista. */
