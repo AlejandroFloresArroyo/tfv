@@ -53,6 +53,7 @@ import { and, count, eq, inArray, isNull, sql } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 import { categorySubtree } from "./categories.ts"
+import { recordEvents } from "./stock.ts"
 import { loadWarehouse } from "./warehouses.ts"
 
 export type ProductRelation = "variant" | "accessory"
@@ -315,7 +316,7 @@ export async function createProduct(
     if (!product) throw new Error("la inserción del producto no devolvió fila")
 
     for (const measurement of input.measurements ?? []) {
-      await insertMeasurement(tx, productId, measurement)
+      await insertMeasurement(tx, productId, measurement, actor.userId)
     }
 
     for (const [relation, children] of [
@@ -323,7 +324,7 @@ export async function createProduct(
       ["accessory", input.accessories ?? []],
     ] as const) {
       for (const child of children) {
-        await insertChild(tx, product, relation, child)
+        await insertChild(tx, product, relation, child, actor.userId)
       }
     }
 
@@ -520,7 +521,7 @@ export async function addMeasurement(
     await loadWarehouse(tx, companyId, warehouseId)
     await loadProduct(tx, warehouseId, productId)
 
-    const id = await insertMeasurement(tx, productId, input)
+    const id = await insertMeasurement(tx, productId, input, actor.userId)
     const [record] = await measurementsOf(tx, productId, [id])
     if (!record) throw new Error("la medida recién creada no se pudo leer")
     return record
@@ -594,6 +595,7 @@ async function insertMeasurement(
   tx: Transaction,
   productId: string,
   input: MeasurementInput,
+  actorId: string,
 ): Promise<string> {
   const measurementId = newId()
 
@@ -613,12 +615,24 @@ async function insertMeasurement(
   // es un objeto físico, y sin fila no hay nada que etiquetar, mover ni reservar.
   const quantity = input.initialQuantity ?? 0
   if (quantity > 0) {
-    await tx.insert(warehouseStockUnits).values(
-      Array.from({ length: quantity }, () => ({
-        id: newId(),
-        measurementId,
-        code: productCode(),
-      })),
+    const units = await tx
+      .insert(warehouseStockUnits)
+      .values(
+        Array.from({ length: quantity }, () => ({
+          id: newId(),
+          measurementId,
+          code: productCode(),
+        })),
+      )
+      .returning({ id: warehouseStockUnits.id })
+
+    // El alta también deja rastro. Sin el momento inicial, el historial de una unidad empieza en su
+    // segundo estado y no se puede reconstruir de dónde salió.
+    await recordEvents(
+      tx,
+      units.map((unit) => ({ unitId: unit.id, from: null, to: "available" as const })),
+      "created",
+      actorId,
     )
   }
 
@@ -636,6 +650,7 @@ async function insertChild(
   parent: typeof warehouseProducts.$inferSelect,
   relation: ProductRelation,
   input: ChildInput,
+  actorId: string,
 ): Promise<void> {
   const childId = newId()
 
@@ -658,7 +673,7 @@ async function insertChild(
   })
 
   for (const measurement of input.measurements ?? []) {
-    await insertMeasurement(tx, childId, measurement)
+    await insertMeasurement(tx, childId, measurement, actorId)
   }
 }
 
@@ -671,7 +686,7 @@ async function insertChild(
  */
 async function categoryCondition(tx: Transaction, query: ParsedQuery) {
   const filter = query.filters.categoryId
-  if (!filter || filter.kind !== "eq") return undefined
+  if (filter?.kind !== "eq") return undefined
 
   const subtree = await categorySubtree(tx, String(filter.value))
   if (subtree.length === 0) return eq(warehouseProducts.categoryId, String(filter.value))

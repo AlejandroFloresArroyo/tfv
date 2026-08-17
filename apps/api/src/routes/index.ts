@@ -80,6 +80,23 @@ import {
 import { health } from "./health.ts"
 import { permissionCatalogRoute } from "./permissions.ts"
 import {
+  changeUnitStatusRoute,
+  createPriceListRoute,
+  createUnitsRoute,
+  deletePriceListRoute,
+  deleteUnitsRoute,
+  findUnitByCodeRoute,
+  listPriceListsRoute,
+  listPricesRoute,
+  listUnitsRoute,
+  removePriceRoute,
+  resolvePriceRoute,
+  setPriceListProductsRoute,
+  setPriceRoute,
+  unitHistoryRoute,
+  updatePriceListRoute,
+} from "./stock.ts"
+import {
   createStorageRoute,
   createWarehouseRoute,
   deleteStorageRoute,
@@ -189,7 +206,23 @@ export const routes: readonly RegisteredRoute[] = [
 
   addMeasurementRoute,
   deleteMeasurementRoute,
-  // Pendiente de la rebanada 12: listas de precios y unidades de existencia.
+
+  listPriceListsRoute,
+  createPriceListRoute,
+  updatePriceListRoute,
+  deletePriceListRoute,
+  listPricesRoute,
+  setPriceRoute,
+  setPriceListProductsRoute,
+  removePriceRoute,
+  resolvePriceRoute,
+
+  listUnitsRoute,
+  createUnitsRoute,
+  changeUnitStatusRoute,
+  deleteUnitsRoute,
+  findUnitByCodeRoute,
+  unitHistoryRoute,
 
   // ─── Producciones ──────────────────────────────────────────────────────────
   // Pendiente: rebanada 20.
