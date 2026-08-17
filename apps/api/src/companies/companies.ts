@@ -1,0 +1,446 @@
+/**
+ * Empresas y membresías.
+ *
+ * Ver `openspec/specs/companies/spec.md` y la rebanada 10.
+ *
+ * ## Todo pasa por las políticas
+ *
+ * Cada operación corre dentro de `withRequester`, así que el motor vuelve a comprobar el alcance
+ * aunque la compuerta de permisos ya lo haya hecho. Son dos capas a propósito: la de aplicación
+ * puede equivocarse en un `where`, y entonces la de datos devuelve cero filas en lugar de las de
+ * otro arrendatario. Es la propiedad que `access-control` exige y la razón de que el aislamiento
+ * sobreviva a un fallo del código.
+ *
+ * ## La excepción, y por qué es una sola
+ *
+ * **Crear una empresa** es la única operación que no puede resolverse contra las empresas del
+ * solicitante: la política exige que la empresa ya esté entre las suyas, y al crearla no lo está.
+ * Se resuelve con `withSystem`, que declara el alcance de forma explícita y **no elude las
+ * políticas** — escribir en una empresa que no se nombró sigue fallando. La alternativa habría sido
+ * `withElevated`, que las apaga enteras; se descartó porque apagar el aislamiento para crear una
+ * fila es desproporcionado y no deja rastro de qué alcance se pretendía.
+ */
+
+import { ConflictError, NotFoundError, newId, UnprocessableError } from "@tfv/contracts"
+import { db, type Transaction, withRequester, withSystem } from "@tfv/db"
+import { companies, companyMembers, roles, users } from "@tfv/db/schema"
+import { and, asc, count, eq, isNull, ne } from "drizzle-orm"
+
+/** Quién realiza la operación. Lo mismo que el motor necesita para resolver la identidad. */
+export interface Actor {
+  readonly userId: string
+  readonly sessionId: string
+}
+
+export interface CompanyRecord {
+  readonly id: string
+  readonly name: string
+  readonly description: string
+  readonly email: string | null
+  readonly commissionRate: string
+  readonly createdAt: Date
+  readonly updatedAt: Date
+  readonly deletedAt: Date | null
+}
+
+export interface MemberRecord {
+  readonly id: string
+  readonly userId: string
+  readonly email: string
+  readonly name: string
+  readonly lastname: string
+  readonly roleId: string | null
+  readonly roleName: string | null
+  readonly isOwner: boolean
+  readonly isActive: boolean
+  readonly createdAt: Date
+}
+
+// ─── Empresas ────────────────────────────────────────────────────────────────
+
+export interface CreateCompanyInput {
+  readonly name: string
+  readonly description?: string | undefined
+  readonly email?: string | undefined
+}
+
+/**
+ * Crea una empresa y deja a quien la crea como propietaria.
+ *
+ * Las dos escrituras van en la misma transacción. Separadas, un fallo entre ellas dejaría una
+ * empresa sin ningún propietario — y como la propiedad es lo único que concede acceso completo,
+ * nadie podría entrar en ella ni para borrarla.
+ */
+export async function createCompany(
+  actor: Actor,
+  input: CreateCompanyInput,
+): Promise<CompanyRecord> {
+  const companyId = newId()
+
+  return withSystem("crear_empresa", [companyId], async (tx) => {
+    const [company] = await tx
+      .insert(companies)
+      .values({
+        id: companyId,
+        name: input.name.trim(),
+        description: input.description?.trim() ?? "",
+        email: input.email?.trim() || null,
+      })
+      .returning()
+
+    if (!company) throw new Error("la inserción de la empresa no devolvió fila")
+
+    await tx.insert(companyMembers).values({
+      id: newId(),
+      companyId,
+      userId: actor.userId,
+      isOwner: true,
+    })
+
+    return toCompanyRecord(company)
+  })
+}
+
+/** Las empresas del solicitante. El filtro lo pone el motor, no un `where` de la aplicación. */
+export async function listCompanies(actor: Actor): Promise<CompanyRecord[]> {
+  return withRequester(actor, async (tx) => {
+    const rows = await tx
+      .select()
+      .from(companies)
+      .where(isNull(companies.deletedAt))
+      .orderBy(asc(companies.name))
+
+    return rows.map(toCompanyRecord)
+  })
+}
+
+export async function getCompany(actor: Actor, companyId: string): Promise<CompanyRecord> {
+  return withRequester(actor, async (tx) => {
+    const company = await loadCompany(tx, companyId)
+    return toCompanyRecord(company)
+  })
+}
+
+export interface UpdateCompanyInput {
+  readonly name?: string | undefined
+  readonly description?: string | undefined
+  readonly email?: string | null | undefined
+  /**
+   * Sólo la mueve la administración de plataforma.
+   *
+   * La comprobación no está aquí: quien llama decide si el solicitante puede tocarla. Aquí sólo se
+   * escribe lo que llegue, y llega ya filtrado.
+   */
+  readonly commissionRate?: string | undefined
+}
+
+export async function updateCompany(
+  actor: Actor,
+  companyId: string,
+  input: UpdateCompanyInput,
+): Promise<CompanyRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadCompany(tx, companyId)
+
+    const patch: Record<string, unknown> = {}
+    if (input.name !== undefined) patch.name = input.name.trim()
+    if (input.description !== undefined) patch.description = input.description.trim()
+    if (input.email !== undefined) patch.email = input.email?.trim() || null
+    if (input.commissionRate !== undefined) patch.commissionRate = input.commissionRate
+
+    if (Object.keys(patch).length === 0) {
+      return toCompanyRecord(await loadCompany(tx, companyId))
+    }
+
+    const [updated] = await tx
+      .update(companies)
+      .set(patch)
+      .where(eq(companies.id, companyId))
+      .returning()
+
+    if (!updated) throw new NotFoundError("La empresa no existe")
+    return toCompanyRecord(updated)
+  })
+}
+
+/**
+ * Da de baja una empresa.
+ *
+ * **Borrado lógico** (`project.md` D-02): la fila sobrevive y su historial contable con ella. Lo
+ * que se pierde es el acceso, y lo hace cumplir el motor — `app.member_of()` excluye las empresas
+ * dadas de baja, así que sus miembros dejan de alcanzar sus datos por cualquier vía, no sólo por
+ * las consultas que se acordaron de filtrar. Ver la migración `0008`.
+ *
+ * No hay cascada escrita a mano, que es el punto de la rebanada: la implementación anterior tenía
+ * unas veinte funciones de borrado, y tres de ellas **borraban de la tabla de empresas usando el
+ * identificador de otra entidad** (`DEFECTS.md` C-08).
+ */
+export async function deleteCompany(actor: Actor, companyId: string): Promise<void> {
+  await withRequester(actor, async (tx) => {
+    await loadCompany(tx, companyId)
+    await tx.update(companies).set({ deletedAt: new Date() }).where(eq(companies.id, companyId))
+  })
+}
+
+// ─── Membresías ──────────────────────────────────────────────────────────────
+
+export async function listMembers(actor: Actor, companyId: string): Promise<MemberRecord[]> {
+  return withRequester(actor, async (tx) => {
+    await loadCompany(tx, companyId)
+
+    const rows = await tx
+      .select({
+        id: companyMembers.id,
+        userId: users.id,
+        email: users.email,
+        name: users.name,
+        lastname: users.lastname,
+        roleId: companyMembers.roleId,
+        roleName: roles.name,
+        isOwner: companyMembers.isOwner,
+        isActive: companyMembers.isActive,
+        createdAt: companyMembers.createdAt,
+      })
+      .from(companyMembers)
+      .innerJoin(users, eq(users.id, companyMembers.userId))
+      .leftJoin(roles, eq(roles.id, companyMembers.roleId))
+      .where(eq(companyMembers.companyId, companyId))
+      .orderBy(asc(users.name), asc(users.email))
+
+    return rows
+  })
+}
+
+export interface AddMemberInput {
+  /** Correo de quien se incorpora. Debe tener cuenta: crear la cuenta es la vía de invitación. */
+  readonly email: string
+  readonly roleId?: string | null | undefined
+}
+
+/**
+ * Incorpora a una persona que ya tiene cuenta.
+ *
+ * La invitación de quien **no** tiene cuenta —crear la cuenta sin contraseña y enviarle un enlace
+ * de un solo uso— ya existe en `accounts.ts` desde la rebanada 04. Aquí sólo se ata a la empresa.
+ *
+ * La búsqueda del usuario por correo **no puede pasar por las políticas**: quien invita no tiene
+ * por qué compartir empresa con la persona invitada, así que su fila no está en su alcance. Se
+ * resuelve fuera de la transacción del solicitante y sólo se usa el identificador; nada del
+ * perfil ajeno sale de aquí.
+ */
+export async function addMember(
+  actor: Actor,
+  companyId: string,
+  input: AddMemberInput,
+): Promise<MemberRecord> {
+  const email = input.email.trim().toLowerCase()
+
+  const [invited] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.email, email), isNull(users.deletedAt)))
+    .limit(1)
+
+  if (!invited) {
+    throw new UnprocessableError("No existe ninguna cuenta con ese correo")
+  }
+
+  return withRequester(actor, async (tx) => {
+    await loadCompany(tx, companyId)
+    await assertRoleBelongs(tx, companyId, input.roleId ?? null)
+
+    const [existing] = await tx
+      .select({ id: companyMembers.id })
+      .from(companyMembers)
+      .where(and(eq(companyMembers.companyId, companyId), eq(companyMembers.userId, invited.id)))
+      .limit(1)
+
+    if (existing) throw new ConflictError("Esa persona ya pertenece a la empresa")
+
+    await tx.insert(companyMembers).values({
+      id: newId(),
+      companyId,
+      userId: invited.id,
+      roleId: input.roleId ?? null,
+      isOwner: false,
+    })
+
+    return await readMember(tx, companyId, invited.id)
+  })
+}
+
+export interface UpdateMemberInput {
+  readonly roleId?: string | null | undefined
+  readonly isActive?: boolean | undefined
+  readonly isOwner?: boolean | undefined
+}
+
+/**
+ * Cambia el rol, la actividad o la propiedad de una membresía.
+ *
+ * Dos invariantes, y las dos protegen lo mismo: **que la empresa nunca se quede sin propietaria**.
+ * Sin propietaria no hay quien conceda permisos ni quien nombre a otra, así que la empresa queda
+ * inservible y sólo la administración de plataforma puede rescatarla.
+ *
+ * Se comprueban **dentro de la transacción**: comprobar antes y escribir después deja una ventana
+ * en la que dos peticiones simultáneas, cada una retirando a una propietaria distinta, pasan las
+ * dos su comprobación y dejan cero.
+ */
+export async function updateMember(
+  actor: Actor,
+  companyId: string,
+  memberId: string,
+  input: UpdateMemberInput,
+): Promise<MemberRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadCompany(tx, companyId)
+
+    const member = await loadMember(tx, companyId, memberId)
+
+    const losesOwnership = member.isOwner && (input.isOwner === false || input.isActive === false)
+
+    if (losesOwnership) await assertNotLastOwner(tx, companyId, memberId)
+
+    if (input.roleId !== undefined) await assertRoleBelongs(tx, companyId, input.roleId)
+
+    const patch: Record<string, unknown> = {}
+    if (input.roleId !== undefined) patch.roleId = input.roleId
+    if (input.isActive !== undefined) patch.isActive = input.isActive
+    if (input.isOwner !== undefined) patch.isOwner = input.isOwner
+
+    if (Object.keys(patch).length > 0) {
+      await tx.update(companyMembers).set(patch).where(eq(companyMembers.id, memberId))
+    }
+
+    return await readMember(tx, companyId, member.userId)
+  })
+}
+
+/** Retira a alguien de la empresa. No puede dejarla sin propietaria. */
+export async function removeMember(
+  actor: Actor,
+  companyId: string,
+  memberId: string,
+): Promise<void> {
+  await withRequester(actor, async (tx) => {
+    await loadCompany(tx, companyId)
+
+    const member = await loadMember(tx, companyId, memberId)
+    if (member.isOwner) await assertNotLastOwner(tx, companyId, memberId)
+
+    await tx.delete(companyMembers).where(eq(companyMembers.id, memberId))
+  })
+}
+
+// ─── Ayuda ───────────────────────────────────────────────────────────────────
+
+/**
+ * Carga la empresa, o falla como si no existiera.
+ *
+ * Una empresa fuera del alcance del solicitante responde `404` y no `403`. La diferencia importa:
+ * `403` confirma que existe, y eso permite descubrir qué empresas hay en la plataforma probando
+ * identificadores.
+ */
+async function loadCompany(tx: Transaction, companyId: string) {
+  const [company] = await tx
+    .select()
+    .from(companies)
+    .where(and(eq(companies.id, companyId), isNull(companies.deletedAt)))
+    .limit(1)
+
+  if (!company) throw new NotFoundError("La empresa no existe")
+  return company
+}
+
+async function loadMember(tx: Transaction, companyId: string, memberId: string) {
+  const [member] = await tx
+    .select()
+    .from(companyMembers)
+    .where(and(eq(companyMembers.id, memberId), eq(companyMembers.companyId, companyId)))
+    .limit(1)
+
+  if (!member) throw new NotFoundError("Esa persona no pertenece a la empresa")
+  return member
+}
+
+async function readMember(
+  tx: Transaction,
+  companyId: string,
+  userId: string,
+): Promise<MemberRecord> {
+  const [row] = await tx
+    .select({
+      id: companyMembers.id,
+      userId: users.id,
+      email: users.email,
+      name: users.name,
+      lastname: users.lastname,
+      roleId: companyMembers.roleId,
+      roleName: roles.name,
+      isOwner: companyMembers.isOwner,
+      isActive: companyMembers.isActive,
+      createdAt: companyMembers.createdAt,
+    })
+    .from(companyMembers)
+    .innerJoin(users, eq(users.id, companyMembers.userId))
+    .leftJoin(roles, eq(roles.id, companyMembers.roleId))
+    .where(and(eq(companyMembers.companyId, companyId), eq(companyMembers.userId, userId)))
+    .limit(1)
+
+  if (!row) throw new NotFoundError("Esa persona no pertenece a la empresa")
+  return row
+}
+
+/** Un rol es de una empresa y de una sola. Asignar el de otra cruzaría los arrendatarios. */
+async function assertRoleBelongs(
+  tx: Transaction,
+  companyId: string,
+  roleId: string | null,
+): Promise<void> {
+  if (roleId === null) return
+
+  const [role] = await tx
+    .select({ id: roles.id })
+    .from(roles)
+    .where(and(eq(roles.id, roleId), eq(roles.companyId, companyId)))
+    .limit(1)
+
+  if (!role) throw new UnprocessableError("Ese rol no pertenece a esta empresa")
+}
+
+async function assertNotLastOwner(
+  tx: Transaction,
+  companyId: string,
+  memberId: string,
+): Promise<void> {
+  const [row] = await tx
+    .select({ remaining: count() })
+    .from(companyMembers)
+    .where(
+      and(
+        eq(companyMembers.companyId, companyId),
+        eq(companyMembers.isOwner, true),
+        eq(companyMembers.isActive, true),
+        ne(companyMembers.id, memberId),
+      ),
+    )
+
+  if ((row?.remaining ?? 0) === 0) {
+    throw new UnprocessableError(
+      "La empresa se quedaría sin propietaria. Nombra a otra antes de retirar ésta.",
+    )
+  }
+}
+
+function toCompanyRecord(row: typeof companies.$inferSelect): CompanyRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    email: row.email,
+    commissionRate: row.commissionRate,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    deletedAt: row.deletedAt,
+  }
+}
