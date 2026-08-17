@@ -65,6 +65,20 @@ import {
 } from "./directory.ts"
 import { health } from "./health.ts"
 import { permissionCatalogRoute } from "./permissions.ts"
+import {
+  createStorageRoute,
+  createWarehouseRoute,
+  deleteStorageRoute,
+  deleteWarehouseRoute,
+  getWarehouseRoute,
+  listStoragesRoute,
+  listWarehousesRoute,
+  storagePathRoute,
+  storageScopeRoute,
+  updateStorageRoute,
+  updateWarehouseRoute,
+  warehouseScopeRoute,
+} from "./warehouses.ts"
 
 export const routes: readonly RegisteredRoute[] = [
   // ─── Sistema ───────────────────────────────────────────────────────────────
@@ -133,7 +147,20 @@ export const routes: readonly RegisteredRoute[] = [
   // Pendiente de la rebanada 10: prospectos.
 
   // ─── Almacenes ─────────────────────────────────────────────────────────────
-  // Pendiente: rebanada 12.
+  listWarehousesRoute,
+  createWarehouseRoute,
+  getWarehouseRoute,
+  updateWarehouseRoute,
+  warehouseScopeRoute,
+  deleteWarehouseRoute,
+
+  listStoragesRoute,
+  storagePathRoute,
+  createStorageRoute,
+  updateStorageRoute,
+  storageScopeRoute,
+  deleteStorageRoute,
+  // Pendiente de la rebanada 12: catálogo, medidas, precios y unidades.
 
   // ─── Producciones ──────────────────────────────────────────────────────────
   // Pendiente: rebanada 20.

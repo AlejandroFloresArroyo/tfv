@@ -1,0 +1,392 @@
+/**
+ * Almacenes.
+ *
+ * Ver `openspec/specs/warehouses-and-storage/spec.md`. Rebanada 12.
+ *
+ * Un almacén es el establecimiento desde el que una empresa renta y vende equipo, y es **la raíz de
+ * todo el servicio**: ubicaciones, categorías, productos, listas de precios, cotizaciones y pedidos
+ * cuelgan de él. Una empresa puede tener varios.
+ *
+ * ## La habilitación se comprueba, no se supone
+ *
+ * Crear un almacén exige que la empresa tenga contratado el servicio. No es lo mismo que el
+ * permiso: el permiso dice qué puede hacer una persona dentro de la empresa, y la habilitación dice
+ * qué ha contratado la empresa. Alguien con todos los permisos de una empresa sin almacenes no debe
+ * poder crear uno — y sin esta comprobación podría, porque la compuerta sólo mira permisos.
+ */
+
+import {
+  buildPage,
+  ConflictError,
+  NotFoundError,
+  newId,
+  type Page,
+  type ParsedQuery,
+  type QuerySchema,
+  slugCandidate,
+  slugify,
+  UnprocessableError,
+} from "@tfv/contracts"
+import { type Transaction, withRequester } from "@tfv/db"
+import {
+  companies,
+  companyServices,
+  services,
+  warehouseCategories,
+  warehouseProducts,
+  warehouseStorages,
+  warehouses,
+} from "@tfv/db/schema"
+import { and, count, eq, isNull } from "drizzle-orm"
+import type { Actor } from "../companies/companies.ts"
+import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
+
+/** La clave del servicio en el catálogo. Es la que gobierna la habilitación. */
+const SERVICE = "warehouses"
+
+export interface WarehouseRecord {
+  readonly id: string
+  readonly companyId: string
+  readonly name: string
+  readonly description: string
+  readonly slug: string | null
+  readonly isPublished: boolean
+  readonly priority: string
+  readonly createdAt: Date
+  readonly updatedAt: Date
+}
+
+/**
+ * Qué se puede pedir de la colección de almacenes.
+ *
+ * **El orden por defecto son tres criterios y no uno.** La prioridad la fija quien administra, y
+ * empata en cuanto dos almacenes valen lo mismo —que es lo normal, porque casi nadie la toca—; la
+ * fecha desempata poniendo lo nuevo arriba, y el nombre desempata a los creados el mismo día. Sin
+ * los tres, el listado cambia de orden entre visitas sin que nadie haya tocado nada.
+ */
+export const warehouseQuery: QuerySchema = {
+  filters: {
+    isPublished: { type: "boolean", label: "Publicación" },
+  },
+  searchable: ["name", "description"],
+  sortable: ["name", "priority", "createdAt"],
+  defaultSort: [
+    { field: "priority", direction: "desc" },
+    { field: "createdAt", direction: "desc" },
+    { field: "name", direction: "asc" },
+  ],
+}
+
+const mapping = {
+  fields: {
+    isPublished: warehouses.isPublished,
+    name: warehouses.name,
+    priority: warehouses.priority,
+    createdAt: warehouses.createdAt,
+  },
+  searchable: [warehouses.name, warehouses.description],
+  tiebreak: warehouses.id,
+}
+
+// ─── Lectura ─────────────────────────────────────────────────────────────────
+
+export async function listWarehouses(
+  actor: Actor,
+  companyId: string,
+  query: ParsedQuery,
+): Promise<Page<WarehouseRecord>> {
+  const { limit, offset, page } = windowOf(query)
+
+  return withRequester(actor, async (tx) => {
+    await assertCompany(tx, companyId)
+
+    const where = and(
+      eq(warehouses.companyId, companyId),
+      isNull(warehouses.deletedAt),
+      ...collectionConditions(query, mapping),
+    )
+
+    const [total] = await tx.select({ value: count() }).from(warehouses).where(where)
+
+    const rows = await tx
+      .select()
+      .from(warehouses)
+      .where(where)
+      .orderBy(...collectionOrder(query, mapping))
+      .limit(limit)
+      .offset(offset)
+
+    return buildPage(rows.map(toRecord), total?.value ?? 0, page, limit)
+  })
+}
+
+export async function getWarehouse(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+): Promise<WarehouseRecord> {
+  return withRequester(actor, async (tx) => {
+    await assertCompany(tx, companyId)
+    return toRecord(await loadWarehouse(tx, companyId, warehouseId))
+  })
+}
+
+// ─── Escritura ───────────────────────────────────────────────────────────────
+
+export interface CreateWarehouseInput {
+  readonly name: string
+  readonly description?: string | undefined
+  readonly priority?: string | undefined
+  readonly isPublished?: boolean | undefined
+}
+
+export async function createWarehouse(
+  actor: Actor,
+  companyId: string,
+  input: CreateWarehouseInput,
+): Promise<WarehouseRecord> {
+  return withRequester(actor, async (tx) => {
+    await assertCompany(tx, companyId)
+    await assertServiceEnabled(tx, companyId)
+
+    const [created] = await tx
+      .insert(warehouses)
+      .values({
+        id: newId(),
+        companyId,
+        name: input.name.trim(),
+        description: input.description?.trim() ?? "",
+        slug: await freeSlug(tx, input.name),
+        ...(input.priority === undefined ? {} : { priority: input.priority }),
+        ...(input.isPublished === undefined ? {} : { isPublished: input.isPublished }),
+      })
+      .returning()
+
+    if (!created) throw new Error("la inserción del almacén no devolvió fila")
+    return toRecord(created)
+  })
+}
+
+export interface UpdateWarehouseInput {
+  readonly name?: string | undefined
+  readonly description?: string | undefined
+  readonly priority?: string | undefined
+  readonly isPublished?: boolean | undefined
+  /**
+   * El identificador legible, cuando se cambia a mano.
+   *
+   * Se rechaza si ya está ocupado en lugar de añadirle un sufijo: al crear, el sufijo es una
+   * comodidad porque nadie eligió el identificador; al cambiarlo, alguien ha escrito uno concreto y
+   * darle otro distinto en silencio es no hacer lo que pidió.
+   */
+  readonly slug?: string | undefined
+}
+
+export async function updateWarehouse(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  input: UpdateWarehouseInput,
+): Promise<WarehouseRecord> {
+  return withRequester(actor, async (tx) => {
+    await assertCompany(tx, companyId)
+    const current = await loadWarehouse(tx, companyId, warehouseId)
+
+    const patch: Record<string, unknown> = {}
+    if (input.name !== undefined) patch.name = input.name.trim()
+    if (input.description !== undefined) patch.description = input.description.trim()
+    if (input.priority !== undefined) patch.priority = input.priority
+    if (input.isPublished !== undefined) patch.isPublished = input.isPublished
+
+    if (input.slug !== undefined) {
+      const slug = slugify(input.slug, "almacen")
+      if (slug !== current.slug) await assertSlugFree(tx, slug)
+      patch.slug = slug
+    }
+
+    if (Object.keys(patch).length === 0) return toRecord(current)
+
+    const [updated] = await tx
+      .update(warehouses)
+      .set(patch)
+      .where(eq(warehouses.id, warehouseId))
+      .returning()
+
+    if (!updated) throw new NotFoundError("El almacén no existe")
+    return toRecord(updated)
+  })
+}
+
+/** Lo que se lleva por delante dar de baja un almacén, para poder enumerarlo antes. */
+export interface DeletionScope {
+  readonly storages: number
+  readonly categories: number
+  readonly products: number
+}
+
+export async function deletionScope(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+): Promise<DeletionScope> {
+  return withRequester(actor, async (tx) => {
+    await assertCompany(tx, companyId)
+    await loadWarehouse(tx, companyId, warehouseId)
+
+    const [storages] = await tx
+      .select({ value: count() })
+      .from(warehouseStorages)
+      .where(eq(warehouseStorages.warehouseId, warehouseId))
+
+    const [categories] = await tx
+      .select({ value: count() })
+      .from(warehouseCategories)
+      .where(eq(warehouseCategories.warehouseId, warehouseId))
+
+    const [products] = await tx
+      .select({ value: count() })
+      .from(warehouseProducts)
+      .where(
+        and(
+          eq(warehouseProducts.warehouseId, warehouseId),
+          isNull(warehouseProducts.deletedAt),
+          // Las variantes y los accesorios se cuentan con su padre: enumerar «catorce productos»
+          // cuando son cuatro con tres variantes cada uno asusta sin informar.
+          isNull(warehouseProducts.parentId),
+        ),
+      )
+
+    return {
+      storages: storages?.value ?? 0,
+      categories: categories?.value ?? 0,
+      products: products?.value ?? 0,
+    }
+  })
+}
+
+/**
+ * Da de baja un almacén.
+ *
+ * **Borrado lógico**, y sin cascada escrita a mano. El contenido deja de ser accesible porque toda
+ * lectura parte del almacén y el almacén ya no está: no hace falta recorrer nada. Es exactamente lo
+ * que la implementación anterior hacía mal —veinte funciones de borrado, tres de ellas borrando de
+ * la tabla de empresas usando el identificador de otra entidad (`DEFECTS.md` C-08)—.
+ *
+ * **Falta impedir la baja con trabajo en curso.** La spec lo exige, y necesita las cotizaciones
+ * (14) y los pedidos (15): hoy no hay nada que consultar, y fingir la comprobación sería peor que
+ * declararla pendiente.
+ */
+export async function deleteWarehouse(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+): Promise<void> {
+  await withRequester(actor, async (tx) => {
+    await assertCompany(tx, companyId)
+    await loadWarehouse(tx, companyId, warehouseId)
+
+    await tx.update(warehouses).set({ deletedAt: new Date() }).where(eq(warehouses.id, warehouseId))
+  })
+}
+
+// ─── Ayuda ───────────────────────────────────────────────────────────────────
+
+/**
+ * La empresa tiene contratado el servicio de almacenes.
+ *
+ * Se comprueba al crear y no al leer: retirar un servicio **conserva sus datos**, así que un
+ * almacén existente sigue siendo consultable aunque la empresa deje de tener el servicio. Lo que no
+ * puede es crecer.
+ */
+async function assertServiceEnabled(tx: Transaction, companyId: string): Promise<void> {
+  const [enabled] = await tx
+    .select({ id: companyServices.id })
+    .from(companyServices)
+    .innerJoin(services, eq(services.id, companyServices.serviceId))
+    .where(and(eq(companyServices.companyId, companyId), eq(services.keycode, SERVICE)))
+    .limit(1)
+
+  if (!enabled) {
+    throw new UnprocessableError("Esta empresa no tiene contratado el servicio de almacenes")
+  }
+}
+
+/**
+ * El identificador legible es único **en toda la plataforma**, no por empresa.
+ *
+ * Es lo que aparece en la dirección de una tienda pública, y ahí no hay empresa que lo acote.
+ */
+async function freeSlug(tx: Transaction, name: string): Promise<string> {
+  const base = slugify(name, "almacen")
+
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const candidate = slugCandidate(base, attempt)
+
+    const [taken] = await tx
+      .select({ id: warehouses.id })
+      .from(warehouses)
+      .where(and(eq(warehouses.slug, candidate), isNull(warehouses.deletedAt)))
+      .limit(1)
+
+    if (!taken) return candidate
+  }
+
+  throw new UnprocessableError("Demasiados almacenes con ese nombre")
+}
+
+async function assertSlugFree(tx: Transaction, slug: string): Promise<void> {
+  const [taken] = await tx
+    .select({ id: warehouses.id })
+    .from(warehouses)
+    .where(and(eq(warehouses.slug, slug), isNull(warehouses.deletedAt)))
+    .limit(1)
+
+  if (taken) throw new ConflictError("Ese identificador legible ya está ocupado")
+}
+
+/**
+ * La empresa está al alcance del solicitante.
+ *
+ * Fuera del alcance, el motor no devuelve la fila y esto responde `404`. No `403`: decir «existe
+ * pero no puedes» confirma que existe, y eso ya es información sobre otra empresa.
+ */
+async function assertCompany(tx: Transaction, companyId: string): Promise<void> {
+  const [company] = await tx
+    .select({ id: companies.id })
+    .from(companies)
+    .where(and(eq(companies.id, companyId), isNull(companies.deletedAt)))
+    .limit(1)
+
+  if (!company) throw new NotFoundError("La empresa no existe")
+}
+
+export async function loadWarehouse(tx: Transaction, companyId: string, warehouseId: string) {
+  const [row] = await tx
+    .select()
+    .from(warehouses)
+    .where(
+      and(
+        eq(warehouses.id, warehouseId),
+        eq(warehouses.companyId, companyId),
+        isNull(warehouses.deletedAt),
+      ),
+    )
+    .limit(1)
+
+  if (!row) throw new NotFoundError("El almacén no existe")
+  return row
+}
+
+function toRecord(row: typeof warehouses.$inferSelect): WarehouseRecord {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    name: row.name,
+    description: row.description,
+    slug: row.slug,
+    isPublished: row.isPublished,
+    priority: row.priority,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+}
