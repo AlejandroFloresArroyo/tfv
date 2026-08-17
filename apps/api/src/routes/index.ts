@@ -26,6 +26,20 @@ import {
   verifyEmailRoute,
 } from "./auth.ts"
 import {
+  addMeasurementRoute,
+  createProductRoute,
+  createWarehouseCategoryRoute,
+  deleteMeasurementRoute,
+  deleteProductRoute,
+  deleteWarehouseCategoryRoute,
+  getProductRoute,
+  listProductsRoute,
+  listWarehouseCategoriesRoute,
+  productScopeRoute,
+  updateProductRoute,
+  updateWarehouseCategoryRoute,
+} from "./catalog.ts"
+import {
   addMemberRoute,
   createCompanyRoute,
   createRoleRoute,
@@ -160,7 +174,22 @@ export const routes: readonly RegisteredRoute[] = [
   updateStorageRoute,
   storageScopeRoute,
   deleteStorageRoute,
-  // Pendiente de la rebanada 12: catálogo, medidas, precios y unidades.
+
+  listWarehouseCategoriesRoute,
+  createWarehouseCategoryRoute,
+  updateWarehouseCategoryRoute,
+  deleteWarehouseCategoryRoute,
+
+  listProductsRoute,
+  createProductRoute,
+  getProductRoute,
+  updateProductRoute,
+  productScopeRoute,
+  deleteProductRoute,
+
+  addMeasurementRoute,
+  deleteMeasurementRoute,
+  // Pendiente de la rebanada 12: listas de precios y unidades de existencia.
 
   // ─── Producciones ──────────────────────────────────────────────────────────
   // Pendiente: rebanada 20.
