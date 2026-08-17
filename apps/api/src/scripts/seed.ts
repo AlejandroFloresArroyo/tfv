@@ -19,8 +19,17 @@
 
 import { newId, PERMISSION_KEYS, type PermissionKey } from "@tfv/contracts"
 import { db } from "@tfv/db"
-import { companies, companyMembers, companyServices, roles, services, users } from "@tfv/db/schema"
-import { and, eq, isNull } from "drizzle-orm"
+import {
+  companies,
+  companyAddresses,
+  companyMembers,
+  companyServices,
+  counterparties,
+  roles,
+  services,
+  users,
+} from "@tfv/db/schema"
+import { and, eq, inArray, isNull } from "drizzle-orm"
 import { hashPassword } from "../auth/password.ts"
 import { env } from "../env.ts"
 
@@ -112,6 +121,28 @@ const ROLES: Record<string, readonly PermissionKey[]> = {
     "warehouses.products.edit_info",
     "companies.users.view",
   ],
+  Ventas: [
+    "companies.clients.view",
+    "companies.clients.create",
+    "companies.clients.edit",
+    "companies.users.view",
+    "warehouses.products.view",
+  ],
+  Compras: [
+    "companies.providers.view",
+    "companies.providers.create",
+    "companies.providers.edit",
+    "companies.addresses.view",
+  ],
+  Administración: [
+    "companies.companies.view",
+    "companies.companies.edit",
+    "companies.users.view",
+    "companies.roles.view",
+    "companies.addresses.view",
+    "companies.addresses.create",
+  ],
+  Contabilidad: ["companies.billings.view", "companies.companies.view"],
 }
 
 async function main(): Promise<void> {
@@ -120,8 +151,9 @@ async function main(): Promise<void> {
   const serviceIds = await seedCatalog()
   const companyIds = await seedCompanies(serviceIds)
   await seedAccounts(passwordHash, companyIds)
+  const volume = await seedVolume(passwordHash, companyIds)
 
-  report(companyIds)
+  report(companyIds, volume)
 }
 
 // ─── Catálogo ────────────────────────────────────────────────────────────────
@@ -267,6 +299,322 @@ async function seedAccounts(passwordHash: string, companyIds: Map<string, string
   }
 }
 
+// ─── Volumen ─────────────────────────────────────────────────────────────────
+
+/**
+ * Gente y contrapartes suficientes para que una colección **se comporte como una colección**.
+ *
+ * Con cuatro cuentas y cero clientes, la búsqueda siempre encuentra, los filtros siempre dejan
+ * todo, y la paginación no aparece nunca. Las tres cosas se ven funcionar sólo cuando hay más
+ * elementos que los que caben en una página, así que aquí hay de sobra.
+ *
+ * Los nombres llevan acentos **a propósito**: es lo que hace visible que buscar «nunez» encuentre a
+ * Núñez. Sin un solo acento en la base, la normalización de la búsqueda parecería funcionar
+ * estuviera puesta o no.
+ */
+const FIRST_NAMES = [
+  "Álvaro",
+  "Beatriz",
+  "César",
+  "Dolores",
+  "Elías",
+  "Fátima",
+  "Gerardo",
+  "Helena",
+  "Inés",
+  "Joaquín",
+  "Karla",
+  "Lucía",
+  "Martín",
+  "Nuria",
+  "Óscar",
+  "Paloma",
+  "Ramón",
+  "Rocío",
+  "Sergio",
+  "Tomás",
+  "Ulises",
+  "Verónica",
+  "Ximena",
+  "Yolanda",
+  "Zoé",
+  "Andrés",
+  "Bárbara",
+  "Camila",
+  "Diego",
+  "Emilio",
+  "Fernanda",
+  "Guillermo",
+] as const
+
+const LAST_NAMES = [
+  "Aguirre",
+  "Beltrán",
+  "Cárdenas",
+  "Domínguez",
+  "Escobar",
+  "Fuentes",
+  "Gálvez",
+  "Herrera",
+  "Ibáñez",
+  "Jiménez",
+  "Lozano",
+  "Maldonado",
+  "Núñez",
+  "Ordóñez",
+  "Peña",
+  "Quintero",
+  "Ríos",
+  "Salazar",
+  "Treviño",
+  "Urbina",
+  "Vázquez",
+  "Wong",
+  "Ximénez",
+  "Ybarra",
+  "Zúñiga",
+  "Ávila",
+] as const
+
+const TRADE_PREFIXES = [
+  "Producciones",
+  "Rentas",
+  "Estudios",
+  "Foto",
+  "Cine",
+  "Servicios",
+  "Grupo",
+  "Taller",
+] as const
+
+const CITIES = [
+  ["Monterrey", "Nuevo León"],
+  ["Ciudad de México", "Ciudad de México"],
+  ["Guadalajara", "Jalisco"],
+  ["Mérida", "Yucatán"],
+  ["Querétaro", "Querétaro"],
+  ["Culiacán", "Sinaloa"],
+] as const
+
+/** Cuántos de cada cosa. Por encima de una página de 24 en todos los casos, que es el punto. */
+const VOLUME = {
+  teammates: 36,
+  clients: 140,
+  providers: 60,
+  addresses: 28,
+} as const
+
+interface VolumeReport {
+  readonly teammates: number
+  readonly clients: number
+  readonly providers: number
+  readonly addresses: number
+}
+
+/**
+ * El par (nombre, apellido) de la persona número `index`.
+ *
+ * Los dos ciclos tienen longitudes coprimas —32 y 26—, así que el par no se repite hasta la persona
+ * 416. Es lo que hace que el correo derivado del nombre sea único sin tener que numerarlo, y lo que
+ * mantiene la siembra idempotente: la misma persona sale siempre con el mismo correo.
+ */
+function personAt(index: number): { first: string; last: string } {
+  return {
+    first: FIRST_NAMES[index % FIRST_NAMES.length] as string,
+    last: LAST_NAMES[index % LAST_NAMES.length] as string,
+  }
+}
+
+/** Sin acentos y en minúsculas, para lo que tiene que ser mecanografiable. */
+function plain(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+}
+
+async function seedVolume(
+  passwordHash: string,
+  companyIds: Map<string, string>,
+): Promise<VolumeReport> {
+  const primary = companyIds.get("Renta Fílmica del Norte")
+  const secondary = companyIds.get("Estudios Mariposa")
+  if (!primary || !secondary) return { teammates: 0, clients: 0, providers: 0, addresses: 0 }
+
+  const teammates = await seedTeammates(passwordHash, primary)
+  const clients = await seedCounterparties(primary, "client", VOLUME.clients, 0)
+  const providers = await seedCounterparties(primary, "provider", VOLUME.providers, 500)
+  // La segunda empresa también necesita cartera: si sólo una tiene datos, cambiar de empresa
+  // parecería romper el listado en lugar de cambiar de alcance.
+  await seedCounterparties(secondary, "client", 40, 900)
+  const addresses = await seedAddresses(primary)
+
+  return { teammates, clients, providers, addresses }
+}
+
+async function seedTeammates(passwordHash: string, companyId: string): Promise<number> {
+  const roleIds = await db
+    .select({ id: roles.id, name: roles.name })
+    .from(roles)
+    .where(eq(roles.companyId, companyId))
+
+  const wanted = Array.from({ length: VOLUME.teammates }, (_, index) => {
+    const { first, last } = personAt(index)
+    return {
+      index,
+      first,
+      last,
+      email: `${plain(first)}.${plain(last)}@tfv.dev`,
+      username: `${plain(first)}-${plain(last)}`,
+    }
+  })
+
+  const existing = await db
+    .select({ id: users.id, email: users.email })
+    .from(users)
+    .where(
+      inArray(
+        users.email,
+        wanted.map((person) => person.email),
+      ),
+    )
+  const byEmail = new Map(existing.map((row) => [row.email, row.id]))
+
+  const missing = wanted.filter((person) => !byEmail.has(person.email))
+  if (missing.length > 0) {
+    await db.insert(users).values(
+      missing.map((person) => ({
+        id: newId(),
+        email: person.email,
+        username: person.username,
+        name: person.first,
+        lastname: person.last,
+        passwordHash,
+        emailVerifiedAt: new Date(),
+      })),
+    )
+
+    const inserted = await db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(
+        inArray(
+          users.email,
+          missing.map((person) => person.email),
+        ),
+      )
+    for (const row of inserted) byEmail.set(row.email, row.id)
+  }
+
+  for (const person of wanted) {
+    const userId = byEmail.get(person.email)
+    if (!userId) continue
+
+    // Uno de cada cinco se queda sin rol y uno de cada siete inactivo: son los dos filtros de la
+    // pantalla, y sin nadie en el caso contrario un filtro que no filtre nada parece funcionar.
+    const roleId =
+      person.index % 5 === 0 ? null : (roleIds[person.index % roleIds.length]?.id ?? null)
+    const isActive = person.index % 7 !== 0
+
+    await db
+      .insert(companyMembers)
+      .values({ id: newId(), companyId, userId, roleId, isOwner: false, isActive })
+      .onConflictDoNothing({ target: [companyMembers.companyId, companyMembers.userId] })
+  }
+
+  return wanted.length
+}
+
+async function seedCounterparties(
+  companyId: string,
+  role: "client" | "provider",
+  howMany: number,
+  seed: number,
+): Promise<number> {
+  const wanted = Array.from({ length: howMany }, (_, offset) => {
+    const index = seed + offset
+    const { first, last } = personAt(index)
+    // Dos de cada tres son un negocio; el resto, una persona. Es la mezcla real de una cartera, y
+    // la que hace que buscar por nombre de persona y por razón social tengan que funcionar los dos.
+    const isBusiness = index % 3 !== 0
+    const trade = TRADE_PREFIXES[index % TRADE_PREFIXES.length] as string
+
+    return {
+      alias: isBusiness ? `${trade} ${last}` : `${first} ${last}`,
+      snapshot: {
+        name: first,
+        lastname: last,
+        email: `${plain(first)}.${plain(last)}.${index}@ejemplo.mx`,
+        ...(isBusiness ? { companyName: `${trade} ${last}, S.A. de C.V.` } : {}),
+      },
+    }
+  })
+
+  const existing = await db
+    .select({ alias: counterparties.alias })
+    .from(counterparties)
+    .where(and(eq(counterparties.companyId, companyId), eq(counterparties.role, role)))
+  const known = new Set(existing.map((row) => row.alias))
+
+  // El alias se repite entre índices distintos —hay ocho prefijos y veintiséis apellidos—, así que
+  // se deduplica aquí: la cartera queda con menos filas que las pedidas, y eso está bien. Lo que no
+  // estaría bien es que volver a sembrar añadiera duplicados cada vez.
+  const missing = new Map<string, (typeof wanted)[number]>()
+  for (const entry of wanted) {
+    if (known.has(entry.alias) || missing.has(entry.alias)) continue
+    missing.set(entry.alias, entry)
+  }
+
+  if (missing.size > 0) {
+    await db.insert(counterparties).values(
+      [...missing.values()].map((entry) => ({
+        id: newId(),
+        companyId,
+        role,
+        alias: entry.alias,
+        snapshot: entry.snapshot,
+      })),
+    )
+  }
+
+  return known.size + missing.size
+}
+
+async function seedAddresses(companyId: string): Promise<number> {
+  const existing = await db
+    .select({ id: companyAddresses.id })
+    .from(companyAddresses)
+    .where(eq(companyAddresses.companyId, companyId))
+
+  if (existing.length > 0) return existing.length
+
+  await db.insert(companyAddresses).values(
+    Array.from({ length: VOLUME.addresses }, (_, index) => {
+      const [city, state] = CITIES[index % CITIES.length] as readonly [string, string]
+      const { last } = personAt(index)
+
+      return {
+        id: newId(),
+        companyId,
+        label: index === 0 ? "Bodega principal" : `Bodega ${last}`,
+        street: `Avenida ${last}`,
+        number: String(100 + index * 7),
+        colony: "Centro",
+        city,
+        state,
+        country: "México",
+        countryCode: "MX",
+        postalCode: String(64000 + index),
+        // Sólo la primera es primaria: el índice único parcial rechazaría la segunda, que es
+        // exactamente lo que se quiere que haga.
+        isPrimary: index === 0,
+      }
+    }),
+  )
+
+  return VOLUME.addresses
+}
+
 async function findRole(companyId: string, name: string): Promise<string | null> {
   const [role] = await db
     .select({ id: roles.id })
@@ -279,7 +627,7 @@ async function findRole(companyId: string, name: string): Promise<string | null>
 
 // ─── Informe ─────────────────────────────────────────────────────────────────
 
-function report(companyIds: Map<string, string>): void {
+function report(companyIds: Map<string, string>, volume: VolumeReport): void {
   const lines = [
     "",
     "  Siembra aplicada.",
@@ -296,6 +644,9 @@ function report(companyIds: Map<string, string>): void {
     "  Empresa                      Servicios",
     "  ───────────────────────────  ──────────────────────────────────",
     ...COMPANIES.map((entry) => `  ${entry.name.padEnd(27)}  ${entry.services.join(", ")}`),
+    "",
+    "  Volumen en Renta Fílmica del Norte, para que las colecciones se comporten como tales:",
+    `    ${volume.teammates} personas · ${volume.clients} clientes · ${volume.providers} proveedores · ${volume.addresses} direcciones`,
     "",
     `  Identificadores: ${[...companyIds.values()].join(", ")}`,
     "",
