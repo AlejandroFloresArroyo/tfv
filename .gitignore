@@ -12,6 +12,22 @@ coverage/
 test-results/
 playwright-report/
 
+# Sesiones guardadas por la preparación de las pruebas de navegador.
+#
+# Son credenciales vivas: cada archivo lleva la cookie de sesión de una de las cuentas de la
+# siembra. Se regeneran en cada ejecución, así que no hay nada que conservar y sí mucho que evitar.
+apps/e2e/.auth/
+
+# Herramientas del entorno de quien desarrolla, enlazadas desde fuera del repositorio.
+.agents/
+
+# Lo genera Next y apunta dentro de `.next/`, que no se versiona.
+#
+# Además apunta a un sitio distinto según el último comando que corrió —`.next/dev/types` tras
+# `next dev`, `.next/types` tras `next build`—, así que versionado cambia solo cada vez que se
+# alterna, y ese ruido tapa los cambios de verdad.
+apps/web/next-env.d.ts
+
 .DS_Store
 
 # Estado local de la pila de Supabase
