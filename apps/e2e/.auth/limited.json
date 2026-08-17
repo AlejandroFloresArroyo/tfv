@@ -1,0 +1,25 @@
+{
+  "cookies": [
+    {
+      "name": "tfv_session",
+      "value": "TF2Fe5JYoeigmVv0oTswq2qfWqiv78wGCke3GcEujq8",
+      "domain": "127.0.0.1",
+      "path": "/",
+      "expires": 1786978241,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "tfv_refresh",
+      "value": "Wtq0KR6Gt54COZAGmo2x03c8t7PrcgCeZa7DoYs1mMM",
+      "domain": "127.0.0.1",
+      "path": "/api/auth",
+      "expires": 1789569341,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}
