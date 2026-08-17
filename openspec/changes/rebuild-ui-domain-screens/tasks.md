@@ -1,18 +1,24 @@
 # 29 · Pantallas de dominio — trabajo
 
+Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falta anotada.
+
 ## Decisión previa
 
-- [ ] Decidir el alcance de traducción: sólo español con textos extraídos, o español e inglés
+- [x] Decidir el alcance de traducción — **español e inglés desde el primer componente**, con
+      los dos idiomas alineados clave a clave y comprobado que no se desalinean
 
 ## 29a · Núcleo y administración
 
-- [ ] Acceso, registro, recuperación y verificación
-- [ ] Perfil y cambio de correo y contraseña
-- [ ] Selector y gestión de empresas
-- [ ] Miembros: invitación, retirada, activación, rol, propiedad
-- [ ] Roles con su matriz de permisos, construida desde el catálogo del servidor
-- [ ] Direcciones de usuario y de empresa, con mapa
-- [ ] Clientes y proveedores
+- [x] Acceso, registro, recuperación y verificación — llegaron con la 28
+- [~] Perfil y sesiones abiertas. **Faltan** el cambio de contraseña y el de correo, que necesita
+      verificar la dirección nueva (rebanada 10)
+- [~] Selector de empresa y alta. **Falta la gestión**: editar y dar de baja desde la pantalla
+- [x] Miembros: incorporación, retirada, activación, rol y propiedad
+- [x] Roles con su matriz de permisos, construida desde el catálogo del servidor
+- [~] Direcciones **de empresa**, con su libreta explorable y la regla de la primaria en la
+      pantalla. Faltan las **de usuario** —misma libreta, otro dueño— y el selector en mapa (28e)
+- [x] Clientes y proveedores, **con permisos separados**: son dos colecciones distintas y no la
+      misma con un parámetro, porque un parámetro no se puede autorizar por separado
 - [ ] Perfiles de facturación, con su asistente
 - [ ] Planes: selección, cambio, cancelación, reactivación
 - [ ] Historial de cobros

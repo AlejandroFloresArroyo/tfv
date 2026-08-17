@@ -108,13 +108,13 @@ Lo construido hasta ahora, medido y no estimado:
 | Rebanadas | 8 de 30 empezadas, **ninguna cerrada del todo** |
 | Código sin pruebas | 21 110 líneas |
 | Código de prueba | 5 639 líneas |
-| Pruebas | **307** — 53 contratos, 59 datos, 136 API, 28 web, 31 de extremo a extremo |
+| Pruebas | **315** — 53 contratos, 59 datos, 136 API, 28 web, 39 de extremo a extremo |
 | Esquema | 91 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
 | Aislamiento | 195 políticas · 91/91 tablas · 0 con identidad cruda |
 | Migraciones | 10, replicadas desde cero en cada verificación |
 | Rutas | **49** registradas, 27 con permiso declarado, 10 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 14, en español e inglés (198 mensajes, sin desalinear) |
+| Pantallas | 17, en español e inglés (261 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía— y **las
@@ -203,24 +203,22 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
 | 28 | `rebuild-ui-foundation` | 🟡 | Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial). Falta la exploración de colecciones (28d) y, de la 28e, el asistente por pasos y los controles ricos |
-| 29 | `rebuild-ui-domain-screens` | ⬜ | Desbloqueada: el alcance de traducción quedó decidido |
+| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, clientes, proveedores y direcciones de empresa. El resto de la 29a espera a la facturación y a la bitácora; 29b–29e, a sus rebanadas de servidor |
 | 30 | `add-data-migration-and-cutover` | ⬜ | |
 
 ## Lo siguiente
 
 En este orden, y con el motivo de que sea ése:
 
-1. **Pantallas de direcciones, clientes y proveedores** (29a). Sus rutas y su exploración están
-   hechas y probadas, y no hay ninguna pantalla que las use: hoy la cartera de ciento veintiocho
-   clientes de la siembra sólo se ve por `curl`. Es lo más barato que queda y lo más visible.
-2. **Almacenes** (rebanada 12). Es la primera columna de comercio y ya no le falta nada: tiene
+1. **Almacenes** (rebanada 12). Es la primera columna de comercio y ya no le falta nada: tiene
    empresas, permisos, contrapartes, direcciones, taxonomía y colecciones debajo.
-3. **Lo que queda de la 10**: prospectos, cambio de correo, y las comprobaciones de «en uso» que
-   necesitan documentos que aún no existen.
-4. **Base de pruebas separada de la de desarrollo.** Sigue estorbando: `pnpm test` borra los datos
+2. **Lo que queda de la 10**: prospectos, cambio de correo, y las comprobaciones de «en uso» que
+   necesitan documentos que aún no existen. El cambio de correo bloquea además la pantalla de
+   perfil, que hoy no lo ofrece.
+3. **Base de pruebas separada de la de desarrollo.** Sigue estorbando: `pnpm test` borra los datos
    con los que se está mirando la aplicación, y ahora borra además la siembra de volumen que hace
    falta para ver funcionar las colecciones.
-5. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
+4. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
    **recepción verificada de eventos de cobro** (07), que cierra el bloque crítico.
 
 La **medición previa al corte** de la 05 no va aquí porque no depende de nosotros: necesita tráfico
@@ -1181,3 +1179,53 @@ El carrusel —ninguna pantalla lo pide— y tres tipos de control de filtro: n�
 y fecha suelta. Ningún recurso los declara todavía, y un control sin nada que filtrar se escribe a
 ciegas y se descubre equivocado el día que tenga usuario. La taxonomía global tampoco pagina: su
 listado por defecto son las raíces, y «ausente» no es «nulo» en esta gramática.
+
+### 2026-08-17 · Las primeras pantallas de directorio
+
+Rebanada **29a**, adelantada porque no costaba nada: la API de direcciones, clientes y proveedores
+estaba hecha y probada desde la 10, la exploración desde la 28d, y no había **ninguna pantalla que
+las usara** — la cartera de ciento veintiocho clientes de la siembra sólo se veía por `curl`.
+
+Tres pantallas nuevas y **8 pruebas de navegador**. Total **315**.
+
+**Clientes y proveedores son dos colecciones, no una con un parámetro**
+
+Comparten el código entero y no comparten el permiso, que es lo único que no se puede compartir:
+quien lleva las compras no ve por ello la cartera de clientes. Un parámetro de ruta no se puede
+autorizar por separado, así que son dos claves del catálogo y dos rutas. Hay una prueba que lo fija:
+un cliente dado de alta no aparece buscándolo entre los proveedores.
+
+**Dos decisiones de la libreta que se ven en la pantalla**
+
+«Marcar como primaria» es una **acción con confirmación**, no una casilla dentro del formulario de
+edición: quien la pulsa está cambiando dos direcciones —la nueva y la que deja de serlo—, y eso
+merece decirse antes y no descubrirse después. Y no se ofrece sobre la que ya lo es: una acción que
+no hace nada es peor que no ofrecerla.
+
+Eliminar la primaria avisa de que la sustituta será la más antigua de las que queden. Sin ese aviso,
+el origen de los envíos cambia solo y nadie relaciona una cosa con la otra.
+
+**Cambiar de empresa dejaba de conservar la sección**
+
+La navegación decidía si conservarla mirando si la empresa destino tenía **ese servicio**. Las
+secciones que no son de ningún servicio —directorio y configuración— no pasaban la comprobación, así
+que cambiar de empresa desde «Miembros» caía a la portada. Existen en toda empresa: ahora se
+conservan sin preguntar.
+
+**Y un fallo que el compilador no ve**
+
+La función que arma la línea legible de una dirección estaba exportada desde el módulo de los
+diálogos, que lleva `"use client"`. La pantalla es de servidor, y llamarla desde ahí no compila mal:
+**falla en ejecución** con «attempted to call describe() from the server». Los tipos no dibujan esa
+frontera, así que hay que dibujarla a mano — lo compartido entre servidor y cliente vive ahora en su
+propio archivo, sin la directiva.
+
+Se descubrió al correr las pruebas de navegador. Sin ellas, se habría descubierto abriendo la
+pantalla.
+
+**Y dos primitivos que no ataban su etiqueta**
+
+`Checkbox` y `Switch` ponían `htmlFor` con el identificador que les dieran, y si no les daban
+ninguno se quedaban sin él: pulsar la etiqueta no marcaba nada y el control perdía su nombre
+accesible. No se ve —la etiqueta se pinta igual— y sólo aparece al intentar usarlo con teclado. Lo
+generan ellos ahora, que es el mismo argumento por el que `Field` es un componente y no tres.
