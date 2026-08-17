@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.next/
+.turbo/
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+coverage/
+test-results/
+playwright-report/
+
+.DS_Store
+
+# Estado local de la pila de Supabase
+supabase/.temp/
+supabase/.branches/

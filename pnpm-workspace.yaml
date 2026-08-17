@@ -1,0 +1,14 @@
+packages:
+  - apps/*
+  - packages/*
+
+# El frontend y el backend anteriores quedan fuera del espacio de trabajo:
+# son referencia, no se construyen ni se instalan desde aquí.
+
+allowBuilds:
+  # Lo necesitan drizzle-kit y vitest para compilar TypeScript en tiempo de ejecución.
+  esbuild: true
+  # Los trae Next: el observador de archivos y el compilador. Los dos publican binarios
+  # precompilados, y su guion de instalación sólo actúa cuando no hay uno para la plataforma.
+  '@parcel/watcher': true
+  '@swc/core': true

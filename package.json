@@ -1,0 +1,32 @@
+{
+  "name": "tfv",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "check": "turbo run check",
+    "test": "turbo run test --concurrency=1",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "db:up": "supabase start",
+    "db:down": "supabase stop",
+    "db:generate": "pnpm --filter @tfv/db generate",
+    "db:migrate": "pnpm --filter @tfv/db migrate",
+    "db:studio": "pnpm --filter @tfv/db studio",
+    "db:seed": "pnpm --filter @tfv/api seed",
+    "db:status": "supabase status",
+    "db:reset": "supabase db reset",
+    "test:e2e": "pnpm --filter @tfv/e2e test:e2e"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.8",
+    "supabase": "^2.114.0",
+    "turbo": "^2.10.10",
+    "typescript": "^7.0.2"
+  }
+}
