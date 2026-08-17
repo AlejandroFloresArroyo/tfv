@@ -3,7 +3,7 @@
 import { Check, ChevronDown, Minus } from "lucide-react"
 import { Checkbox as CheckboxPrimitive, Switch as SwitchPrimitive } from "radix-ui"
 import type { ComponentPropsWithoutRef, SelectHTMLAttributes } from "react"
-import { forwardRef } from "react"
+import { forwardRef, useId } from "react"
 import { cn } from "../lib/cn.ts"
 
 /**
@@ -61,7 +61,20 @@ export interface CheckboxProps
  * marcado —«todos los permisos de almacenes»— y sin él sólo quedan dos estados para representar
  * tres situaciones.
  */
-export function Checkbox({ label, hint, className, id, ...rest }: CheckboxProps) {
+export function Checkbox({ label, hint, className, id: given, ...rest }: CheckboxProps) {
+  /**
+   * El identificador lo genera el componente si no se lo dan.
+   *
+   * Sin él, el `<label>` se queda sin `htmlFor`: pulsarlo no marca la casilla y el control pierde
+   * su nombre accesible. Es un fallo que **no se ve** —la etiqueta se pinta igual— y que sólo
+   * aparece al intentar marcarla con teclado o al buscarla por su nombre.
+   *
+   * Es el mismo argumento que hace de `Field` un componente y no tres: la atadura no se puede
+   * dejar a que quien lo use se acuerde.
+   */
+  const generated = useId()
+  const id = given ?? generated
+
   /**
    * La ayuda va como **descripción**, no dentro de la etiqueta.
    *
@@ -72,7 +85,7 @@ export function Checkbox({ label, hint, className, id, ...rest }: CheckboxProps)
    *
    * El nombre es la identidad; el recuento es estado, y el estado se describe aparte.
    */
-  const hintId = hint && id ? `${id}-hint` : undefined
+  const hintId = hint ? `${id}-hint` : undefined
 
   const control = (
     <CheckboxPrimitive.Root
@@ -134,7 +147,11 @@ export interface SwitchProps extends ComponentPropsWithoutRef<typeof SwitchPrimi
  * casilla espera al envío del formulario. Usar el aspecto equivocado hace que la gente pulse
  * «Guardar» buscando un botón que no existe, o que crea que no guardó cuando ya lo hizo.
  */
-export function Switch({ label, className, id, ...rest }: SwitchProps) {
+export function Switch({ label, className, id: given, ...rest }: SwitchProps) {
+  // Como en la casilla: sin identificador la etiqueta no queda atada al control, y eso no se ve.
+  const generated = useId()
+  const id = given ?? generated
+
   const control = (
     <SwitchPrimitive.Root
       id={id}
