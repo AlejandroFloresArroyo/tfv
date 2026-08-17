@@ -108,11 +108,11 @@ Lo construido hasta ahora, medido y no estimado:
 | Rebanadas | 8 de 30 empezadas, **ninguna cerrada del todo** |
 | Código sin pruebas | 21 110 líneas |
 | Código de prueba | 5 639 líneas |
-| Pruebas | **315** — 53 contratos, 59 datos, 136 API, 28 web, 39 de extremo a extremo |
+| Pruebas | **337** — 59 contratos, 59 datos, 152 API, 28 web, 39 de extremo a extremo |
 | Esquema | 91 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
 | Aislamiento | 195 políticas · 91/91 tablas · 0 con identidad cruda |
 | Migraciones | 10, replicadas desde cero en cada verificación |
-| Rutas | **49** registradas, 27 con permiso declarado, 10 públicas y enumeradas |
+| Rutas | **61** registradas, 39 con permiso declarado, 10 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
 | Pantallas | 17, en español e inglés (261 mensajes, sin desalinear) |
 
@@ -171,7 +171,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 12 | `migrate-warehouse-catalog` | ⬜ | |
+| 12 | `migrate-warehouse-catalog` | 🟡 | Almacén y árbol de ubicaciones. Faltan el catálogo, las medidas, los precios y las unidades |
 | 13 | `add-transactional-stock-reservation` | ⬜ | **Bloqueada**: decisión M-04 |
 | 14 | `add-server-side-quotation-pricing` | ⬜ | **Bloqueada**: decisión M-05 |
 | 15 | `migrate-warehouse-orders` | ⬜ | |
@@ -210,15 +210,18 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 En este orden, y con el motivo de que sea ése:
 
-1. **Almacenes** (rebanada 12). Es la primera columna de comercio y ya no le falta nada: tiene
-   empresas, permisos, contrapartes, direcciones, taxonomía y colecciones debajo.
-2. **Lo que queda de la 10**: prospectos, cambio de correo, y las comprobaciones de «en uso» que
+1. **Lo que queda de almacenes** (rebanada 12): el catálogo con variantes y accesorios, las
+   medidas, las listas de precios y las unidades de existencia. El almacén y sus ubicaciones ya
+   están, así que todo lo demás tiene dónde colgarse.
+2. **Las pantallas de almacenes** (29b), empezando por el árbol de ubicaciones como jerarquía
+   navegable, que es lo único de la 12 que no se puede comprobar sin pantalla.
+3. **Lo que queda de la 10**: prospectos, cambio de correo, y las comprobaciones de «en uso» que
    necesitan documentos que aún no existen. El cambio de correo bloquea además la pantalla de
    perfil, que hoy no lo ofrece.
-3. **Base de pruebas separada de la de desarrollo.** Sigue estorbando: `pnpm test` borra los datos
+4. **Base de pruebas separada de la de desarrollo.** Sigue estorbando: `pnpm test` borra los datos
    con los que se está mirando la aplicación, y ahora borra además la siembra de volumen que hace
    falta para ver funcionar las colecciones.
-4. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
+5. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
    **recepción verificada de eventos de cobro** (07), que cierra el bloque crítico.
 
 La **medición previa al corte** de la 05 no va aquí porque no depende de nosotros: necesita tráfico
@@ -1229,3 +1232,64 @@ pantalla.
 ninguno se quedaban sin él: pulsar la etiqueta no marcaba nada y el control perdía su nombre
 accesible. No se ve —la etiqueta se pinta igual— y sólo aparece al intentar usarlo con teclado. Lo
 generan ellos ahora, que es el mismo argumento por el que `Field` es un componente y no tres.
+
+### 2026-08-17 · El almacén y su nave
+
+Primera mitad de la rebanada **12**, y la apertura de la columna de comercio: el almacén y su árbol
+de ubicaciones físicas. Doce rutas nuevas y **22 pruebas**. Total **337**.
+
+**La habilitación no es el permiso**
+
+Crear un almacén exige que la empresa tenga contratado el servicio. Es una comprobación aparte, y
+hace falta que lo sea: el permiso dice qué puede hacer una persona **dentro** de una empresa, y una
+propietaria los tiene todos. Sin esta comprobación, la propietaria de una empresa que no contrató
+almacenes podría crear uno, porque la compuerta sólo mira permisos.
+
+**El código de una ubicación es para decirlo en voz alta**
+
+`RCK3`, `BOX12`. La gente los escribe en etiquetas y los dice cruzando la nave, y de ahí salen dos
+reglas que parecen detalles y no lo son:
+
+- **Se regenera al cambiar de tipo y nunca al renombrar.** Corregir una falta de ortografía en el
+  nombre no puede dejar la nave llena de etiquetas mintiendo.
+- **El correlativo cuenta por tipo y por almacén.** Cada nave tiene su `BOX1`. Contar globalmente
+  daría números altos y sin sentido para quien sólo ve la suya.
+
+Y una consecuencia que conviene tener escrita: el número **no identifica**. Se calcula contando, así
+que eliminar una ubicación libera su número y el siguiente alta lo reutiliza. Lo que identifica es
+la fila. Dos altas simultáneas del mismo tipo cuentan lo mismo y la segunda choca contra el índice
+único de `(almacén, código)` — falla, que es el modo correcto de fallar.
+
+**Eliminar una caja no destruye lo que había dentro**
+
+Se lleva el subárbol y deja los productos **sin ubicación**. Las dos consecuencias las hace el
+motor: la cascada, con la clave foránea autorreferente; y los productos sueltos, con la clave
+foránea a nulo. No hay recorrido escrito a mano, que es donde la implementación anterior se
+equivocaba —veinte funciones de borrado, tres de ellas borrando de la tabla de empresas (C-08)—.
+
+Lo único que el motor no puede impedir por sí solo es el ciclo, porque la consulta que lo detecta es
+recursiva y una restricción no puede serlo. Es el mismo reparto que en la taxonomía global.
+
+**El identificador legible se comporta distinto al crear y al editar**
+
+Al crear se añade un sufijo si colisiona: nadie eligió el identificador, se derivó del nombre, y
+«Bodega» es un nombre razonable dos veces. Al cambiarlo a mano se **rechaza**: alguien escribió uno
+concreto, y darle otro en silencio es no hacer lo que pidió.
+
+La derivación se sacó a los contratos, con sus pruebas. La necesitan ya las categorías, los
+almacenes y —en cuanto lleguen— los productos y las tiendas, y dos implementaciones del mismo
+formato acaban difiriendo en el primer caso raro: una eñe, un guion doble, un nombre que son sólo
+símbolos.
+
+**Y una mezcla de dos formas de consultar**
+
+El camino de la raíz a una ubicación sale de una consulta recursiva, que es SQL a secas. Sus
+columnas vuelven como las nombra la base —`parent_id`, `created_at`—, sin la traducción del
+constructor de consultas: mezclar las dos formas deja campos en `undefined` que sólo se notan al
+serializar. Ahora lo recursivo aporta **sólo el orden** y las filas las lee la consulta tipada.
+
+**Abierto de la 12**
+
+El catálogo, las medidas, los precios y las unidades. Y dos cosas que no dependen de escribir más
+código aquí: impedir la baja de un almacén con trabajo en curso necesita las cotizaciones y los
+pedidos, y presentar el árbol como jerarquía navegable es pantalla.
