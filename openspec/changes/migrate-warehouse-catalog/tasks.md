@@ -17,8 +17,9 @@ pantalla (29b).
 - [x] Orden por prioridad, fecha y nombre. Son tres criterios y no uno: la prioridad empata en
       cuanto dos almacenes valen lo mismo, que es lo normal porque casi nadie la toca
 - [x] Baja con borrado lógico, previa enumeración
-- [ ] Impedir la baja con trabajo en curso — necesita cotizaciones (14) y pedidos (15), que son
-      quienes lo tendrían
+- [x] Impedir la baja con trabajo en curso. Estaba anotada esperando a las cotizaciones (14) y a
+      los pedidos (15); existen desde hace dos rebanadas y nadie lo advirtió. Los estados abiertos
+      se **derivan** de los cerrados, para que añadir uno nuevo no deje el hueco abierto en silencio
 - [x] **Corregir la cascada que borra de la tabla de empresas**: no hay cascada escrita a mano que
       pueda hacerlo. El contenido deja de ser accesible porque toda lectura parte del almacén
 
