@@ -822,6 +822,115 @@ describe("el estado de la cotización proyecta al inventario", () => {
 
 // ─── Retorno ─────────────────────────────────────────────────────────────────
 
+describe("las líneas se congelan al salir el equipo", () => {
+  it("una renta en curso no admite cambios de línea", async () => {
+    // No es burocracia: bajar la cantidad soltaría el vínculo de una unidad que está en un rodaje,
+    // y como sólo vuelven a `available` las que estaban `in_quote`, la unidad se quedaría `rented`
+    // sin dueño — comprometida para siempre y sin que la verificación de coherencia la viera.
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(3)
+    await moveTo(quote.id, "in_progress")
+    await moveTo(quote.id, "in_rent")
+
+    const [line] = await linesOf(quote.id)
+    const response = await setLines(quote.id, [{ id: line?.id, measurementId, quantity: 1 }])
+
+    expect(response.status).toBe(409)
+    // Y el equipo sigue fuera, entero.
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ rented: 3 })
+  })
+
+  it("tampoco admite añadir equipo a una renta ya salida", async () => {
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(2)
+    const other = await newStocked("Añadida", 2)
+    await moveTo(quote.id, "in_progress")
+    await moveTo(quote.id, "in_rent")
+
+    const [line] = await linesOf(quote.id)
+    const response = await setLines(quote.id, [
+      { id: line?.id, measurementId, quantity: 2 },
+      { measurementId: other, quantity: 1 },
+    ])
+
+    expect(response.status).toBe(409)
+    expect(statusesOf(await unitsOf(other))).toEqual({ available: 2 })
+  })
+
+  it("mientras el equipo no ha salido sí se editan", async () => {
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(3)
+    await moveTo(quote.id, "in_progress")
+    const [line] = await linesOf(quote.id)
+
+    const response = await setLines(quote.id, [{ id: line?.id, measurementId, quantity: 1 }])
+
+    expect(response.status).toBe(200)
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ available: 2, in_quote: 1 })
+  })
+})
+
+describe("cancelar con el equipo fuera", () => {
+  it("no se puede hasta registrar el retorno", async () => {
+    // Cancelar proyecta el inventario a «disponible». Con el equipo en la calle eso pone en el
+    // sistema que hay tres cámaras en el estante que no están.
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(3)
+    await moveTo(quote.id, "in_progress")
+    await moveTo(quote.id, "in_rent")
+
+    const response = await request(
+      "PATCH",
+      `${base}/quotes/${quote.id}/status`,
+      { status: "canceled" },
+      cookie,
+    )
+
+    expect(response.status).toBe(422)
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ rented: 3 })
+  })
+
+  it("se puede en cuanto vuelve todo", async () => {
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(2)
+    await moveTo(quote.id, "in_progress")
+    await moveTo(quote.id, "in_rent")
+
+    const out = await unitsOf(measurementId)
+    await request(
+      "POST",
+      `${base}/quotes/${quote.id}/returns`,
+      { units: out.map((unit) => ({ unitId: unit.id, status: "available" })) },
+      cookie,
+    )
+
+    const response = await request(
+      "PATCH",
+      `${base}/quotes/${quote.id}/status`,
+      { status: "canceled" },
+      cookie,
+    )
+
+    expect(response.status).toBe(200)
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ available: 2 })
+  })
+
+  it("una cotización sin equipo fuera se cancela sin más", async () => {
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(2)
+
+    const response = await request(
+      "PATCH",
+      `${base}/quotes/${quote.id}/status`,
+      { status: "canceled" },
+      cookie,
+    )
+
+    expect(response.status).toBe(200)
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ available: 2 })
+  })
+})
+
 describe("retorno del equipo rentado", () => {
   it("devuelve al inventario las que vuelven en condiciones", async () => {
     // Escenario: «El retorno devuelve el equipo al inventario».
@@ -866,6 +975,25 @@ describe("retorno del equipo rentado", () => {
     // Y la dañada no cuenta como disponible.
     const other = await newQuote({ ...WINDOW })
     expect((await setLines(other.id, [{ measurementId, quantity: 6 }])).status).toBe(422)
+  })
+
+  it("no acepta el retorno de una unidad que nunca salió de la nave", async () => {
+    // Una cotización en progreso tiene su equipo apartado, no fuera. «Devolverlo» por esta vía
+    // sería soltarlo sin pasar por la reconciliación, que es quien sabe qué líneas quedan.
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(2)
+    await moveTo(quote.id, "in_progress")
+    const held = await unitsOf(measurementId)
+
+    const response = await request(
+      "POST",
+      `${base}/quotes/${quote.id}/returns`,
+      { units: [{ unitId: held[0]?.id, status: "available" }] },
+      cookie,
+    )
+
+    expect(response.status).toBe(422)
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ in_quote: 2 })
   })
 
   it("no acepta el retorno de una unidad que no salió con esta cotización", async () => {
@@ -948,6 +1076,31 @@ describe("coherencia entre reservas e inventario", () => {
     )
 
     expect(report.items).toHaveLength(0)
+  })
+
+  it("detecta una unidad rentada sin vínculo vivo", async () => {
+    // El agujero que tapa esta rebanada: el escaneo de huérfanas sólo miraba entre las `in_quote`,
+    // así que una unidad que se quedó `rented` sin dueño era invisible — comprometida para siempre
+    // y sin nadie a quien reclamarla.
+    await clearWarehouse()
+    const { quote, measurementId } = await stockedQuote(3)
+    await moveTo(quote.id, "in_progress")
+    await moveTo(quote.id, "in_rent")
+    const [unit] = await unitsOf(measurementId)
+
+    // Se rompe por debajo, que es como se rompería de verdad.
+    await db
+      .update(warehouseStockReservations)
+      .set({ releasedAt: new Date() })
+      .where(eq(warehouseStockReservations.stockUnitId, unit?.id ?? ""))
+
+    const report = await json<{ items: { unitId: string; reason: string }[] }>(
+      await request("GET", `${base}/reservation-coherence`, undefined, cookie),
+    )
+
+    expect(report.items).toHaveLength(1)
+    expect(report.items[0]?.unitId).toBe(unit?.id)
+    expect(report.items[0]?.reason).toBe("committed_without_link")
   })
 
   it("detecta una unidad en cotización sin vínculo vivo", async () => {

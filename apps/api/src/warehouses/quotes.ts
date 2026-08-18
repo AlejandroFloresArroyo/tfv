@@ -22,6 +22,7 @@ import {
   buildPage,
   ConflictError,
   isClosed,
+  linesFrozen,
   NotFoundError,
   needsWindow,
   newId,
@@ -63,6 +64,7 @@ import {
   type Discrepancy,
   heldByQuote,
   pendingReturn,
+  projectedStatus,
   projectQuote,
   reconcileLine,
   registerReturn,
@@ -82,6 +84,7 @@ import { loadWarehouse } from "./warehouses.ts"
 export {
   allowedTransitions,
   isClosed,
+  linesFrozen,
   needsWindow,
   QUOTE_STATUSES,
   type QuoteStatus,
@@ -405,6 +408,19 @@ export async function changeQuoteStatus(
     assertTransition(quote.status, next, quote.type)
     assertWindow(quote.type, next, quote.startsOn, quote.endsOn)
 
+    // Cancelar proyecta el inventario a «disponible». Con el equipo en la calle, eso escribiría en
+    // el sistema que hay cámaras en el estante que no están — y nadie lo notaría hasta que alguien
+    // fuera a buscarlas. Es la misma guarda que ya tenía la baja de la cotización.
+    if (projectedStatus(next, quote.type) === "available") {
+      const outstanding = await pendingReturn(tx, quoteId)
+      if (outstanding > 0) {
+        throw new UnprocessableError(
+          `Hay ${outstanding === 1 ? "una unidad" : `${outstanding} unidades`} sin devolver. ` +
+            "Registra el retorno del equipo antes de cancelar la cotización.",
+        )
+      }
+    }
+
     // Congelar **antes** de proyectar. Cerrar suelta el vínculo de lo vendido y lo cancelado, y la
     // cantidad de una línea es cuántas unidades tiene apartadas: calcular después congelaría ceros.
     const frozen =
@@ -457,6 +473,27 @@ function assertWindow(
 function assertOpen(status: QuoteStatus): void {
   if (isClosed(status)) {
     throw new ConflictError("Una cotización cerrada no se modifica")
+  }
+}
+
+/**
+ * Las líneas no se tocan con el equipo fuera.
+ *
+ * La regla vive en `@tfv/contracts` porque la interfaz tiene que ofrecer lo mismo que el servidor
+ * acepta. Lo que se protege no es el documento sino el inventario: soltar una reserva devuelve a
+ * `available` **sólo lo que estaba apartado**, así que bajar una cantidad en una renta en curso
+ * dejaría la unidad `rented` sin dueño, comprometida para siempre.
+ *
+ * El equipo vuelve registrando su retorno, que es la única operación que sabe en qué condiciones
+ * volvió cada unidad.
+ */
+function assertLinesEditable(status: QuoteStatus, type: TradeType): void {
+  assertOpen(status)
+  if (linesFrozen(status, type)) {
+    throw new ConflictError(
+      "El equipo de esta cotización ya salió: las líneas no se modifican hasta que vuelva. " +
+        "Registra el retorno del equipo.",
+    )
   }
 }
 
@@ -775,7 +812,7 @@ export async function setLines(
   return withRequester(actor, async (tx) => {
     await loadWarehouse(tx, companyId, warehouseId)
     const quote = await loadQuote(tx, warehouseId, quoteId)
-    assertOpen(quote.status)
+    assertLinesEditable(quote.status, quote.type)
 
     await applyLines(tx, quoteId, warehouseId, input, { actorId: actor.userId, allowMinting })
     return readLines(tx, quoteId)

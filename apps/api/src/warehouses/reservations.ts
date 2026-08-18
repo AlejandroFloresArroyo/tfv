@@ -431,6 +431,16 @@ export async function registerReturn(
     )
   }
 
+  // Y sólo vuelve lo que **está fuera**. Una unidad apartada sigue en la nave: «devolverla» por
+  // aquí la soltaría sin pasar por la reconciliación, que es quien sabe qué líneas quedan y con
+  // cuántas unidades cada una.
+  const inside = returns.filter((row) => held.get(row.unitId)?.status !== "rented")
+  if (inside.length > 0) {
+    throw new UnprocessableError(
+      `${inside.length === 1 ? "Una unidad no ha salido" : `${inside.length} unidades no han salido`} de la nave. El retorno es para el equipo que está fuera.`,
+    )
+  }
+
   for (const item of returns) {
     const current = held.get(item.unitId)
     if (!current) continue
@@ -478,12 +488,22 @@ export interface Discrepancy {
 }
 
 /**
+ * Estados en los que una unidad está **comprometida**: no se puede prometer a nadie más.
+ *
+ * El escaneo de huérfanas los recorre todos. Antes sólo miraba `in_quote`, y ésa era la mitad del
+ * problema: soltar una reserva devuelve a `available` únicamente lo que estaba `in_quote`, así que
+ * una unidad **rentada** que perdía su vínculo se quedaba comprometida para siempre —y era
+ * precisamente el caso que la verificación no podía ver.
+ */
+const COMMITTED: readonly StockStatus[] = ["in_quote", "in_order", "rented"]
+
+/**
  * Comprueba que el inventario y las reservas dicen lo mismo.
  *
  * Dos formas de romperse, y las dos se comunican identificando la unidad:
  *
- * - Una unidad **en cotización sin vínculo vivo**: figura comprometida y nadie la reclama, así que
- *   está bloqueada para siempre sin que nadie sepa por qué.
+ * - Una unidad **comprometida sin vínculo vivo**: figura apartada, rentada o en pedido, y nadie la
+ *   reclama, así que está bloqueada para siempre sin que nadie sepa por qué.
  * - Un vínculo vivo cuya unidad **no está en el estado que su cotización proyecta**: alguien movió
  *   el inventario por detrás y el documento dejó de ser cierto.
  *
@@ -514,7 +534,7 @@ export async function checkCoherence(tx: Transaction, warehouseId: string): Prom
     .where(
       and(
         eq(warehouseProducts.warehouseId, warehouseId),
-        eq(warehouseStockUnits.status, "in_quote"),
+        inArray(warehouseStockUnits.status, COMMITTED),
         isNull(warehouseStockUnits.deletedAt),
       ),
     )
