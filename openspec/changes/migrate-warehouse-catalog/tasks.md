@@ -34,7 +34,7 @@ pantalla (29b).
       motor: la cascada autorreferente y la clave foránea a nulo
 - [x] Recuento de productos de primer nivel, sin contar variantes ni accesorios
 - [x] Camino de la raíz a una ubicación, para situarla sin recorrer el árbol
-- [ ] Presentación como jerarquía navegable, con selección en la dirección — es pantalla (29b)
+- [x] Presentación como jerarquía navegable, con selección en la dirección — es pantalla (29b)
 
 ## Catálogo
 

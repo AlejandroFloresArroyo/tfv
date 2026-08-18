@@ -34,8 +34,9 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 - [ ] Detalle de producto: información, medidas, precios, unidades
 - [ ] Unidades con etiquetas individuales y en lote
 - [ ] Listas de precios
-- [ ] Categorías anidadas
-- [x] **Ubicaciones como organigrama navegable**
+- [x] Categorías anidadas
+- [x] **Ubicaciones como organigrama navegable**, y editable sobre él: crear dentro, renombrar,
+      cambiar de padre y eliminar
 - [x] Bandeja de cotizaciones y ficha, con su equipo apartado y sus importes
 - [~] **Constructor de cotizaciones**: el editor de líneas con la disponibilidad delante, el cambio
       de estado, el registro del retorno, y los bloques de condiciones de pago e impuestos, que se
