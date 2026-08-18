@@ -12,7 +12,8 @@
  */
 
 import { z } from "@hono/zod-openapi"
-import { toInstant } from "@tfv/contracts"
+import { missingPermission, type PermissionKey, toInstant } from "@tfv/contracts"
+import { allows } from "../auth/authorization.ts"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import { defineRoute, REQUIRES } from "../runtime/route.ts"
@@ -542,11 +543,25 @@ export const deleteQuoteRoute = defineRoute({
 // ─── Estado ──────────────────────────────────────────────────────────────────
 
 /**
- * El cambio de estado tiene **tres** claves, no una.
+ * Qué clave **adicional** exige cada destino.
  *
  * Sacar el equipo y dar el servicio por terminado son decisiones distintas de mover la cotización
- * por la bandeja, y la matriz de permisos anterior ya las separaba. El manejador elige la clave por
- * el estado de destino.
+ * por la bandeja, y la matriz de permisos anterior ya las separaba. Colapsarlas en `edit_status`
+ * ampliaría en silencio la autoridad de quien sólo tenía ésa, y dejaría además una clave del
+ * catálogo que nadie puede ejercer.
+ */
+const STATUS_PERMISSION: Partial<Record<(typeof QUOTE_STATUSES)[number], PermissionKey>> = {
+  in_rent: "warehouses.quotes.rented",
+  completed: "warehouses.quotes.finished",
+  sold: "warehouses.quotes.finished",
+}
+
+/**
+ * El cambio de estado tiene **tres** claves, no una.
+ *
+ * La declarada es la general; la del destino se comprueba en el manejador, contra la autorización
+ * que el guardián ya resolvió. Declarar la general en la ruta es lo que mantiene cierto que ninguna
+ * escritura llega sin permiso: la del destino sólo puede estrechar, nunca abrir.
  */
 export const changeQuoteStatusRoute = defineRoute({
   access: REQUIRES("warehouses.quotes.edit_status"),
@@ -568,12 +583,16 @@ export const changeQuoteStatusRoute = defineRoute({
         description: "Cambiada, con su inventario proyectado",
         content: { "application/json": { schema: quoteSchema } },
       },
+      403: { description: "Falta la clave que exige ese destino" },
       409: { description: "La transición no está prevista, o la cotización está cerrada" },
       422: { description: "Falta un dato del documento para avanzar" },
     },
   },
   handler: async (c) => {
     const params = c.req.valid("param")
+    const required = STATUS_PERMISSION[c.req.valid("json").status]
+    if (required && !allows(c.get("authorization"), required)) throw missingPermission(required)
+
     const quote = await changeQuoteStatus(
       actorOf(c),
       params.companyId,

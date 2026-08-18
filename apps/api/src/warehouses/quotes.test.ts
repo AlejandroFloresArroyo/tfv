@@ -1155,3 +1155,102 @@ describe("los importes se congelan al cerrar", () => {
     expect((await breakdownOf(quote.id)).total).toBe("1000.00")
   })
 })
+
+// ─── Permisos del cambio de estado ───────────────────────────────────────────
+
+let scopedAccounts = 0
+
+/** Una cuenta de la misma empresa con un rol acotado a las claves que se le pasen. */
+async function memberWith(permissions: string[]): Promise<string> {
+  // Con `newId()` recortado no basta: son identificadores ordenados por tiempo y su prefijo es el
+  // mismo dentro de la misma ventana, así que tres cuentas seguidas compartirían correo.
+  scopedAccounts += 1
+  const email = `acotada-${scopedAccounts}@ejemplo.mx`
+  await request("POST", "/auth/register", { email, password: PASSWORD, name: "Acotada" })
+  await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.email, email))
+
+  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
+  const roleId = newId()
+  await db
+    .insert(roles)
+    .values({ id: roleId, companyId, name: `Rol acotado ${scopedAccounts}`, permissions })
+  await db
+    .insert(companyMembers)
+    .values({ id: newId(), companyId, userId: user?.id ?? "", roleId, isOwner: false })
+
+  const login = await request("POST", "/auth/login", { email, password: PASSWORD })
+  return (
+    login.headers
+      .getSetCookie()
+      .find((raw) => raw.startsWith("tfv_session="))
+      ?.split(";")[0] ?? ""
+  )
+}
+
+describe("sacar el equipo tiene su propia clave", () => {
+  it("mover la cotización por la bandeja no autoriza a sacar el equipo", async () => {
+    // La matriz anterior separa `edit_status`, `rented` y `finished`. Colapsarlas en una sola
+    // ampliaría la autoridad de quien sólo tenía la primera.
+    await clearQuotes()
+    const { quote } = await stockedQuote(2)
+    const scoped = await memberWith(["warehouses.quotes.view", "warehouses.quotes.edit_status"])
+
+    const moved = await request(
+      "PATCH",
+      `${base}/quotes/${quote.id}/status`,
+      { status: "pending" },
+      scoped,
+    )
+    expect(moved.status).toBe(200)
+
+    const out = await request(
+      "PATCH",
+      `${base}/quotes/${quote.id}/status`,
+      { status: "in_progress" },
+      scoped,
+    )
+    expect(out.status).toBe(200)
+
+    const rented = await request(
+      "PATCH",
+      `${base}/quotes/${quote.id}/status`,
+      { status: "in_rent" },
+      scoped,
+    )
+    expect(rented.status).toBe(403)
+  })
+
+  it("con la clave de sacar el equipo, sí", async () => {
+    await clearQuotes()
+    const { quote } = await stockedQuote(2)
+    const scoped = await memberWith([
+      "warehouses.quotes.view",
+      "warehouses.quotes.edit_status",
+      "warehouses.quotes.rented",
+    ])
+
+    const rented = await request(
+      "PATCH",
+      `${base}/quotes/${quote.id}/status`,
+      { status: "in_rent" },
+      scoped,
+    )
+
+    expect(rented.status).toBe(200)
+  })
+
+  it("dar por terminada una cotización exige la suya", async () => {
+    await clearQuotes()
+    const { quote } = await stockedQuote(2, { type: "sale" })
+    const scoped = await memberWith(["warehouses.quotes.view", "warehouses.quotes.edit_status"])
+
+    const done = await request(
+      "PATCH",
+      `${base}/quotes/${quote.id}/status`,
+      { status: "completed" },
+      scoped,
+    )
+
+    expect(done.status).toBe(403)
+  })
+})
