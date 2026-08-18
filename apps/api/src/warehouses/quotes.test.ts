@@ -942,3 +942,216 @@ describe("coherencia entre reservas e inventario", () => {
     expect(report.items[0]?.unitId).toBe(unit?.id)
   })
 })
+
+// ─── Importes ────────────────────────────────────────────────────────────────
+
+interface Breakdown {
+  subtotal: string
+  discount: string
+  base: string
+  net: string
+  fees: string
+  gross: string
+  total: string
+  penalty: string
+  lines: { lineId: string; unitCost: string; total: string; appliedDays: string }[]
+  groups: { productId: string; subtotal: string }[]
+}
+
+/** Un producto con tarifa de venta en una lista de precios, y unidades. */
+async function pricedProduct(
+  name: string,
+  quantity: number,
+  price: { sale?: string; rent?: Record<string, unknown>; penalty?: Record<string, unknown> },
+): Promise<{ measurementId: string; productId: string; priceId: string }> {
+  const product = await json<Product>(
+    await request(
+      "POST",
+      `${base}/products`,
+      { name, measurements: [{ name: "Cuerpo", initialQuantity: quantity }] },
+      cookie,
+    ),
+  )
+
+  const list = await json<{ id: string }>(
+    await request("POST", `${base}/price-lists`, { name: `Tarifas ${name}` }, cookie),
+  )
+  const priceRow = await json<{ id: string }>(
+    await request(
+      "PUT",
+      `${base}/price-lists/${list.id}/prices/${product.id}`,
+      {
+        sale: price.sale ?? "0.00",
+        rent: price.rent ?? { isFixed: false },
+        penalty: price.penalty ?? { isFixed: false },
+      },
+      cookie,
+    ),
+  )
+
+  return {
+    measurementId: product.measurements[0]?.id as string,
+    productId: product.id,
+    priceId: priceRow.id,
+  }
+}
+
+async function breakdownOf(quoteId: string): Promise<Breakdown> {
+  const response = await request("GET", `${base}/quotes/${quoteId}/breakdown`, undefined, cookie)
+  expect(response.status).toBe(200)
+  return json<Breakdown>(response)
+}
+
+describe("el cálculo es autoridad del servidor", () => {
+  it("calcula el importe de una venta a partir de las tarifas del catálogo", async () => {
+    await clearWarehouse()
+    const { measurementId, priceId } = await pricedProduct("Foco", 4, { sale: "250.00" })
+    const quote = await newQuote({
+      type: "sale",
+      lines: [{ measurementId, quantity: 4, productPriceId: priceId }],
+    })
+
+    const breakdown = await breakdownOf(quote.id)
+
+    expect(breakdown.lines[0]?.unitCost).toBe("250.00")
+    expect(breakdown.subtotal).toBe("1000.00")
+    expect(breakdown.total).toBe("1000.00")
+  })
+
+  it("aplica la tarifa de renta por los días de la ventana", async () => {
+    await clearWarehouse()
+    // Diez días en frecuencia semanal son 1.43 semanas: 100.00 × 1.43 = 143.00 por unidad.
+    const { measurementId, priceId } = await pricedProduct("Cámara", 2, {
+      rent: { isFixed: false, weekly: "100.00" },
+    })
+    const quote = await newQuote({
+      ...WINDOW,
+      lines: [{ measurementId, quantity: 2, productPriceId: priceId, frequency: "weekly" }],
+    })
+
+    const breakdown = await breakdownOf(quote.id)
+
+    expect(breakdown.lines[0]?.appliedDays).toBe("1.43")
+    expect(breakdown.lines[0]?.total).toBe("286.00")
+  })
+
+  it("descarta los importes que llegan del cliente", async () => {
+    await clearWarehouse()
+    const { measurementId, priceId } = await pricedProduct("Foco", 2, { sale: "250.00" })
+    const quote = await newQuote({
+      type: "sale",
+      lines: [{ measurementId, quantity: 2, productPriceId: priceId }],
+    })
+
+    // Se envía un total inferior al que corresponde; el esquema ni siquiera lo admite.
+    const response = await request(
+      "PUT",
+      `${base}/quotes/${quote.id}/payment-terms`,
+      { version: 1, total: "1.00" },
+      cookie,
+    )
+    expect([200, 400]).toContain(response.status)
+
+    expect((await breakdownOf(quote.id)).total).toBe("500.00")
+  })
+
+  it("aplica impuestos y comisiones sobre el neto", async () => {
+    await clearWarehouse()
+    const { measurementId, priceId } = await pricedProduct("Foco", 4, { sale: "250.00" })
+    const quote = await newQuote({
+      type: "sale",
+      lines: [{ measurementId, quantity: 4, productPriceId: priceId }],
+    })
+
+    await request(
+      "PUT",
+      `${base}/quotes/${quote.id}/taxes`,
+      { version: 1, iva: { enabled: true, rate: "16", type: "trasladado" } },
+      cookie,
+    )
+    await request(
+      "PUT",
+      `${base}/quotes/${quote.id}/payment-terms`,
+      { version: 1, transferFeeRate: "3", advance: { amount: "500.00" } },
+      cookie,
+    )
+
+    const breakdown = await breakdownOf(quote.id)
+
+    expect(breakdown.net).toBe("1160.00")
+    expect(breakdown.fees).toBe("34.80")
+    expect(breakdown.gross).toBe("1194.80")
+    expect(breakdown.total).toBe("694.80")
+  })
+
+  it("agrupa las líneas por producto", async () => {
+    await clearWarehouse()
+    const first = await pricedProduct("Cámara", 2, { sale: "100.00" })
+    const second = await pricedProduct("Grúa", 2, { sale: "300.00" })
+    const quote = await newQuote({
+      type: "sale",
+      lines: [
+        { measurementId: first.measurementId, quantity: 1, productPriceId: first.priceId },
+        { measurementId: second.measurementId, quantity: 2, productPriceId: second.priceId },
+      ],
+    })
+
+    const breakdown = await breakdownOf(quote.id)
+
+    expect(breakdown.groups).toHaveLength(2)
+    expect(breakdown.groups.map((group) => group.subtotal)).toEqual(["100.00", "600.00"])
+  })
+})
+
+describe("los importes se congelan al cerrar", () => {
+  it("una cotización cerrada no cambia aunque cambien las tarifas", async () => {
+    // Escenario: «Una cotización cerrada no se mueve».
+    await clearWarehouse()
+    const { measurementId, priceId, productId } = await pricedProduct("Foco", 2, {
+      sale: "250.00",
+    })
+    const quote = await newQuote({
+      type: "sale",
+      lines: [{ measurementId, quantity: 2, productPriceId: priceId }],
+    })
+    expect((await breakdownOf(quote.id)).total).toBe("500.00")
+
+    await moveTo(quote.id, "sold")
+
+    const lists = await json<{ items: { id: string }[] }>(
+      await request("GET", `${base}/price-lists`, undefined, cookie),
+    )
+    await request(
+      "PUT",
+      `${base}/price-lists/${lists.items[0]?.id}/prices/${productId}`,
+      { sale: "500.00", rent: { isFixed: false }, penalty: { isFixed: false } },
+      cookie,
+    )
+
+    expect((await breakdownOf(quote.id)).total).toBe("500.00")
+  })
+
+  it("una cotización abierta sí refleja el cambio de tarifa", async () => {
+    // Escenario: «Una cotización abierta sí se recalcula».
+    await clearWarehouse()
+    const { measurementId, priceId, productId } = await pricedProduct("Foco", 2, {
+      sale: "250.00",
+    })
+    const quote = await newQuote({
+      type: "sale",
+      lines: [{ measurementId, quantity: 2, productPriceId: priceId }],
+    })
+
+    const lists = await json<{ items: { id: string }[] }>(
+      await request("GET", `${base}/price-lists`, undefined, cookie),
+    )
+    await request(
+      "PUT",
+      `${base}/price-lists/${lists.items[0]?.id}/prices/${productId}`,
+      { sale: "500.00", rent: { isFixed: false }, penalty: { isFixed: false } },
+      cookie,
+    )
+
+    expect((await breakdownOf(quote.id)).total).toBe("1000.00")
+  })
+})

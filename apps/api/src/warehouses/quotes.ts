@@ -26,6 +26,7 @@ import {
   type Page,
   type ParsedQuery,
   type QuerySchema,
+  type QuotationBreakdown,
   type QuotePaymentTerms,
   type QuoteTaxes,
   UnprocessableError,
@@ -44,6 +45,7 @@ import {
 import { and, count, eq, inArray, isNull } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
+import { breakdownOf, computeOf } from "./quote-pricing.ts"
 import {
   checkCoherence,
   type Discrepancy,
@@ -426,8 +428,15 @@ export async function changeQuoteStatus(
     assertTransition(quote.status, next, quote.type)
     assertWindow(quote.type, next, quote.startsOn, quote.endsOn)
 
+    // Congelar **antes** de proyectar. Cerrar suelta el vínculo de lo vendido y lo cancelado, y la
+    // cantidad de una línea es cuántas unidades tiene apartadas: calcular después congelaría ceros.
+    const frozen =
+      isClosed(next) && !quote.computed
+        ? { computed: await computeOf(tx, quote), computedAt: new Date() }
+        : {}
+
     // El estado y el inventario se confirman **juntos**: si algo falla, ni uno ni otro cambian.
-    const updated = await patch(tx, quoteId, { status: next })
+    const updated = await patch(tx, quoteId, { status: next, ...frozen })
     await projectQuote(tx, quoteId, next, quote.type, actor.userId)
 
     return toRecord(updated)
@@ -878,4 +887,25 @@ async function assertPrice(
     .limit(1)
 
   if (!row) throw new NotFoundError("La tarifa no existe")
+}
+
+// ─── Importes ────────────────────────────────────────────────────────────────
+
+/**
+ * El desglose de una cotización, con cada paso intermedio.
+ *
+ * Es **la única fuente del importe**. La interfaz consume esta misma cadena a través de la función
+ * pura de los contratos, así que previsualizar y guardar dan lo mismo; y nada de lo que llegue del
+ * navegador entra en el cálculo, que es lo que corrige `DEFECTS.md` M-06.
+ */
+export async function quoteBreakdown(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  quoteId: string,
+): Promise<QuotationBreakdown> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    return breakdownOf(tx, await loadQuote(tx, warehouseId, quoteId))
+  })
 }

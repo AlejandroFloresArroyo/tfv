@@ -24,6 +24,7 @@ import {
   listLines,
   listQuotes,
   QUOTE_STATUSES,
+  quoteBreakdown,
   quoteQuery,
   RENT_FREQUENCIES,
   ROUND_DIRECTIONS,
@@ -164,6 +165,65 @@ const lineInput = z.object({
   productPriceId: z.string().nullable().optional(),
   position: z.number().int().min(0).optional(),
   positionProduct: z.number().int().min(0).optional(),
+})
+
+const lineBreakdownSchema = z.object({
+  lineId: z.string(),
+  productId: z.string(),
+  measurementId: z.string(),
+  quantity: z.number().int(),
+  frequency: z.enum(RENT_FREQUENCIES),
+  appliedDays: z.string(),
+  unitCost: z.string(),
+  unitDiscount: z.string(),
+  unitTotal: z.string(),
+  cost: z.string(),
+  discount: z.string(),
+  total: z.string(),
+  penalty: z.string(),
+  fee: z.string(),
+  unitFee: z.string(),
+  totalWithFee: z.string(),
+})
+
+/** Todos los importes son cadenas decimales: `1234.56` no sobrevive a un viaje como número JSON. */
+const breakdownSchema = z.object({
+  version: z.literal(1),
+  days: z.number().int(),
+  lines: z.array(lineBreakdownSchema).readonly(),
+  groups: z
+    .array(
+      z.object({
+        productId: z.string(),
+        lineIds: z.array(z.string()).readonly(),
+        subtotal: z.string(),
+      }),
+    )
+    .readonly(),
+  linesTotal: z.string(),
+  additionals: z.string(),
+  subtotal: z.string(),
+  discount: z.string(),
+  base: z.string(),
+  taxes: z
+    .array(
+      z.object({
+        key: z.string(),
+        concept: z.string(),
+        effect: z.enum(["increase", "decrease"]),
+        rate: z.string().optional(),
+        amount: z.string(),
+      }),
+    )
+    .readonly(),
+  taxTotal: z.string(),
+  net: z.string(),
+  fees: z.string(),
+  feesSpread: z.boolean(),
+  gross: z.string(),
+  advance: z.string(),
+  total: z.string(),
+  penalty: z.string(),
 })
 
 const companyParams = z.object({ companyId: z.string() })
@@ -691,5 +751,42 @@ export const reservationCoherenceRoute = defineRoute({
     const params = c.req.valid("param")
     const items = await reservationCoherence(actorOf(c), params.companyId, params.warehouseId)
     return c.json({ items }, 200)
+  },
+})
+
+// ─── Importes ────────────────────────────────────────────────────────────────
+
+/**
+ * El desglose, con cada paso intermedio.
+ *
+ * Sale aparte de la cotización y no dentro porque su coste no es el mismo: leer el documento es una
+ * fila, y calcular sus importes resuelve las tarifas de todas sus líneas. La bandeja de trabajo
+ * lista cotizaciones sin pagar eso.
+ */
+export const quoteBreakdownRoute = defineRoute({
+  access: REQUIRES("warehouses.quotes.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/quotes/{quoteId}/breakdown",
+    summary: "Consultar los importes de una cotización",
+    tags: ["Cotizaciones"],
+    request: { params: quoteParams },
+    responses: {
+      200: {
+        description:
+          "El desglose. Congelado si la cotización está cerrada, al vuelo si está abierta",
+        content: { "application/json": { schema: breakdownSchema } },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const breakdown = await quoteBreakdown(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.quoteId,
+    )
+    return c.json(breakdown, 200)
   },
 })
