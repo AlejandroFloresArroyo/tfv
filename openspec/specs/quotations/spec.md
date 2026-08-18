@@ -125,6 +125,39 @@ La operación SHALL ser atómica y SHALL reconciliar las reservas de inventario 
 - **THEN** las líneas de la cotización siguen siendo las de antes
 - **AND** las reservas no han cambiado
 
+### Requirement: Las líneas se congelan al salir el equipo
+
+Mientras el equipo de una cotización de renta esté fuera de la nave —en renta, o completada con
+unidades sin devolver—, el sistema NO SHALL admitir cambios en sus líneas: ni cantidades, ni altas,
+ni bajas.
+
+El equipo vuelve **registrando su retorno**, que es la única operación que sabe en qué condiciones
+volvió cada unidad.
+
+> No es una regla de documento sino de inventario. Soltar una reserva devuelve a disponible
+> únicamente lo que estaba **apartado**: bajar una cantidad con el equipo fuera liberaría el vínculo
+> y dejaría la unidad rentada **sin dueño**, comprometida indefinidamente y sin nadie a quien
+> reclamarla.
+
+#### Scenario: Una renta en curso no admite cambios de línea
+
+- **GIVEN** una cotización en renta con tres unidades fuera
+- **WHEN** se intenta bajar la cantidad de su línea a una
+- **THEN** se rechaza
+- **AND** las tres unidades siguen rentadas
+
+#### Scenario: Tampoco admite añadir equipo
+
+- **GIVEN** la misma cotización
+- **WHEN** se intenta añadir una línea
+- **THEN** se rechaza y no se aparta nada
+
+#### Scenario: Mientras el equipo no ha salido sí se editan
+
+- **GIVEN** una cotización en progreso con tres unidades apartadas
+- **WHEN** se baja la cantidad de su línea a una
+- **THEN** se acepta y dos unidades vuelven a disponible
+
 ### Requirement: Orden de presentación de líneas y productos
 
 Una cotización SHALL conservar el orden en que sus líneas y sus productos deben presentarse, y ese
@@ -198,12 +231,32 @@ abierto.
 Todo cambio de estado de una cotización SHALL proyectarse sobre sus unidades reservadas conforme a
 `stock-reservation`, en la misma transacción.
 
+Un cambio de estado que devolvería unidades a disponible NO SHALL aceptarse mientras haya equipo
+sin devolver: primero se registra el retorno.
+
+> Cancelar proyecta el inventario a disponible. Con el equipo en la calle, eso escribe en el sistema
+> que hay cámaras en el estante que no están, y nadie lo nota hasta que alguien va a buscarlas. Es
+> la misma guarda que ya protegía la eliminación de la cotización.
+
 #### Scenario: El cambio de estado y el inventario van juntos
 
 - **GIVEN** una cotización en progreso con unidades reservadas
 - **WHEN** se cancela
 - **THEN** el estado y la liberación de las unidades se confirman juntos
 - **AND** si algo falla, ni el estado ni las unidades cambian
+
+#### Scenario: No se cancela con el equipo fuera
+
+- **GIVEN** una cotización en renta con tres unidades sin devolver
+- **WHEN** se intenta cancelar
+- **THEN** se rechaza nombrando cuántas unidades faltan
+- **AND** las tres siguen rentadas
+
+#### Scenario: Cancelar es posible en cuanto vuelve todo
+
+- **GIVEN** la misma cotización con su retorno ya registrado
+- **WHEN** se cancela
+- **THEN** se acepta
 
 ### Requirement: Prioridad derivada del estado
 

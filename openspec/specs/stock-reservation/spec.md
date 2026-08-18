@@ -211,6 +211,10 @@ indicando por cada una si vuelve en condiciones o con incidencia.
 Las unidades que vuelvan en condiciones SHALL pasar a disponible; las que vuelvan con incidencia
 SHALL pasar al estado de incidencia que se indique.
 
+SHALL admitirse el **retorno anticipado**: el equipo vuelve cuando vuelve, sin esperar al fin del
+periodo. Sólo SHALL admitirse el retorno de unidades que **estén fuera**; una unidad apartada sigue
+en la nave y se libera reconciliando su línea, no devolviéndola.
+
 #### Scenario: El retorno devuelve el equipo al inventario
 
 - **GIVEN** una cotización de renta completada con seis unidades rentadas
@@ -223,6 +227,13 @@ SHALL pasar al estado de incidencia que se indique.
 - **WHEN** una de las unidades se registra como dañada
 - **THEN** cinco quedan disponibles y una queda dañada
 - **AND** la dañada no cuenta como disponible
+
+#### Scenario: No vuelve lo que nunca salió
+
+- **GIVEN** una cotización en progreso con dos unidades apartadas
+- **WHEN** se intenta registrar el retorno de una de ellas
+- **THEN** se rechaza
+- **AND** las dos siguen apartadas
 
 ### Requirement: Eliminar una línea libera sus unidades
 
@@ -261,13 +272,26 @@ SHALL quedar congelados y no SHALL recalcularse aunque cambien después los prec
 
 ### Requirement: Coherencia entre reservas e inventario
 
-En todo momento, el número de unidades en estado de cotización de una medida SHALL ser igual al
-número de vínculos vigentes entre esa medida y líneas de cotización.
+Toda unidad **comprometida** —apartada, en pedido o rentada— SHALL tener un vínculo vigente con la
+línea de cotización que la reclama, y todo vínculo vigente SHALL corresponder a una unidad en el
+estado que proyecta su cotización.
 
-El sistema SHALL poder verificar esta coherencia y comunicar cualquier discrepancia.
+El sistema SHALL poder verificar esta coherencia y comunicar cualquier discrepancia identificando la
+unidad.
 
-#### Scenario: La verificación detecta una discrepancia
+> **Corregido.** Decía «unidades en estado de cotización», y ése era justo el punto ciego: soltar
+> una reserva devuelve a disponible únicamente lo que estaba apartado, de modo que la unidad que se
+> queda **rentada sin vínculo** —el descuadre más caro, porque es equipo que salió y que nadie
+> reclama— caía fuera del enunciado y de la verificación.
 
-- **GIVEN** un inventario donde una unidad figura en cotización sin vínculo vigente
+#### Scenario: La verificación detecta una unidad apartada sin vínculo
+
+- **GIVEN** un inventario donde una unidad figura apartada sin vínculo vigente
+- **WHEN** se ejecuta la verificación de coherencia
+- **THEN** se comunica la discrepancia identificando la unidad
+
+#### Scenario: La verificación detecta una unidad rentada sin vínculo
+
+- **GIVEN** un inventario donde una unidad figura rentada sin vínculo vigente
 - **WHEN** se ejecuta la verificación de coherencia
 - **THEN** se comunica la discrepancia identificando la unidad

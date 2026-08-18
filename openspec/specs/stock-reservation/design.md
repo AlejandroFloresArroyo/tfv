@@ -64,6 +64,12 @@ real es contra la **proyección**, que subsume la anterior y además detecta el 
 unidad comprometida que ya nadie reclama—. Las dos formas de romperse se comunican identificando la
 unidad.
 
+**Y el escaneo de huérfanas alcanza a los tres estados comprometidos**, no sólo a `in_quote`. La
+implementación lo hacía sobre `in_quote` a secas, que dejaba fuera precisamente el caso más caro:
+soltar una reserva devuelve a `available` únicamente lo que estaba apartado, de modo que una unidad
+`rented` que perdía su vínculo quedaba comprometida indefinidamente y **la verificación no podía
+verla**. Ahora se recorren `in_quote`, `in_order` y `rented`.
+
 ## Transacciones
 
 ### Reservar (aumentar cantidad)
