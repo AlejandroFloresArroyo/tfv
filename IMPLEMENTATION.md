@@ -224,9 +224,8 @@ En este orden, y con el motivo de que sea ése:
 
 1. **El modelo y el motor del precio** (hecho): precio negociado, la renta sin tarifa y la marca de
    provisional.
-2. **El bloque de condiciones de pago entero** (29b): descuento, anticipo, conceptos adicionales,
-   comisiones, depósito, penalización y **precio por paquete**. Es lo siguiente acordado, y va
-   entero porque el precio por paquete forma parte de él y hace falta.
+2. **El bloque de condiciones de pago entero** (hecho), y con él el fiscal: los dos se guardan solos
+   y alimentan la misma previsualización.
 3. **Congelar las líneas al salir el equipo, y el retorno anticipado.** Ahí se tapa además un
    agujero: bajar una cantidad de una cotización en renta suelta el vínculo y deja la unidad
    `rented` sin dueño, y la verificación de coherencia **no la ve** porque sólo busca huérfanas
@@ -1913,3 +1912,81 @@ sin haber guardado nada.
 Tres pasadas de diagnóstico se fueron en dos trampas de las pruebas de extremo a extremo que no eran
 del producto —la siembra de la suite no borra, y «Guardado» no significa que el árbol de servidor se
 haya rehecho—. Quedan anotadas en el propio archivo de pruebas y como H-18.
+
+### 2026-08-18 · Lo que se negocia alrededor del precio
+
+Segundo punto de lo acordado: el bloque de condiciones de pago **entero**, y con él el fiscal, que
+tenía su ruta y su permiso desde la rebanada 14 y no tenía formulario.
+
+**Guardado sin botón**
+
+El texto viaja al perder el foco, los controles al cambiar. Tres decisiones lo sostienen, y las tres
+están probadas fuera de React porque montar un navegador para verlas habría acabado en no verlas:
+
+- **Una petición en vuelo a la vez.** El `PUT` reemplaza el objeto completo, así que dos en paralelo
+  se pisan y guarda la que **llega** la última, no la que se escribió la última. Las que lleguen
+  mientras hay una en curso marcan que hay que repetir, y al terminar se manda el estado más
+  reciente. Los intermedios no viajan porque no hacen falta.
+- **Fallar no revierte.** Lo escrito se queda y el aviso aparece. Volver al último valor bueno tira
+  lo que la persona acaba de teclear, que es la peor manera de contarle que hubo un problema.
+- **Un importe a medio escribir detiene el bloque**, no viaja como ausencia. Si `15` se tratara como
+  «no hay», salir del campo borraría del servidor el valor que había.
+
+El editor de líneas conserva su botón, y no por consistencia: guardar líneas **aparta equipo**,
+puede fallar por existencias, y cada fallo es un conflicto que alguien tiene que ver. Cambiar un
+precio no mueve nada —la reconciliación es diferencial—, pero comparten envío.
+
+**Tres formularios sobre las mismas cifras**
+
+La previsualización pasa a componerse en un solo sitio: las líneas, las condiciones y los impuestos
+se juntan y el motor se llama una vez. Que cada formulario compusiera su entrada con su trozo y lo
+guardado de los otros dos es H-14 otra vez, un paso antes del motor — no en el cálculo, sino en qué
+se le entrega.
+
+**Tres cosas que el motor hacía mal, y una que no hacía**
+
+- El **precio por paquete sustituía a la base**, y la base viene del subtotal, que incluye los
+  conceptos adicionales: declarar un paquete hacía **desaparecer** un flete registrado aparte. Ahora
+  sustituye a lo que suman las líneas, y los adicionales siguen sumando encima.
+- El **descuento por producto se aplicaba «sobre el costo unitario»**, y el costo unitario de una
+  renta es la **tarifa**: un diez por ciento sobre una renta de diez días descontaba el uno por
+  ciento. En una venta coincide, y el único escenario de la spec era una venta. Ahora baja el
+  importe de la línea.
+- El mismo campo en **importe fijo** significaba dos cosas según la línea —por unidad con tarifa,
+  una sola vez con precio negociado—, con un orden de magnitud entre ellas. Ahora es una sola vez, y
+  entonces la línea no informa unitarios, por lo mismo que la de precio negociado.
+- El **depósito en garantía se guardaba y no lo miraba nadie**: estaba en el esquema, en la ruta y en
+  el tipo de entrada, y el cálculo no lo tocaba. Ahora se informa como contingente, junto a la
+  penalización: ni suma ni resta, porque se devuelve.
+
+**Un importe ambiguo en el documento que se firma**
+
+`10.500.00`. La parte entera se agrupaba con las convenciones del idioma y luego se le pegaba un
+punto para los decimales; en español el punto ya separa los miles. Sólo se ve a partir de cinco
+dígitos y nada sembrado llegaba: apareció al escribir un precio de paquete. El separador decimal lo
+pone ahora el idioma.
+
+Queda una pregunta abierta que no me corresponde: el idioma es `es`, que agrupa a la europea
+—`10.500,00`—, y esto es un sistema mexicano, donde se espera `10,500.00`. Cambiarlo afecta también
+a fechas y a todo lo demás, así que se pregunta antes de tocarlo.
+
+**Las pruebas de extremo a extremo compartían documento**
+
+Escribían sobre las cuatro cotizaciones sembradas, y tanto el guardado de líneas como el de
+condiciones de pago mandan el conjunto completo: dos pruebas sobre el mismo documento se borran lo
+que la otra acaba de escribir. Peor, registrar un retorno **consume** el equipo de la renta sembrada
+y la siembra no lo repone —respeta lo que existe—, así que la suite pasaba una vez y luego mentía.
+Ahora cada prueba que escribe crea la suya y se la lleva cancelando primero, que es lo que devuelve
+el equipo a la nave.
+
+De paso quedó claro que **`--repeat-each` no es un modo válido para esta suite**: los archivos que no
+se tocaron fallan igual. Doblar la concurrencia contra una base compartida no lo aguanta ninguno.
+Es la rebanada 9 asomando.
+
+**Comprobado**
+
+TypeScript en los seis paquetes, Biome, **507 pruebas** de vitest —132 de contratos, 59 de base, 37
+de web y 279 de API— y **56 de extremo a extremo**, dos pasadas seguidas sin dejar rastro: cuatro
+cotizaciones antes y cuatro después. Se miró en pantalla: 9 000.00 de paquete más 1 500.00 de
+traslado son 10 500.00 de subtotal, y de ahí 12 545.40 a pagar con el depósito y la penalización
+aparte.
