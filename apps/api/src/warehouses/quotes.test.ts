@@ -349,6 +349,10 @@ describe("listado de cotizaciones", () => {
 interface Line {
   id: string
   measurementId: string
+  measurementName: string
+  productId: string
+  productName: string
+  productCode: string
   productPriceId: string | null
   frequency: string
   quantity: number
@@ -462,6 +466,25 @@ describe("una reserva aparta unidades concretas", () => {
 
     const reserved = (await json<{ items: Line[] }>(response)).items[0]?.unitIds ?? []
     expect(reserved.sort()).toEqual([units[2]?.id, units[3]?.id].sort())
+  })
+})
+
+describe("una línea se puede leer sin volver a preguntar", () => {
+  it("trae el producto y la medida por su nombre", async () => {
+    // Sin esto, dibujar una cotización de doce líneas cuesta doce peticiones más: el identificador
+    // de una medida no le dice nada a quien lee el documento.
+    await clearQuotes()
+    const measurementId = await newStocked("Cámara Sony FX6", 2)
+    const quote = await newQuote({ ...WINDOW })
+
+    const [line] = (
+      await json<{ items: Line[] }>(await setLines(quote.id, [{ measurementId, quantity: 2 }]))
+    ).items
+
+    expect(line?.productName).toBe("Cámara Sony FX6")
+    expect(line?.measurementName).toBe("Cuerpo")
+    expect(line?.productCode).not.toBe("")
+    expect(line?.productId).not.toBe("")
   })
 })
 

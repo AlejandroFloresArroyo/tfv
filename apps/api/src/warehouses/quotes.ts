@@ -689,6 +689,17 @@ export interface QuoteLineRecord {
   readonly id: string
   readonly quoteId: string
   readonly measurementId: string
+  /**
+   * El producto y la medida, por su nombre.
+   *
+   * Van en la línea y no se consultan aparte por la misma razón que la localización por código
+   * devuelve el camino entero: un identificador no le dice nada a quien lee el documento, y
+   * resolverlos uno a uno convertiría una cotización de doce líneas en trece peticiones.
+   */
+  readonly measurementName: string
+  readonly productId: string
+  readonly productName: string
+  readonly productCode: string
   readonly productPriceId: string | null
   readonly frequency: RentFrequency
   /** No es una columna: es **cuántas unidades tiene apartadas**. Ver `stock-reservation`. */
@@ -822,25 +833,37 @@ async function applyLines(
 
 async function readLines(tx: Transaction, quoteId: string): Promise<QuoteLineRecord[]> {
   const rows = await tx
-    .select()
+    .select({
+      line: warehouseQuoteLines,
+      measurementName: warehouseMeasurements.name,
+      productId: warehouseProducts.id,
+      productName: warehouseProducts.name,
+      productCode: warehouseProducts.code,
+    })
     .from(warehouseQuoteLines)
+    .innerJoin(
+      warehouseMeasurements,
+      eq(warehouseMeasurements.id, warehouseQuoteLines.measurementId),
+    )
+    .innerJoin(warehouseProducts, eq(warehouseProducts.id, warehouseMeasurements.productId))
     .where(eq(warehouseQuoteLines.quoteId, quoteId))
     .orderBy(warehouseQuoteLines.positionProduct, warehouseQuoteLines.position)
 
   const reserved = await reservedByLine(tx, quoteId)
 
-  return rows.map((row) => {
-    const unitIds = reserved.get(row.id) ?? []
+  return rows.map(({ line, ...names }) => {
+    const unitIds = reserved.get(line.id) ?? []
     return {
-      id: row.id,
-      quoteId: row.quoteId,
-      measurementId: row.measurementId,
-      productPriceId: row.productPriceId,
-      frequency: row.frequency,
+      id: line.id,
+      quoteId: line.quoteId,
+      measurementId: line.measurementId,
+      ...names,
+      productPriceId: line.productPriceId,
+      frequency: line.frequency,
       quantity: unitIds.length,
       unitIds,
-      position: row.position,
-      positionProduct: row.positionProduct,
+      position: line.position,
+      positionProduct: line.positionProduct,
     }
   })
 }
