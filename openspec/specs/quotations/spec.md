@@ -125,11 +125,13 @@ La operación SHALL ser atómica y SHALL reconciliar las reservas de inventario 
 - **THEN** las líneas de la cotización siguen siendo las de antes
 - **AND** las reservas no han cambiado
 
-### Requirement: Las líneas se congelan al salir el equipo
+### Requirement: La composición de las líneas se congela al salir el equipo
 
 Mientras el equipo de una cotización de renta esté fuera de la nave —en renta, o completada con
-unidades sin devolver—, el sistema NO SHALL admitir cambios en sus líneas: ni cantidades, ni altas,
-ni bajas.
+unidades sin devolver—, el sistema NO SHALL admitir altas, bajas ni cambios de cantidad o de medida
+en sus líneas.
+
+SÍ SHALL admitir cambios de **precio y periodicidad**: no mueven inventario.
 
 El equipo vuelve **registrando su retorno**, que es la única operación que sabe en qué condiciones
 volvió cada unidad.
@@ -137,9 +139,10 @@ volvió cada unidad.
 > No es una regla de documento sino de inventario. Soltar una reserva devuelve a disponible
 > únicamente lo que estaba **apartado**: bajar una cantidad con el equipo fuera liberaría el vínculo
 > y dejaría la unidad rentada **sin dueño**, comprometida indefinidamente y sin nadie a quien
-> reclamarla.
+> reclamarla. Cambiar lo que cuesta una línea no toca nada de eso — y hace falta poder hacerlo,
+> porque una **extensión de renta** nace con el equipo ya fuera y sin esto no tendría precio nunca.
 
-#### Scenario: Una renta en curso no admite cambios de línea
+#### Scenario: Una renta en curso no admite cambios de cantidad
 
 - **GIVEN** una cotización en renta con tres unidades fuera
 - **WHEN** se intenta bajar la cantidad de su línea a una
@@ -151,6 +154,13 @@ volvió cada unidad.
 - **GIVEN** la misma cotización
 - **WHEN** se intenta añadir una línea
 - **THEN** se rechaza y no se aparta nada
+
+#### Scenario: El precio sí se ajusta con el equipo fuera
+
+- **GIVEN** la misma cotización
+- **WHEN** se cambia el precio negociado y la periodicidad de su línea, sin tocar la cantidad
+- **THEN** se acepta
+- **AND** el equipo sigue donde estaba
 
 #### Scenario: Mientras el equipo no ha salido sí se editan
 

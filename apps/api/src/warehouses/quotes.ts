@@ -477,22 +477,49 @@ function assertOpen(status: QuoteStatus): void {
 }
 
 /**
- * Las líneas no se tocan con el equipo fuera.
+ * Con el equipo fuera se congela **la composición, no el precio**.
  *
- * La regla vive en `@tfv/contracts` porque la interfaz tiene que ofrecer lo mismo que el servidor
- * acepta. Lo que se protege no es el documento sino el inventario: soltar una reserva devuelve a
- * `available` **sólo lo que estaba apartado**, así que bajar una cantidad en una renta en curso
- * dejaría la unidad `rented` sin dueño, comprometida para siempre.
+ * Lo que se protege es el inventario, no el documento: soltar una reserva devuelve a `available`
+ * **sólo lo que estaba apartado**, así que bajar una cantidad en una renta en curso dejaría la
+ * unidad `rented` sin dueño, comprometida para siempre. El equipo vuelve registrando su retorno,
+ * que es la única operación que sabe en qué condiciones volvió cada unidad.
  *
- * El equipo vuelve registrando su retorno, que es la única operación que sabe en qué condiciones
- * volvió cada unidad.
+ * Cambiar lo que **cuesta** una línea no mueve nada de eso. Y hace falta poder hacerlo: una
+ * extensión de renta nace con el equipo ya fuera, y sin esto no podría tener precio nunca.
+ *
+ * Así que con el equipo fuera se admite el envío **si describe exactamente las mismas líneas, con
+ * las mismas medidas y las mismas cantidades**. Cualquier otra cosa —una línea nueva, una que
+ * falta, una cantidad distinta, una medida cambiada— es movimiento de inventario y se rechaza.
  */
-function assertLinesEditable(status: QuoteStatus, type: TradeType): void {
-  assertOpen(status)
-  if (linesFrozen(status, type)) {
+async function assertLinesEditable(
+  tx: Transaction,
+  quote: { readonly id: string; readonly status: QuoteStatus; readonly type: TradeType },
+  input: readonly QuoteLineInput[],
+): Promise<void> {
+  assertOpen(quote.status)
+  if (!linesFrozen(quote.status, quote.type)) return
+
+  const existing = await tx
+    .select({ id: warehouseQuoteLines.id, measurementId: warehouseQuoteLines.measurementId })
+    .from(warehouseQuoteLines)
+    .where(eq(warehouseQuoteLines.quoteId, quote.id))
+  const reserved = await reservedByLine(tx, quote.id)
+
+  const same =
+    input.length === existing.length &&
+    existing.every((line) => {
+      const sent = input.find((row) => row.id === line.id)
+      return (
+        sent !== undefined &&
+        sent.measurementId === line.measurementId &&
+        sent.quantity === (reserved.get(line.id) ?? []).length
+      )
+    })
+
+  if (!same) {
     throw new ConflictError(
-      "El equipo de esta cotización ya salió: las líneas no se modifican hasta que vuelva. " +
-        "Registra el retorno del equipo.",
+      "El equipo de esta cotización ya salió: no se añade, se quita ni se cambia la cantidad " +
+        "hasta que vuelva. El precio sí se puede ajustar. Registra el retorno del equipo.",
     )
   }
 }
@@ -812,7 +839,7 @@ export async function setLines(
   return withRequester(actor, async (tx) => {
     await loadWarehouse(tx, companyId, warehouseId)
     const quote = await loadQuote(tx, warehouseId, quoteId)
-    assertLinesEditable(quote.status, quote.type)
+    await assertLinesEditable(tx, quote, input)
 
     await applyLines(tx, quoteId, warehouseId, input, { actorId: actor.userId, allowMinting })
     return readLines(tx, quoteId)

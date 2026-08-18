@@ -176,8 +176,9 @@ test.describe("la ficha de una cotización", () => {
     // El estado proyectado sobre el inventario: en renta significa equipo fuera de la nave, y con
     // el equipo fuera las líneas se enseñan pero no se editan.
     await expect(page.getByText("En renta").first()).toBeVisible()
-    await expect(page.getByRole("heading", { name: "Líneas" })).toBeVisible()
-    await expect(page.getByRole("heading", { name: "Equipo de la cotización" })).toHaveCount(0)
+    await expect(page.getByRole("heading", { name: "Equipo de la cotización" })).toBeVisible()
+    // Con el equipo fuera el buscador no está: no se añade nada a una renta ya salida.
+    await expect(page.getByLabel("Añadir equipo")).toHaveCount(0)
 
     // Los importes vienen calculados del servidor, con su cadena entera visible.
     await expect(page.getByRole("heading", { name: "Importes" })).toBeVisible()
@@ -392,9 +393,12 @@ test.describe("el retorno del equipo", () => {
 
     await rentedQuote(context, page, companyId, warehouseId)
 
-    await expect(page.getByRole("button", { name: "Guardar líneas" })).toHaveCount(0)
-    await expect(page.getByLabel("Cantidad")).toHaveCount(0)
+    // Se congela la composición, no el precio: la cantidad se ve apagada, el buscador desaparece
+    // y el precio de cada línea se sigue pudiendo ajustar.
     await expect(page.getByText(/ya salió de la nave/i)).toBeVisible()
+    await expect(page.getByLabel("Añadir equipo")).toHaveCount(0)
+    await expect(page.getByLabel("Cantidad").first()).toBeDisabled()
+    await expect(page.getByLabel("Precio negociado").first()).toBeEnabled()
 
     // Y el camino de vuelta está en la misma página.
     await expect(page.getByRole("region", { name: "Retorno del equipo" })).toBeVisible()

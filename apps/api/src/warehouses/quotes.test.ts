@@ -357,6 +357,7 @@ interface Line {
   productName: string
   productCode: string
   productPriceId: string | null
+  price: string | null
   frequency: string
   quantity: number
   unitIds: string[]
@@ -837,6 +838,28 @@ describe("las líneas se congelan al salir el equipo", () => {
 
     expect(response.status).toBe(409)
     // Y el equipo sigue fuera, entero.
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ rented: 3 })
+  })
+
+  it("pero el precio sí se cambia con el equipo fuera", async () => {
+    // Lo que se congela es el **movimiento de inventario**, no el documento. Cambiar lo que cuesta
+    // una línea no saca ni mete equipo de la nave, y sin esto una extensión de renta —que nace ya
+    // con el equipo fuera— no podría tener precio nunca.
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(3)
+    await moveTo(quote.id, "in_progress")
+    await moveTo(quote.id, "in_rent")
+    const [line] = await linesOf(quote.id)
+
+    const response = await setLines(quote.id, [
+      { id: line?.id, measurementId, quantity: 3, price: "4500.00", frequency: "monthly" },
+    ])
+
+    expect(response.status).toBe(200)
+    const [updated] = await linesOf(quote.id)
+    expect(updated?.price).toBe("4500.00")
+    expect(updated?.frequency).toBe("monthly")
+    // Y el equipo sigue exactamente donde estaba.
     expect(statusesOf(await unitsOf(measurementId))).toEqual({ rented: 3 })
   })
 

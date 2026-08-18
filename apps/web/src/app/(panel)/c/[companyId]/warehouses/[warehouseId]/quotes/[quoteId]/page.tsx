@@ -88,9 +88,12 @@ export default async function QuotePage({
   // porque bajar una cantidad soltaría el vínculo de una unidad que sigue en la calle, y el
   // inventario pasaría a decir que está libre. Ofrecer el editor sería ofrecer un botón cuyo
   // guardado responde `409` siempre.
+  // Cerrada: nada se toca, ni siquiera el precio — los importes están congelados. Con el equipo
+  // fuera pero abierta: se congela **la composición**, no el precio. Cambiar lo que cuesta una
+  // línea no saca ni mete equipo de la nave, y una extensión de renta nace ya con el equipo fuera.
   const closed = isClosed(quote.status)
   const frozen = linesFrozen(quote.status, quote.type)
-  const canEditLines = can(company, "warehouses.quotes.edit_products") && !frozen
+  const canEditLines = can(company, "warehouses.quotes.edit_products") && !closed
 
   // Las listas de precios sólo hacen falta para el buscador del editor, y sólo se saben necesarias
   // después de conocer el estado de la cotización.
@@ -181,6 +184,7 @@ export default async function QuotePage({
                 priceLists={priceListsResult?.ok ? priceListsResult.data.items : []}
                 canMint={can(company, "warehouses.products.stock_create")}
                 canCreate={can(company, "warehouses.products.create")}
+                frozen={frozen}
               />
             ) : (
               <section aria-labelledby="lines-heading">
@@ -190,12 +194,6 @@ export default async function QuotePage({
                     {t("warehouses.quotes.lines")}
                   </h2>
                 </div>
-
-                {frozen && !closed ? (
-                  <Callout tone="info" className="mb-3">
-                    {t("warehouses.quotes.linesFrozen")}
-                  </Callout>
-                ) : null}
 
                 {lines.length > 0 ? (
                   <div className="grid gap-3">

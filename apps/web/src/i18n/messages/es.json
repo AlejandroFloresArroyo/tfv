@@ -642,7 +642,8 @@
       "provisionalSubmit": "Dar de alta y añadir",
       "provisionalFailed": "No se pudo dar de alta el equipo",
       "provisional": "Por completar",
-      "provisionalFilter": "Sólo lo que falta por completar"
+      "provisionalFilter": "Sólo lo que falta por completar",
+      "linesPriceOnly": "El equipo ya salió de la nave: no se añade, no se quita y no cambian las cantidades. El precio sí se puede ajustar. Para devolverlo, usa el retorno del equipo, más abajo."
     },
     "completeOnly": "Sólo los completos"
   }

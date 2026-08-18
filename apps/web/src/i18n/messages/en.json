@@ -642,7 +642,8 @@
       "provisionalSubmit": "Add and put on the quote",
       "provisionalFailed": "Could not add the equipment",
       "provisional": "To complete",
-      "provisionalFilter": "Only what is left to complete"
+      "provisionalFilter": "Only what is left to complete",
+      "linesPriceOnly": "The equipment has left the warehouse: nothing is added, removed or re-counted. Prices can still be adjusted. To bring it back, use the equipment return below."
     },
     "completeOnly": "Only complete ones"
   }

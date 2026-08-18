@@ -96,6 +96,7 @@ export function QuoteEditor({
   priceLists,
   canMint,
   canCreate,
+  frozen,
 }: {
   companyId: string
   warehouseId: string
@@ -106,6 +107,14 @@ export function QuoteEditor({
   canMint: boolean
   /** Dar de alta un producto provisional desde aquí. Exige la clave de alta de catálogo. */
   canCreate: boolean
+  /**
+   * El equipo ya salió: se congela **la composición, no el precio**.
+   *
+   * Ni se añade, ni se quita, ni cambia una cantidad —eso movería inventario que está en la calle—,
+   * pero lo que cuesta cada línea sí se ajusta. Una extensión de renta nace así, con el equipo ya
+   * fuera, y sin esto no podría tener precio nunca.
+   */
+  frozen: boolean
 }) {
   const t = useTranslations("warehouses.quotes")
   const format = useFormatter()
@@ -288,18 +297,22 @@ export function QuoteEditor({
         </Panel>
       )}
 
-      <Panel className="p-4">
-        <Picker
-          base={base}
-          type={quote.type}
-          priceListId={priceListId}
-          priceLists={priceLists}
-          onPriceList={setPriceListId}
-          onAdd={add}
-          canCreate={canCreate}
-          chosen={drafts.map((draft) => draft.measurementId)}
-        />
-      </Panel>
+      {frozen ? (
+        <Callout tone="info">{t("linesPriceOnly")}</Callout>
+      ) : (
+        <Panel className="p-4">
+          <Picker
+            base={base}
+            type={quote.type}
+            priceListId={priceListId}
+            priceLists={priceLists}
+            onPriceList={setPriceListId}
+            onAdd={add}
+            canCreate={canCreate}
+            chosen={drafts.map((draft) => draft.measurementId)}
+          />
+        </Panel>
+      )}
 
       {drafts.length > 0 ? (
         <ul className="grid gap-3">
@@ -323,14 +336,16 @@ export function QuoteEditor({
                       </p>
                     </div>
 
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => remove(draft.measurementId)}
-                      aria-label={t("removeLine", { name: draft.productName })}
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                    </Button>
+                    {frozen ? null : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => remove(draft.measurementId)}
+                        aria-label={t("removeLine", { name: draft.productName })}
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </Button>
+                    )}
                   </div>
 
                   <Separator className="my-3" />
@@ -345,6 +360,7 @@ export function QuoteEditor({
                           min={0}
                           max={ceiling}
                           value={draft.quantity}
+                          disabled={frozen}
                           aria-invalid={over || undefined}
                           onChange={(event) =>
                             update(draft.measurementId, {
@@ -435,7 +451,7 @@ export function QuoteEditor({
         <Panel className="p-5 text-body1 text-content-muted">{t("noLinesYet")}</Panel>
       )}
 
-      {canMint ? (
+      {canMint && !frozen ? (
         <label className="flex items-start gap-2 text-body3 text-content-muted">
           <input
             type="checkbox"

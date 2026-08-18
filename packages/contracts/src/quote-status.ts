@@ -84,12 +84,15 @@ export function needsWindow(status: QuoteStatus, type: TradeType): boolean {
 }
 
 /**
- * Si las líneas de la cotización ya no se tocan.
+ * Si la **composición** de las líneas ya no se toca.
  *
- * Dos motivos distintos con la misma consecuencia: el documento está **cerrado**, o el equipo está
- * **fuera**. En el segundo caso las líneas no se congelan por burocracia sino porque bajar una
- * cantidad soltaría el vínculo de una unidad que sigue en la calle, y el inventario pasaría a decir
- * que está libre.
+ * Dos motivos distintos: el documento está **cerrado**, o el equipo está **fuera**. En el segundo
+ * caso no se congela por burocracia sino porque bajar una cantidad soltaría el vínculo de una
+ * unidad que sigue en la calle, y el inventario pasaría a decir que está libre.
+ *
+ * **El precio no entra en esto.** Cambiar lo que cuesta una línea no saca ni mete equipo de la
+ * nave, y hace falta poder hacerlo: una extensión de renta nace con el equipo ya fuera. Quien
+ * aplique esta regla debe congelar altas, bajas, cantidades y medidas — no importes.
  */
 export function linesFrozen(status: QuoteStatus, type: TradeType): boolean {
   return isClosed(status) || (type === "rent" && EQUIPMENT_OUT.includes(status))
