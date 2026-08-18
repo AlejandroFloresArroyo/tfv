@@ -237,8 +237,9 @@ En este orden, y con el motivo de que sea ése:
    borrador como esbozamos — el motivo está en la bitácora y merece una revisión.
 7. **Pedidos de almacén** (hecho): ciclo, aceptación atómica, rechazo con motivo y su bandeja.
    Quedan cuatro tareas de la rebanada esperando al escaparate y al servicio de producciones.
-8. **Lo que queda de la 10**: los prospectos. Las comprobaciones de «en uso» siguen esperando a los
-   documentos que aún no existen.
+8. **Lo que queda de la 10** (hecho): los prospectos y la comprobación de «en uso» de una
+   contraparte, que ya tiene documentos que consultar. Las pantallas esperan al sitio público y a
+   un área de administración de plataforma.
 9. **Base de pruebas separada de la de desarrollo.** Sigue estorbando, y ahora de dos maneras:
    `pnpm test` borra los datos con los que se está mirando la aplicación, y dos ejecuciones
    simultáneas se truncan las tablas la una a la otra.
@@ -2234,3 +2235,55 @@ aceptar llevando a la cotización con el folio del pedido.
 Un detalle que la limpieza de las pruebas destapó: dar de baja un pedido **desvincula** su
 cotización en vez de borrarla —es un documento con importes—, así que una prueba que acepta tiene
 que llevarse las dos o deja rastro.
+
+### 2026-08-18 · Lo que quedaba de la décima
+
+Octavo punto. Eran dos cosas: una comprobación que llevaba meses esperando a que existiera algo que
+consultar, y los prospectos.
+
+**La comprobación que ya se puede hacer**
+
+«Impedir eliminar una contraparte con documentos vigentes» estaba declarada pendiente desde la
+rebanada 10 con su motivo escrito: «hoy no hay nada que consultar, y fingir la comprobación sería
+peor que declararla pendiente». Ya hay cotizaciones y pedidos.
+
+Retienen los **abiertos**. Los cerrados no: una venta de hace dos años no debe impedir limpiar la
+cartera, y su copia de los datos del cliente vive en el propio documento. El mensaje nombra lo que
+la retiene, porque un rechazo que no dice qué mirar obliga a buscar a ciegas.
+
+**Los prospectos, y por qué no son una cuenta a medias**
+
+La tentación es crear el usuario desactivado y ya. No: una cuenta a medias es una cuenta que alguien
+acaba pudiendo usar, y además ocupa el correo, de modo que quien luego quiera registrarse de verdad
+se encuentra con que «ya existe». Un prospecto vive en su propia tabla hasta que alguien lo
+convierte.
+
+Aceptar reutiliza `invite`, que desde la rebanada 04 sabe crear la cuenta verificada y sin
+contraseña con su enlace de un solo uso. El enlace **no vuelve en la respuesta**: devolverlo dejaría
+entrar en la cuenta ajena a quien acepta.
+
+Y la corrección de L-02 sale gratis por cómo está planteado: la bandeja de pendientes son los que no
+tienen `accepted_at`, así que el aceptado sale de ella **por construcción**, sin que nadie tenga que
+acordarse de retirarlo — que es exactamente lo que la implementación anterior no hacía.
+
+**Dos guardas del propio repositorio hicieron su trabajo**
+
+La primera: la prueba de cobertura de políticas, la que lleva escrito «no borrar esta prueba». El
+bucle que repartió la política de plataforma en la 0005 corrió **una sola vez**, así que la tabla
+nueva quedó con las políticas desactivadas — que no es «falla cerrado» sino abierta de par en par.
+La 0014 repite el bucle sobre todas las tablas y vuelve a comprobar que no quede ninguna suelta.
+
+La segunda: el candado de la superficie pública. Comprobaba que toda escritura pública cuelgue de
+`/auth`, que era un **sustituto** de la frontera real —«ninguna sobre datos de una empresa»— y que
+servía mientras todas lo hacían. Un prospecto no es autenticación y no es de nadie. Se comprueba
+ahora la frontera de verdad: que el camino no se resuelva contra una empresa, la misma que
+`assertScopedByCompany` aplica al cargar el módulo.
+
+**Sin pantalla, a propósito**
+
+El formulario de contacto pertenece al sitio público (29e) y la bandeja necesita un área de
+administración de plataforma que no existe. Queda anotado en la tarea.
+
+**Comprobado**
+
+Los seis paquetes, Biome, **327 pruebas** de la API —once nuevas— y **62 de extremo a extremo**.
