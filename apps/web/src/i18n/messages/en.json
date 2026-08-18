@@ -15,6 +15,21 @@
       "occupied": "That email already belongs to another account.",
       "networkError": "We couldn't request the change. Check your connection and try again."
     },
+    "passwordChange": {
+      "title": "Change password",
+      "description": "We need your current one to confirm it's you.",
+      "current": "Current password",
+      "new": "New password",
+      "newHint": "At least 12 characters. Nothing from the most used ones.",
+      "again": "Repeat the new password",
+      "show": "Show the password",
+      "hide": "Hide the password",
+      "mismatch": "The two don't match.",
+      "wrongCurrent": "That isn't your current password.",
+      "rejected": "That password doesn't meet the requirements. Try a longer or less common one.",
+      "signsOut": "Changing it closes every session, including this one: you'll have to sign in again with the new password.",
+      "submit": "Change the password"
+    },
     "sessions": {
       "title": "Active sessions",
       "subtitle": "Each row is a browser with an open session. Closing them all signs you out here too.",
@@ -31,6 +46,9 @@
   "addresses": {
     "title": "Addresses",
     "subtitle": "Where {company} ships from and bills to.",
+    "mine": "My addresses",
+    "mineSubtitle": "Where you receive what you buy.",
+    "mineEmptyBody": "They're needed for what you buy to arrive somewhere.",
     "create": "New address",
     "createTitle": "Add an address",
     "createBody": "The first one in the book becomes the primary.",
@@ -40,6 +58,7 @@
     "label": "Label",
     "labelHint": "So you recognise it at a glance. Optional.",
     "labelPlaceholder": "Main warehouse",
+    "labelPlaceholderMine": "Home",
     "street": "Street",
     "number": "Number",
     "colony": "Neighbourhood",
@@ -186,7 +205,25 @@
     "createBody": "You become the owner.",
     "name": "Name",
     "description": "Description",
-    "email": "Contact email"
+    "email": "Contact email",
+    "manage": {
+      "nav": "Company",
+      "title": "Company details",
+      "subtitle": "The name, contact details and services of {company}.",
+      "data": "Details",
+      "actions": "Company actions",
+      "editTitle": "Edit the details",
+      "commission": "Platform commission",
+      "commissionHint": "Percentage on sales. Only platform administration changes it.",
+      "created": "Created",
+      "services": "Contracted services",
+      "servicesHint": "Platform administration enables them.",
+      "noServices": "None yet.",
+      "delete": "Close the company",
+      "deleteTitle": "Close the company",
+      "deleteScopeService": "{service}: its data stops being accessible.",
+      "deleteScopeMembers": "Its members lose access; their accounts remain."
+    }
   },
   "dashboard": {
     "welcome": "Hello, {name}",

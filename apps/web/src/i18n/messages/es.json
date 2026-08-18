@@ -15,6 +15,21 @@
       "occupied": "Ese correo ya pertenece a otra cuenta.",
       "networkError": "No pudimos solicitar el cambio. Revisa tu conexión e inténtalo de nuevo."
     },
+    "passwordChange": {
+      "title": "Cambiar contraseña",
+      "description": "Necesitamos la actual para confirmar que eres tú.",
+      "current": "Contraseña actual",
+      "new": "Contraseña nueva",
+      "newHint": "Al menos 12 caracteres. Nada de las contraseñas más usadas.",
+      "again": "Repite la contraseña nueva",
+      "show": "Mostrar la contraseña",
+      "hide": "Ocultar la contraseña",
+      "mismatch": "Las dos no coinciden.",
+      "wrongCurrent": "Esa no es tu contraseña actual.",
+      "rejected": "Esa contraseña no cumple los requisitos. Prueba con una más larga o menos común.",
+      "signsOut": "Al cambiarla se cierran todas tus sesiones, incluida ésta: tendrás que entrar de nuevo con la contraseña nueva.",
+      "submit": "Cambiar la contraseña"
+    },
     "sessions": {
       "title": "Sesiones activas",
       "subtitle": "Cada renglón es un navegador con la sesión abierta. Cerrarlas todas te obliga a entrar de nuevo aquí también.",
@@ -31,6 +46,9 @@
   "addresses": {
     "title": "Direcciones",
     "subtitle": "Desde dónde envía y a dónde factura {company}.",
+    "mine": "Mis direcciones",
+    "mineSubtitle": "Dónde recibes lo que compras.",
+    "mineEmptyBody": "Hacen falta para que lo que compres llegue a alguna parte.",
     "create": "Nueva dirección",
     "createTitle": "Añadir una dirección",
     "createBody": "La primera de la libreta queda como primaria.",
@@ -40,6 +58,7 @@
     "label": "Etiqueta",
     "labelHint": "Para reconocerla de un vistazo. Opcional.",
     "labelPlaceholder": "Bodega principal",
+    "labelPlaceholderMine": "Casa",
     "street": "Calle",
     "number": "Número",
     "colony": "Colonia",
@@ -186,7 +205,25 @@
     "createBody": "Quedas como propietaria.",
     "name": "Nombre",
     "description": "Descripción",
-    "email": "Correo de contacto"
+    "email": "Correo de contacto",
+    "manage": {
+      "nav": "Empresa",
+      "title": "Datos de la empresa",
+      "subtitle": "El nombre, el contacto y los servicios de {company}.",
+      "data": "Datos",
+      "actions": "Acciones de la empresa",
+      "editTitle": "Editar los datos",
+      "commission": "Comisión de la plataforma",
+      "commissionHint": "Porcentaje sobre las ventas. Sólo lo mueve la administración de plataforma.",
+      "created": "Alta",
+      "services": "Servicios contratados",
+      "servicesHint": "Los habilita la administración de plataforma.",
+      "noServices": "Todavía no tiene ninguno.",
+      "delete": "Dar de baja la empresa",
+      "deleteTitle": "Dar de baja la empresa",
+      "deleteScopeService": "{service}: sus datos dejan de estar accesibles.",
+      "deleteScopeMembers": "Sus miembros pierden el acceso; sus cuentas siguen existiendo."
+    }
   },
   "dashboard": {
     "welcome": "Hola, {name}",

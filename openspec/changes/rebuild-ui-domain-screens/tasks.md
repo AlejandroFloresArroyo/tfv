@@ -10,13 +10,24 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 ## 29a · Núcleo y administración
 
 - [x] Acceso, registro, recuperación y verificación — llegaron con la 28
-- [~] Perfil y sesiones abiertas. **Faltan** el cambio de contraseña y el de correo, que necesita
-      verificar la dirección nueva (rebanada 10)
-- [~] Selector de empresa y alta. **Falta la gestión**: editar y dar de baja desde la pantalla
+- [~] Perfil, sesiones abiertas, **cambio de contraseña** y cambio de correo. La contraseña
+      advierte antes de confirmar que el cambio cierra **todas** las sesiones, incluida aquella
+      desde la que se cambia — que es lo que hace el servicio, y no lo que decía la spec (H-45).
+      **Falta** canjear el enlace del correo nuevo de extremo a extremo: se emite y nadie lo
+      entrega todavía (rebanada 09)
+- [~] Selector de empresa, alta, y **gestión** —editar y dar de baja— en configuración, al lado
+      de miembros, roles y direcciones: quien tiene una sola empresa se salta el selector y ahí no
+      habría encontrado nunca dónde editarla. La comisión sólo se ofrece a la administración de
+      plataforma. La baja enumera los **servicios** que dejan de estar accesibles, y no cuántos
+      almacenes o cotizaciones se lleva: la empresa no tiene alcance que preguntar como sí lo tiene
+      un almacén, ni el servicio comprueba la suscripción activa que la spec exige (H-47). **Falta**
+      además editar la imagen y los sectores: no hay ruta para una ni modelo para los otros (H-48)
 - [x] Miembros: incorporación, retirada, activación, rol y propiedad
 - [x] Roles con su matriz de permisos, construida desde el catálogo del servidor
-- [~] Direcciones **de empresa**, con su libreta explorable y la regla de la primaria en la
-      pantalla. Faltan las **de usuario** —misma libreta, otro dueño— y el selector en mapa (28e)
+- [~] Direcciones **de empresa y de usuario**, con su libreta explorable y la regla de la primaria
+      en la pantalla. Son la misma pantalla con otro dueño, de verdad: el camino de la API y quién
+      puede qué viajan como dato, y la de la persona no consulta permisos porque su libreta cuelga
+      de ella. **Falta** el selector en mapa y las sugerencias al escribir (28e)
 - [x] Clientes y proveedores, **con permisos separados**: son dos colecciones distintas y no la
       misma con un parámetro, porque un parámetro no se puede autorizar por separado
 - [ ] Perfiles de facturación, con su asistente

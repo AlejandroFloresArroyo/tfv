@@ -215,12 +215,24 @@ usaba una función de dispersión no criptográfica y sin caducidad (ver `DEFECT
 
 Un usuario con sesión SHALL poder cambiar su contraseña aportando la actual.
 
-Un cambio correcto SHALL invalidar las demás sesiones y conservar la actual.
+Un cambio correcto SHALL invalidar **todas** las sesiones del titular, **incluida aquella desde la
+que se cambia**: quien acaba de cambiarla vuelve a identificarse con la contraseña nueva. Es lo
+mismo que hace el restablecimiento por enlace, y por el mismo motivo — quien tuviera la contraseña
+anterior deja de tener acceso, sin excepciones que haya que razonar.
+
+La pantalla que ofrece el cambio SHALL advertir de esa consecuencia **antes** de confirmarlo.
 
 #### Scenario: Se exige la contraseña actual
 
 - **WHEN** el usuario intenta cambiar su contraseña sin aportar la actual correcta
 - **THEN** la operación se rechaza
+
+#### Scenario: El cambio cierra también la sesión desde la que se hace
+
+- **GIVEN** un usuario con sesión abierta en dos dispositivos
+- **WHEN** cambia su contraseña desde uno de ellos
+- **THEN** ninguno de los dos conserva el acceso
+- **AND** el que la cambió lo sabía antes de confirmar
 
 ### Requirement: Requisitos mínimos de contraseña
 
