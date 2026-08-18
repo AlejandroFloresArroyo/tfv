@@ -170,6 +170,7 @@ export function PriceListActions({
   canEdit,
   canDelete,
   redirectOnDelete,
+  label,
 }: {
   companyId: string
   warehouseId: string
@@ -177,6 +178,13 @@ export function PriceListActions({
   canEdit: boolean
   canDelete: boolean
   redirectOnDelete?: string
+  /**
+   * Cómo se llama el punto de acceso.
+   *
+   * En la ficha conviven el de la lista y el de cada tarifa. Con el mismo nombre, quien los recorre
+   * con lector de pantalla oye «Acciones» tres veces y ninguna dice de qué.
+   */
+  label?: string
 }) {
   const t = useTranslations()
 
@@ -216,5 +224,5 @@ export function PriceListActions({
     })
   }
 
-  return <ItemActions label={t("common.actions")} actions={actions} />
+  return <ItemActions label={label ?? t("common.actions")} actions={actions} />
 }
