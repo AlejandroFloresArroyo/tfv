@@ -33,7 +33,9 @@ import {
   type QuotePaymentTerms,
   type QuoteStatus,
   type QuoteTaxes,
+  type RateSchedule,
   type RentFrequency,
+  resolveRate,
   TRADE_TYPES,
   TRANSITIONS,
   type TradeType,
@@ -49,6 +51,7 @@ import {
   warehouseProducts,
   warehouseQuoteLines,
   warehouseQuotes,
+  warehouseStockUnits,
   warehouses,
 } from "@tfv/db/schema"
 import { and, count, eq, inArray, isNull } from "drizzle-orm"
@@ -703,6 +706,18 @@ export interface QuoteLineRecord {
   readonly productCode: string
   readonly productPriceId: string | null
   readonly frequency: RentFrequency
+  /**
+   * La tarifa con la que se calculó esta línea, ya resuelta.
+   *
+   * Viaja con la línea porque el constructor previsualiza los importes mientras se edita, y tiene
+   * que partir **exactamente** de lo que el servidor usó. Resolverla por su cuenta —o resolverla
+   * contra otra lista de precios— produce un total distinto del que se acaba de guardar.
+   */
+  readonly basePrice: string
+  readonly rent?: RateSchedule | undefined
+  readonly penalty?: RateSchedule | undefined
+  /** Unidades libres de esa medida, **sin contar las de esta línea**. El tope es ésta más aquéllas. */
+  readonly available: number
   /** No es una columna: es **cuántas unidades tiene apartadas**. Ver `stock-reservation`. */
   readonly quantity: number
   readonly unitIds: readonly string[]
@@ -837,9 +852,12 @@ async function readLines(tx: Transaction, quoteId: string): Promise<QuoteLineRec
     .select({
       line: warehouseQuoteLines,
       measurementName: warehouseMeasurements.name,
+      priceDifference: warehouseMeasurements.priceDifference,
       productId: warehouseProducts.id,
       productName: warehouseProducts.name,
       productCode: warehouseProducts.code,
+      productPrice: warehouseProducts.price,
+      rate: warehouseProductPrices,
     })
     .from(warehouseQuoteLines)
     .innerJoin(
@@ -847,12 +865,20 @@ async function readLines(tx: Transaction, quoteId: string): Promise<QuoteLineRec
       eq(warehouseMeasurements.id, warehouseQuoteLines.measurementId),
     )
     .innerJoin(warehouseProducts, eq(warehouseProducts.id, warehouseMeasurements.productId))
+    .leftJoin(
+      warehouseProductPrices,
+      eq(warehouseProductPrices.id, warehouseQuoteLines.productPriceId),
+    )
     .where(eq(warehouseQuoteLines.quoteId, quoteId))
     .orderBy(warehouseQuoteLines.positionProduct, warehouseQuoteLines.position)
 
   const reserved = await reservedByLine(tx, quoteId)
+  const free = await freeUnits(
+    tx,
+    rows.map((row) => row.line.measurementId),
+  )
 
-  return rows.map(({ line, ...names }) => {
+  return rows.map(({ line, priceDifference, productPrice, rate, ...names }) => {
     const unitIds = reserved.get(line.id) ?? []
     return {
       id: line.id,
@@ -861,12 +887,37 @@ async function readLines(tx: Transaction, quoteId: string): Promise<QuoteLineRec
       ...names,
       productPriceId: line.productPriceId,
       frequency: line.frequency,
+      // La misma regla que usa el motor al calcular. Ver `resolveRate` y `quote-pricing.ts`.
+      ...resolveRate({ productPrice, priceDifference, ...(rate ? { listed: rate } : {}) }),
+      available: free.get(line.measurementId) ?? 0,
       quantity: unitIds.length,
       unitIds,
       position: line.position,
       positionProduct: line.positionProduct,
     }
   })
+}
+
+/** Unidades disponibles por medida. Las que no aparecen no tienen ninguna. */
+async function freeUnits(
+  tx: Transaction,
+  measurementIds: readonly string[],
+): Promise<Map<string, number>> {
+  if (measurementIds.length === 0) return new Map()
+
+  const rows = await tx
+    .select({ measurementId: warehouseStockUnits.measurementId, value: count() })
+    .from(warehouseStockUnits)
+    .where(
+      and(
+        inArray(warehouseStockUnits.measurementId, [...measurementIds]),
+        eq(warehouseStockUnits.status, "available"),
+        isNull(warehouseStockUnits.deletedAt),
+      ),
+    )
+    .groupBy(warehouseStockUnits.measurementId)
+
+  return new Map(rows.map((row) => [row.measurementId, row.value]))
 }
 
 /** La medida existe y pertenece a un producto de este almacén. */

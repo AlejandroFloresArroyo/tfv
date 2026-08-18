@@ -347,6 +347,9 @@ describe("listado de cotizaciones", () => {
 // ─── Líneas y reserva ────────────────────────────────────────────────────────
 
 interface Line {
+  basePrice: string
+  rent?: { isFixed: boolean; weekly?: string }
+  available: number
   id: string
   measurementId: string
   measurementName: string
@@ -1275,6 +1278,64 @@ describe("sacar el equipo tiene su propia clave", () => {
     )
 
     expect(done.status).toBe(403)
+  })
+})
+
+// ─── La tarifa que viaja con cada línea ──────────────────────────────────────
+
+describe("cada línea trae la tarifa con la que se calculó", () => {
+  it("la tarifa de la línea es la de su entrada de lista, no la del precio escalar", async () => {
+    // Sin esto el constructor previsualiza con el precio de venta del producto y enseña un total
+    // distinto del que el servidor acaba de calcular, que es la mitad del defecto M-06.
+    await clearWarehouse()
+    const product = await json<Product>(
+      await request(
+        "POST",
+        `${base}/products`,
+        { name: "Cámara", price: "700.00", measurements: [{ name: "Cuerpo", initialQuantity: 2 }] },
+        cookie,
+      ),
+    )
+    const measurementId = product.measurements[0]?.id as string
+
+    const list = await json<{ id: string }>(
+      await request("POST", `${base}/price-lists`, { name: "Tarifas" }, cookie),
+    )
+    const price = await json<{ id: string }>(
+      await request(
+        "PUT",
+        `${base}/price-lists/${list.id}/prices/${product.id}`,
+        {
+          sale: "700.00",
+          rent: { isFixed: false, weekly: "70.00" },
+          penalty: { isFixed: false },
+        },
+        cookie,
+      ),
+    )
+
+    const quote = await newQuote({ ...WINDOW })
+    await setLines(quote.id, [
+      { measurementId, quantity: 1, frequency: "weekly", productPriceId: price.id },
+    ])
+
+    const [line] = await linesOf(quote.id)
+
+    expect(line?.basePrice).toBe("700.00")
+    expect(line?.rent).toEqual({ isFixed: false, weekly: "70.00" })
+  })
+
+  it("dice cuántas unidades quedan libres de esa medida, sin contar las suyas", async () => {
+    // Es el tope que el editor puede ofrecer sin pedir nada más: lo libre más lo propio.
+    await clearWarehouse()
+    const measurementId = await newStocked("Trípode", 5)
+    const quote = await newQuote({ ...WINDOW })
+    await setLines(quote.id, [{ measurementId, quantity: 2 }])
+
+    const [line] = await linesOf(quote.id)
+
+    expect(line?.quantity).toBe(2)
+    expect(line?.available).toBe(3)
   })
 })
 

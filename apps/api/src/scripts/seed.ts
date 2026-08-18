@@ -701,7 +701,7 @@ async function seedPriceList(warehouseId: string): Promise<string> {
     id: priceListId,
     warehouseId,
     name: "Tarifas 2026",
-    description: "Renta por semana, venta al precio de catálogo.",
+    description: "Renta por día, semana y mes; venta al precio de catálogo.",
   })
 
   const products = await db
@@ -718,7 +718,15 @@ async function seedPriceList(warehouseId: string): Promise<string> {
           priceListId,
           productId: product.id,
           sale: product.price,
-          rent: { isFixed: false, weekly: (base / 10).toFixed(2) },
+          // Las tres periodicidades, no sólo la semanal: sin tarifa para la frecuencia elegida el
+          // motor cobra el precio base, y una lista a medias hace que eso parezca un defecto de la
+          // pantalla en lugar de una lista sin rellenar.
+          rent: {
+            isFixed: false,
+            daily: (base / 40).toFixed(2),
+            weekly: (base / 10).toFixed(2),
+            monthly: (base / 3).toFixed(2),
+          },
           penalty: { isFixed: true, fixed: (base * 2).toFixed(2) },
         }
       }),

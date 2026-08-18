@@ -148,6 +148,14 @@ const quoteSchema = z.object({
   updatedAt: z.string(),
 })
 
+const rateScheduleSchema = z.object({
+  isFixed: z.boolean(),
+  fixed: z.string().optional(),
+  daily: z.string().optional(),
+  weekly: z.string().optional(),
+  monthly: z.string().optional(),
+})
+
 const lineSchema = z.object({
   id: z.string(),
   quoteId: z.string(),
@@ -158,6 +166,11 @@ const lineSchema = z.object({
   productCode: z.string(),
   productPriceId: z.string().nullable(),
   frequency: z.enum(RENT_FREQUENCIES),
+  /** La tarifa resuelta con la que se calculó, para que el navegador previsualice con la misma. */
+  basePrice: z.string(),
+  rent: rateScheduleSchema.optional(),
+  penalty: rateScheduleSchema.optional(),
+  available: z.number().int(),
   quantity: z.number().int(),
   unitIds: z.array(z.string()).readonly(),
   position: z.number().int(),
@@ -859,14 +872,6 @@ export const quoteBreakdownRoute = defineRoute({
 })
 
 // ─── Tarifas y existencia ────────────────────────────────────────────────────
-
-const rateScheduleSchema = z.object({
-  isFixed: z.boolean(),
-  fixed: z.string().optional(),
-  daily: z.string().optional(),
-  weekly: z.string().optional(),
-  monthly: z.string().optional(),
-})
 
 const candidateSchema = z.object({
   measurementId: z.string(),
