@@ -16,16 +16,27 @@
  *   distintas: la API los acepta y el navegador de escritorio no los pinta. Ver `H-51`.
  */
 
-/** El reparto de la spec. `signature` no sale de ninguna extensión: la produce el capturador. */
-export type FileKind = "image" | "video" | "document" | "file" | "signature"
+import {
+  classify as classifyExtension,
+  EXTENSIONS_BY_KIND,
+  splitFileName,
+  type UploadKind,
+} from "@tfv/contracts/media"
 
-/** Extensiones por tipo, **en el orden de la tabla**: es el que ve quien abre el selector. */
-const EXTENSIONS: Readonly<Record<"image" | "video" | "document" | "file", readonly string[]>> = {
-  image: ["jpg", "jpeg", "png", "gif", "svg", "heic", "heif", "webp"],
-  video: ["mp4", "mov", "m4v", "avi", "mkv", "webm", "ogv", "wmv", "flv", "3gp", "3g2", "hevc"],
-  document: ["pdf"],
-  file: ["doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv"],
-}
+/**
+ * El reparto y la tabla **salen del contrato compartido**, no de aquí.
+ *
+ * Estaban escritos en los dos sitios: en este paquete, para decidir qué admite el selector, y en
+ * `@tfv/contracts`, para que la API autorice la escritura de exactamente eso. Dos copias de la
+ * misma regla son dos reglas en cuanto alguien toca una — y la que se queda vieja es la que
+ * decide si el archivo se puede elegir, así que el usuario se enteraría al recibir un `400`.
+ *
+ * Lo que sí es de aquí es lo que sigue: qué se puede previsualizar y cómo se compone el filtro del
+ * diálogo del sistema operativo. Eso no lo sabe el servidor ni le importa.
+ */
+export type FileKind = UploadKind
+
+const EXTENSIONS = EXTENSIONS_BY_KIND
 
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
   jpg: "image/jpeg",
@@ -70,22 +81,16 @@ const UNPREVIEWABLE_IMAGES: readonly string[] = ["heic", "heif"]
 
 /** La extensión en minúsculas, o nada si el nombre no tiene **nombre y** extensión. */
 export function extensionOf(fileName: string): string | undefined {
-  const cut = fileName.lastIndexOf(".")
-  // `cut < 1` cubre las dos formas inválidas de una vez: sin punto, y con el punto al principio
-  // —`.gitignore`, que tiene extensión pero no nombre—.
-  if (cut < 1 || cut === fileName.length - 1) return undefined
-  return fileName.slice(cut + 1).toLowerCase()
+  // La regla de qué nombre vale es la misma que aplica la API al recibirlo, así que se pregunta
+  // ahí: sin punto, o con el punto al principio —`.gitignore`, que tiene extensión y no nombre—,
+  // no hay archivo que subir.
+  return splitFileName(fileName)?.extension
 }
 
 /** El tipo de la spec. Lo no reconocido es archivo genérico, incluido el nombre sin extensión. */
 export function classify(fileName: string): FileKind {
   const extension = extensionOf(fileName)
-  if (extension === undefined) return "file"
-
-  for (const [kind, extensions] of Object.entries(EXTENSIONS)) {
-    if (extensions.includes(extension)) return kind as FileKind
-  }
-  return "file"
+  return extension === undefined ? "file" : classifyExtension(extension)
 }
 
 /**

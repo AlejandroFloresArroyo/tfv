@@ -171,6 +171,9 @@ importers:
 
   packages/ui:
     dependencies:
+      '@tfv/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       clsx:
         specifier: ^2.1.1
         version: 2.1.1

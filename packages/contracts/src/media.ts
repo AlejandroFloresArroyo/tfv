@@ -30,40 +30,26 @@ export type UploadFailure = (typeof UPLOAD_FAILURES)[number]
 export const UPLOAD_VARIANTS = ["original", "thumbnail", "small", "medium", "large"] as const
 export type UploadVariant = (typeof UPLOAD_VARIANTS)[number]
 
-const EXTENSIONS: Readonly<Record<string, UploadKind>> = {
-  jpg: "image",
-  jpeg: "image",
-  png: "image",
-  gif: "image",
-  svg: "image",
-  heic: "image",
-  heif: "image",
-  webp: "image",
-
-  mp4: "video",
-  mov: "video",
-  m4v: "video",
-  avi: "video",
-  mkv: "video",
-  webm: "video",
-  ogv: "video",
-  wmv: "video",
-  flv: "video",
-  "3gp": "video",
-  "3g2": "video",
-  hevc: "video",
-
-  pdf: "document",
-
-  doc: "file",
-  docx: "file",
-  xls: "file",
-  xlsx: "file",
-  ppt: "file",
-  pptx: "file",
-  txt: "file",
-  csv: "file",
+/**
+ * La tabla de la spec, **en su orden**, que es el que ve quien abre el selector de archivos.
+ *
+ * `signature` no sale de ninguna extensión: la produce el capturador de firma.
+ */
+export const EXTENSIONS_BY_KIND: Readonly<
+  Record<"image" | "video" | "document" | "file", readonly string[]>
+> = {
+  image: ["jpg", "jpeg", "png", "gif", "svg", "heic", "heif", "webp"],
+  video: ["mp4", "mov", "m4v", "avi", "mkv", "webm", "ogv", "wmv", "flv", "3gp", "3g2", "hevc"],
+  document: ["pdf"],
+  file: ["doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv"],
 }
+
+/** Derivado de la tabla, para preguntar por una extensión sin recorrerla. */
+const EXTENSIONS: Readonly<Record<string, UploadKind>> = Object.fromEntries(
+  Object.entries(EXTENSIONS_BY_KIND).flatMap(([kind, extensions]) =>
+    extensions.map((extension) => [extension, kind as UploadKind]),
+  ),
+)
 
 /**
  * El nombre partido, o nada si no sirve.
