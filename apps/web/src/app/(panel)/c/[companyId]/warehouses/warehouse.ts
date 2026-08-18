@@ -164,6 +164,8 @@ export interface QuoteLineRow {
   productCode: string
   productPriceId: string | null
   frequency: RentFrequency
+  /** Precio negociado: el total de la línea para el periodo. Manda sobre la tarifa sin borrarla. */
+  price: string | null
   /** La tarifa con la que el servidor calculó esta línea. El constructor previsualiza con ella. */
   basePrice: string
   rent?: RateSchedule

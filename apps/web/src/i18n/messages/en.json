@@ -515,7 +515,7 @@
       "returnFailed": "The return could not be registered",
       "perDay": "per day",
       "perUnit": "per unit",
-      "noDailyRate": "no daily rate",
+      "noDailyRate": "no price · type one",
       "kind": {
         "rent": "Rental",
         "sale": "Sale"
@@ -543,7 +543,12 @@
         "isn": "Payroll tax",
         "hospitality": "Lodging tax",
         "frontier": "Border tax"
-      }
+      },
+      "linePrice": "Negotiated price",
+      "byTariff": "By tariff",
+      "unpriced": "Nobody set a rate for this periodicity. Type the line price.",
+      "unpricedLines": "{count, plural, one {One line has no price} other {# lines have no price}}. Type it, or pick a periodicity that has a rate.",
+      "amountsUnsaved": "Calculated from what you are editing. Not saved yet."
     }
   }
 }

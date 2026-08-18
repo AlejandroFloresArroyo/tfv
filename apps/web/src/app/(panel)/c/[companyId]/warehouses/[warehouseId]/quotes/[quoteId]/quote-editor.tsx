@@ -1,6 +1,6 @@
 "use client"
 
-import { formatMoney, money } from "@tfv/contracts/money"
+import { formatMoney, isZero } from "@tfv/contracts/money"
 import {
   computeQuotation,
   type QuotationBreakdown,
@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { formatAmount } from "~/lib/amount.ts"
 import { ApiError, api, SessionExpiredError } from "~/lib/api.client.ts"
 import type { QuoteLineRow, QuoteRow, RentFrequency } from "../../../warehouse.ts"
+import { usePublishPreview } from "./quote-preview.tsx"
 
 /**
  * El constructor de cotizaciones: el editor de líneas.
@@ -75,6 +76,14 @@ interface Draft {
   penalty?: RateSchedule
   frequency: RentFrequency
   quantity: number
+  /**
+   * Precio negociado: el total de esta línea para el periodo completo.
+   *
+   * Cadena vacía significa «sin precio negociado», que es distinto de cero. Se guarda como texto
+   * porque es lo que hay en el campo mientras se escribe: convertirlo a número aquí perdería el
+   * `1500.` de quien todavía no ha escrito los decimales.
+   */
+  price: string
   /** Unidades libres en el almacén, **sin contar** las que esta línea ya tiene apartadas. */
   free: number
   /** Cuántas tenía apartadas al abrir el editor. Es lo que puede recuperar sin competir. */
@@ -82,6 +91,9 @@ interface Draft {
 }
 
 const FREQUENCIES: readonly RentFrequency[] = ["daily", "weekly", "monthly"]
+
+/** Un importe completo. Mientras se escribe «15» o «1500.» no lo es, y no se previsualiza con él. */
+const PRICE = /^\d+(\.\d{1,2})?$/
 
 export function QuoteEditor({
   companyId,
@@ -114,7 +126,15 @@ export function QuoteEditor({
 
   const breakdown = usePreview(quote, drafts)
   const dirty = useMemo(() => changed(lines, drafts), [lines, drafts])
+
+  // El panel de importes vive en la otra columna y tiene que enseñar **esto**, no lo guardado.
+  const publish = usePublishPreview()
+  useEffect(() => {
+    publish({ breakdown, dirty })
+  }, [publish, breakdown, dirty])
   const overbooked = drafts.filter((draft) => draft.quantity > draft.free + draft.reserved)
+  // Sin tarifa para la frecuencia y sin precio escrito, la línea no vale cero: no tiene precio.
+  const unpriced = breakdown?.lines.filter((line) => line.unpriced).length ?? 0
 
   function add(candidate: RateCandidate) {
     setSaved(false)
@@ -143,6 +163,7 @@ export function QuoteEditor({
           ...(candidate.penalty ? { penalty: candidate.penalty } : {}),
           frequency: "daily" as const,
           quantity: candidate.available > 0 ? 1 : 0,
+          price: "",
           free: candidate.available,
           reserved: 0,
         },
@@ -176,6 +197,7 @@ export function QuoteEditor({
               measurementId: draft.measurementId,
               quantity: draft.quantity,
               frequency: draft.frequency,
+              price: draft.price.trim() === "" ? null : draft.price.trim(),
               productPriceId: draft.productPriceId,
               position: index,
               positionProduct: index,
@@ -225,6 +247,12 @@ export function QuoteEditor({
       {overbooked.length > 0 ? (
         <Callout tone="warning" live>
           {t("overbooked", { count: overbooked.length })}
+        </Callout>
+      ) : null}
+
+      {unpriced > 0 ? (
+        <Callout tone="warning" live>
+          {t("unpricedLines", { count: unpriced })}
         </Callout>
       ) : null}
 
@@ -316,6 +344,21 @@ export function QuoteEditor({
                       </Field>
                     ) : null}
 
+                    <Field label={t("linePrice")} className="w-36">
+                      {(ids) => (
+                        <Input
+                          {...ids}
+                          type="text"
+                          inputMode="decimal"
+                          value={draft.price}
+                          placeholder={t("byTariff")}
+                          onChange={(event) =>
+                            update(draft.measurementId, { price: event.target.value })
+                          }
+                        />
+                      )}
+                    </Field>
+
                     <div className="grid gap-1">
                       <span className="text-body3 font-semibold text-content-faint">
                         {t("availability")}
@@ -341,6 +384,11 @@ export function QuoteEditor({
                     <p className="mt-3 inline-flex items-center gap-1.5 text-body3 text-danger">
                       <TriangleAlert className="size-4" aria-hidden="true" />
                       {t("notEnough", { count: ceiling })}
+                    </p>
+                  ) : amounts?.unpriced ? (
+                    <p className="mt-3 inline-flex items-center gap-1.5 text-body3 text-warning">
+                      <TriangleAlert className="size-4" aria-hidden="true" />
+                      {t("unpriced")}
                     </p>
                   ) : null}
                 </Panel>
@@ -388,6 +436,7 @@ function usePreview(
       basePrice: draft.basePrice,
       ...(draft.rent ? { rent: draft.rent } : {}),
       ...(draft.penalty ? { penalty: draft.penalty } : {}),
+      ...(PRICE.test(draft.price.trim()) ? { linePrice: draft.price.trim() } : {}),
       position: index,
       positionProduct: index,
     }))
@@ -561,15 +610,16 @@ function Picker({
 }
 
 /**
- * Lo que costará una unidad si se añade ahora, y de dónde sale la cifra.
+ * Lo que costará una unidad si se añade ahora, y si nadie lo ha fijado.
  *
  * Una línea nueva nace con periodicidad diaria, así que ésa es la cifra que corresponde enseñar en
- * una renta. Sale de `rateFor`, la misma función que el motor usa al calcular.
+ * una renta. Sale de `rateFor`, la misma función que el motor usa al calcular — que desde la
+ * corrección de `quotation-pricing` devuelve **cero** cuando nadie fijó tarifa, en vez de recaer en
+ * el precio de venta.
  *
- * **Cuando la lista no tiene tarifa diaria, el motor cobra el precio base**, y eso hay que decirlo:
- * una lista pensada por semanas enseñaría el precio de venta como si fuera la tarifa de un día, que
- * es como se cotiza una cámara a diez veces lo que vale su semana. El importe es el que se cobrará;
- * lo que se añade es la advertencia de que nadie fijó esa tarifa.
+ * `fallback` cierto significa «esto todavía no tiene precio», y es lo que el constructor enseña
+ * para que se escriba uno. No es un aviso cosmético: es la situación normal en un almacén cuya
+ * lista de precios está sin llenar.
  */
 function unitRate(
   candidate: RateCandidate,
@@ -577,13 +627,8 @@ function unitRate(
 ): { amount: string; fallback: boolean } {
   if (type === "sale") return { amount: candidate.basePrice, fallback: false }
 
-  const schedule = candidate.rent
-  const declared = schedule ? (schedule.isFixed ? schedule.fixed : schedule.daily) : undefined
-
-  return {
-    amount: formatMoney(rateFor(schedule, "daily", money(candidate.basePrice))),
-    fallback: declared === undefined,
-  }
+  const rate = rateFor(candidate.rent, "daily")
+  return { amount: formatMoney(rate), fallback: isZero(rate) }
 }
 
 /**
@@ -607,6 +652,7 @@ function initial(lines: readonly QuoteLineRow[]): Draft[] {
     ...(line.penalty ? { penalty: line.penalty } : {}),
     frequency: line.frequency,
     quantity: line.quantity,
+    price: line.price ?? "",
     free: line.available,
     reserved: line.quantity,
   }))
@@ -622,7 +668,8 @@ function changed(lines: readonly QuoteLineRow[], drafts: readonly Draft[]): bool
       line === undefined ||
       line.measurementId !== draft.measurementId ||
       line.quantity !== draft.quantity ||
-      line.frequency !== draft.frequency
+      line.frequency !== draft.frequency ||
+      (line.price ?? "") !== draft.price.trim()
     )
   })
 }

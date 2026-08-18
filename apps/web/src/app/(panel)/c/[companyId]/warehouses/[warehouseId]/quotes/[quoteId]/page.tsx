@@ -20,7 +20,9 @@ import type {
 } from "../../../warehouse.ts"
 import { WarehouseNav } from "../../warehouse-nav.tsx"
 import { QuoteStatusBadge, QuoteTypeBadge } from "../quote-badges.tsx"
+import { QuoteAmounts } from "./quote-amounts.tsx"
 import { QuoteEditor } from "./quote-editor.tsx"
+import { QuotePreview } from "./quote-preview.tsx"
 import { type OutUnit, QuoteReturns } from "./quote-returns.tsx"
 import { QuoteStatusControl } from "./quote-status.tsx"
 
@@ -103,235 +105,186 @@ export default async function QuotePage({
         </Callout>
       ) : null}
 
-      <div className="grid gap-4 laptop:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="min-w-0 space-y-6">
-          <Panel className="p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="grid size-11 shrink-0 place-items-center rounded-sm bg-panel-hover text-content-muted">
-                  <FileText className="size-5" aria-hidden="true" />
-                </span>
-                <div className="min-w-0">
-                  <p className="font-mono text-body2 font-semibold text-content">{quote.folio}</p>
-                  <p className="truncate text-body3 text-content-faint">{quote.code}</p>
+      <QuotePreview>
+        <div className="grid gap-4 laptop:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="min-w-0 space-y-6">
+            <Panel className="p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-sm bg-panel-hover text-content-muted">
+                    <FileText className="size-5" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-mono text-body2 font-semibold text-content">{quote.folio}</p>
+                    <p className="truncate text-body3 text-content-faint">{quote.code}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  <QuoteTypeBadge type={quote.type} />
+                  <QuoteStatusBadge status={quote.status} />
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-1.5">
-                <QuoteTypeBadge type={quote.type} />
-                <QuoteStatusBadge status={quote.status} />
-              </div>
-            </div>
+              <Separator className="my-4" />
 
-            <Separator className="my-4" />
-
-            <dl className="grid gap-3 tablet:grid-cols-2">
-              <Row
-                label={t("warehouses.quotes.window")}
-                value={
-                  quote.startsOn && quote.endsOn ? (
-                    <span className="inline-flex items-center gap-2">
-                      <CalendarRange className="size-4 text-content-faint" aria-hidden="true" />
-                      {format.dateTime(new Date(quote.startsOn), { dateStyle: "medium" })} –{" "}
-                      {format.dateTime(new Date(quote.endsOn), { dateStyle: "medium" })}
-                      {breakdown ? (
-                        <span className="text-content-faint">
-                          · {t("warehouses.quotes.days", { count: breakdown.days })}
-                        </span>
-                      ) : null}
-                    </span>
-                  ) : (
-                    t("warehouses.quotes.noWindow")
-                  )
-                }
-              />
-              <Row
-                label={t("warehouses.quotes.rounding")}
-                value={
-                  quote.roundDays
-                    ? quote.roundDirection === "up"
-                      ? t("warehouses.quotes.roundUp")
-                      : t("warehouses.quotes.roundDown")
-                    : t("warehouses.quotes.noRounding")
-                }
-              />
-            </dl>
-          </Panel>
-
-          {canEditLines ? (
-            <QuoteEditor
-              companyId={companyId}
-              warehouseId={warehouseId}
-              quote={quote}
-              lines={lines}
-              priceLists={priceListsResult?.ok ? priceListsResult.data.items : []}
-              canMint={can(company, "warehouses.products.stock_create")}
-            />
-          ) : (
-            <section aria-labelledby="lines-heading">
-              <div className="mb-3 flex items-center gap-2">
-                <Package className="size-5 text-content-faint" aria-hidden="true" />
-                <h2 id="lines-heading" className="text-title2 font-bold text-content">
-                  {t("warehouses.quotes.lines")}
-                </h2>
-              </div>
-
-              {lines.length > 0 ? (
-                <div className="grid gap-3">
-                  {lines.map((line) => {
-                    const amounts = amountOf(line.id)
-                    return (
-                      <Panel key={line.id} className="p-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <h3 className="truncate text-body1 font-bold text-content">
-                              <Link
-                                href={`/c/${companyId}/warehouses/${warehouseId}/products/${line.productId}`}
-                                className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
-                              >
-                                {line.productName}
-                              </Link>
-                            </h3>
-                            <p className="truncate text-body3 text-content-faint">
-                              {line.measurementName} · {line.productCode}
-                            </p>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <Badge tone={line.quantity > 0 ? "accent" : "neutral"}>
-                              {t("warehouses.quotes.reserved", { count: line.quantity })}
-                            </Badge>
-                            {quote.type === "rent" ? (
-                              <Badge>{t(`warehouses.quotes.frequencyOf.${line.frequency}`)}</Badge>
-                            ) : null}
-                          </div>
-                        </div>
-
-                        {amounts ? (
-                          <>
-                            <Separator className="my-3" />
-                            <dl className="grid gap-3 tablet:grid-cols-3">
-                              <Row
-                                label={t("warehouses.quotes.unitCost")}
-                                value={formatAmount(amounts.unitCost, format)}
-                              />
-                              {quote.type === "rent" ? (
-                                <Row
-                                  label={t("warehouses.quotes.appliedDays")}
-                                  value={amounts.appliedDays}
-                                />
-                              ) : null}
-                              <Row
-                                label={t("warehouses.quotes.lineTotal")}
-                                value={formatAmount(amounts.total, format)}
-                              />
-                            </dl>
-                          </>
+              <dl className="grid gap-3 tablet:grid-cols-2">
+                <Row
+                  label={t("warehouses.quotes.window")}
+                  value={
+                    quote.startsOn && quote.endsOn ? (
+                      <span className="inline-flex items-center gap-2">
+                        <CalendarRange className="size-4 text-content-faint" aria-hidden="true" />
+                        {format.dateTime(new Date(quote.startsOn), { dateStyle: "medium" })} –{" "}
+                        {format.dateTime(new Date(quote.endsOn), { dateStyle: "medium" })}
+                        {breakdown ? (
+                          <span className="text-content-faint">
+                            · {t("warehouses.quotes.days", { count: breakdown.days })}
+                          </span>
                         ) : null}
-                      </Panel>
+                      </span>
+                    ) : (
+                      t("warehouses.quotes.noWindow")
                     )
-                  })}
+                  }
+                />
+                <Row
+                  label={t("warehouses.quotes.rounding")}
+                  value={
+                    quote.roundDays
+                      ? quote.roundDirection === "up"
+                        ? t("warehouses.quotes.roundUp")
+                        : t("warehouses.quotes.roundDown")
+                      : t("warehouses.quotes.noRounding")
+                  }
+                />
+              </dl>
+            </Panel>
+
+            {canEditLines ? (
+              <QuoteEditor
+                companyId={companyId}
+                warehouseId={warehouseId}
+                quote={quote}
+                lines={lines}
+                priceLists={priceListsResult?.ok ? priceListsResult.data.items : []}
+                canMint={can(company, "warehouses.products.stock_create")}
+              />
+            ) : (
+              <section aria-labelledby="lines-heading">
+                <div className="mb-3 flex items-center gap-2">
+                  <Package className="size-5 text-content-faint" aria-hidden="true" />
+                  <h2 id="lines-heading" className="text-title2 font-bold text-content">
+                    {t("warehouses.quotes.lines")}
+                  </h2>
                 </div>
-              ) : (
-                <Panel className="p-5 text-body1 text-content-muted">
-                  {t("warehouses.quotes.noLines")}
-                </Panel>
-              )}
-            </section>
-          )}
 
-          {canFinish && unitsResult.ok ? (
-            <QuoteReturns
-              companyId={companyId}
-              warehouseId={warehouseId}
-              quoteId={quoteId}
-              units={unitsResult.data.items.filter((unit) => unit.status === "rented")}
-            />
-          ) : null}
+                {lines.length > 0 ? (
+                  <div className="grid gap-3">
+                    {lines.map((line) => {
+                      const amounts = amountOf(line.id)
+                      return (
+                        <Panel key={line.id} className="p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h3 className="truncate text-body1 font-bold text-content">
+                                <Link
+                                  href={`/c/${companyId}/warehouses/${warehouseId}/products/${line.productId}`}
+                                  className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                                >
+                                  {line.productName}
+                                </Link>
+                              </h3>
+                              <p className="truncate text-body3 text-content-faint">
+                                {line.measurementName} · {line.productCode}
+                              </p>
+                            </div>
 
-          <Contacts client={quote.clientContacts} seller={quote.sellerContacts} />
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <Badge tone={line.quantity > 0 ? "accent" : "neutral"}>
+                                {t("warehouses.quotes.reserved", { count: line.quantity })}
+                              </Badge>
+                              {quote.type === "rent" ? (
+                                <Badge>
+                                  {t(`warehouses.quotes.frequencyOf.${line.frequency}`)}
+                                </Badge>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          {amounts ? (
+                            <>
+                              <Separator className="my-3" />
+                              <dl className="grid gap-3 tablet:grid-cols-3">
+                                <Row
+                                  label={t("warehouses.quotes.unitCost")}
+                                  value={
+                                    // Ausente en una línea con precio negociado: su total no se
+                                    // reparte exacto entre las unidades. Un guion dice la verdad.
+                                    amounts.unitCost === undefined
+                                      ? "—"
+                                      : formatAmount(amounts.unitCost, format)
+                                  }
+                                />
+                                {quote.type === "rent" ? (
+                                  <Row
+                                    label={t("warehouses.quotes.appliedDays")}
+                                    value={amounts.appliedDays}
+                                  />
+                                ) : null}
+                                <Row
+                                  label={t("warehouses.quotes.lineTotal")}
+                                  value={formatAmount(amounts.total, format)}
+                                />
+                              </dl>
+                            </>
+                          ) : null}
+                        </Panel>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <Panel className="p-5 text-body1 text-content-muted">
+                    {t("warehouses.quotes.noLines")}
+                  </Panel>
+                )}
+              </section>
+            )}
+
+            {canFinish && unitsResult.ok ? (
+              <QuoteReturns
+                companyId={companyId}
+                warehouseId={warehouseId}
+                quoteId={quoteId}
+                units={unitsResult.data.items.filter((unit) => unit.status === "rented")}
+              />
+            ) : null}
+
+            <Contacts client={quote.clientContacts} seller={quote.sellerContacts} />
+          </div>
+
+          <aside className="space-y-4">
+            {canEditStatus ? (
+              <QuoteStatusControl
+                companyId={companyId}
+                warehouseId={warehouseId}
+                quoteId={quoteId}
+                status={quote.status}
+                type={quote.type}
+                canRent={can(company, "warehouses.quotes.rented")}
+                canFinish={canFinish}
+              />
+            ) : null}
+
+            {breakdown ? (
+              <QuoteAmounts saved={breakdown} closed={closed} />
+            ) : breakdownResult.ok ? null : (
+              <ApiFailure result={breakdownResult} />
+            )}
+          </aside>
         </div>
-
-        <aside className="space-y-4">
-          {canEditStatus ? (
-            <QuoteStatusControl
-              companyId={companyId}
-              warehouseId={warehouseId}
-              quoteId={quoteId}
-              status={quote.status}
-              type={quote.type}
-              canRent={can(company, "warehouses.quotes.rented")}
-              canFinish={canFinish}
-            />
-          ) : null}
-
-          {breakdown ? (
-            <Amounts breakdown={breakdown} closed={closed} />
-          ) : breakdownResult.ok ? null : (
-            <ApiFailure result={breakdownResult} />
-          )}
-        </aside>
-      </div>
+      </QuotePreview>
     </PageShell>
-  )
-}
-
-async function Amounts({ breakdown, closed }: { breakdown: QuoteBreakdown; closed: boolean }) {
-  const t = await getTranslations("warehouses.quotes")
-  const format = await getFormatter()
-  const amount = (value: string) => formatAmount(value, format)
-
-  return (
-    <Panel className="p-5">
-      <h2 className="text-title2 font-bold text-content">{t("amounts")}</h2>
-      <p className="mt-1 text-body3 text-content-faint">
-        {closed ? t("amountsFrozen") : t("amountsLive")}
-      </p>
-
-      <dl className="mt-4 grid gap-3">
-        <Row label={t("subtotal")} value={amount(breakdown.subtotal)} />
-        {breakdown.discount !== "0.00" ? (
-          <Row label={t("discount")} value={`−${amount(breakdown.discount)}`} />
-        ) : null}
-        <Row label={t("base")} value={amount(breakdown.base)} />
-
-        {breakdown.taxes.map((tax) => (
-          <Row
-            key={tax.key}
-            label={taxLabel(tax, t)}
-            value={`${tax.effect === "decrease" ? "−" : ""}${amount(tax.amount)}`}
-          />
-        ))}
-
-        <Row label={t("net")} value={amount(breakdown.net)} />
-        {breakdown.fees !== "0.00" ? (
-          <Row label={t("fees")} value={amount(breakdown.fees)} />
-        ) : null}
-        {breakdown.advance !== "0.00" ? (
-          <Row label={t("advance")} value={`−${amount(breakdown.advance)}`} />
-        ) : null}
-      </dl>
-
-      <Separator className="my-4" />
-
-      <dl className="grid gap-1">
-        <dt className="text-body3 font-semibold text-content-faint">{t("total")}</dt>
-        <dd className="text-title1 font-bold text-content">{amount(breakdown.total)}</dd>
-      </dl>
-
-      {breakdown.penalty !== "0.00" ? (
-        <>
-          <Separator className="my-4" />
-          <dl className="grid gap-1">
-            <dt className="text-body3 font-semibold text-content-faint">{t("penalty")}</dt>
-            <dd className="text-body1 font-semibold text-content-muted">
-              {amount(breakdown.penalty)}
-            </dd>
-            <dd className="text-body3 text-content-faint">{t("penaltyHint")}</dd>
-          </dl>
-        </>
-      ) : null}
-    </Panel>
   )
 }
 
@@ -380,18 +333,6 @@ async function ContactList({ title, contacts }: { title: string; contacts: Quote
       )}
     </Panel>
   )
-}
-
-/**
- * El nombre de un impuesto.
- *
- * Manda lo que escribió quien lo registró; si no escribió nada, se traduce su clave. Lo que **no**
- * se hace es enseñar la clave: `iva` es un identificador interno, y un documento con consecuencias
- * contractuales no puede mostrar el nombre de una columna.
- */
-function taxLabel(tax: QuoteBreakdown["taxes"][number], t: (key: string) => string): string {
-  if (tax.concept) return tax.concept
-  return tax.key.startsWith("additional:") ? tax.key : t(`taxOf.${tax.key}`)
 }
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {

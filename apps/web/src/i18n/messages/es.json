@@ -515,7 +515,7 @@
       "returnFailed": "No se pudo registrar el retorno",
       "perDay": "por día",
       "perUnit": "por unidad",
-      "noDailyRate": "sin tarifa diaria",
+      "noDailyRate": "sin precio · escríbelo",
       "kind": {
         "rent": "Renta",
         "sale": "Venta"
@@ -543,7 +543,12 @@
         "isn": "ISN",
         "hospitality": "Impuesto de hospedaje",
         "frontier": "Impuesto fronterizo"
-      }
+      },
+      "linePrice": "Precio negociado",
+      "byTariff": "Por tarifa",
+      "unpriced": "Nadie fijó tarifa para esta periodicidad. Escribe el precio de la línea.",
+      "unpricedLines": "{count, plural, one {Una línea no tiene precio} other {# líneas no tienen precio}}. Escríbelo o elige una periodicidad con tarifa.",
+      "amountsUnsaved": "Calculados con lo que estás editando. Todavía no se han guardado."
     }
   }
 }
