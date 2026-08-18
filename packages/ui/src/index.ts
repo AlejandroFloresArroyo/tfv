@@ -70,4 +70,17 @@ export {
   Separator,
   Skeleton,
 } from "./components/surfaces.tsx"
+export {
+  Wizard,
+  type WizardLabels,
+  type WizardStepView,
+} from "./components/wizard.tsx"
 export { cn } from "./lib/cn.ts"
+export type { StepErrors, WizardState, WizardStep } from "./lib/wizard.ts"
+/**
+ * La máquina del asistente, agrupada.
+ *
+ * `advance`, `back`, `submit` y `start` sueltos en la raíz del sistema de diseño chocarían con
+ * medio vocabulario de cualquier pantalla. Los tipos sí van sueltos: sus nombres ya son suyos.
+ */
+export * as wizard from "./lib/wizard.ts"
