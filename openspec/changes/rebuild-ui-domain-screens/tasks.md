@@ -34,7 +34,9 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 - [ ] **Asistente de producto de cinco pasos**
 - [ ] **Asistente de variante de cuatro pasos**
 - [ ] Detalle de producto: información, medidas, precios, unidades
-- [ ] Unidades con etiquetas individuales y en lote
+- [x] Unidades con etiquetas individuales y en lote. Pantalla de la medida con la tabla, el alta
+      masiva, el cambio de estado en lote con motivo y la baja, el historial por unidad, y la hoja
+      imprimible en los dos formatos de máquina
 - [ ] Listas de precios
 - [ ] Categorías anidadas
 - [x] **Ubicaciones como organigrama navegable**

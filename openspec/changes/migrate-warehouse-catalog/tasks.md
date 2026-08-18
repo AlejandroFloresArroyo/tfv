@@ -3,8 +3,8 @@
 Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falta anotada.
 
 **Hecha entera salvo lo que depende de documentos que aún no existen**: las tres comprobaciones de
-compromiso necesitan las cotizaciones (14) y los pedidos (15), y las etiquetas imprimibles son
-pantalla (29b).
+compromiso necesitan las cotizaciones (14) y los pedidos (15). Las etiquetas imprimibles, que
+esperaban a la pantalla, ya están.
 
 ## Almacén
 
@@ -102,8 +102,11 @@ pantalla (29b).
       compromiso, o la cotización seguiría diciendo que la tiene
 - [x] Estados terminales no vuelven. Una vendida no se recupera con un cambio de estado
 - [x] Recuperación explícita de las unidades de incidencia: las dañadas se reparan y vuelven
-- [ ] Etiquetas individuales y en lote, en ambos formatos — es pantalla (29b). El código ya usa el
-      alfabeto de Crockford, que es lo que la etiqueta necesita del servidor
+- [x] Etiquetas individuales y en lote, en ambos formatos. Hoja imprimible en la pantalla de la
+      medida, con el código de doce caracteres en grande —se dicta por teléfono— y el mismo código
+      bidimensional o de barras, a elegir al imprimir. **Sin la ubicación**: la unidad se mueve y la
+      etiqueta va pegada. El código ya usaba el alfabeto de Crockford, que es lo que la etiqueta
+      necesita del servidor
 - [x] Localización por código, con producto, medida, ubicación y estado. Cuelga del almacén y no de
       la medida: quien lee la etiqueta **no sabe** de qué producto es, para eso la lee
 - [x] Historial de cambio de estado con motivo y responsable, **incluida el alta**: sin el momento

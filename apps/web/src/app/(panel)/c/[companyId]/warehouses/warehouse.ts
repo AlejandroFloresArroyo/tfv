@@ -232,3 +232,51 @@ export interface QuoteLineRow {
  * importe vacío en lugar de como un error de compilación.
  */
 export type QuoteBreakdown = QuotationBreakdown
+
+// ─── Unidades de existencia ──────────────────────────────────────────────────
+
+/**
+ * Una unidad es **un objeto físico**, no un contador.
+ *
+ * Ver `openspec/specs/stock-units/spec.md`. De ahí sale que la pantalla de una medida sea una tabla
+ * de filas con código propio y no una casilla con un número: la cámara concreta que está en la caja
+ * `BOX7` y que lleva pegada su etiqueta.
+ */
+export interface StockUnitRow {
+  id: string
+  measurementId: string
+  /** Doce caracteres del alfabeto de Crockford. Es lo que va impreso y lo que se dicta. */
+  code: string
+  status: StockStatus
+  /** Acuñada porque una cotización pidió más de las que había. Auditable, y por eso se enseña. */
+  createdByReservation: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+/** Quién provocó un cambio de estado. El motivo escrito va aparte, en `note`. */
+export const STOCK_REASONS = [
+  "manual",
+  "quote_reservation",
+  "quote_release",
+  "quote_status",
+  "order",
+  "storefront_sale",
+  "rental_return",
+  "created",
+] as const
+
+export type StockReason = (typeof STOCK_REASONS)[number]
+
+export interface StockEventRow {
+  id: string
+  /** Nulo en el alta: antes de existir la unidad no estaba en ningún estado. */
+  fromStatus: StockStatus | null
+  toStatus: StockStatus
+  reason: StockReason
+  actorId: string | null
+  /** La cotización o el pedido que lo causó, cuando lo hubo. */
+  causeId: string | null
+  note: string | null
+  occurredAt: string
+}
