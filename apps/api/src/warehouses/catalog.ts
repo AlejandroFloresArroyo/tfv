@@ -254,6 +254,23 @@ export interface MeasurementInput {
   readonly initialQuantity?: number | undefined
 }
 
+/**
+ * Corregir una medida.
+ *
+ * Todo opcional salvo lo que no está: **la cantidad inicial no se puede corregir**. Creó unidades
+ * físicas, cada una con su código y su etiqueta impresa; «que ahora sean cinco en vez de tres» no
+ * dice cuáles se destruyen. Las unidades se dan de alta y de baja por su cuenta.
+ */
+export interface MeasurementPatch {
+  readonly name?: string | undefined
+  readonly kind?: MeasurementKind | undefined
+  readonly priceDifference?: string | undefined
+  readonly dimensions?: Dimensions | undefined
+  readonly lengthUnit?: LengthUnit | undefined
+  readonly massUnit?: MassUnit | undefined
+  readonly clothing?: ClothingSheet | undefined
+}
+
 export interface ChildInput {
   readonly name: string
   readonly description?: string | undefined
@@ -559,6 +576,67 @@ export async function addMeasurement(
     const id = await insertMeasurement(tx, productId, input, actor.userId)
     const [record] = await measurementsOf(tx, productId, [id])
     if (!record) throw new Error("la medida recién creada no se pudo leer")
+    return record
+  })
+}
+
+/**
+ * Corregir una medida sin tocar sus unidades.
+ *
+ * Existe por lo que costaba no tenerla: una errata en el nombre sólo se podía arreglar borrando la
+ * medida y volviéndola a crear, y eso **borra sus unidades** —objetos físicos con su código
+ * impreso en una etiqueta pegada a cada uno—.
+ *
+ * **Criterio adoptado, y anotado**: la protege `warehouses.products.measurement_create`. No hay
+ * clave propia para corregir, el catálogo de permisos está cerrado en las 255 migradas, y
+ * ampliarlo es decisión de producto. Quien puede añadir una medida puede corregir la que añadió;
+ * la alternativa —exigir la de borrado— pediría el permiso de la operación destructiva para hacer
+ * la que no lo es.
+ */
+export async function updateMeasurement(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  productId: string,
+  measurementId: string,
+  input: MeasurementPatch,
+): Promise<MeasurementRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    await loadProduct(tx, warehouseId, productId)
+
+    // La pertenencia al producto se comprueba aquí y no en la condición del `update`: una medida de
+    // otro producto tiene que responder «no existe», no «no se cambió nada».
+    const [measurement] = await tx
+      .select({ id: warehouseMeasurements.id })
+      .from(warehouseMeasurements)
+      .where(
+        and(
+          eq(warehouseMeasurements.id, measurementId),
+          eq(warehouseMeasurements.productId, productId),
+          isNull(warehouseMeasurements.deletedAt),
+        ),
+      )
+      .limit(1)
+
+    if (!measurement) throw new NotFoundError("La medida no existe")
+
+    await tx
+      .update(warehouseMeasurements)
+      .set({
+        ...(input.name === undefined ? {} : { name: input.name.trim() }),
+        ...(input.kind === undefined ? {} : { kind: input.kind }),
+        ...(input.priceDifference === undefined ? {} : { priceDifference: input.priceDifference }),
+        ...(input.dimensions === undefined ? {} : { dimensions: input.dimensions }),
+        ...(input.lengthUnit === undefined ? {} : { lengthUnit: input.lengthUnit }),
+        ...(input.massUnit === undefined ? {} : { massUnit: input.massUnit }),
+        ...(input.clothing === undefined ? {} : { clothing: input.clothing }),
+        updatedAt: new Date(),
+      })
+      .where(eq(warehouseMeasurements.id, measurementId))
+
+    const [record] = await measurementsOf(tx, productId, [measurementId])
+    if (!record) throw new Error("la medida recién corregida no se pudo leer")
     return record
   })
 }

@@ -71,6 +71,8 @@ interface Product {
 interface Measurement {
   id: string
   name: string
+  kind: string
+  priceDifference: string
   units: Record<string, number>
   dimensions: { height?: number; weight?: number }
   lengthUnit: string
@@ -458,6 +460,69 @@ describe("eliminar un producto arrastra su estructura", () => {
 
     expect(detail.measurements.map((row) => row.name)).toEqual(["Kit"])
     expect(detail.measurements[0]?.units).toEqual({ available: 4 })
+  })
+})
+
+describe("corregir una medida", () => {
+  it("conserva las unidades que ya existían", async () => {
+    // El motivo de que exista este endpoint. Sin él, corregir una errata en el nombre obliga a
+    // borrar la medida y volver a crearla, y eso destruye las unidades: objetos físicos con su
+    // código impreso en una etiqueta pegada.
+    await clearCatalog()
+    const product = await newProduct({
+      name: "Cámara",
+      measurements: [{ name: "Cuepro", initialQuantity: 3 }],
+    })
+    const medida = product.measurements[0]
+
+    const response = await request(
+      "PATCH",
+      `${base}/products/${product.id}/measurements/${medida?.id}`,
+      { name: "Cuerpo", dimensions: { height: 12 }, lengthUnit: "cm" },
+      cookie,
+    )
+    expect(response.status).toBe(200)
+
+    const updated = await json<Measurement>(response)
+    expect(updated.name).toBe("Cuerpo")
+    expect(updated.dimensions.height).toBe(12)
+    expect(updated.units).toEqual({ available: 3 })
+  })
+
+  it("cambia sólo lo que se manda", async () => {
+    await clearCatalog()
+    const product = await newProduct({
+      name: "Maleta",
+      measurements: [{ name: "Grande", kind: "box", priceDifference: "150.00" }],
+    })
+    const medida = product.measurements[0]
+
+    const response = await request(
+      "PATCH",
+      `${base}/products/${product.id}/measurements/${medida?.id}`,
+      { priceDifference: "-75.50" },
+      cookie,
+    )
+    expect(response.status).toBe(200)
+
+    const updated = await json<Measurement>(response)
+    expect(updated.name).toBe("Grande")
+    expect(updated.kind).toBe("box")
+    expect(updated.priceDifference).toBe("-75.50")
+  })
+
+  it("no alcanza a la medida de otro producto", async () => {
+    await clearCatalog()
+    const uno = await newProduct({ name: "Cámara", measurements: [{ name: "Cuerpo" }] })
+    const otro = await newProduct({ name: "Maleta", measurements: [{ name: "Grande" }] })
+
+    const response = await request(
+      "PATCH",
+      `${base}/products/${uno.id}/measurements/${otro.measurements[0]?.id}`,
+      { name: "Robada" },
+      cookie,
+    )
+    expect(response.status).toBe(404)
   })
 })
 

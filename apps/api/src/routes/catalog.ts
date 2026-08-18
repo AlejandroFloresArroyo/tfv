@@ -18,7 +18,12 @@
 
 import { z } from "@hono/zod-openapi"
 import { ForbiddenError, toInstant } from "@tfv/contracts"
-import { createProductInput, measurementInput, updateProductInput } from "@tfv/contracts/catalog"
+import {
+  createProductInput,
+  measurementInput,
+  measurementPatchInput,
+  updateProductInput,
+} from "@tfv/contracts/catalog"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import { defineRoute, REQUIRES } from "../runtime/route.ts"
@@ -34,6 +39,7 @@ import {
   MEASUREMENT_KINDS,
   productDeletionScope,
   productQuery,
+  updateMeasurement,
   updateProduct,
 } from "../warehouses/catalog.ts"
 import {
@@ -538,6 +544,47 @@ export const addMeasurementRoute = defineRoute({
       c.req.valid("json"),
     )
     return c.json(serializeMeasurement(measurement), 201)
+  },
+})
+
+export const updateMeasurementRoute = defineRoute({
+  /**
+   * La clave del alta, y no una propia.
+   *
+   * El catálogo de permisos está cerrado en las 255 migradas y ampliarlo es decisión de producto,
+   * así que se adopta el criterio de que quien puede añadir una medida puede corregir la que
+   * añadió. Exigir la de borrado pediría el permiso de la operación destructiva para hacer la que
+   * no lo es. Queda anotado en `HALLAZGOS.md`.
+   */
+  access: REQUIRES("warehouses.products.measurement_create"),
+  config: {
+    method: "patch",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/products/{productId}/measurements/{measurementId}",
+    summary: "Corregir una medida, sin tocar sus unidades",
+    tags: ["Catálogo"],
+    request: {
+      params: measurementParams,
+      body: { content: { "application/json": { schema: measurementPatchInput } } },
+    },
+    responses: {
+      200: {
+        description: "Corregida. Sus unidades siguen siendo las mismas",
+        content: { "application/json": { schema: measurementSchema } },
+      },
+      404: { description: "La medida no es de ese producto" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const measurement = await updateMeasurement(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.productId,
+      params.measurementId,
+      c.req.valid("json"),
+    )
+    return c.json(serializeMeasurement(measurement), 200)
   },
 })
 

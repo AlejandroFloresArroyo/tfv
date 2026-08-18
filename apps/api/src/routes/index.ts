@@ -37,6 +37,7 @@ import {
   listProductsRoute,
   listWarehouseCategoriesRoute,
   productScopeRoute,
+  updateMeasurementRoute,
   updateProductRoute,
   updateWarehouseCategoryRoute,
 } from "./catalog.ts"
@@ -258,6 +259,7 @@ export const routes: readonly RegisteredRoute[] = [
   deleteProductRoute,
 
   addMeasurementRoute,
+  updateMeasurementRoute,
   deleteMeasurementRoute,
 
   listPriceListsRoute,
