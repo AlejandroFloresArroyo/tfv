@@ -11,6 +11,7 @@ import { apiGet } from "~/lib/api.server.ts"
 import { can } from "~/lib/can.ts"
 import { requireCompany, requireProfile } from "~/lib/session.ts"
 import type { PriceListRow, WarehouseRow } from "../../warehouse.ts"
+import { canViewPanel } from "../panel/access.ts"
 import { WarehouseNav } from "../warehouse-nav.tsx"
 import { CreatePriceList, PriceListActions } from "./price-list-actions.tsx"
 
@@ -78,6 +79,7 @@ export default async function PriceListsPage({
       <WarehouseNav
         companyId={companyId}
         warehouseId={warehouseId}
+        canViewPanel={canViewPanel(company)}
         canViewWarehouses={canViewWarehouses}
         canViewProducts={can(company, "warehouses.products.view")}
         canViewCategories={can(company, "warehouses.categories.view")}

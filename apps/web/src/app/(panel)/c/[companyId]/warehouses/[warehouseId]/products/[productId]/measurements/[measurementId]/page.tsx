@@ -26,6 +26,7 @@ import type {
   StorageRow,
 } from "../../../../../warehouse.ts"
 import { STOCK_STATUSES } from "../../../../../warehouse.ts"
+import { canViewPanel } from "../../../../panel/access.ts"
 import { WarehouseNav } from "../../../../warehouse-nav.tsx"
 import { StockActions } from "./stock-actions.tsx"
 import { StockUnits } from "./stock-units.tsx"
@@ -105,6 +106,7 @@ export default async function MeasurementPage({
     <WarehouseNav
       companyId={companyId}
       warehouseId={warehouseId}
+      canViewPanel={canViewPanel(company)}
       canViewWarehouses={canViewWarehouses}
       canViewProducts={can(company, "warehouses.products.view")}
       canViewCategories={can(company, "warehouses.categories.view")}

@@ -1050,6 +1050,30 @@
       "deleteProducts": "{count, plural, =0 {Leaves no product unclassified} one {Leaves # product unclassified, without deleting it} other {Leaves # products unclassified, without deleting them}}",
       "counting": "Counting what it affects…",
       "countFailed": "Could not count what it affects."
+    },
+    "panel": {
+      "tab": "Overview",
+      "title": "Warehouse overview",
+      "subtitle": "What is inside, and what is waiting on someone.",
+      "nothing": "There is nothing to summarise here",
+      "nothingBody": "The overview gathers the catalog, the quotes and the orders. Your role reaches none of the three.",
+      "products": "Products",
+      "productsHint": "What the catalog holds.",
+      "provisional": "To complete",
+      "provisionalHint": "Entries made on the fly from a quote.",
+      "waiting": "Awaiting a reply",
+      "waitingHint": "Drafts and quotes already sent to the client.",
+      "inProgress": "Being prepared",
+      "inProgressHint": "Accepted by the client, equipment still in the warehouse.",
+      "out": "Equipment out",
+      "outHint": "Rentals under way, pending return.",
+      "orders": "Orders to decide",
+      "ordersHint": "Waiting for someone to accept or reject them.",
+      "attention": "Quotes asking for attention",
+      "noAttention": "Nothing awaiting a reply.",
+      "decisions": "Orders pending a decision",
+      "noDecisions": "No order waiting on a decision.",
+      "seeAll": "See all"
     }
   }
 }

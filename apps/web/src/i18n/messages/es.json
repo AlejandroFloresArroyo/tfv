@@ -1050,6 +1050,30 @@
       "deleteProducts": "{count, plural, =0 {No deja ningún producto sin clasificar} one {Deja # producto sin clasificar, sin eliminarlo} other {Deja # productos sin clasificar, sin eliminarlos}}",
       "counting": "Contando lo que resulta afectado…",
       "countFailed": "No se pudo contar lo que resulta afectado."
+    },
+    "panel": {
+      "tab": "Panel",
+      "title": "Panel del almacén",
+      "subtitle": "Qué hay dentro y qué está esperando a alguien.",
+      "nothing": "Aquí no hay nada que resumir",
+      "nothingBody": "El panel reúne el catálogo, las cotizaciones y los pedidos. Tu papel no alcanza a ninguno de los tres.",
+      "products": "Productos",
+      "productsHint": "Lo que hay dado de alta en el catálogo.",
+      "provisional": "Por completar",
+      "provisionalHint": "Altas hechas a la carrera desde una cotización.",
+      "waiting": "Esperando respuesta",
+      "waitingHint": "Borradores y cotizaciones enviadas al cliente.",
+      "inProgress": "En preparación",
+      "inProgressHint": "Aceptadas por el cliente, con el equipo todavía en la nave.",
+      "out": "Equipo fuera",
+      "outHint": "Rentas en curso, pendientes de retorno.",
+      "orders": "Pedidos por decidir",
+      "ordersHint": "Esperan que alguien los acepte o los rechace.",
+      "attention": "Cotizaciones que piden atención",
+      "noAttention": "Nada esperando respuesta.",
+      "decisions": "Pedidos pendientes de decisión",
+      "noDecisions": "Ningún pedido esperando decisión.",
+      "seeAll": "Ver todo"
     }
   }
 }

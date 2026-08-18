@@ -18,6 +18,7 @@ import type {
   QuoteLineRow,
   QuoteRow,
 } from "../../../warehouse.ts"
+import { canViewPanel } from "../../panel/access.ts"
 import { WarehouseNav } from "../../warehouse-nav.tsx"
 import { QuoteStatusBadge, QuoteTypeBadge } from "../quote-badges.tsx"
 import { QuoteAmounts } from "./quote-amounts.tsx"
@@ -52,6 +53,7 @@ export default async function QuotePage({
     <WarehouseNav
       companyId={companyId}
       warehouseId={warehouseId}
+      canViewPanel={canViewPanel(company)}
       canViewWarehouses={can(company, "warehouses.warehouses.view")}
       canViewProducts={can(company, "warehouses.products.view")}
       canViewCategories={can(company, "warehouses.categories.view")}
