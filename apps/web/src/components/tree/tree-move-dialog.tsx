@@ -27,7 +27,6 @@ import { type TreeOption, withoutSubtree } from "./tree.ts"
  */
 export function TreeMoveDialog({
   title,
-  description,
   submitLabel,
   fieldLabel,
   hint,
@@ -41,7 +40,6 @@ export function TreeMoveDialog({
   onOpenChange,
 }: {
   title: string
-  description?: string
   submitLabel: string
   fieldLabel: string
   /** Qué significa dejarlo sin padre, dicho en la propia pantalla. */
@@ -99,7 +97,6 @@ export function TreeMoveDialog({
   return (
     <FormDialog
       title={title}
-      {...(description ? { description } : {})}
       submitLabel={submitLabel}
       open={open}
       onOpenChange={onOpenChange}
