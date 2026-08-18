@@ -72,6 +72,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@tfv/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@tfv/ui':
         specifier: workspace:*
         version: link:../../packages/ui

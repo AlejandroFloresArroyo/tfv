@@ -1,3 +1,12 @@
+import type {
+  QuotationBreakdown,
+  QuoteContact,
+  QuotePaymentTerms,
+  QuoteTaxes,
+  RateSchedule,
+  RentFrequency,
+} from "@tfv/contracts/quotation"
+
 export interface WarehouseRow {
   id: string
   companyId: string
@@ -114,11 +123,7 @@ export const QUOTE_STATUSES = [
 
 export type QuoteStatus = (typeof QUOTE_STATUSES)[number]
 
-export interface QuoteContact {
-  name: string
-  phone?: string
-  position?: string
-}
+export type { QuoteContact, RateSchedule, RentFrequency } from "@tfv/contracts/quotation"
 
 export interface QuoteRow {
   id: string
@@ -139,6 +144,8 @@ export interface QuoteRow {
   roundDirection: "up" | "down"
   clientContacts: QuoteContact[]
   sellerContacts: QuoteContact[]
+  paymentTerms: QuotePaymentTerms | null
+  taxes: QuoteTaxes | null
   alert: string | null
   message: string | null
   terms: string | null
@@ -156,48 +163,24 @@ export interface QuoteLineRow {
   productName: string
   productCode: string
   productPriceId: string | null
-  frequency: "daily" | "weekly" | "monthly"
+  frequency: RentFrequency
+  /** La tarifa con la que el servidor calculó esta línea. El constructor previsualiza con ella. */
+  basePrice: string
+  rent?: RateSchedule
+  penalty?: RateSchedule
+  /** Unidades libres de la medida, sin contar las de esta línea. */
+  available: number
   quantity: number
   unitIds: string[]
   position: number
   positionProduct: number
 }
 
-/** Todos los importes son cadenas decimales. Nunca se convierten a número para operar con ellos. */
-export interface QuoteBreakdown {
-  version: 1
-  days: number
-  lines: {
-    lineId: string
-    productId: string
-    quantity: number
-    appliedDays: string
-    unitCost: string
-    unitDiscount: string
-    total: string
-    penalty: string
-    fee: string
-    totalWithFee: string
-  }[]
-  groups: { productId: string; lineIds: string[]; subtotal: string }[]
-  linesTotal: string
-  additionals: string
-  subtotal: string
-  discount: string
-  base: string
-  taxes: {
-    key: string
-    concept?: string
-    effect: "increase" | "decrease"
-    rate?: string
-    amount: string
-  }[]
-  taxTotal: string
-  net: string
-  fees: string
-  feesSpread: boolean
-  gross: string
-  advance: string
-  total: string
-  penalty: string
-}
+/**
+ * El desglose, tal y como lo produce el motor.
+ *
+ * Es **el tipo del paquete compartido**, no una copia. Copiarlo aquí dejaría a la pantalla
+ * describiendo una forma que puede dejar de ser la que llega, y el desajuste se vería como un
+ * importe vacío en lugar de como un error de compilación.
+ */
+export type QuoteBreakdown = QuotationBreakdown

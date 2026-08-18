@@ -1,3 +1,4 @@
+import { isClosed } from "@tfv/contracts/quote-status"
 import { Badge, Callout, Panel, Separator } from "@tfv/ui"
 import { CalendarRange, FileText, Package, Users } from "lucide-react"
 import type { Metadata } from "next"
@@ -19,13 +20,13 @@ import type {
 } from "../../../warehouse.ts"
 import { WarehouseNav } from "../../warehouse-nav.tsx"
 import { QuoteStatusBadge, QuoteTypeBadge } from "../quote-badges.tsx"
+import { QuoteEditor } from "./quote-editor.tsx"
+import { type OutUnit, QuoteReturns } from "./quote-returns.tsx"
+import { QuoteStatusControl } from "./quote-status.tsx"
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations())("warehouses.quotes.detail") }
 }
-
-/** Cerrada: el desglose que se muestra es el congelado, y conviene que se note. */
-const CLOSED = new Set(["completed", "sold", "canceled"])
 
 export default async function QuotePage({
   params,
@@ -52,11 +53,16 @@ export default async function QuotePage({
     />
   )
 
-  const base = `/companies/${companyId}/warehouses/${warehouseId}/quotes/${quoteId}`
-  const [quoteResult, linesResult, breakdownResult] = await Promise.all([
+  const canEditStatus = can(company, "warehouses.quotes.edit_status")
+  const canFinish = can(company, "warehouses.quotes.finished")
+
+  const warehouse = `/companies/${companyId}/warehouses/${warehouseId}`
+  const base = `${warehouse}/quotes/${quoteId}`
+  const [quoteResult, linesResult, breakdownResult, unitsResult] = await Promise.all([
     apiGet<QuoteRow>(base),
     apiGet<ItemsEnvelope<QuoteLineRow>>(`${base}/lines`),
     apiGet<QuoteBreakdown>(`${base}/breakdown`),
+    apiGet<ItemsEnvelope<OutUnit>>(`${base}/units`),
   ])
 
   if (!quoteResult.ok) {
@@ -70,6 +76,19 @@ export default async function QuotePage({
 
   const quote = quoteResult.data
   const lines = linesResult.ok ? linesResult.data.items : []
+
+  // Cerrada: ni se editan las líneas ni se recalculan los importes. Ofrecer el editor sería ofrecer
+  // un botón cuyo guardado responde `409` siempre.
+  const closed = isClosed(quote.status)
+  const canEditLines = can(company, "warehouses.quotes.edit_products") && !closed
+
+  // Las listas de precios sólo hacen falta para el buscador del editor, y sólo se saben necesarias
+  // después de conocer el estado de la cotización.
+  const priceListsResult =
+    canEditLines && can(company, "warehouses.prices.view")
+      ? await apiGet<ItemsEnvelope<{ id: string; name: string }>>(`${warehouse}/price-lists`)
+      : null
+
   const breakdown = breakdownResult.ok ? breakdownResult.data : null
   const amountOf = (lineId: string) =>
     breakdown?.lines.find((line) => line.lineId === lineId) ?? null
@@ -139,83 +158,115 @@ export default async function QuotePage({
             </dl>
           </Panel>
 
-          <section aria-labelledby="lines-heading">
-            <div className="mb-3 flex items-center gap-2">
-              <Package className="size-5 text-content-faint" aria-hidden="true" />
-              <h2 id="lines-heading" className="text-title2 font-bold text-content">
-                {t("warehouses.quotes.lines")}
-              </h2>
-            </div>
-
-            {lines.length > 0 ? (
-              <div className="grid gap-3">
-                {lines.map((line) => {
-                  const amounts = amountOf(line.id)
-                  return (
-                    <Panel key={line.id} className="p-4">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="truncate text-body1 font-bold text-content">
-                            <Link
-                              href={`/c/${companyId}/warehouses/${warehouseId}/products/${line.productId}`}
-                              className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
-                            >
-                              {line.productName}
-                            </Link>
-                          </h3>
-                          <p className="truncate text-body3 text-content-faint">
-                            {line.measurementName} · {line.productCode}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <Badge tone={line.quantity > 0 ? "accent" : "neutral"}>
-                            {t("warehouses.quotes.reserved", { count: line.quantity })}
-                          </Badge>
-                          {quote.type === "rent" ? (
-                            <Badge>{t(`warehouses.quotes.frequencyOf.${line.frequency}`)}</Badge>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      {amounts ? (
-                        <>
-                          <Separator className="my-3" />
-                          <dl className="grid gap-3 tablet:grid-cols-3">
-                            <Row
-                              label={t("warehouses.quotes.unitCost")}
-                              value={formatAmount(amounts.unitCost, format)}
-                            />
-                            {quote.type === "rent" ? (
-                              <Row
-                                label={t("warehouses.quotes.appliedDays")}
-                                value={amounts.appliedDays}
-                              />
-                            ) : null}
-                            <Row
-                              label={t("warehouses.quotes.lineTotal")}
-                              value={formatAmount(amounts.total, format)}
-                            />
-                          </dl>
-                        </>
-                      ) : null}
-                    </Panel>
-                  )
-                })}
+          {canEditLines ? (
+            <QuoteEditor
+              companyId={companyId}
+              warehouseId={warehouseId}
+              quote={quote}
+              lines={lines}
+              priceLists={priceListsResult?.ok ? priceListsResult.data.items : []}
+              canMint={can(company, "warehouses.products.stock_create")}
+            />
+          ) : (
+            <section aria-labelledby="lines-heading">
+              <div className="mb-3 flex items-center gap-2">
+                <Package className="size-5 text-content-faint" aria-hidden="true" />
+                <h2 id="lines-heading" className="text-title2 font-bold text-content">
+                  {t("warehouses.quotes.lines")}
+                </h2>
               </div>
-            ) : (
-              <Panel className="p-5 text-body1 text-content-muted">
-                {t("warehouses.quotes.noLines")}
-              </Panel>
-            )}
-          </section>
+
+              {lines.length > 0 ? (
+                <div className="grid gap-3">
+                  {lines.map((line) => {
+                    const amounts = amountOf(line.id)
+                    return (
+                      <Panel key={line.id} className="p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="truncate text-body1 font-bold text-content">
+                              <Link
+                                href={`/c/${companyId}/warehouses/${warehouseId}/products/${line.productId}`}
+                                className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                              >
+                                {line.productName}
+                              </Link>
+                            </h3>
+                            <p className="truncate text-body3 text-content-faint">
+                              {line.measurementName} · {line.productCode}
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge tone={line.quantity > 0 ? "accent" : "neutral"}>
+                              {t("warehouses.quotes.reserved", { count: line.quantity })}
+                            </Badge>
+                            {quote.type === "rent" ? (
+                              <Badge>{t(`warehouses.quotes.frequencyOf.${line.frequency}`)}</Badge>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        {amounts ? (
+                          <>
+                            <Separator className="my-3" />
+                            <dl className="grid gap-3 tablet:grid-cols-3">
+                              <Row
+                                label={t("warehouses.quotes.unitCost")}
+                                value={formatAmount(amounts.unitCost, format)}
+                              />
+                              {quote.type === "rent" ? (
+                                <Row
+                                  label={t("warehouses.quotes.appliedDays")}
+                                  value={amounts.appliedDays}
+                                />
+                              ) : null}
+                              <Row
+                                label={t("warehouses.quotes.lineTotal")}
+                                value={formatAmount(amounts.total, format)}
+                              />
+                            </dl>
+                          </>
+                        ) : null}
+                      </Panel>
+                    )
+                  })}
+                </div>
+              ) : (
+                <Panel className="p-5 text-body1 text-content-muted">
+                  {t("warehouses.quotes.noLines")}
+                </Panel>
+              )}
+            </section>
+          )}
+
+          {canFinish && unitsResult.ok ? (
+            <QuoteReturns
+              companyId={companyId}
+              warehouseId={warehouseId}
+              quoteId={quoteId}
+              units={unitsResult.data.items.filter((unit) => unit.status === "rented")}
+            />
+          ) : null}
 
           <Contacts client={quote.clientContacts} seller={quote.sellerContacts} />
         </div>
 
         <aside className="space-y-4">
+          {canEditStatus ? (
+            <QuoteStatusControl
+              companyId={companyId}
+              warehouseId={warehouseId}
+              quoteId={quoteId}
+              status={quote.status}
+              type={quote.type}
+              canRent={can(company, "warehouses.quotes.rented")}
+              canFinish={canFinish}
+            />
+          ) : null}
+
           {breakdown ? (
-            <Amounts breakdown={breakdown} closed={CLOSED.has(quote.status)} />
+            <Amounts breakdown={breakdown} closed={closed} />
           ) : breakdownResult.ok ? null : (
             <ApiFailure result={breakdownResult} />
           )}

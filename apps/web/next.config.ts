@@ -42,7 +42,7 @@ const config: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
 
   // Los paquetes del espacio de trabajo se consumen como fuente TypeScript, sin paso de emisión.
-  transpilePackages: ["@tfv/ui"],
+  transpilePackages: ["@tfv/contracts", "@tfv/ui"],
 
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${API_ORIGIN}/:path*` }]
