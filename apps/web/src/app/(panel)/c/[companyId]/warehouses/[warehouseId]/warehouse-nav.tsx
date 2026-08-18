@@ -18,11 +18,11 @@ export function WarehouseNav({
   warehouseId,
   canViewWarehouses,
   canViewProducts,
-  canViewCategories = false,
+  canViewCategories,
   canViewStorages,
   canViewQuotes,
   canViewOrders,
-  canViewPrices = false,
+  canViewPrices,
 }: {
   companyId: string
   warehouseId: string
@@ -36,7 +36,7 @@ export function WarehouseNav({
    * aparece en ellas hasta que cada una pase su permiso. **Debe volverse obligatoria** en cuanto se
    * puedan tocar: mientras tanto, la navegación del almacén no es la misma en todas sus pantallas.
    */
-  canViewCategories?: boolean
+  canViewCategories: boolean
   canViewStorages: boolean
   /** Sin valor por omisión: una pantalla nueva que lo olvide no compila, en vez de perder la pestaña. */
   canViewQuotes: boolean
@@ -49,7 +49,7 @@ export function WarehouseNav({
    * pestaña**, no dejar de compilar. Pintarla sin saber si hay permiso no es opción: ofrecería una
    * pantalla que responde 403.
    */
-  canViewPrices?: boolean
+  canViewPrices: boolean
 }) {
   const t = useTranslations("warehouses")
   const pathname = usePathname()

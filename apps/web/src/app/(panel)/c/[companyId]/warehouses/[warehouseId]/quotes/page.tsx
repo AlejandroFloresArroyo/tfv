@@ -101,9 +101,11 @@ export default async function QuotesPage({
         warehouseId={warehouseId}
         canViewWarehouses={canViewWarehouses}
         canViewProducts={can(company, "warehouses.products.view")}
+        canViewCategories={can(company, "warehouses.categories.view")}
         canViewStorages={can(company, "warehouses.storages.view")}
         canViewQuotes={can(company, "warehouses.quotes.view")}
         canViewOrders={can(company, "warehouses.orders.view")}
+        canViewPrices={can(company, "warehouses.prices.view")}
       />
 
       <Collection

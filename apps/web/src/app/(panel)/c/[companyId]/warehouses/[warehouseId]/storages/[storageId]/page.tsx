@@ -69,6 +69,7 @@ export default async function StoragePage({
           canViewStorages={canViewStorages}
           canViewQuotes={can(company, "warehouses.quotes.view")}
           canViewOrders={can(company, "warehouses.orders.view")}
+          canViewPrices={can(company, "warehouses.prices.view")}
         />
         <ApiFailure result={failed} />
       </PageShell>
@@ -98,6 +99,7 @@ export default async function StoragePage({
         canViewStorages={canViewStorages}
         canViewQuotes={can(company, "warehouses.quotes.view")}
         canViewOrders={can(company, "warehouses.orders.view")}
+        canViewPrices={can(company, "warehouses.prices.view")}
       />
 
       <StorageBrowser

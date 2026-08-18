@@ -61,9 +61,11 @@ export default async function ProductPage({
           warehouseId={warehouseId}
           canViewWarehouses={canViewWarehouses}
           canViewProducts={can(company, "warehouses.products.view")}
+          canViewCategories={can(company, "warehouses.categories.view")}
           canViewStorages={canViewStorages}
           canViewQuotes={can(company, "warehouses.quotes.view")}
           canViewOrders={can(company, "warehouses.orders.view")}
+          canViewPrices={can(company, "warehouses.prices.view")}
         />
         <ApiFailure result={productResult} />
       </PageShell>
@@ -86,9 +88,11 @@ export default async function ProductPage({
         warehouseId={warehouseId}
         canViewWarehouses={canViewWarehouses}
         canViewProducts={can(company, "warehouses.products.view")}
+        canViewCategories={can(company, "warehouses.categories.view")}
         canViewStorages={canViewStorages}
         canViewQuotes={can(company, "warehouses.quotes.view")}
         canViewOrders={can(company, "warehouses.orders.view")}
+        canViewPrices={can(company, "warehouses.prices.view")}
       />
 
       <div className="grid gap-4 laptop:grid-cols-[minmax(0,1fr)_18rem]">

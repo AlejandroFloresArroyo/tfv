@@ -57,6 +57,7 @@ export default async function CategoryPage({
       canViewStorages={can(company, "warehouses.storages.view")}
       canViewQuotes={can(company, "warehouses.quotes.view")}
       canViewOrders={can(company, "warehouses.orders.view")}
+      canViewPrices={can(company, "warehouses.prices.view")}
     />
   )
 

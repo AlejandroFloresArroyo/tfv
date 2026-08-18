@@ -85,9 +85,11 @@ export default async function NewProductPage({
           warehouseId={warehouseId}
           canViewWarehouses={can(company, "warehouses.warehouses.view")}
           canViewProducts={can(company, "warehouses.products.view")}
+          canViewCategories={can(company, "warehouses.categories.view")}
           canViewStorages={can(company, "warehouses.storages.view")}
           canViewQuotes={can(company, "warehouses.quotes.view")}
           canViewOrders={can(company, "warehouses.orders.view")}
+          canViewPrices={can(company, "warehouses.prices.view")}
         />
         <Callout tone="warning">{t("warehouses.wizard.forbidden")}</Callout>
       </PageShell>
@@ -101,9 +103,11 @@ export default async function NewProductPage({
         warehouseId={warehouseId}
         canViewWarehouses={can(company, "warehouses.warehouses.view")}
         canViewProducts={can(company, "warehouses.products.view")}
+        canViewCategories={can(company, "warehouses.categories.view")}
         canViewStorages={can(company, "warehouses.storages.view")}
         canViewQuotes={can(company, "warehouses.quotes.view")}
         canViewOrders={can(company, "warehouses.orders.view")}
+        canViewPrices={can(company, "warehouses.prices.view")}
       />
 
       <ProductWizard
