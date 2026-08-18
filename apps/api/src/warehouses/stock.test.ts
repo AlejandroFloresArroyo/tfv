@@ -472,7 +472,14 @@ describe("todo cambio de estado deja rastro", () => {
     )
 
     const history = await json<{
-      items: { fromStatus: string | null; toStatus: string; reason: string; note: string | null }[]
+      items: {
+        fromStatus: string | null
+        toStatus: string
+        reason: string
+        note: string | null
+        actorId: string | null
+        actorName: string | null
+      }[]
     }>(await request("GET", `${base}/units/${unit?.id}/history`, undefined, cookie))
 
     expect(history.items[0]).toMatchObject({
@@ -481,6 +488,34 @@ describe("todo cambio de estado deja rastro", () => {
       reason: "manual",
       note: "Golpe en el visor",
     })
+
+    // H-33: el evento viaja con el nombre. Nombrar a quien movió una unidad obligaba a pedir el
+    // padrón de la empresa, que exige un permiso de otro dominio.
+    expect(history.items[0]?.actorId).not.toBeNull()
+    expect(history.items[0]?.actorName).toBe("Existencias")
+  })
+
+  it("un cambio sin responsable no inventa uno", async () => {
+    // Los que provoca un documento —o la siembra— no tienen persona detrás: el nombre es nulo, y
+    // eso es distinto de no saber quién fue.
+    await clearCatalog()
+    const product = await newStocked("Cámara", 1)
+    const measurementId = product.measurements[0]?.id as string
+    const [unit] = await unitsOf(measurementId)
+
+    await db.insert(warehouseStockEvents).values({
+      id: newId(),
+      stockUnitId: unit?.id as string,
+      fromStatus: "available",
+      toStatus: "in_order",
+      reason: "order",
+    })
+
+    const history = await json<{ items: { actorId: string | null; actorName: string | null }[] }>(
+      await request("GET", `${base}/units/${unit?.id}/history`, undefined, cookie),
+    )
+
+    expect(history.items[0]).toMatchObject({ actorId: null, actorName: null })
   })
 })
 

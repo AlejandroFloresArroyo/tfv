@@ -105,6 +105,8 @@ const eventSchema = z.object({
   toStatus: z.enum(STOCK_STATUSES),
   reason: z.enum(STOCK_REASONS),
   actorId: z.string().nullable(),
+  /** Con el evento, para no pedir el padrón de la empresa sólo para nombrarlo (H-33). */
+  actorName: z.string().nullable(),
   causeId: z.string().nullable(),
   note: z.string().nullable(),
   occurredAt: z.string(),
