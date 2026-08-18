@@ -32,6 +32,8 @@ import {
   warehousePriceLists,
   warehouseProductPrices,
   warehouseProducts,
+  warehouseQuoteLines,
+  warehouseQuotes,
   warehouseStockEvents,
   warehouseStockUnits,
   warehouseStorages,
@@ -117,7 +119,7 @@ afterAll(async () => {
 
 async function clearCatalog() {
   await db.execute(
-    sql`truncate table ${warehouseStockEvents}, ${warehouseStockUnits}, ${warehouseMeasurements}, ${warehouseProductPrices}, ${warehousePriceLists}, ${warehouseProducts} cascade`,
+    sql`truncate table ${warehouseQuotes}, ${warehouseStockEvents}, ${warehouseStockUnits}, ${warehouseMeasurements}, ${warehouseProductPrices}, ${warehousePriceLists}, ${warehouseProducts} cascade`,
   )
 }
 
@@ -785,6 +787,104 @@ describe("listas de precios", () => {
 
     const gone = await request("GET", `${base}/price-lists/${list.id}/prices`, undefined, cookie)
     expect(gone.status).toBe(404)
+  })
+})
+
+/**
+ * Una cotización que cobra por las tarifas de una lista.
+ *
+ * Va por la base y no por la ruta: lo que se prueba aquí es la guarda de la baja, y montar el
+ * documento entero por la API metería media rebanada 13 en una suite de precios.
+ */
+async function quoteUsing(
+  status: "pending" | "canceled",
+  productPriceIds: readonly string[],
+  measurementId: string,
+): Promise<string> {
+  const quoteId = newId()
+  await db
+    .insert(warehouseQuotes)
+    .values({ id: quoteId, warehouseId, code: `COT-${quoteId}`, type: "rent", status })
+
+  await db.insert(warehouseQuoteLines).values(
+    productPriceIds.map((productPriceId, position) => ({
+      id: newId(),
+      quoteId,
+      measurementId,
+      productPriceId,
+      position,
+    })),
+  )
+
+  return quoteId
+}
+
+describe("baja de una lista de precios", () => {
+  it("el alcance enumera las cotizaciones que la usan, y las que están en curso", async () => {
+    // H-37: `warehouse-catalog` pide advertir cuando la lista esté referenciada por cotizaciones
+    // en curso, y no había dato con el que hacerlo. Es lo mismo que resolvió la baja de un almacén.
+    await clearCatalog()
+    const camara = await newStocked("Cámara", 1)
+    const tripie = await newStocked("Tripié", 1)
+    const list = await newList("Pública")
+    const measurementId = camara.measurements[0]?.id as string
+
+    const unaTarifa = await json<{ id: string }>(
+      await request(
+        "PUT",
+        `${base}/price-lists/${list.id}/prices/${camara.id}`,
+        { sale: "1200.00" },
+        cookie,
+      ),
+    )
+    const otraTarifa = await json<{ id: string }>(
+      await request(
+        "PUT",
+        `${base}/price-lists/${list.id}/prices/${tripie.id}`,
+        { sale: "300.00" },
+        cookie,
+      ),
+    )
+
+    // Dos líneas de la misma lista en una sola cotización: cuenta el documento, no las líneas.
+    await quoteUsing("pending", [unaTarifa.id, otraTarifa.id], measurementId)
+    await quoteUsing("canceled", [unaTarifa.id], measurementId)
+
+    const scope = await json<{ products: number; quotes: number; openQuotes: number }>(
+      await request("GET", `${base}/price-lists/${list.id}/scope`, undefined, cookie),
+    )
+
+    expect(scope).toEqual({ products: 2, quotes: 2, openQuotes: 1 })
+  })
+
+  it("no se da de baja mientras una cotización en curso cobre por ella", async () => {
+    await clearCatalog()
+    const camara = await newStocked("Cámara", 1)
+    const list = await newList("Pública")
+    const measurementId = camara.measurements[0]?.id as string
+
+    const tarifa = await json<{ id: string }>(
+      await request(
+        "PUT",
+        `${base}/price-lists/${list.id}/prices/${camara.id}`,
+        { sale: "1200.00" },
+        cookie,
+      ),
+    )
+    const quoteId = await quoteUsing("pending", [tarifa.id], measurementId)
+
+    const rechazada = await request("DELETE", `${base}/price-lists/${list.id}`, undefined, cookie)
+    expect(rechazada.status).toBe(409)
+    expect(await rechazada.text()).toContain("cotización")
+
+    // Cerrada la cotización, la baja pasa: la guarda mira lo que está en curso, no el historial.
+    await db
+      .update(warehouseQuotes)
+      .set({ status: "canceled" })
+      .where(eq(warehouseQuotes.id, quoteId))
+
+    const aceptada = await request("DELETE", `${base}/price-lists/${list.id}`, undefined, cookie)
+    expect(aceptada.status).toBe(204)
   })
 })
 

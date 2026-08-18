@@ -22,6 +22,7 @@ import {
   getPriceList,
   listPriceLists,
   listPrices,
+  priceListDeletionScope,
   priceListQuery,
   removePrice,
   resolveRentPrice,
@@ -275,6 +276,42 @@ export const updatePriceListRoute = defineRoute({
   },
 })
 
+export const priceListScopeRoute = defineRoute({
+  access: REQUIRES("warehouses.prices.delete"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/price-lists/{priceListId}/scope",
+    summary: "Qué se lleva por delante dar de baja la lista",
+    tags: ["Precios"],
+    request: { params: listParams },
+    responses: {
+      200: {
+        description: "Productos que se quedan sin precio, y cotizaciones que cobran por ella",
+        content: {
+          "application/json": {
+            schema: z.object({
+              products: z.number().int(),
+              quotes: z.number().int(),
+              /** Las que además impiden la baja, para decirlo antes de que nadie confirme. */
+              openQuotes: z.number().int(),
+            }),
+          },
+        },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const scope = await priceListDeletionScope(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.priceListId,
+    )
+    return c.json(scope, 200)
+  },
+})
+
 export const deletePriceListRoute = defineRoute({
   access: REQUIRES("warehouses.prices.delete"),
   config: {
@@ -285,6 +322,7 @@ export const deletePriceListRoute = defineRoute({
     request: { params: listParams },
     responses: {
       204: { description: "Dada de baja. Los productos sobreviven; sus tarifas en ella, no" },
+      409: { description: "La usan cotizaciones en curso" },
     },
   },
   handler: async (c) => {

@@ -23,20 +23,24 @@
 
 import {
   buildPage,
+  ConflictError,
   NotFoundError,
   newId,
   type Page,
   type ParsedQuery,
   type QuerySchema,
 } from "@tfv/contracts"
+import { isClosed, QUOTE_STATUSES } from "@tfv/contracts/quote-status"
 import { type Transaction, withRequester } from "@tfv/db"
 import {
   type RateSchedule,
   warehousePriceLists,
   warehouseProductPrices,
   warehouseProducts,
+  warehouseQuoteLines,
+  warehouseQuotes,
 } from "@tfv/db/schema"
-import { and, asc, count, eq, inArray, isNull } from "drizzle-orm"
+import { and, asc, count, countDistinct, eq, inArray, isNull } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 import { loadWarehouse } from "./warehouses.ts"
@@ -209,11 +213,92 @@ export async function updatePriceList(
 }
 
 /**
+ * Los estados de cotización que cuentan como trabajo en curso.
+ *
+ * Derivados y no copiados, como en la baja de un almacén: lo que no está cerrado está abierto. Una
+ * lista escrita a mano se quedaría vieja el día que se añada un estado, y en silencio.
+ */
+const OPEN_QUOTES = QUOTE_STATUSES.filter((status) => !isClosed(status))
+
+/** Lo que se lleva por delante dar de baja una lista, para poder enumerarlo antes. */
+export interface PriceListDeletionScope {
+  /** Productos que se quedan sin el precio que esta lista les daba. */
+  readonly products: number
+  /** Cotizaciones que cobran por alguna de sus tarifas. Todas, para enumerar el alcance. */
+  readonly quotes: number
+  /** Las que además **impiden** la baja, para decirlo antes de que nadie confirme. */
+  readonly openQuotes: number
+}
+
+/**
+ * Cotizaciones que cobran por las tarifas de una lista, en total y en curso.
+ *
+ * Cuenta **documentos y no líneas**: una cotización con doce líneas de la misma lista es una
+ * cotización. Las cuenta la misma función que enumera y la que decide si se puede dar de baja —si
+ * fueran dos consultas parecidas, el día que una cambie el diálogo enseñaría un número y la baja
+ * aplicaría otro. Es la misma forma que `commerceCounts` en la baja de un almacén.
+ *
+ * El vínculo entre una cotización y una lista es su línea: `product_price_id` apunta a la tarifa,
+ * y la tarifa a la lista. No hay columna directa, y no debería haberla —la cotización se cobra por
+ * tarifas, no por listas—.
+ */
+async function quoteCounts(
+  tx: Transaction,
+  priceListId: string,
+): Promise<{ quotes: number; openQuotes: number }> {
+  const usedBy = (open: boolean) =>
+    tx
+      .select({ value: countDistinct(warehouseQuotes.id) })
+      .from(warehouseQuoteLines)
+      .innerJoin(
+        warehouseProductPrices,
+        eq(warehouseProductPrices.id, warehouseQuoteLines.productPriceId),
+      )
+      .innerJoin(warehouseQuotes, eq(warehouseQuotes.id, warehouseQuoteLines.quoteId))
+      .where(
+        and(
+          eq(warehouseProductPrices.priceListId, priceListId),
+          isNull(warehouseQuotes.deletedAt),
+          ...(open ? [inArray(warehouseQuotes.status, OPEN_QUOTES)] : []),
+        ),
+      )
+
+  const [quotes] = await usedBy(false)
+  const [openQuotes] = await usedBy(true)
+
+  return { quotes: quotes?.value ?? 0, openQuotes: openQuotes?.value ?? 0 }
+}
+
+export async function priceListDeletionScope(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  priceListId: string,
+): Promise<PriceListDeletionScope> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    const list = await loadPriceList(tx, warehouseId, priceListId)
+
+    const [counted] = await withProductCounts(tx, [list])
+
+    return {
+      ...(await quoteCounts(tx, priceListId)),
+      products: counted?.productCount ?? 0,
+    }
+  })
+}
+
+/**
  * Da de baja una lista de precios.
  *
  * **Los productos sobreviven.** Lo que desaparece son sus tarifas en esa lista, y con ellas el
  * precio que la lista les daba: quien resuelva un precio después caerá al escalar del producto o a
  * cero. Es el orden de precedencia funcionando, no una pérdida de datos.
+ *
+ * **No mientras una cotización en curso cobre por ella.** `warehouse-catalog` pide advertirlo, y
+ * advertir sin poder impedirlo deja que la advertencia llegue tarde: entre que el diálogo enumera y
+ * alguien confirma, cabe una cotización nueva. Se enumera antes —con `/scope`, para decirlo al
+ * abrir— y se rechaza en la carrera, que es como se resolvió lo mismo en la baja de un almacén.
  */
 export async function deletePriceList(
   actor: Actor,
@@ -224,6 +309,16 @@ export async function deletePriceList(
   await withRequester(actor, async (tx) => {
     await loadWarehouse(tx, companyId, warehouseId)
     await loadPriceList(tx, warehouseId, priceListId)
+
+    const { openQuotes } = await quoteCounts(tx, priceListId)
+
+    if (openQuotes > 0) {
+      throw new ConflictError(
+        `Esta lista de precios la usan ${openQuotes} cotización${
+          openQuotes === 1 ? "" : "es"
+        } en curso. Ciérralas o cámbiales la lista antes de darla de baja.`,
+      )
+    }
 
     await tx
       .update(warehousePriceLists)
