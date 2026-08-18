@@ -2,8 +2,8 @@
  * Cálculo de cotizaciones.
  *
  * Transcribe la cadena de `openspec/specs/quotation-pricing/spec.md`. El orden de las operaciones
- * **no es negociable**: las comisiones van sobre el neto, después de los impuestos, y el precio
- * fijo sustituye a la base pero no al descuento.
+ * **no es negociable**: las comisiones van sobre el neto, después de los impuestos, y el precio por
+ * paquete sustituye al total de las líneas —no al subtotal, ni al descuento, que se aplica encima.
  *
  * Es una función pura, sin acceso a datos, porque la ejecutan los dos lados: el navegador la usa
  * para previsualizar mientras se edita, y el servidor la recalcula al guardar. Misma función,
@@ -254,7 +254,14 @@ export interface QuotationLineBreakdown {
    * informarlo a informarlo mal.
    */
   readonly unitCost?: string | undefined
-  readonly unitDiscount: string
+  /**
+   * **Ausentes cuando el descuento por producto es un importe fijo.**
+   *
+   * Ese importe se resta una vez al total de la línea, así que no hay unitario que informar:
+   * `100.00` entre tres no existe en pesos, y un unitario que no multiplica hasta el total es un
+   * dato falso en el documento. Con porcentaje siguen saliendo exactos.
+   */
+  readonly unitDiscount?: string | undefined
   readonly unitTotal?: string | undefined
   readonly cost: string
   readonly discount: string
@@ -309,6 +316,13 @@ export interface QuotationBreakdown {
   readonly lines: readonly QuotationLineBreakdown[]
   readonly groups: readonly QuotationGroupBreakdown[]
   readonly linesTotal: string
+  /**
+   * El precio pactado por el paquete. **Ausente cuando no se pactó ninguno.**
+   *
+   * Sustituye al total de las líneas en la cadena, y viaja resuelto para que el documento no tenga
+   * que volver a componérselo por su cuenta a partir de las condiciones de pago.
+   */
+  readonly packagePrice?: string | undefined
   readonly additionals: string
   readonly subtotal: string
   readonly discount: string
@@ -323,6 +337,8 @@ export interface QuotationBreakdown {
   readonly total: string
   /** Contingente: no forma parte del total. Sólo se cobra si procede. */
   readonly penalty: string
+  /** Contingente: se cobra por adelantado y se devuelve. Tampoco forma parte del total. */
+  readonly deposit: string
 }
 
 // ─── El motor ────────────────────────────────────────────────────────────────
@@ -387,7 +403,6 @@ function computeLine(
       quantity: input.quantity,
       frequency: input.frequency,
       appliedDays: days,
-      unitDiscount: "0.00",
       discount: formatMoney(lineDiscount),
       cost: formatMoney(negotiated),
       total: formatMoney(total),
@@ -402,9 +417,15 @@ function computeLine(
   const rentPrice = rateFor(input.rent, input.frequency)
 
   const unitCost = type === "rent" ? rentPrice : basePrice
-  const unitDiscount = discount?.perProduct ? discountOf(unitCost, discount) : ZERO
   const unitGross = type === "rent" ? scale(rentPrice, days) : basePrice
-  const unitTotal = subtract(unitGross, unitDiscount)
+  const gross = multiply(unitGross, input.quantity)
+
+  // El descuento por producto baja **lo que vale la línea**, no la tarifa. Calculado sobre la
+  // tarifa, un diez por ciento en una renta de diez días descontaba el uno por ciento.
+  const perUnit = perUnitDiscount(discount, unitGross)
+  const lineDiscount =
+    perUnit === undefined ? fixedLineDiscount(discount, input.quantity) : multiply(perUnit, input.quantity)
+  const total = subtract(gross, lineDiscount)
 
   return {
     lineId: input.id,
@@ -414,18 +435,47 @@ function computeLine(
     frequency: input.frequency,
     appliedDays: days,
     unitCost: formatMoney(unitCost),
-    unitDiscount: formatMoney(unitDiscount),
-    unitTotal: formatMoney(unitTotal),
+    // Un importe fijo por producto no divide entre las unidades: la línea se queda sin unitarios.
+    ...(perUnit === undefined
+      ? {}
+      : {
+          unitDiscount: formatMoney(perUnit),
+          unitTotal: formatMoney(subtract(unitGross, perUnit)),
+        }),
     cost: formatMoney(multiply(unitCost, input.quantity)),
-    discount: formatMoney(multiply(unitDiscount, input.quantity)),
-    total: formatMoney(multiply(unitTotal, input.quantity)),
+    discount: formatMoney(lineDiscount),
+    total: formatMoney(total),
     penalty: formatMoney(multiply(penaltyPrice, input.quantity)),
     fee: "0.00",
     unitFee: "0.00",
-    totalWithFee: formatMoney(multiply(unitTotal, input.quantity)),
+    totalWithFee: formatMoney(total),
     // Una renta sin tarifa para su frecuencia no vale cero: **no tiene precio**, y hay que fijarlo.
     unpriced: type === "rent" && isZero(rentPrice),
   }
+}
+
+/**
+ * Lo que le toca a cada unidad del descuento por producto, cuando se puede repartir exacto.
+ *
+ * Devuelve `undefined` cuando el descuento es un **importe fijo por producto**: ése se resta una
+ * vez al total de la línea y no hay reparto que hacer. Con porcentaje sí lo hay, porque el
+ * porcentaje es distributivo y las unidades suman exactamente el descuento de la línea.
+ */
+function perUnitDiscount(
+  discount: QuotationDiscount | undefined,
+  unitGross: Money,
+): Money | undefined {
+  if (discount === undefined || discount.perProduct !== true) return ZERO
+  if (discount.type === "amount") return undefined
+  return applyPercent(unitGross, percent(discount.value))
+}
+
+/** El importe fijo que baja la línea entera. Una línea sin unidades no descuenta nada. */
+function fixedLineDiscount(discount: QuotationDiscount | undefined, quantity: number): Money {
+  if (discount === undefined || discount.perProduct !== true || discount.type !== "amount") {
+    return ZERO
+  }
+  return quantity > 0 ? money(discount.value) : ZERO
 }
 
 /**
@@ -522,15 +572,18 @@ export function computeQuotation(input: QuotationInput): QuotationBreakdown {
   const additionals = sum(
     (input.payment?.additionals ?? []).map((additional) => money(additional.amount)),
   )
-  const subtotal = add(linesTotal, additionals)
 
-  // El precio fijo sustituye a la base calculada, pero **no** al descuento: éste se aplica
-  // igualmente sobre él. Y un descuento por producto ya viajó en las líneas, así que aquí es cero.
-  const fixedPrice = input.payment?.fixedPrice
-  const discountable = fixedPrice === undefined ? subtotal : money(fixedPrice)
-  const documentDiscount =
-    discount && !discount.perProduct ? discountOf(discountable, discount) : ZERO
-  const base = subtract(discountable, documentDiscount)
+  // El precio por paquete sustituye a **lo que suman las líneas**, no al subtotal: un flete
+  // registrado como concepto adicional no es parte del paquete de equipo, y absorberlo en silencio
+  // se descubre al facturar.
+  const packagePrice = input.payment?.fixedPrice
+  const priced = packagePrice === undefined ? linesTotal : money(packagePrice)
+  const subtotal = add(priced, additionals)
+
+  // El descuento global se aplica igualmente sobre el precio del paquete. Y un descuento por
+  // producto ya viajó dentro de las líneas, así que aquí es cero.
+  const documentDiscount = discount && !discount.perProduct ? discountOf(subtotal, discount) : ZERO
+  const base = subtract(subtotal, documentDiscount)
 
   const taxes = computeTaxes(base, input.taxes)
   const taxTotal = sum(
@@ -560,6 +613,7 @@ export function computeQuotation(input: QuotationInput): QuotationBreakdown {
     lines: presented,
     groups: groupByProduct(presented),
     linesTotal: formatMoney(linesTotal),
+    ...(packagePrice === undefined ? {} : { packagePrice: formatMoney(money(packagePrice)) }),
     additionals: formatMoney(additionals),
     subtotal: formatMoney(subtotal),
     discount: formatMoney(documentDiscount),
@@ -573,6 +627,7 @@ export function computeQuotation(input: QuotationInput): QuotationBreakdown {
     advance: formatMoney(advance),
     total: formatMoney(subtract(gross, advance)),
     penalty: formatMoney(penalty),
+    deposit: formatMoney(money(input.payment?.deposit?.amount ?? "0")),
   }
 }
 

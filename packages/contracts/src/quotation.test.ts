@@ -71,6 +71,7 @@ function quote(overrides: Partial<QuotationInput> = {}): QuotationInput {
   return { type: "rent", ...WINDOW, lines: [line()], ...overrides }
 }
 
+
 describe("precio unitario de renta y de venta", () => {
   it("una tarifa fija ignora los días", () => {
     const result = computeQuotation(
@@ -181,6 +182,73 @@ describe("descuento por producto", () => {
     expect(result.lines[0]?.discount).toBe("0.00")
     expect(result.lines[0]?.total).toBe("800.00")
   })
+
+  it("un importe por producto se resta una vez al total de la línea", () => {
+    // Escenario: «Un descuento por producto en importe se resta al total de la línea». Por unidad,
+    // los mismos 100.00 quitarían 400.00 de una línea de cuatro; nadie escribe eso queriéndolo.
+    const result = computeQuotation(
+      quote({
+        type: "sale",
+        lines: [line({ quantity: 4, basePrice: "200.00" })],
+        payment: {
+          version: 1,
+          discount: { type: "amount", value: "100.00", perProduct: true },
+        },
+      }),
+    )
+
+    expect(result.lines[0]?.cost).toBe("800.00")
+    expect(result.lines[0]?.discount).toBe("100.00")
+    expect(result.lines[0]?.total).toBe("700.00")
+  })
+
+  it("y entonces no informa el descuento ni el total unitarios", () => {
+    // 100.00 entre cuatro sí divide, pero entre tres no; informar un unitario que sólo a veces
+    // multiplica hasta el total es peor que no informarlo nunca.
+    const result = computeQuotation(
+      quote({
+        type: "sale",
+        lines: [line({ quantity: 3, basePrice: "200.00" })],
+        payment: {
+          version: 1,
+          discount: { type: "amount", value: "100.00", perProduct: true },
+        },
+      }),
+    )
+
+    expect(result.lines[0]?.unitCost).toBe("200.00")
+    expect(result.lines[0]?.unitDiscount).toBeUndefined()
+    expect(result.lines[0]?.unitTotal).toBeUndefined()
+  })
+
+  it("un porcentaje por producto baja el total de la línea, no la tarifa", () => {
+    // Diez días a 100.00: cada unidad vale 1000.00 y el diez por ciento son 100.00. Calculado sobre
+    // la tarifa serían 10.00 —un uno por ciento efectivo—, que no es lo que nadie pacta.
+    const result = computeQuotation(
+      quote({
+        lines: [
+          line({ quantity: 2, frequency: "daily", rent: { isFixed: false, daily: "100.00" } }),
+        ],
+        payment: { version: 1, discount: { type: "percent", value: "10", perProduct: true } },
+      }),
+    )
+
+    expect(result.lines[0]?.unitTotal).toBe("900.00")
+    expect(result.lines[0]?.total).toBe("1800.00")
+  })
+
+  it("con porcentaje los unitarios siguen saliendo exactos", () => {
+    const result = computeQuotation(
+      quote({
+        type: "sale",
+        lines: [line({ quantity: 4, basePrice: "200.00" })],
+        payment: { version: 1, discount: { type: "percent", value: "10", perProduct: true } },
+      }),
+    )
+
+    expect(result.lines[0]?.unitDiscount).toBe("20.00")
+    expect(result.lines[0]?.unitTotal).toBe("180.00")
+  })
 })
 
 describe("redondeo por línea antes de sumar", () => {
@@ -255,12 +323,31 @@ describe("descuento global", () => {
   })
 })
 
-describe("precio fijo que sustituye a la base", () => {
+describe("precio por paquete que sustituye al total de las líneas", () => {
   it("manda sobre lo que sumen las líneas", () => {
     const result = computeQuotation(thousand({ payment: { version: 1, fixedPrice: "800.00" } }))
 
-    expect(result.subtotal).toBe("1000.00")
+    expect(result.linesTotal).toBe("1000.00")
+    expect(result.subtotal).toBe("800.00")
     expect(result.base).toBe("800.00")
+  })
+
+  it("no se traga los conceptos adicionales", () => {
+    // Escenario: «El precio por paquete no absorbe los conceptos adicionales». Un flete registrado
+    // aparte no es parte del paquete de equipo; sustituirlo en silencio se descubre al facturar.
+    const result = computeQuotation(
+      thousand({
+        payment: {
+          version: 1,
+          fixedPrice: "800.00",
+          additionals: [{ name: "Traslado", amount: "150.00" }],
+        },
+      }),
+    )
+
+    expect(result.additionals).toBe("150.00")
+    expect(result.subtotal).toBe("950.00")
+    expect(result.base).toBe("950.00")
   })
 
   it("recibe igualmente el descuento global", () => {
@@ -275,6 +362,15 @@ describe("precio fijo que sustituye a la base", () => {
     )
 
     expect(result.base).toBe("720.00")
+  })
+
+  it("informa el precio del paquete, y lo omite cuando no lo hay", () => {
+    // El documento no vuelve a componérselo por su cuenta: la cifra que sustituye viaja resuelta.
+    const withPackage = computeQuotation(thousand({ payment: { version: 1, fixedPrice: "800.00" } }))
+    const without = computeQuotation(thousand())
+
+    expect(withPackage.packagePrice).toBe("800.00")
+    expect(without.packagePrice).toBeUndefined()
   })
 })
 
@@ -488,6 +584,23 @@ describe("penalización calculada aparte", () => {
     )
 
     expect(result.penalty).toBe("750.00")
+  })
+})
+
+describe("el depósito en garantía es contingente", () => {
+  it("no forma parte del total", () => {
+    // Escenario: «El depósito no altera el total». Es una garantía que se devuelve; meterla en el
+    // total a pagar hace que el documento mienta sobre lo que cuesta el servicio.
+    const result = computeQuotation(
+      thousand({ payment: { version: 1, deposit: { amount: "5000.00" } } }),
+    )
+
+    expect(result.deposit).toBe("5000.00")
+    expect(result.total).toBe("1000.00")
+  })
+
+  it("es cero cuando no se pacta ninguno", () => {
+    expect(computeQuotation(thousand()).deposit).toBe("0.00")
   })
 })
 
