@@ -21,11 +21,14 @@ import {
   createQuote,
   deleteQuote,
   getQuote,
+  listLines,
   listQuotes,
   QUOTE_STATUSES,
   quoteQuery,
+  RENT_FREQUENCIES,
   ROUND_DIRECTIONS,
   setContacts,
+  setLines,
   setPaymentTerms,
   setResponsible,
   setTaxes,
@@ -138,6 +141,28 @@ const quoteSchema = z.object({
   updatedAt: z.string(),
 })
 
+const lineSchema = z.object({
+  id: z.string(),
+  quoteId: z.string(),
+  measurementId: z.string(),
+  productPriceId: z.string().nullable(),
+  frequency: z.enum(RENT_FREQUENCIES),
+  quantity: z.number().int(),
+  unitIds: z.array(z.string()).readonly(),
+  position: z.number().int(),
+  positionProduct: z.number().int(),
+})
+
+const lineInput = z.object({
+  id: z.string().optional(),
+  measurementId: z.string(),
+  quantity: z.number().int().min(0).max(9999),
+  frequency: z.enum(RENT_FREQUENCIES).optional(),
+  productPriceId: z.string().nullable().optional(),
+  position: z.number().int().min(0).optional(),
+  positionProduct: z.number().int().min(0).optional(),
+})
+
 const companyParams = z.object({ companyId: z.string() })
 const warehouseParams = companyParams.extend({ warehouseId: z.string() })
 const quoteParams = warehouseParams.extend({ quoteId: z.string() })
@@ -232,6 +257,8 @@ export const createQuoteRoute = defineRoute({
               endsOn: instant.optional(),
               roundDays: z.boolean().optional(),
               roundDirection: z.enum(ROUND_DIRECTIONS).optional(),
+              lines: z.array(lineInput).max(500).readonly().optional(),
+              allowMinting: z.boolean().optional(),
             }),
           },
         },
@@ -239,7 +266,7 @@ export const createQuoteRoute = defineRoute({
     },
     responses: {
       201: {
-        description: "Creada, pendiente y con su folio",
+        description: "Creada, con su folio. Con líneas nace en progreso; sin ellas, pendiente",
         content: { "application/json": { schema: quoteSchema } },
       },
     },
@@ -492,5 +519,81 @@ export const changeQuoteStatusRoute = defineRoute({
       c.req.valid("json").status,
     )
     return c.json(serializeQuote(quote), 200)
+  },
+})
+
+// ─── Líneas ──────────────────────────────────────────────────────────────────
+
+export const listQuoteLinesRoute = defineRoute({
+  access: REQUIRES("warehouses.quotes.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/quotes/{quoteId}/lines",
+    summary: "Listar las líneas de una cotización",
+    tags: ["Cotizaciones"],
+    request: { params: quoteParams },
+    responses: {
+      200: {
+        description: "Las líneas, con las unidades que tiene apartadas cada una",
+        content: { "application/json": { schema: z.object({ items: z.array(lineSchema) }) } },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const items = await listLines(actorOf(c), params.companyId, params.warehouseId, params.quoteId)
+    return c.json({ items }, 200)
+  },
+})
+
+/**
+ * El conjunto entero, no una línea suelta.
+ *
+ * Es `PUT` porque sustituye: lo que no venga se elimina y libera su equipo. Enviar el conjunto
+ * completo es lo que permite que la reconciliación sea atómica —crear, actualizar, eliminar y
+ * reservar en una transacción—, y lo que hace que el resultado no dependa del orden en que la
+ * interfaz mande sus cambios.
+ */
+export const setQuoteLinesRoute = defineRoute({
+  access: REQUIRES("warehouses.quotes.edit_products"),
+  config: {
+    method: "put",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/quotes/{quoteId}/lines",
+    summary: "Establecer el conjunto de líneas de una cotización",
+    tags: ["Cotizaciones"],
+    request: {
+      params: quoteParams,
+      body: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              lines: z.array(lineInput).max(500).readonly(),
+              /** `DEFECTS.md` M-04: acuñar inventario inexistente se autoriza aquí, o no ocurre. */
+              allowMinting: z.boolean().optional(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "El conjunto resultante, con su equipo apartado",
+        content: { "application/json": { schema: z.object({ items: z.array(lineSchema) }) } },
+      },
+      422: { description: "No hay existencia suficiente. No se reservó nada" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const body = c.req.valid("json")
+    const items = await setLines(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.quoteId,
+      body.lines,
+      body.allowMinting ?? false,
+    )
+    return c.json({ items }, 200)
   },
 })

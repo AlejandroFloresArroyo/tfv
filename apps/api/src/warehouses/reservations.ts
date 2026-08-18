@@ -1,0 +1,294 @@
+/**
+ * Reserva de existencias.
+ *
+ * Ver `openspec/specs/stock-reservation/spec.md` y su `design.md`. Rebanada 13.
+ *
+ * La máquina que une las cotizaciones con el inventario físico, y el punto de mayor riesgo de
+ * corrección de todo el servicio: aquí se decide qué cámara concreta queda apartada para qué
+ * cliente, y un error se traduce en equipo prometido dos veces o en equipo bloqueado que nadie
+ * puede rentar.
+ *
+ * ## Dos mecanismos, y conviene no confundirlos
+ *
+ * 1. **Reconciliación por cantidad.** Una línea pide *n* unidades de una medida y el sistema
+ *    mantiene exactamente *n* apartadas: al subir aparta más, al bajar libera.
+ * 2. **Proyección de estado.** El estado de la cotización determina el de todas sus unidades.
+ *
+ * ## Por qué el vínculo es una tabla
+ *
+ * Poner `quote_line_id` en la unidad parecería más simple, pero pierde dos cosas: el índice único
+ * parcial `(stock_unit_id) where released_at is null`, que es **la garantía estructural** de que
+ * una unidad no se compromete dos veces sin depender de que la aplicación lo compruebe, y el
+ * histórico de reservas liberadas.
+ */
+
+import { newId, UnprocessableError } from "@tfv/contracts"
+import type { Transaction } from "@tfv/db"
+import { warehouseStockReservations, warehouseStockUnits } from "@tfv/db/schema"
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm"
+import { recordEvents, type StockStatus } from "./stock.ts"
+
+export interface ReservationContext {
+  readonly quoteId: string
+  readonly measurementId: string
+  readonly actorId: string
+  /** `DEFECTS.md` M-04: acuñar inventario que no existe exige decirlo en la operación. */
+  readonly allowMinting: boolean
+}
+
+// ─── Reconciliación ──────────────────────────────────────────────────────────
+
+/**
+ * Deja la línea con exactamente `quantity` unidades apartadas.
+ *
+ * Reserva o libera **la diferencia**, nunca el total: las unidades que ya estaban apartadas siguen
+ * siéndolo. Volver a reservar desde cero devolvería equipo al inventario por un instante y otra
+ * cotización simultánea podría llevárselo.
+ *
+ * La excepción es **cambiar de medida**: entonces lo apartado no sirve, por mucho que la cantidad
+ * coincida, y hay que soltarlo entero antes de apartar lo nuevo. Sin esto, una línea puede acabar
+ * diciendo una medida y sujetando unidades de otra, que es la clase de descuadre que sólo aparece
+ * el día que alguien va a la nave a buscar el equipo.
+ */
+export async function reconcileLine(
+  tx: Transaction,
+  lineId: string,
+  quantity: number,
+  context: ReservationContext,
+): Promise<void> {
+  const held = await liveReservations(tx, lineId)
+  const foreign = held.filter((row) => row.measurementId !== context.measurementId)
+
+  if (foreign.length > 0) await release(tx, foreign, context)
+
+  const mine = held.length - foreign.length
+  if (quantity > mine) await reserve(tx, lineId, quantity - mine, context)
+  else if (quantity < mine) {
+    await release(
+      tx,
+      held.filter((row) => row.measurementId === context.measurementId).slice(0, mine - quantity),
+      context,
+    )
+  }
+}
+
+/**
+ * Aparta `amount` unidades disponibles de la medida.
+ *
+ * `for update skip locked` es la pieza del escenario de concurrencia: sin él, dos reservas
+ * simultáneas sobre la misma medida se serializan y la segunda puede fallar por espera en lugar de
+ * tomar limpiamente otras unidades. Con él, la segunda **salta** las filas bloqueadas y coge las
+ * siguientes; si no quedan, falla por existencia insuficiente, que es la respuesta correcta.
+ */
+async function reserve(
+  tx: Transaction,
+  lineId: string,
+  amount: number,
+  context: ReservationContext,
+): Promise<void> {
+  const candidates = await tx.execute<{ id: string }>(sql`
+    select id from ${warehouseStockUnits}
+     where measurement_id = ${context.measurementId}
+       and status = 'available'
+       and deleted_at is null
+     order by created_at, id
+     limit ${amount}
+     for update skip locked
+  `)
+
+  const chosen = [...candidates].map((row) => row.id)
+  const missing = amount - chosen.length
+
+  if (missing > 0) {
+    if (!context.allowMinting) {
+      throw new UnprocessableError(
+        `No hay existencia suficiente: se pidieron ${amount} unidades y hay ${chosen.length} disponibles. ` +
+          "Autoriza expresamente la creación de inventario si el equipo existe y falta darlo de alta.",
+      )
+    }
+    chosen.push(...(await mint(tx, missing, context)))
+  }
+
+  await tx.insert(warehouseStockReservations).values(
+    chosen.map((stockUnitId) => ({
+      id: newId(),
+      stockUnitId,
+      quoteLineId: lineId,
+      quoteId: context.quoteId,
+    })),
+  )
+
+  await tx
+    .update(warehouseStockUnits)
+    .set({ status: "in_quote", updatedAt: new Date() })
+    .where(inArray(warehouseStockUnits.id, chosen))
+
+  await recordEvents(
+    tx,
+    chosen.map((unitId) => ({ unitId, from: "available" as StockStatus, to: "in_quote" as const })),
+    "quote_reservation",
+    context.actorId,
+    undefined,
+    context.quoteId,
+  )
+}
+
+/**
+ * Da de alta las unidades que faltan, marcadas como acuñadas por reserva.
+ *
+ * La implementación anterior hacía esto **en silencio y siempre** (`DEFECTS.md` M-04), de modo que
+ * una cotización podía comprometer equipo que no existía en la nave sin que nadie se enterara. Aquí
+ * exige autorización explícita en la operación y deja rastro: quién la motivó y con qué cotización,
+ * para que el descuadre entre inventario registrado y físico sea auditable.
+ */
+async function mint(
+  tx: Transaction,
+  amount: number,
+  context: ReservationContext,
+): Promise<string[]> {
+  const rows = await tx
+    .insert(warehouseStockUnits)
+    .values(
+      Array.from({ length: amount }, () => ({
+        id: newId(),
+        measurementId: context.measurementId,
+        code: unitCode(),
+        createdByReservation: true,
+        createdByQuoteId: context.quoteId,
+      })),
+    )
+    .returning({ id: warehouseStockUnits.id })
+
+  await recordEvents(
+    tx,
+    rows.map((row) => ({ unitId: row.id, from: null, to: "available" as StockStatus })),
+    "created",
+    context.actorId,
+    "Acuñada para satisfacer una reserva, con autorización explícita",
+    context.quoteId,
+  )
+
+  return rows.map((row) => row.id)
+}
+
+/**
+ * Libera las reservas indicadas y devuelve sus unidades a disponible.
+ *
+ * Se liberan **las más recientes primero** —es el orden en que llegan— para que las que llevan más
+ * tiempo apartadas sigan estándolo: bajar una cantidad no debería soltar la unidad que alguien
+ * lleva una semana reservando.
+ */
+async function release(
+  tx: Transaction,
+  reservations: readonly { id: string; stockUnitId: string }[],
+  context: { readonly actorId: string; readonly quoteId: string },
+): Promise<void> {
+  if (reservations.length === 0) return
+
+  const unitIds = reservations.map((row) => row.stockUnitId)
+
+  await tx
+    .update(warehouseStockReservations)
+    .set({ releasedAt: new Date() })
+    .where(
+      inArray(
+        warehouseStockReservations.id,
+        reservations.map((row) => row.id),
+      ),
+    )
+
+  const units = await tx
+    .update(warehouseStockUnits)
+    .set({ status: "available", updatedAt: new Date() })
+    .where(
+      and(inArray(warehouseStockUnits.id, unitIds), eq(warehouseStockUnits.status, "in_quote")),
+    )
+    .returning({ id: warehouseStockUnits.id })
+
+  await recordEvents(
+    tx,
+    units.map((row) => ({
+      unitId: row.id,
+      from: "in_quote" as StockStatus,
+      to: "available" as const,
+    })),
+    "quote_release",
+    context.actorId,
+    undefined,
+    context.quoteId,
+  )
+}
+
+/** Libera todo lo que tenga apartado una línea. La usa el borrado de líneas. */
+export async function releaseLine(
+  tx: Transaction,
+  lineId: string,
+  context: { readonly actorId: string; readonly quoteId: string },
+): Promise<void> {
+  await release(tx, await liveReservations(tx, lineId), context)
+}
+
+// ─── Consulta ────────────────────────────────────────────────────────────────
+
+/** Las reservas vivas de una línea, de la más reciente a la más antigua. */
+async function liveReservations(
+  tx: Transaction,
+  lineId: string,
+): Promise<{ id: string; stockUnitId: string; measurementId: string }[]> {
+  return tx
+    .select({
+      id: warehouseStockReservations.id,
+      stockUnitId: warehouseStockReservations.stockUnitId,
+      measurementId: warehouseStockUnits.measurementId,
+    })
+    .from(warehouseStockReservations)
+    .innerJoin(
+      warehouseStockUnits,
+      eq(warehouseStockUnits.id, warehouseStockReservations.stockUnitId),
+    )
+    .where(
+      and(
+        eq(warehouseStockReservations.quoteLineId, lineId),
+        isNull(warehouseStockReservations.releasedAt),
+      ),
+    )
+    .orderBy(desc(warehouseStockReservations.createdAt), desc(warehouseStockReservations.id))
+}
+
+/** Qué unidades tiene apartadas cada línea de una cotización. */
+export async function reservedByLine(
+  tx: Transaction,
+  quoteId: string,
+): Promise<Map<string, string[]>> {
+  const rows = await tx
+    .select({
+      lineId: warehouseStockReservations.quoteLineId,
+      stockUnitId: warehouseStockReservations.stockUnitId,
+    })
+    .from(warehouseStockReservations)
+    .where(
+      and(
+        eq(warehouseStockReservations.quoteId, quoteId),
+        isNull(warehouseStockReservations.releasedAt),
+      ),
+    )
+    .orderBy(warehouseStockReservations.createdAt, warehouseStockReservations.id)
+
+  const byLine = new Map<string, string[]>()
+  for (const row of rows) {
+    if (!row.lineId) continue
+    const list = byLine.get(row.lineId)
+    if (list) list.push(row.stockUnitId)
+    else byLine.set(row.lineId, [row.stockUnitId])
+  }
+  return byLine
+}
+
+// ─── Ayuda ───────────────────────────────────────────────────────────────────
+
+const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+function unitCode(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(12))
+  return Array.from(bytes, (byte) => ALPHABET[byte % ALPHABET.length]).join("")
+}

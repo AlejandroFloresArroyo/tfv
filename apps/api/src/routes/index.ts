@@ -85,8 +85,10 @@ import {
   createQuoteRoute,
   deleteQuoteRoute,
   getQuoteRoute,
+  listQuoteLinesRoute,
   listQuotesRoute,
   setQuoteContactsRoute,
+  setQuoteLinesRoute,
   setQuotePaymentRoute,
   setQuoteResponsibleRoute,
   setQuoteTaxesRoute,
@@ -247,6 +249,8 @@ export const routes: readonly RegisteredRoute[] = [
   setQuoteTaxesRoute,
   setQuoteResponsibleRoute,
   changeQuoteStatusRoute,
+  listQuoteLinesRoute,
+  setQuoteLinesRoute,
   deleteQuoteRoute,
 
   // ─── Producciones ──────────────────────────────────────────────────────────

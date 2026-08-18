@@ -31,10 +31,20 @@ import {
   UnprocessableError,
 } from "@tfv/contracts"
 import { type Transaction, withRequester } from "@tfv/db"
-import { counterparties, type QuoteContact, warehouseQuotes, warehouses } from "@tfv/db/schema"
-import { and, count, eq, isNull } from "drizzle-orm"
+import {
+  counterparties,
+  type QuoteContact,
+  warehouseMeasurements,
+  warehouseProductPrices,
+  warehouseProducts,
+  warehouseQuoteLines,
+  warehouseQuotes,
+  warehouses,
+} from "@tfv/db/schema"
+import { and, count, eq, inArray, isNull } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
+import { reconcileLine, releaseLine, reservedByLine } from "./reservations.ts"
 import { loadWarehouse } from "./warehouses.ts"
 
 export const QUOTE_STATUSES = [
@@ -53,6 +63,9 @@ export const TRADE_TYPES = ["rent", "sale"] as const
 export type TradeType = (typeof TRADE_TYPES)[number]
 
 export const ROUND_DIRECTIONS = ["up", "down"] as const
+
+export const RENT_FREQUENCIES = ["daily", "weekly", "monthly"] as const
+export type RentFrequency = (typeof RENT_FREQUENCIES)[number]
 
 /**
  * Estados cerrados: el documento terminó, con efecto o sin él.
@@ -213,13 +226,16 @@ export interface CreateQuoteInput {
   readonly endsOn?: Date | undefined
   readonly roundDays?: boolean | undefined
   readonly roundDirection?: "up" | "down" | undefined
+  readonly lines?: readonly QuoteLineInput[] | undefined
+  readonly allowMinting?: boolean | undefined
 }
 
 /**
  * Crea una cotización.
  *
- * Nace **pendiente**: sin líneas no hay nada que preparar. Aportarlas es una operación aparte, y es
- * la que la lleva a en progreso.
+ * Nace **en el estado que corresponde**: con líneas, en progreso —ya hay equipo apartado y algo que
+ * preparar—; sin ellas, pendiente. Y con líneas, el alta y la reserva se confirman juntas: si el
+ * equipo no alcanza, no queda ni la cotización.
  *
  * El responsable por omisión es quien la crea. Es lo que hace que una cotización tenga siempre a
  * alguien detrás sin obligar a elegirlo en el formulario más común.
@@ -234,6 +250,10 @@ export async function createQuote(
     await loadWarehouse(tx, companyId, warehouseId)
     if (input.clientId) await assertClient(tx, companyId, input.clientId)
 
+    const withLines = (input.lines ?? []).length > 0
+    const status: QuoteStatus = withLines ? "in_progress" : "pending"
+    if (withLines) assertWindow(input.type, status, input.startsOn ?? null, input.endsOn ?? null)
+
     const [row] = await tx
       .insert(warehouseQuotes)
       .values({
@@ -246,7 +266,7 @@ export async function createQuote(
         name: input.name ?? "",
         description: input.description ?? "",
         type: input.type,
-        status: "pending",
+        status,
         startsOn: input.startsOn ?? null,
         endsOn: input.endsOn ?? null,
         roundDays: input.roundDays ?? false,
@@ -255,6 +275,14 @@ export async function createQuote(
       .returning()
 
     if (!row) throw new Error("La cotización no se insertó")
+
+    if (withLines) {
+      await applyLines(tx, row.id, warehouseId, input.lines ?? [], {
+        actorId: actor.userId,
+        allowMinting: input.allowMinting ?? false,
+      })
+    }
+
     return toRecord(row)
   })
 }
@@ -386,11 +414,7 @@ export async function changeQuoteStatus(
     const quote = await loadQuote(tx, warehouseId, quoteId)
 
     assertTransition(quote.status, next, quote.type)
-    if (quote.type === "rent" && NEEDS_WINDOW.includes(next) && !(quote.startsOn && quote.endsOn)) {
-      throw new UnprocessableError(
-        "Una cotización de renta necesita sus fechas de inicio y fin para avanzar",
-      )
-    }
+    assertWindow(quote.type, next, quote.startsOn, quote.endsOn)
 
     return toRecord(await patch(tx, quoteId, { status: next }))
   })
@@ -413,6 +437,21 @@ function assertTransition(current: QuoteStatus, next: QuoteStatus, type: TradeTy
         : `No se puede pasar de «${current}» a «${next}»`,
     )
   }
+}
+
+/** Desde en progreso, una renta necesita su ventana: hay equipo comprometido para unos días. */
+function assertWindow(
+  type: TradeType,
+  status: QuoteStatus,
+  startsOn: Date | null,
+  endsOn: Date | null,
+): void {
+  if (type !== "rent" || !NEEDS_WINDOW.includes(status)) return
+  if (startsOn && endsOn) return
+
+  throw new UnprocessableError(
+    "Una cotización de renta necesita sus fechas de inicio y fin para avanzar",
+  )
 }
 
 function assertOpen(status: QuoteStatus): void {
@@ -554,4 +593,210 @@ function toRecord(row: typeof warehouseQuotes.$inferSelect): QuoteRecord {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
+}
+
+// ─── Líneas ──────────────────────────────────────────────────────────────────
+
+export interface QuoteLineRecord {
+  readonly id: string
+  readonly quoteId: string
+  readonly measurementId: string
+  readonly productPriceId: string | null
+  readonly frequency: RentFrequency
+  /** No es una columna: es **cuántas unidades tiene apartadas**. Ver `stock-reservation`. */
+  readonly quantity: number
+  readonly unitIds: readonly string[]
+  readonly position: number
+  readonly positionProduct: number
+}
+
+export interface QuoteLineInput {
+  /** Presente: la línea ya existe y se actualiza. Ausente: se crea. */
+  readonly id?: string | undefined
+  readonly measurementId: string
+  readonly quantity: number
+  readonly frequency?: RentFrequency | undefined
+  readonly productPriceId?: string | null | undefined
+  readonly position?: number | undefined
+  readonly positionProduct?: number | undefined
+}
+
+export async function listLines(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  quoteId: string,
+): Promise<QuoteLineRecord[]> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    await loadQuote(tx, warehouseId, quoteId)
+    return readLines(tx, quoteId)
+  })
+}
+
+/**
+ * Establece **de una vez** el conjunto completo de líneas de una cotización.
+ *
+ * Crea las nuevas, actualiza las presentes y elimina las ausentes, reconciliando las reservas de
+ * cada una. Es una sola operación y no tres porque el conjunto es lo que tiene sentido: aplicar la
+ * mitad dejaría una cotización que no es ni la de antes ni la que se pidió.
+ *
+ * **Todo en una transacción.** Si una línea no encuentra existencia, se revierte entera: ni las
+ * líneas ni las reservas quedan a medias. Es el escenario que la spec llama «un fallo deja las
+ * líneas como estaban», y es la razón de que la reconciliación viva aquí y no en el cliente.
+ */
+export async function setLines(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  quoteId: string,
+  input: readonly QuoteLineInput[],
+  allowMinting: boolean,
+): Promise<QuoteLineRecord[]> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    const quote = await loadQuote(tx, warehouseId, quoteId)
+    assertOpen(quote.status)
+
+    await applyLines(tx, quoteId, warehouseId, input, { actorId: actor.userId, allowMinting })
+    return readLines(tx, quoteId)
+  })
+}
+
+/**
+ * La reconciliación propiamente dicha, sin abrir transacción.
+ *
+ * Vive aparte porque el alta de una cotización con líneas la necesita dentro de **su** transacción:
+ * crear la cotización y apartar su equipo tienen que confirmarse juntos.
+ */
+async function applyLines(
+  tx: Transaction,
+  quoteId: string,
+  warehouseId: string,
+  input: readonly QuoteLineInput[],
+  options: { readonly actorId: string; readonly allowMinting: boolean },
+): Promise<void> {
+  const existing = await tx
+    .select()
+    .from(warehouseQuoteLines)
+    .where(eq(warehouseQuoteLines.quoteId, quoteId))
+
+  const known = new Map(existing.map((row) => [row.id, row]))
+  const kept = new Set<string>()
+
+  for (const [index, line] of input.entries()) {
+    await assertMeasurement(tx, warehouseId, line.measurementId)
+    if (line.productPriceId) await assertPrice(tx, warehouseId, line.productPriceId)
+
+    const current = line.id ? known.get(line.id) : undefined
+    if (line.id && !current) throw new NotFoundError("Alguna línea no existe en esta cotización")
+
+    const values = {
+      measurementId: line.measurementId,
+      productPriceId: line.productPriceId ?? null,
+      frequency: line.frequency ?? "weekly",
+      position: line.position ?? index,
+      positionProduct: line.positionProduct ?? index,
+    }
+
+    const lineId = current?.id ?? newId()
+    if (current) {
+      await tx
+        .update(warehouseQuoteLines)
+        .set({ ...values, updatedAt: new Date() })
+        .where(eq(warehouseQuoteLines.id, lineId))
+    } else {
+      await tx.insert(warehouseQuoteLines).values({ id: lineId, quoteId, ...values })
+    }
+    kept.add(lineId)
+
+    await reconcileLine(tx, lineId, line.quantity, {
+      quoteId,
+      measurementId: line.measurementId,
+      actorId: options.actorId,
+      allowMinting: options.allowMinting,
+    })
+  }
+
+  const dropped = existing.filter((row) => !kept.has(row.id))
+  for (const row of dropped) {
+    await releaseLine(tx, row.id, { actorId: options.actorId, quoteId })
+  }
+  if (dropped.length > 0) {
+    await tx.delete(warehouseQuoteLines).where(
+      inArray(
+        warehouseQuoteLines.id,
+        dropped.map((row) => row.id),
+      ),
+    )
+  }
+}
+
+async function readLines(tx: Transaction, quoteId: string): Promise<QuoteLineRecord[]> {
+  const rows = await tx
+    .select()
+    .from(warehouseQuoteLines)
+    .where(eq(warehouseQuoteLines.quoteId, quoteId))
+    .orderBy(warehouseQuoteLines.positionProduct, warehouseQuoteLines.position)
+
+  const reserved = await reservedByLine(tx, quoteId)
+
+  return rows.map((row) => {
+    const unitIds = reserved.get(row.id) ?? []
+    return {
+      id: row.id,
+      quoteId: row.quoteId,
+      measurementId: row.measurementId,
+      productPriceId: row.productPriceId,
+      frequency: row.frequency,
+      quantity: unitIds.length,
+      unitIds,
+      position: row.position,
+      positionProduct: row.positionProduct,
+    }
+  })
+}
+
+/** La medida existe y pertenece a un producto de este almacén. */
+async function assertMeasurement(
+  tx: Transaction,
+  warehouseId: string,
+  measurementId: string,
+): Promise<void> {
+  const [row] = await tx
+    .select({ id: warehouseMeasurements.id })
+    .from(warehouseMeasurements)
+    .innerJoin(warehouseProducts, eq(warehouseProducts.id, warehouseMeasurements.productId))
+    .where(
+      and(
+        eq(warehouseMeasurements.id, measurementId),
+        eq(warehouseProducts.warehouseId, warehouseId),
+        isNull(warehouseMeasurements.deletedAt),
+        isNull(warehouseProducts.deletedAt),
+      ),
+    )
+    .limit(1)
+
+  if (!row) throw new NotFoundError("La medida no existe")
+}
+
+/** La tarifa existe y es de un producto de este almacén. */
+async function assertPrice(
+  tx: Transaction,
+  warehouseId: string,
+  productPriceId: string,
+): Promise<void> {
+  const [row] = await tx
+    .select({ id: warehouseProductPrices.id })
+    .from(warehouseProductPrices)
+    .innerJoin(warehouseProducts, eq(warehouseProducts.id, warehouseProductPrices.productId))
+    .where(
+      and(
+        eq(warehouseProductPrices.id, productPriceId),
+        eq(warehouseProducts.warehouseId, warehouseId),
+      ),
+    )
+    .limit(1)
+
+  if (!row) throw new NotFoundError("La tarifa no existe")
 }
