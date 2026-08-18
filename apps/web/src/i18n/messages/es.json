@@ -46,6 +46,9 @@
   "addresses": {
     "title": "Direcciones",
     "subtitle": "Desde dónde envía y a dónde factura {company}.",
+    "mine": "Mis direcciones",
+    "mineSubtitle": "Dónde recibes lo que compras.",
+    "mineEmptyBody": "Hacen falta para que lo que compres llegue a alguna parte.",
     "create": "Nueva dirección",
     "createTitle": "Añadir una dirección",
     "createBody": "La primera de la libreta queda como primaria.",
@@ -55,6 +58,7 @@
     "label": "Etiqueta",
     "labelHint": "Para reconocerla de un vistazo. Opcional.",
     "labelPlaceholder": "Bodega principal",
+    "labelPlaceholderMine": "Casa",
     "street": "Calle",
     "number": "Número",
     "colony": "Colonia",

@@ -46,6 +46,9 @@
   "addresses": {
     "title": "Addresses",
     "subtitle": "Where {company} ships from and bills to.",
+    "mine": "My addresses",
+    "mineSubtitle": "Where you receive what you buy.",
+    "mineEmptyBody": "They're needed for what you buy to arrive somewhere.",
     "create": "New address",
     "createTitle": "Add an address",
     "createBody": "The first one in the book becomes the primary.",
@@ -55,6 +58,7 @@
     "label": "Label",
     "labelHint": "So you recognise it at a glance. Optional.",
     "labelPlaceholder": "Main warehouse",
+    "labelPlaceholderMine": "Home",
     "street": "Street",
     "number": "Number",
     "colony": "Neighbourhood",

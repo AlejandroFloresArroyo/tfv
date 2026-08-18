@@ -36,7 +36,7 @@ export default async function AccountPage() {
       }
     >
       <div className="grid gap-4 laptop:grid-cols-2">
-        <Panel className="p-5">
+        <Panel className="p-5 laptop:col-span-2">
           <h2 className="text-title2 font-bold text-content">{t("account.profile")}</h2>
           <Separator className="my-4" />
 
@@ -61,6 +61,16 @@ export default async function AccountPage() {
           </Button>
         </Panel>
 
+        <Panel className="flex flex-col p-5">
+          <h2 className="text-title2 font-bold text-content">{t("addresses.mine")}</h2>
+          <Separator className="my-4" />
+
+          <p className="flex-1 text-body2 text-content-muted">{t("addresses.mineSubtitle")}</p>
+
+          <Button asChild variant="secondary" className="mt-4 self-start">
+            <Link href="/account/addresses">{t("addresses.mine")}</Link>
+          </Button>
+        </Panel>
 
         <Panel className="p-5 laptop:col-span-2">
           <h2 className="text-title2 font-bold text-content">
