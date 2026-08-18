@@ -222,17 +222,18 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 En este orden, y con el motivo de que sea ése:
 
-1. **El constructor de cotizaciones** (29b): el editor de líneas con la disponibilidad delante, el
-   cambio de estado y el registro del retorno. Es la parte que **escribe**, y es la que cierra las
-   dos tareas que le quedan a la 14 —que la interfaz consuma la misma función de cálculo para
-   previsualizar mientras se edita, en vez de reimplementarla—. La de sólo lectura ya está.
-2. **Pedidos de almacén** (rebanada 15). Es lo que da entrada a las cotizaciones desde fuera:
+1. **Pedidos de almacén** (rebanada 15). Es lo que da entrada a las cotizaciones desde fuera:
    aceptar un pedido crea su cotización con las líneas y el inventario ya apartado, que es la
-   transición central del servicio. Se apoya entera en lo que acaba de quedar construido.
+   transición central del servicio. Se apoya entera en lo que acaba de quedar construido —la
+   reconciliación de líneas y la proyección de estado son las mismas—.
+2. **Los cuatro bloques que le faltan al constructor** (29b): identidad, contactos, condiciones de
+   pago e impuestos. Tienen su ruta y su permiso desde la 13; les falta el formulario. Los de pago e
+   impuestos son los que mueven dinero, así que son los que más importa que se editen bien.
 3. **Lo que queda de la 10**: los prospectos. Las comprobaciones de «en uso» siguen esperando a los
    documentos que aún no existen.
-4. **Base de pruebas separada de la de desarrollo.** Sigue estorbando: `pnpm test` borra los datos
-   con los que se está mirando la aplicación, y con ellos la siembra de volumen y las cotizaciones.
+4. **Base de pruebas separada de la de desarrollo.** Sigue estorbando, y ahora de dos maneras:
+   `pnpm test` borra los datos con los que se está mirando la aplicación, y dos ejecuciones
+   simultáneas se truncan las tablas la una a la otra.
 5. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
    **recepción verificada de eventos de cobro** (07), que cierra el bloque crítico.
 
@@ -1777,3 +1778,79 @@ Una nota de entorno: la primera pasada de extremo a extremo falló entera porque
 llevaba horas levantado sin recarga y servía un registro de rutas anterior a las cotizaciones. No
 era un fallo del código, pero costó una vuelta entera de diagnóstico — el arranque sin vigilancia
 no avisa de que está viejo.
+
+### 2026-08-17 · La cotización se puede construir
+
+El **constructor**: el editor de líneas con la disponibilidad delante, el cambio de estado y el
+registro del retorno. Es la parte que escribe, y cierra las dos tareas que le quedaban a la 14.
+
+**La previsualización no es una aproximación**
+
+El navegador calcula los importes con `computeQuotation`, **la misma función que corre en la API**.
+No es una reimplementación ligera para enseñar algo mientras llega la buena: es la del paquete
+compartido, así que el requisito de `quotation-pricing` —«la previsualización coincide con lo que el
+servidor calculará»— se cumple por construcción y no por disciplina. La tarea decía «retirar el
+motor del código del navegador»: no hay motor, hay una importación.
+
+Con el motor viajaron dos reglas más, por el mismo motivo. **La resolución de tarifa**: la
+precedencia de `warehouse-catalog` —tarifa de la lista, o precio del producto, o cero— más el ajuste
+propio de la medida. Y **la máquina de estados**, para que la pantalla ofrezca sólo lo que existe.
+
+**Y sin embargo el primer intento no cuadraba**
+
+La ficha enseñaba una línea a 700.00 mientras el subtotal, tres centímetros más allá, decía 210.00.
+La función era la misma; lo que difería era **el precio que se le entregaba**. El editor resolvía la
+tarifa por su cuenta y contra otra lista de precios, así que recaía en el precio de venta en lugar
+de la tarifa semanal.
+
+Es el defecto M-06 un paso antes del motor, y merece anotarse porque la lección no es la evidente:
+compartir la función no basta si cada lado compone su entrada. Ahora **la línea viaja con su tarifa
+ya resuelta**, la que el servidor aplicó, y la previsualización parte de lo que se guardó. Queda
+anotado como H-14.
+
+**La existencia se mira antes de guardar, no al guardar**
+
+El servidor rechaza una reserva que no cabe y no aparta nada a medias —eso está probado desde la
+13—. Pero enterarse al guardar es enterarse **después** de haberle prometido el equipo al cliente.
+El tope de cada línea es lo libre más lo que ella misma tiene apartado: al reconciliar, sus propias
+unidades no compiten consigo mismas.
+
+De ahí sale `GET .../rates`, que devuelve tarifa y existencia **juntas**. Separarlas obligaría a la
+interfaz a cruzar dos listados y a resolver la precedencia por su cuenta, que es justo lo que
+acabábamos de impedir. Exige la clave de editar líneas y no la de mirar: publica las tarifas
+negociadas del almacén, y quien puede leer una cotización no tiene por qué ver la lista entera.
+
+**Un botón que responde 409 no es un botón**
+
+El cambio de estado ofrece sólo las transiciones que la máquina admite, y filtra las que no
+corresponden al tipo —una venta no pasa «a renta»—. Una cotización cerrada no ofrece editor: su
+guardado respondería `409` siempre. Ofrecer y dejar que el servidor rechace convierte una regla del
+dominio en un error de formulario.
+
+**El retorno tenía que poder nombrarse**
+
+Completar una renta deja el equipo fuera a propósito: terminar el documento y recibir el equipo son
+cosas distintas y pasan en momentos distintos. Registrar el retorno exige decir **qué** unidad
+vuelve y en qué condiciones, y para eso hacía falta una ruta que dijera qué tiene fuera la
+cotización. Cada unidad por su código, que es lo que lleva escrito la etiqueta de la nave.
+
+**Una tarifa que nadie fijó no se enseña como si la hubieran fijado**
+
+Cuando la lista no tiene tarifa para la periodicidad elegida, el motor cobra el precio base — es la
+regla declarada. El buscador lo enseñaba como «por día» sin decirlo, y con la siembra anterior —que
+sólo fijaba la semanal— eso significaba ofrecer una cámara a diez veces lo que vale su semana. Ahora
+se marca en aviso, y la siembra fija las tres periodicidades. Queda anotado como H-15.
+
+**Comprobado**
+
+TypeScript en los seis paquetes, Biome, **476 pruebas** de vitest y **51 de extremo a extremo**,
+seis de ellas nuevas. La primera de esas seis es la que importa: la suma de los totales de línea que enseña
+el navegador es el subtotal que enseña el servidor, en la misma pantalla y a la vez.
+
+Y se miró de verdad, que es como aparecieron los dos defectos de arriba. En la ficha en renta:
+140.00 más 70.00 más 280.00 son los 490.00 del subtotal, más 78.40 de IVA y 17.05 de comisión,
+585.45 a pagar.
+
+Dos notas de entorno. El proceso de la API volvía a estar arrancado sin vigilancia y servía un
+registro de rutas anterior — H-13, otra vez. Y **dos ejecuciones de `pnpm test` no pueden
+solaparse**: se truncan las tablas la una a la otra, y los fallos que salen no son de ningún cambio.

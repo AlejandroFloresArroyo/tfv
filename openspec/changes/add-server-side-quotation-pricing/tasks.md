@@ -32,11 +32,13 @@
 ## Servidor como autoridad
 
 - [x] Recalcular al guardar; descartar los importes recibidos
-- [ ] La interfaz consume la misma función, no una reimplementación
-- [ ] Retirar el motor del código del navegador
+- [x] La interfaz consume la misma función, no una reimplementación
+- [x] Retirar el motor del código del navegador
 
-> Las dos esperan a que la interfaz tenga pantallas de cotización (29b). La función ya es la misma
-> y está publicada en `@tfv/contracts`; falta que alguien la llame desde el navegador.
+> El constructor (29b) llama a `computeQuotation` de `@tfv/contracts` para previsualizar mientras se
+> edita. No hay motor en el código del navegador: hay una importación. Con él viaja `resolveRate`,
+> porque **entregarle otro precio a la misma función también da otro total** — ver `HALLAZGOS.md`
+> H-14, que es exactamente ese fallo antes de arreglarlo.
 
 ## Congelación
 

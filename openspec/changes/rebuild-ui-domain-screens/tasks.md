@@ -37,7 +37,9 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 - [ ] Categorías anidadas
 - [x] **Ubicaciones como organigrama navegable**
 - [x] Bandeja de cotizaciones y ficha, con su equipo apartado y sus importes
-- [ ] **Constructor de cotizaciones**, con sus pasos y sus bloques de edición
+- [~] **Constructor de cotizaciones**: el editor de líneas con la disponibilidad delante, el cambio
+      de estado y el registro del retorno. Faltan los bloques de identidad, contactos, condiciones
+      de pago e impuestos, que tienen su ruta y su permiso pero todavía no su formulario
 - [ ] Documento de cotización y su enlace público
 - [ ] Pedidos con aceptación y rechazo
 - [ ] **Conversación en tiempo real del pedido**
