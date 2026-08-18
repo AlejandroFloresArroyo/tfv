@@ -325,6 +325,18 @@ export const warehouseQuoteLines = pgTable(
       onDelete: "set null",
     }),
 
+    /**
+     * Precio negociado: **el total de esta línea para el periodo completo**.
+     *
+     * Sustituye a toda tarifa y no se multiplica por los días ni por la cantidad. Nulo cuando la
+     * línea se cobra por tarifa; ponerlo y quitarlo no borra `product_price_id`, de modo que
+     * retirarlo devuelve el cálculo anterior en vez de dejar la línea sin precio.
+     *
+     * Existe porque las listas de precios por día, semana y mes están sin llenar en la mayoría de
+     * los almacenes: escribir el importe es como se cotiza de verdad.
+     */
+    price: money("price"),
+
     frequency: rentFrequency("frequency").notNull().default("weekly"),
 
     /** Orden de presentación. Puramente visual, persistido por línea. */

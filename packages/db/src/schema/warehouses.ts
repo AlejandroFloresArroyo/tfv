@@ -184,6 +184,18 @@ export const warehouseProducts = pgTable(
     price: money("price").notNull().default("0"),
     usesPriceLists: boolean("uses_price_lists").notNull().default(false),
 
+    /**
+     * Alta provisional, creada desde una cotización.
+     *
+     * Se pone cuando alguien da de alta equipo que no estaba en el catálogo mientras cotiza delante
+     * de un cliente: nombre, una medida y las unidades que se apartan. **Mientras esté puesta el
+     * producto no se publica**, y quitarla exige la clave de catálogo — que es el momento en que
+     * alguien mira el producto de verdad y lo completa.
+     *
+     * Sin esta marca, «ya lo completaré luego» es una intención; con ella es una bandeja.
+     */
+    isProvisional: boolean("is_provisional").notNull().default(false),
+
     availableForSale: boolean("available_for_sale").notNull().default(false),
     availableForRent: boolean("available_for_rent").notNull().default(false),
 
