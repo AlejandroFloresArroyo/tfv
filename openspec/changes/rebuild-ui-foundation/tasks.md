@@ -108,9 +108,9 @@ hablan el lenguaje de `query-and-pagination`, con la gramática cerrada y el sob
 - [~] **Selector de archivos con vista previa y reintento por archivo**, con lo que la 08 pide del
       lado del cliente: clasificación por extensión, reducción con `canvas` que nunca amplía el
       original, extracción de portada del video y progreso por archivo. La regla vive en
-      `packages/ui/src/lib/` con 59 pruebas —la máquina de subida cubre el camino feliz, el fallo
-      en cada uno de los cuatro pasos, el reintento y la caducidad, con los tres puertos del
-      contrato fingidos—. **Falta comprobarlo en un navegador**: lo que toca `canvas`,
+      `packages/ui/src/lib/` con 66 pruebas —la máquina de subida cubre el camino feliz, el fallo
+      en cada uno de los cuatro pasos, el reintento, la reemisión de firmas caducadas y la regla de
+      que sin el original no hay archivo, con los cuatro puertos del contrato fingidos—. **Falta comprobarlo en un navegador**: lo que toca `canvas`,
       `createImageBitmap` y el `<video>` no tiene prueba, ninguna pantalla lo usa todavía y los
       endpoints de subida no existían al escribirlo. Ver `H-51`, `H-52` y `H-53`
 - [ ] Editor de texto enriquecido con saneado
