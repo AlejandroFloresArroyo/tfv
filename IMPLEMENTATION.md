@@ -105,10 +105,10 @@ Lo construido hasta ahora, medido y no estimado:
 
 | | |
 |---|---|
-| Rebanadas | 8 de 30 empezadas, **ninguna cerrada del todo** |
-| Código sin pruebas | 26 787 líneas |
-| Código de prueba | 7 861 líneas |
-| Pruebas | **385** — 59 contratos, 59 datos, 200 API, 28 web, 39 de extremo a extremo |
+| Rebanadas | 9 de 30 empezadas, **ninguna cerrada del todo** |
+| Código sin pruebas | 27 714 líneas |
+| Código de prueba | 8 586 líneas |
+| Pruebas | **432** — 98 contratos, 59 datos, 207 API, 29 web, 39 de extremo a extremo |
 | Esquema | 91 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
 | Aislamiento | 195 políticas · 91/91 tablas · 0 con identidad cruda |
 | Migraciones | 10, replicadas desde cero en cada verificación |
@@ -117,17 +117,22 @@ Lo construido hasta ahora, medido y no estimado:
 | Pantallas | 17, en español e inglés (261 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
-**los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía— y **las
-colecciones explorables**. La parte ancha del trabajo siguen siendo las rebanadas 08 a 27; la 10
-está casi entera y las demás sin tocar.
+**los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
+colecciones explorables** y **el almacén entero, del catálogo a las existencias**. La parte ancha
+del trabajo siguen siendo las rebanadas 08 a 27; la 10 está casi entera y las demás sin tocar.
+
+**La aritmética de las cotizaciones ya está escrita y probada.** El motor de cálculo es una función
+pura de los contratos, con un caso de prueba por cada escenario de su spec. Todavía no la llama
+nadie: las cotizaciones no existen en la API. Pero el día que existan, el importe no lo decidirá el
+navegador.
 
 **Las colecciones ya se comportan como colecciones.** Los seis listados hablan el lenguaje de
 consulta —búsqueda insensible a acentos, filtros de gramática cerrada, orden estable, sobre de
 paginación uniforme— y la interfaz guarda su estado **en la dirección**: un listado filtrado se
 comparte por enlace, retroceder deshace el último filtro y recargar no pierde nada.
 
-**La interfaz ya tiene red.** Treinta y una pruebas de extremo a extremo con Playwright, en unos
-nueve segundos, sobre un build de producción. Cubren tema, idioma, las tres guardas, la renovación
+**La interfaz ya tiene red.** Treinta y nueve pruebas de extremo a extremo con Playwright, en unos
+doce segundos, sobre un build de producción. Cubren tema, idioma, las tres guardas, la renovación
 transparente, el cierre de sesión sin recarga, el recorrido de escritura completo y la exploración
 de colecciones entera. Lo que aún no cubren está enumerado en el `tasks.md` de la 28.
 
@@ -173,7 +178,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 |---|---|---|---|
 | 12 | `migrate-warehouse-catalog` | 🟡 | Entera salvo lo que depende de documentos que no existen: las comprobaciones de compromiso necesitan las rebanadas 14 y 15 |
 | 13 | `add-transactional-stock-reservation` | ⬜ | **Bloqueada**: decisión M-04 |
-| 14 | `add-server-side-quotation-pricing` | ⬜ | **Bloqueada**: decisión M-05 |
+| 14 | `add-server-side-quotation-pricing` | 🟡 | Motor de cálculo entero y probado, 22/36. Lo que falta —recalcular al guardar, congelar al cerrar, el documento— espera a que las cotizaciones existan. La decisión M-05 sigue sin confirmar: se implementó el criterio de la spec |
 | 15 | `migrate-warehouse-orders` | ⬜ | |
 | 16 | `migrate-order-chat-realtime` | ⬜ | |
 | 17 | `migrate-shipping-rates` | ⬜ | |
@@ -210,23 +215,24 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 En este orden, y con el motivo de que sea ése:
 
-1. **Las pantallas de almacenes** (29b): el catálogo con su rejilla, el árbol de ubicaciones como
-   jerarquía navegable, y el detalle de producto con sus medidas y su disponibilidad. Es todo lo que
-   la 12 dejó hecho y no se puede mirar.
-2. **Reserva transaccional de existencias** (rebanada 13) y **cotizaciones** (14). Son lo que
-   convierte el inventario en comercio, y lo que desbloquea las tres comprobaciones de compromiso
-   que la 12 dejó anotadas. La 13 espera la decisión M-04.
-3. **Lo que queda de la 10**: prospectos, cambio de correo, y las comprobaciones de «en uso» que
-   necesitan documentos que aún no existen. El cambio de correo bloquea además la pantalla de
-   perfil, que hoy no lo ofrece.
-4. **Base de pruebas separada de la de desarrollo.** Sigue estorbando: `pnpm test` borra los datos
-   con los que se está mirando la aplicación, y ahora borra además la siembra de volumen que hace
-   falta para ver funcionar las colecciones.
-5. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
+1. **Las cotizaciones, y con ellas la reserva de existencias** (rebanada 13 y lo que queda de la
+   14). Es lo que convierte el inventario en comercio, y lo que desbloquea las tres comprobaciones
+   de compromiso que la 12 dejó anotadas. Van juntas porque no se sostienen por separado: reservar
+   es vincular unidades a **una línea de cotización**, y hoy no hay ninguna cotización en la API.
+   El orden dentro del bloque es alta de cotización y sus líneas, reconciliación de reservas con
+   bloqueo, proyección del estado sobre el inventario, retorno del equipo rentado, y por último
+   congelar el desglose al cerrar, que es lo que cierra la 14.
+2. **Lo que queda de la 10**: los prospectos. Las comprobaciones de «en uso» siguen esperando a los
+   documentos que aún no existen.
+3. **Base de pruebas separada de la de desarrollo.** Sigue estorbando: `pnpm test` borra los datos
+   con los que se está mirando la aplicación, y con ellos la siembra de volumen que hace falta para
+   ver funcionar las colecciones.
+4. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
    **recepción verificada de eventos de cobro** (07), que cierra el bloque crítico.
 
 La **medición previa al corte** de la 05 no va aquí porque no depende de nosotros: necesita tráfico
-real de la pila anterior, y su sitio es junto a la rebanada 30.
+real de la pila anterior, y su sitio es junto a la rebanada 30. La **medición de importes** de la 14
+—cuántas cotizaciones abiertas cambian y en cuánto— está en el mismo caso.
 
 ## Decisiones pendientes que bloquean
 
@@ -241,6 +247,9 @@ Ninguna bloquea el trabajo en curso. Por orden de cuándo harán falta:
 | Rebanada 10 | Si transferir la propiedad debe poder delegarse a un rol. Hoy no tiene clave en el catálogo y se exige el papel; concederla añadiría una clave que la implementación anterior no tiene | Producto |
 | Rebanada 28e | Si la licencia del editor de imagen es transferible (F-13) | Legal |
 | Rebanada 30 | Qué se hace con las cuentas existentes marcadas como verificadas | Producto |
+
+La de la 14 ya está implementada con el criterio de la spec y señalada en el código, según la regla
+5: confirmarla es cambiar una fila de la tabla de tratamiento, no reestructurar nada.
 
 Resueltas: **cómo se propaga la identidad al motor** (rebanada 06, ver D-07 y la bitácora del
 2026-08-16), **si se acepta la ventana de revocación** —no se acepta, se paga la consulta— y
@@ -1504,3 +1513,73 @@ incluidas solicitudes y confirmaciones concurrentes, dos cuentas disputando la m
 un token abierto bajo una sesión ajena. La
 base y los volcados de esquema temporales se eliminaron al terminar. También pasaron TypeScript en
 API y web, las **29 pruebas web**, Biome y el build de producción con Webpack.
+
+### 2026-08-17 · La aritmética que decide los importes
+
+Primera mitad de la **14**: el motor de cálculo de cotizaciones, entero y probado. Es una función
+pura en los contratos —sin acceso a datos, sin reloj— que recibe las líneas ya resueltas con su
+precio y su cantidad, las condiciones de pago, el bloque fiscal y la ventana de fechas, y devuelve
+el desglose con cada paso intermedio.
+
+Que sea pura no es una preferencia estética: es lo que permite que el navegador previsualice
+mientras se edita y el servidor recalcule al guardar **con la misma función**, que es el requisito
+de que la previsualización coincida. Y hace que cada escenario de la spec sea un caso de prueba
+directo, sin montar base de datos. Son treinta y nueve, uno por escenario, y el archivo dice de
+dónde viene cada uno.
+
+**Dos sitios donde el orden decide el importe**
+
+Las comisiones van **después** de los impuestos, sobre el neto. Aplicarlas antes movería la base
+imponible y con ella el importe de cada impuesto. Y el precio fijo sustituye a la base calculada
+pero **no** al descuento: el descuento global se aplica igualmente sobre él. Los dos llevan
+comentario en el código, porque son invisibles al leer y caros al equivocarse.
+
+**Una sola tabla de tratamiento fiscal**
+
+La implementación anterior aplicaba dos convenciones de signo incompatibles según se repartieran o
+no las comisiones entre líneas: una pasada calculaba `IVA + ISR − retención` y la otra
+`IVA − ISR + retención` (`DEFECTS.md` M-05). Aquí hay una tabla, en un solo lugar, y el reparto no
+la toca.
+
+Se sostiene porque **el reparto de comisiones es de presentación**: distribuye la comisión entre las
+unidades cotizadas y la incorpora al precio unitario, sin tocar la cadena de cálculo. Activarlo no
+mueve la base, ni los impuestos, ni el total —hay una prueba de cada cosa—; lo único que cambia es
+dónde aparece la comisión en el documento. El residuo va a la última línea, así que las líneas
+impresas siguen sumando exactamente lo mismo.
+
+El **ISR directo** adopta el criterio fiscal habitual —aumenta la base— y queda señalado en el
+código como pendiente de confirmación de administración. Cambiarlo, si lo confirman al revés, es una
+fila de la tabla.
+
+**Un matiz que apareció al implementar**
+
+El helper de precios de la 12 resolvía la tarifa por periodicidad de otra manera que el
+encadenamiento de la spec, y comparándolos se vio cuál de las dos ramas recae en el precio base:
+sólo la de periodicidad. Una tarifa **marcada como fija y vacía cobra cero**, no el precio del
+catálogo — marcarla fija es declarar que no se cobra por periodicidad, no pedir que se cobre otra
+cosa. Tiene su prueba y su comentario.
+
+**El documento de la cotización pasa a los contratos**
+
+Las condiciones de pago, el bloque fiscal, la tarifa por periodicidad y el desglose se declaraban en
+el esquema y son la entrada y la salida del motor. Tenerlos en dos sitios es tenerlos mal en uno de
+los dos: el día que divergieran, el importe guardado dejaría de ser el importe calculado. Ahora se
+declaran una vez, en los contratos, y el esquema los importa. No hubo migración — el tipo de una
+columna `jsonb` sólo existe en TypeScript.
+
+De paso, el bloque fiscal gana lo que le faltaba para cumplir su spec: un impuesto se **desactiva
+sin perder su porcentaje** —antes no había dónde guardar la diferencia entre «sin registrar» y
+«registrado y apagado»— y una contribución adicional declara si aumenta o disminuye la base.
+
+**Lo que no entra, y por qué**
+
+Recalcular al guardar, congelar el desglose al cerrar y el documento comercial son las otras tres
+secciones de la 14, y las tres necesitan que exista una cotización en la API. No existe ninguna
+todavía: el modelo está en la base desde la 02, pero no hay ni un endpoint. Es lo primero de lo
+siguiente, junto con la 13.
+
+**Comprobado**
+
+TypeScript en los seis paquetes, Biome, y las **432 pruebas** —98 de contratos, 59 de datos, 207 de
+API y 29 de web— y las **39 de extremo a extremo**, que se volvieron a correr en vez de darlas por
+buenas. La suite de la API volvió a vaciar la base de desarrollo, y se volvió a sembrar.

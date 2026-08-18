@@ -5,26 +5,29 @@
 - [ ] Resolver `DEFECTS.md` M-05: convención de signo del ISR directo
 - [ ] Decidir si el bloque fiscal aspira a cumplimiento formal
 
+> El motor implementa el criterio adoptado en la spec —una sola tabla, el ISR directo aumenta la
+> base— y lo deja señalado en el código. Confirmarlo es una fila de la tabla; cambiarlo también.
+
 ## Motor
 
-- [ ] Función pura en el paquete de contratos, sin acceso a datos
-- [ ] Conversión de días por frecuencia, con dos decimales
-- [ ] Redondeo opcional, conservando el valor real si redondea a cero
-- [ ] Precio de renta: fijo, por frecuencia, o precio base
-- [ ] Precio de penalización: fijo, por frecuencia, o cero
-- [ ] Descuento por producto sobre el costo unitario
-- [ ] Total de línea de renta y de venta
-- [ ] Redondeo por línea antes de sumar
-- [ ] Conceptos adicionales en el subtotal
-- [ ] Descuento global, por porcentaje o por importe
-- [ ] Precio fijo que sustituye a la base, con su descuento
-- [ ] Tabla de tratamiento fiscal, en un solo lugar
-- [ ] Comisiones sobre el neto, después de impuestos
-- [ ] Reparto exacto, con residuo a la última línea
-- [ ] Anticipo descontado del bruto
-- [ ] Penalización calculada aparte, fuera del total
-- [ ] Agrupación por producto, respetando el orden de la cotización
-- [ ] Desglose con todos los importes intermedios
+- [x] Función pura en el paquete de contratos, sin acceso a datos
+- [x] Conversión de días por frecuencia, con dos decimales
+- [x] Redondeo opcional, conservando el valor real si redondea a cero
+- [x] Precio de renta: fijo, por frecuencia, o precio base
+- [x] Precio de penalización: fijo, por frecuencia, o cero
+- [x] Descuento por producto sobre el costo unitario
+- [x] Total de línea de renta y de venta
+- [x] Redondeo por línea antes de sumar
+- [x] Conceptos adicionales en el subtotal
+- [x] Descuento global, por porcentaje o por importe
+- [x] Precio fijo que sustituye a la base, con su descuento
+- [x] Tabla de tratamiento fiscal, en un solo lugar
+- [x] Comisiones sobre el neto, después de impuestos
+- [x] Reparto exacto, con residuo a la última línea
+- [x] Anticipo descontado del bruto
+- [x] Penalización calculada aparte, fuera del total
+- [x] Agrupación por producto, respetando el orden de la cotización
+- [x] Desglose con todos los importes intermedios
 
 ## Servidor como autoridad
 
@@ -47,9 +50,9 @@
 
 ## Verificación
 
-- [ ] Un caso de prueba por cada escenario de la spec
-- [ ] Prueba: la suma de líneas es exactamente el subtotal
-- [ ] Prueba: activar el reparto no altera los impuestos
-- [ ] Prueba: el reparto suma exactamente la comisión
+- [x] Un caso de prueba por cada escenario de la spec
+- [x] Prueba: la suma de líneas es exactamente el subtotal
+- [x] Prueba: activar el reparto no altera los impuestos
+- [x] Prueba: el reparto suma exactamente la comisión
 - [ ] Prueba: cotización cerrada no cambia al duplicar tarifas
 - [ ] Medición: cuántas cotizaciones abiertas cambian de importe y en cuánto
