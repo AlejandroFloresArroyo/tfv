@@ -226,7 +226,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
 | 28 | `rebuild-ui-foundation` | 🟡 | Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial), con el **asistente por pasos**, el área de texto, el campo de importe y el selector con búsqueda. De la 28e faltan el selector de archivos, el editor enriquecido, la firma y el mapa; de la 28d, la exploración de colecciones |
-| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, contrapartes y direcciones (29a). La 29b **cierra el flujo del almacén**: alta y baja de almacén, los dos árboles editables, los **dos asistentes** de producto y de variante, la ficha corregible, existencias con etiquetas imprimibles, listas de precios con asignación masiva, y el constructor de cotizaciones con su alta. Faltan los bloques de identidad y contactos, el documento público y la conversación del pedido. 29c–29e esperan a sus rebanadas de servidor |
+| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, contrapartes y direcciones (29a). La 29b **cierra el flujo del almacén**: alta y baja de almacén, los dos árboles editables, los **dos asistentes** de producto y de variante, la ficha corregible, existencias con etiquetas imprimibles, listas de precios con asignación masiva, **el panel del almacén** y el constructor de cotizaciones entero —sus cuatro bloques se guardan solos, y la ventana de fechas rehace los días que cobra cada línea antes de guardar—. Faltan el documento público y la conversación del pedido. 29c–29e esperan a sus rebanadas de servidor |
 | 30 | `add-data-migration-and-cutover` | ⬜ | |
 
 ## Lo siguiente
