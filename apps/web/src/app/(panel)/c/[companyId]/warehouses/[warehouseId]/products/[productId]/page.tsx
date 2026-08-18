@@ -153,7 +153,11 @@ export default async function ProductPage({
             {product.measurements.length > 0 ? (
               <div className="grid gap-3 tablet:grid-cols-2">
                 {product.measurements.map((measurement) => (
-                  <MeasurementCard key={measurement.id} measurement={measurement} />
+                  <MeasurementCard
+                    key={measurement.id}
+                    measurement={measurement}
+                    href={`/c/${companyId}/warehouses/${warehouseId}/products/${productId}/measurements/${measurement.id}`}
+                  />
                 ))}
               </div>
             ) : (
@@ -242,7 +246,14 @@ export default async function ProductPage({
   )
 }
 
-async function MeasurementCard({ measurement }: { measurement: MeasurementRow }) {
+async function MeasurementCard({
+  measurement,
+  href,
+}: {
+  measurement: MeasurementRow
+  /** A sus unidades: la medida es el recuento, y las unidades son los objetos que lo componen. */
+  href: string
+}) {
   const t = await getTranslations()
   const format = await getFormatter()
   const available = measurement.units.available ?? 0
@@ -279,7 +290,14 @@ async function MeasurementCard({ measurement }: { measurement: MeasurementRow })
     <Panel className="p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="truncate text-body1 font-bold text-content">{measurement.name}</h3>
+          <h3 className="truncate text-body1 font-bold text-content">
+            <Link
+              href={href}
+              className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+            >
+              {measurement.name}
+            </Link>
+          </h3>
           <p className="text-body3 text-content-faint">
             {t(`warehouses.measurements.kind.${measurement.kind}`)}
           </p>
