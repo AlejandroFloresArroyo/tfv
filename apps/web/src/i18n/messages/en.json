@@ -15,6 +15,21 @@
       "occupied": "That email already belongs to another account.",
       "networkError": "We couldn't request the change. Check your connection and try again."
     },
+    "passwordChange": {
+      "title": "Change password",
+      "description": "We need your current one to confirm it's you.",
+      "current": "Current password",
+      "new": "New password",
+      "newHint": "At least 12 characters. Nothing from the most used ones.",
+      "again": "Repeat the new password",
+      "show": "Show the password",
+      "hide": "Hide the password",
+      "mismatch": "The two don't match.",
+      "wrongCurrent": "That isn't your current password.",
+      "rejected": "That password doesn't meet the requirements. Try a longer or less common one.",
+      "signsOut": "Changing it closes every session, including this one: you'll have to sign in again with the new password.",
+      "submit": "Change the password"
+    },
     "sessions": {
       "title": "Active sessions",
       "subtitle": "Each row is a browser with an open session. Closing them all signs you out here too.",

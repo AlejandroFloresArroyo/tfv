@@ -15,6 +15,21 @@
       "occupied": "Ese correo ya pertenece a otra cuenta.",
       "networkError": "No pudimos solicitar el cambio. Revisa tu conexión e inténtalo de nuevo."
     },
+    "passwordChange": {
+      "title": "Cambiar contraseña",
+      "description": "Necesitamos la actual para confirmar que eres tú.",
+      "current": "Contraseña actual",
+      "new": "Contraseña nueva",
+      "newHint": "Al menos 12 caracteres. Nada de las contraseñas más usadas.",
+      "again": "Repite la contraseña nueva",
+      "show": "Mostrar la contraseña",
+      "hide": "Ocultar la contraseña",
+      "mismatch": "Las dos no coinciden.",
+      "wrongCurrent": "Esa no es tu contraseña actual.",
+      "rejected": "Esa contraseña no cumple los requisitos. Prueba con una más larga o menos común.",
+      "signsOut": "Al cambiarla se cierran todas tus sesiones, incluida ésta: tendrás que entrar de nuevo con la contraseña nueva.",
+      "submit": "Cambiar la contraseña"
+    },
     "sessions": {
       "title": "Sesiones activas",
       "subtitle": "Cada renglón es un navegador con la sesión abierta. Cerrarlas todas te obliga a entrar de nuevo aquí también.",
