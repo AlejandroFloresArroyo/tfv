@@ -35,12 +35,15 @@ import {
   deleteProductRoute,
   deleteWarehouseCategoryRoute,
   getProductRoute,
+  getWarehouseCategoryRoute,
   listProductsRoute,
   listWarehouseCategoriesRoute,
   productScopeRoute,
   updateMeasurementRoute,
   updateProductRoute,
   updateWarehouseCategoryRoute,
+  warehouseCategoryPathRoute,
+  warehouseCategoryScopeRoute,
 } from "./catalog.ts"
 import {
   addMemberRoute,
@@ -248,8 +251,11 @@ export const routes: readonly RegisteredRoute[] = [
   deleteStorageRoute,
 
   listWarehouseCategoriesRoute,
+  getWarehouseCategoryRoute,
+  warehouseCategoryPathRoute,
   createWarehouseCategoryRoute,
   updateWarehouseCategoryRoute,
+  warehouseCategoryScopeRoute,
   deleteWarehouseCategoryRoute,
 
   listProductsRoute,
