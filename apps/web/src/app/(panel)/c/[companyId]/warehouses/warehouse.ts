@@ -268,3 +268,24 @@ export interface StorageScope {
   /** Productos que quedarán **sin ubicación**. No se eliminan. */
   products: number
 }
+
+/**
+ * Una categoría del almacén.
+ *
+ * Es el otro árbol, y no trae recuento de productos: el del catálogo se pregunta al listado de
+ * productos, que es quien sabe expandir el filtro a las descendientes.
+ */
+export interface WarehouseCategoryRow {
+  id: string
+  warehouseId: string
+  parentId: string | null
+  name: string
+  description: string
+  /** Único **dentro de su almacén**, no del mundo: dos naves pueden tener «vestuario». */
+  slug: string | null
+  color: string | null
+  icon: string | null
+  childCount: number
+  createdAt: string
+  updatedAt: string
+}
