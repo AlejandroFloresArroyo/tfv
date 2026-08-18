@@ -110,27 +110,28 @@ Lo construido hasta ahora, medido y no estimado:
 | | |
 |---|---|
 | Rebanadas | 10 de 30 empezadas, **ninguna cerrada del todo** |
-| Código sin pruebas | 30 197 líneas |
-| Código de prueba | 9 743 líneas |
-| Pruebas | **479** — 98 contratos, 59 datos, 254 API, 29 web, 39 de extremo a extremo |
+| Código sin pruebas | 31 130 líneas |
+| Código de prueba | 9 973 líneas |
+| Pruebas | **488** — 98 contratos, 59 datos, 258 API, 29 web, 44 de extremo a extremo |
 | Esquema | 91 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
 | Aislamiento | 195 políticas · 91/91 tablas · 0 con identidad cruda |
 | Migraciones | 11, replicadas desde cero en cada verificación |
 | Rutas | **104** registradas, 81 con permiso declarado, 10 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 17, en español e inglés (261 mensajes, sin desalinear) |
+| Pantallas | 23, en español e inglés (426 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
 colecciones explorables** y **el almacén entero, del catálogo a las existencias**. La parte ancha
 del trabajo siguen siendo las rebanadas 08 a 27; la 10 está casi entera y las demás sin tocar.
 
-**El inventario ya es comercio.** Hay cotizaciones, y reservan equipo de verdad: unidades
-concretas apartadas con bloqueo, reconciliadas por diferencia, proyectadas sobre el inventario al
-cambiar de estado y devueltas con un retorno explícito. El importe lo calcula el servidor con la
-misma función pura que usará el navegador, y se congela al cerrar. Es la corrección de los tres
-defectos más caros del servicio: la reserva sin atomicidad, la acuñación silenciosa de inventario y
-el motor de cálculo viviendo en el cliente.
+**El inventario ya es comercio, y se puede mirar.** Hay cotizaciones, y reservan equipo de verdad:
+unidades concretas apartadas con bloqueo, reconciliadas por diferencia, proyectadas sobre el
+inventario al cambiar de estado y devueltas con un retorno explícito. El importe lo calcula el
+servidor con la misma función pura que usará el navegador, y se congela al cerrar. Es la corrección
+de los tres defectos más caros del servicio: la reserva sin atomicidad, la acuñación silenciosa de
+inventario y el motor de cálculo viviendo en el cliente. La bandeja de trabajo y la ficha ya
+enseñan todo eso; falta el editor, que es la parte que escribe.
 
 **Las colecciones ya se comportan como colecciones.** Los seis listados hablan el lenguaje de
 consulta —búsqueda insensible a acentos, filtros de gramática cerrada, orden estable, sobre de
@@ -214,25 +215,24 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
 | 28 | `rebuild-ui-foundation` | 🟡 | Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial). Falta la exploración de colecciones (28d) y, de la 28e, el asistente por pasos y los controles ricos |
-| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, clientes, proveedores y direcciones de empresa. El resto de la 29a espera a la facturación y a la bitácora; 29b–29e, a sus rebanadas de servidor |
+| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, contrapartes y direcciones (29a); catálogo, árbol de ubicaciones, ficha de producto y **cotizaciones** de sólo lectura (29b). Falta la parte que escribe: asistentes de producto y constructor de cotizaciones. 29c–29e esperan a sus rebanadas de servidor |
 | 30 | `add-data-migration-and-cutover` | ⬜ | |
 
 ## Lo siguiente
 
 En este orden, y con el motivo de que sea ése:
 
-1. **Las pantallas de cotización** (29b): la bandeja de trabajo, el editor de líneas con su
-   disponibilidad, el desglose de importes y el retorno del equipo. Es todo lo que las rebanadas 13
-   y 14 acaban de dejar hecho y no se puede mirar, y es lo que cierra las dos tareas que quedan de
-   la 14 —que la interfaz consuma la misma función de cálculo, en vez de reimplementarla—.
+1. **El constructor de cotizaciones** (29b): el editor de líneas con la disponibilidad delante, el
+   cambio de estado y el registro del retorno. Es la parte que **escribe**, y es la que cierra las
+   dos tareas que le quedan a la 14 —que la interfaz consuma la misma función de cálculo para
+   previsualizar mientras se edita, en vez de reimplementarla—. La de sólo lectura ya está.
 2. **Pedidos de almacén** (rebanada 15). Es lo que da entrada a las cotizaciones desde fuera:
    aceptar un pedido crea su cotización con las líneas y el inventario ya apartado, que es la
    transición central del servicio. Se apoya entera en lo que acaba de quedar construido.
 3. **Lo que queda de la 10**: los prospectos. Las comprobaciones de «en uso» siguen esperando a los
    documentos que aún no existen.
 4. **Base de pruebas separada de la de desarrollo.** Sigue estorbando: `pnpm test` borra los datos
-   con los que se está mirando la aplicación, y con ellos la siembra de volumen que hace falta para
-   ver funcionar las colecciones.
+   con los que se está mirando la aplicación, y con ellos la siembra de volumen y las cotizaciones.
 5. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
    **recepción verificada de eventos de cobro** (07), que cierra el bloque crítico.
 
@@ -1711,3 +1711,56 @@ anotada sólo en el diff no la encuentra nadie.
 **Comprobado**
 
 TypeScript, Biome y las **257 pruebas de API**, cincuenta de ellas de cotizaciones.
+
+### 2026-08-17 · La cotización se puede mirar
+
+Primer incremento visible de las 13 y 14: la **bandeja de trabajo** y la **ficha**. Dos rutas de
+pantalla nuevas y una entrada más en la navegación del almacén, con su permiso.
+
+**La bandeja no decide el orden.** Llega ordenada por la prioridad que el servidor deriva del
+estado —una columna calculada, no un valor que nadie escribe—, así que lo que hay que atender antes
+sale antes sin que la pantalla opine. Ordenarla aquí desharía esa derivación, que es justo lo que la
+hace fiable.
+
+La ficha enseña el equipo apartado línea a línea y el desglose entero: cada impuesto por separado,
+comisiones, anticipo y total. Y dice si los importes están **congelados** o si todavía se mueven,
+porque un total que puede cambiar mañana y otro que no volverá a moverse se leen distinto.
+
+**Una petición por cotización, no una por línea**
+
+Las líneas devolvían el identificador de la medida y nada más, que a quien lee el documento no le
+dice nada. Resolverlos uno a uno habría convertido una cotización de doce líneas en trece
+peticiones — el mismo error que la rejilla del catálogo evitó no incluyendo la disponibilidad. Ahora
+la línea trae el producto y la medida por su nombre, como la localización por código devuelve el
+camino entero.
+
+**Los importes no pasan por coma flotante ni para pintarse**
+
+Dos decimales caben de sobra en un flotante, y por eso es tentador convertir la cadena decimal para
+formatearla. Se agrupa la parte entera con las convenciones del idioma y se vuelve a pegar la
+fracción, sin `Number` en ningún punto: convertir para pintar es el hábito que acaba con un total
+mostrado que no coincide con el cobrado.
+
+**El tono de la insignia dice la fase, no si va bien**
+
+Cancelada es peligro y completada es éxito, pero **en renta es aviso**: hay equipo fuera de la nave,
+que es la situación que alguien tiene que vigilar. Pintarla de verde por estar «avanzada»
+escondería justo lo que hay que mirar.
+
+**La siembra deja cuatro cotizaciones en cuatro estados**
+
+Como todo lo demás de esa siembra, los estados difieren a propósito: con cuatro pendientes, el orden
+por prioridad se comportaría igual estuviera bien o mal. Su inventario queda proyectado, de modo que
+la verificación de coherencia pasa sobre la base sembrada en vez de encontrarse un descuadre nacido
+ahí. Todas nacen abiertas: congelar un desglose a mano en la siembra sería reimplementar la
+transición.
+
+**Comprobado**
+
+TypeScript en los seis paquetes, Biome, las **444 pruebas** de vitest y las **44 de extremo a
+extremo**, cuatro de ellas nuevas. El build de producción con Webpack genera las dos rutas.
+
+Una nota de entorno: la primera pasada de extremo a extremo falló entera porque el proceso de la API
+llevaba horas levantado sin recarga y servía un registro de rutas anterior a las cotizaciones. No
+era un fallo del código, pero costó una vuelta entera de diagnóstico — el arranque sin vigilancia
+no avisa de que está viejo.

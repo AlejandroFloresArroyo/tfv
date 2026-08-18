@@ -28,14 +28,15 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 ## 29b · Almacenes
 
 - [ ] Almacenes y su panel
-- [ ] Catálogo con rejilla, filtros y paginación
+- [x] Catálogo con rejilla, filtros y paginación
 - [ ] **Asistente de producto de cinco pasos**
 - [ ] **Asistente de variante de cuatro pasos**
 - [ ] Detalle de producto: información, medidas, precios, unidades
 - [ ] Unidades con etiquetas individuales y en lote
 - [ ] Listas de precios
 - [ ] Categorías anidadas
-- [ ] **Ubicaciones como organigrama navegable**
+- [x] **Ubicaciones como organigrama navegable**
+- [x] Bandeja de cotizaciones y ficha, con su equipo apartado y sus importes
 - [ ] **Constructor de cotizaciones**, con sus pasos y sus bloques de edición
 - [ ] Documento de cotización y su enlace público
 - [ ] Pedidos con aceptación y rechazo
