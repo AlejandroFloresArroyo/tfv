@@ -63,6 +63,7 @@ interface Quote {
   id: string
   code: string
   folio: string
+  extendsQuoteId: string | null
   name: string
   type: "rent" | "sale"
   status: string
@@ -1281,6 +1282,153 @@ describe("pagos cobrados contra la cotización", () => {
 
     expect(response.status).toBe(404)
     expect((await breakdownOf(other.id)).collected).toBe("50.00")
+  })
+})
+
+describe("extensión de una renta", () => {
+  async function liveRental(quantity: number) {
+    const { quote, measurementId } = await stockedQuote(quantity)
+    await moveTo(quote.id, "in_progress")
+    await moveTo(quote.id, "in_rent")
+    return { quote, measurementId }
+  }
+
+  function extend(quoteId: string, body: unknown) {
+    return request("POST", `${base}/quotes/${quoteId}/extensions`, body, cookie)
+  }
+
+  it("traspasa los vínculos sin que la unidad pase por disponible", async () => {
+    // Es la razón de que exista: alargar una renta editándola sería soltar y volver a apartar, y
+    // entre las dos cosas la unidad estaría libre para que otra cotización se la llevara.
+    await clearQuotes()
+    const { quote, measurementId } = await liveRental(3)
+    const out = await unitsOf(measurementId)
+
+    const created = await extend(quote.id, {
+      startsOn: "2026-10-01T00:00:00.000Z",
+      endsOn: "2026-10-15T00:00:00.000Z",
+      unitIds: out.map((unit) => unit.id),
+    })
+    expect(created.status).toBe(201)
+
+    const extension = await json<Quote>(created)
+    expect(extension.status).toBe("in_rent")
+    expect(extension.extendsQuoteId).toBe(quote.id)
+
+    // El equipo no se movió: sigue fuera, y ahora responde a la extensión.
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ rented: 3 })
+    const held = await json<{ items: { id: string }[] }>(
+      await request("GET", `${base}/quotes/${extension.id}/units`, undefined, cookie),
+    )
+    expect(held.items).toHaveLength(3)
+
+    // Y la original se queda sin nada que reclamar.
+    const original = await json<{ items: unknown[] }>(
+      await request("GET", `${base}/quotes/${quote.id}/units`, undefined, cookie),
+    )
+    expect(original.items).toHaveLength(0)
+  })
+
+  it("puede ser parcial: lo que no sigue se queda con la original", async () => {
+    await clearQuotes()
+    const { quote, measurementId } = await liveRental(4)
+    const out = await unitsOf(measurementId)
+
+    const extension = await json<Quote>(
+      await extend(quote.id, {
+        startsOn: "2026-10-01T00:00:00.000Z",
+        endsOn: "2026-10-15T00:00:00.000Z",
+        unitIds: out.slice(0, 2).map((unit) => unit.id),
+      }),
+    )
+
+    const kept = await json<{ items: unknown[] }>(
+      await request("GET", `${base}/quotes/${extension.id}/units`, undefined, cookie),
+    )
+    const back = await json<{ items: unknown[] }>(
+      await request("GET", `${base}/quotes/${quote.id}/units`, undefined, cookie),
+    )
+
+    expect(kept.items).toHaveLength(2)
+    expect(back.items).toHaveLength(2)
+    // Las cuatro siguen fuera: una extensión parcial no devuelve nada por su cuenta.
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ rented: 4 })
+  })
+
+  it("es encadenable", async () => {
+    await clearQuotes()
+    const { quote, measurementId } = await liveRental(2)
+    const out = await unitsOf(measurementId)
+    const unitIds = out.map((unit) => unit.id)
+
+    const first = await json<Quote>(
+      await extend(quote.id, {
+        startsOn: "2026-10-01T00:00:00.000Z",
+        endsOn: "2026-10-15T00:00:00.000Z",
+        unitIds,
+      }),
+    )
+    const second = await json<Quote>(
+      await extend(first.id, {
+        startsOn: "2026-10-15T00:00:00.000Z",
+        endsOn: "2026-10-31T00:00:00.000Z",
+        unitIds,
+      }),
+    )
+
+    expect(second.extendsQuoteId).toBe(first.id)
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ rented: 2 })
+  })
+
+  it("no extiende con una unidad que no salió con esa renta", async () => {
+    await clearQuotes()
+    const { quote } = await liveRental(2)
+    const foreign = await newStocked("Ajena", 1)
+    const [unit] = await unitsOf(foreign)
+
+    const response = await extend(quote.id, {
+      startsOn: "2026-10-01T00:00:00.000Z",
+      endsOn: "2026-10-15T00:00:00.000Z",
+      unitIds: [unit?.id],
+    })
+
+    expect(response.status).toBe(422)
+  })
+
+  it("no extiende una cotización sin equipo fuera", async () => {
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(2)
+    const held = await unitsOf(measurementId)
+
+    const response = await extend(quote.id, {
+      startsOn: "2026-10-01T00:00:00.000Z",
+      endsOn: "2026-10-15T00:00:00.000Z",
+      unitIds: held.map((unit) => unit.id),
+    })
+
+    expect(response.status).toBe(422)
+  })
+
+  it("la extensión nace sin precio negociado: su periodo es otro", async () => {
+    // Copiar el importe pactado para dos semanas a una extensión de un mes sería cobrar mal y
+    // parecer que alguien lo decidió.
+    await clearQuotes()
+    const { quote, measurementId } = await liveRental(2)
+    const [line] = await linesOf(quote.id)
+    await setLines(quote.id, [{ id: line?.id, measurementId, quantity: 2, price: "5000.00" }])
+    const out = await unitsOf(measurementId)
+
+    const extension = await json<Quote>(
+      await extend(quote.id, {
+        startsOn: "2026-10-01T00:00:00.000Z",
+        endsOn: "2026-10-31T00:00:00.000Z",
+        unitIds: out.map((unit) => unit.id),
+      }),
+    )
+
+    const [copied] = await linesOf(extension.id)
+    expect(copied?.price).toBeNull()
+    expect(copied?.quantity).toBe(2)
   })
 })
 

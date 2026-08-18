@@ -101,6 +101,8 @@ export interface QuoteRecord {
   readonly id: string
   readonly warehouseId: string
   readonly orderId: string | null
+  /** La renta que ésta extiende, si lo es. */
+  readonly extendsQuoteId: string | null
   readonly clientId: string | null
   readonly responsibleId: string | null
   readonly code: string
@@ -640,7 +642,7 @@ export async function reservationCoherence(
 /** Mismo alfabeto que el resto de códigos: sin caracteres que se confundan al dictarlos. */
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
-function quoteCode(): string {
+export function quoteCode(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(12))
   return Array.from(bytes, (byte) => ALPHABET[byte % ALPHABET.length]).join("")
 }
@@ -656,7 +658,7 @@ function quoteCode(): string {
  * Cuenta **también las dadas de baja**, para que el correlativo no reutilice un número que ya
  * apareció en un documento impreso.
  */
-async function nextFolio(tx: Transaction, warehouseId: string): Promise<string> {
+export async function nextFolio(tx: Transaction, warehouseId: string): Promise<string> {
   await tx
     .select({ id: warehouses.id })
     .from(warehouses)
@@ -720,11 +722,12 @@ export async function loadQuote(tx: Transaction, warehouseId: string, quoteId: s
   return row
 }
 
-function toRecord(row: typeof warehouseQuotes.$inferSelect): QuoteRecord {
+export function toRecord(row: typeof warehouseQuotes.$inferSelect): QuoteRecord {
   return {
     id: row.id,
     warehouseId: row.warehouseId,
     orderId: row.orderId,
+    extendsQuoteId: row.extendsQuoteId,
     clientId: row.clientId,
     responsibleId: row.responsibleId,
     code: row.code,

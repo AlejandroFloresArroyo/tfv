@@ -17,6 +17,7 @@ import { allows } from "../auth/authorization.ts"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import { defineRoute, REQUIRES } from "../runtime/route.ts"
+import { extendRental } from "../warehouses/extensions.ts"
 import {
   deletePayment,
   listPayments,
@@ -130,6 +131,8 @@ const quoteSchema = z.object({
   id: z.string(),
   warehouseId: z.string(),
   orderId: z.string().nullable(),
+  /** La renta que ésta extiende, si lo es. Encadenable. */
+  extendsQuoteId: z.string().nullable(),
   clientId: z.string().nullable(),
   responsibleId: z.string().nullable(),
   code: z.string(),
@@ -795,6 +798,71 @@ const paymentSchema = z.object({
 function serializePayment(payment: PaymentRecord) {
   return { ...payment, createdAt: payment.createdAt.toISOString() }
 }
+
+/**
+ * Extender una renta.
+ *
+ * Exige la clave de **alta** en la ruta y además la de **sacar equipo** en el manejador: una
+ * extensión nace en renta y se lleva el equipo que ya estaba fuera, así que quien la crea está
+ * haciendo las dos cosas. Es el mismo reparto que el cambio de estado — la ruta declara la general
+ * y el manejador exige la del destino (ver H-07).
+ */
+export const extendQuoteRoute = defineRoute({
+  access: REQUIRES("warehouses.quotes.create"),
+  config: {
+    method: "post",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/quotes/{quoteId}/extensions",
+    summary: "Extender una renta con el equipo que sigue fuera",
+    tags: ["Cotizaciones"],
+    request: {
+      params: quoteParams,
+      body: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              startsOn: instant,
+              endsOn: instant,
+              name: z.string().trim().max(250).optional(),
+              description: z.string().max(4000).optional(),
+              /** Las unidades que siguen fuera. Lo que no figure vuelve con la renta original. */
+              unitIds: z.array(z.string()).min(1).max(500),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "La extensión, ya en renta y con los vínculos traspasados",
+        content: { "application/json": { schema: quoteSchema } },
+      },
+      403: { description: "Falta la clave de sacar equipo" },
+      422: { description: "El equipo no salió con esa renta, o la ventana no se sostiene" },
+    },
+  },
+  handler: async (c) => {
+    if (!allows(c.get("authorization"), "warehouses.quotes.rented")) {
+      throw missingPermission("warehouses.quotes.rented")
+    }
+
+    const params = c.req.valid("param")
+    const body = c.req.valid("json")
+    const extension = await extendRental(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.quoteId,
+      {
+        startsOn: new Date(body.startsOn),
+        endsOn: new Date(body.endsOn),
+        ...(body.name === undefined ? {} : { name: body.name }),
+        ...(body.description === undefined ? {} : { description: body.description }),
+        unitIds: body.unitIds,
+      },
+    )
+    return c.json(serializeQuote(extension), 201)
+  },
+})
 
 export const listQuotePaymentsRoute = defineRoute({
   access: REQUIRES("warehouses.quotes.view"),

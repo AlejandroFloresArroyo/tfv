@@ -85,6 +85,7 @@ import {
   createQuoteRoute,
   deleteQuotePaymentRoute,
   deleteQuoteRoute,
+  extendQuoteRoute,
   getQuoteRoute,
   listQuoteLinesRoute,
   listQuotePaymentsRoute,
@@ -266,6 +267,7 @@ export const routes: readonly RegisteredRoute[] = [
   listQuotePaymentsRoute,
   registerQuotePaymentRoute,
   deleteQuotePaymentRoute,
+  extendQuoteRoute,
   reservationCoherenceRoute,
   deleteQuoteRoute,
 
