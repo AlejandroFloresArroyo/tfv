@@ -268,6 +268,62 @@ sin devolver: primero se registra el retorno.
 - **WHEN** se cancela
 - **THEN** se acepta
 
+### Requirement: Extensión de una renta
+
+Una renta con equipo fuera SHALL poder extenderse creando una **cotización nueva enlazada** a la
+original, con su propia ventana.
+
+La extensión SHALL recibir los **vínculos vivos** de las unidades que continúan, sin que esas
+unidades pasen por disponible en ningún momento. Las unidades que no continúen SHALL quedarse con la
+renta original para su retorno.
+
+SHALL poder ser **parcial** y SHALL ser **encadenable**: una extensión se extiende igual que una
+renta.
+
+La extensión SHALL nacer en renta, y NO SHALL heredar el precio negociado de las líneas ni las
+condiciones de pago de la original.
+
+> Nace en renta, y no en borrador, porque **la cantidad de una línea es cuántas unidades sujeta**:
+> una extensión en borrador sin vínculos vale cero y no se puede negociar un precio que no se ve. Y
+> con los vínculos ya traspasados, un estado abierto proyectaría «en cotización» mientras las
+> unidades están rentadas, de modo que la verificación de coherencia la marcaría con razón.
+>
+> El precio negociado es «el total de la línea para el periodo completo». Arrastrar el importe de
+> dos semanas a una extensión de un mes sería cobrar mal y parecer que alguien lo decidió.
+
+#### Scenario: Los vínculos se traspasan sin soltar el equipo
+
+- **GIVEN** una renta en curso con tres unidades fuera
+- **WHEN** se extiende nombrando las tres
+- **THEN** la extensión queda en renta, enlazada a la original
+- **AND** las tres siguen rentadas y ahora responden a la extensión
+- **AND** la original se queda sin equipo que reclamar
+
+#### Scenario: Una extensión parcial deja el resto con la original
+
+- **GIVEN** una renta en curso con cuatro unidades fuera
+- **WHEN** se extiende nombrando dos
+- **THEN** la extensión reclama dos y la original las otras dos
+- **AND** las cuatro siguen fuera
+
+#### Scenario: Una extensión se extiende
+
+- **GIVEN** una extensión en curso
+- **WHEN** se extiende a su vez
+- **THEN** la segunda queda enlazada a la primera
+
+#### Scenario: No se extiende lo que no salió
+
+- **GIVEN** una renta en curso
+- **WHEN** se intenta extender nombrando una unidad de otra cotización
+- **THEN** se rechaza
+
+#### Scenario: No se adelanta una renta que no ha salido
+
+- **GIVEN** una cotización con equipo apartado pero dentro de la nave
+- **WHEN** se intenta extender
+- **THEN** se rechaza
+
 ### Requirement: Prioridad derivada del estado
 
 Una cotización SHALL exponer una prioridad de presentación derivada de su estado, mayor cuanto más

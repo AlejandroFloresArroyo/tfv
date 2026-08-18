@@ -1,0 +1,3 @@
+ALTER TABLE "warehouse_quotes" ADD COLUMN "extends_quote_id" uuid;--> statement-breakpoint
+ALTER TABLE "warehouse_quotes" ADD CONSTRAINT "warehouse_quotes_extends_fk" FOREIGN KEY ("extends_quote_id") REFERENCES "public"."warehouse_quotes"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "warehouse_quotes_extends_idx" ON "warehouse_quotes" USING btree ("extends_quote_id");

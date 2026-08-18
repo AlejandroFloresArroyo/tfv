@@ -85,6 +85,13 @@
       "when": 1787031606647,
       "tag": "0011_precio_negociado_y_producto_provisional",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787043405761,
+      "tag": "0012_extension_de_renta",
+      "breakpoints": true
     }
   ]
 }

@@ -235,6 +235,21 @@ export const warehouseQuotes = pgTable(
       .notNull()
       .references(() => warehouses.id, { onDelete: "cascade" }),
     orderId: reference("order_id").references(() => warehouseOrders.id, { onDelete: "set null" }),
+
+    /**
+     * La renta que esta cotización **extiende**.
+     *
+     * Una renta no se alarga editándola: su equipo está fuera y sus líneas se congelan. Se crea una
+     * cotización nueva, enlazada, que puede llevar sólo parte del equipo —lo que no siga vuelve con
+     * la original— y que recibe **los vínculos vivos** de las unidades que continúan, sin que
+     * pasen un instante por «disponible».
+     *
+     * Es encadenable: extender una extensión es extender.
+     *
+     * `set null` y no `cascade`: borrar la renta original no debe llevarse por delante la extensión
+     * viva, que es la que sujeta el equipo que sigue en la calle.
+     */
+    extendsQuoteId: reference("extends_quote_id"),
     clientId: reference("client_id").references(() => counterparties.id, { onDelete: "set null" }),
     responsibleId: reference("responsible_id").references(() => users.id, { onDelete: "set null" }),
 
@@ -307,6 +322,18 @@ export const warehouseQuotes = pgTable(
       .on(table.warehouseId, table.priority, table.createdAt)
       .where(sql`deleted_at IS NULL`),
     index("warehouse_quotes_client_idx").on(table.clientId),
+    /**
+     * La renta que esta cotización extiende. **Autorreferencia.**
+     *
+     * `set null` y no en cascada: dar de baja la renta original no puede llevarse por delante la
+     * extensión viva, que es la que sujeta el equipo que sigue en la calle.
+     */
+    foreignKey({
+      columns: [table.extendsQuoteId],
+      foreignColumns: [table.id],
+      name: "warehouse_quotes_extends_fk",
+    }).onDelete("set null"),
+    index("warehouse_quotes_extends_idx").on(table.extendsQuoteId),
   ],
 )
 
