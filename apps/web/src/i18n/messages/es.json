@@ -620,7 +620,8 @@
       },
       "discountAsRate": "Descuento (%)",
       "discountAsAmount": "Descuento (importe)",
-      "linesFrozen": "El equipo de esta cotización ya salió de la nave. Las líneas no se modifican hasta que vuelva: regístralo en el retorno del equipo, más abajo."
+      "linesFrozen": "El equipo de esta cotización ya salió de la nave. Las líneas no se modifican hasta que vuelva: regístralo en el retorno del equipo, más abajo.",
+      "unpricedLine": "Nadie fijó precio para esta línea. No es que sea gratis."
     }
   }
 }

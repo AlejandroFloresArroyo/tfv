@@ -235,7 +235,8 @@ export default async function QuotePage({
                                   value={
                                     // Ausente en una línea con precio negociado: su total no se
                                     // reparte exacto entre las unidades. Un guion dice la verdad.
-                                    amounts.unitCost === undefined
+                                    // Y sin precio fijado tampoco hay unitario que enseñar.
+                                    amounts.unpriced || amounts.unitCost === undefined
                                       ? "—"
                                       : formatAmount(amounts.unitCost, format)
                                   }
@@ -248,9 +249,19 @@ export default async function QuotePage({
                                 ) : null}
                                 <Row
                                   label={t("warehouses.quotes.lineTotal")}
-                                  value={formatAmount(amounts.total, format)}
+                                  value={
+                                    // `0.00` diría que es gratis. Nadie le puso precio, que es otra
+                                    // cosa — la misma distinción que hace el editor.
+                                    amounts.unpriced ? "—" : formatAmount(amounts.total, format)
+                                  }
                                 />
                               </dl>
+
+                              {amounts.unpriced ? (
+                                <p className="mt-3 text-body3 text-warning">
+                                  {t("warehouses.quotes.unpricedLine")}
+                                </p>
+                              ) : null}
                             </>
                           ) : null}
                         </Panel>

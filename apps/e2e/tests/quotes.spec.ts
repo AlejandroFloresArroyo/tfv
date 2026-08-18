@@ -40,39 +40,49 @@ async function ownQuote(
   trash: Created[],
   units = 0,
 ): Promise<string> {
-  const lines: { measurementId: string; quantity: number }[] = []
-
-  if (units > 0) {
-    const rates = await context.request.get(
-      `/api/companies/${companyId}/warehouses/${warehouseId}/rates?availableForRent=true&limit=30`,
-    )
-    expect(rates.ok(), "no se pudieron leer las tarifas").toBe(true)
-    const { items } = (await rates.json()) as {
-      items: { measurementId: string; available: number }[]
-    }
-    // **Al azar entre las que dan de sí**, no la más abundante: quedarse siempre con la mejor hace
-    // que todas las pruebas que corren a la vez se peleen por la misma medida y la dejen seca.
-    const roomy = items.filter((item) => item.available >= units)
-    const measurementId = roomy[Math.floor(Math.random() * roomy.length)]?.measurementId
-    expect(measurementId, "el almacén no tiene equipo libre que rentar").toBeTruthy()
-    lines.push({ measurementId: measurementId as string, quantity: units })
-  }
-
-  const created = await context.request.post(
-    `/api/companies/${companyId}/warehouses/${warehouseId}/quotes`,
-    {
+  const warehouse = `/api/companies/${companyId}/warehouses/${warehouseId}`
+  const attempt = async (measurementId?: string) =>
+    await context.request.post(`${warehouse}/quotes`, {
       data: {
         type: "rent",
         name,
         startsOn: "2026-09-03T00:00:00.000Z",
         endsOn: "2026-09-10T00:00:00.000Z",
-        ...(lines.length > 0 ? { lines } : {}),
+        ...(measurementId === undefined ? {} : { lines: [{ measurementId, quantity: units }] }),
       },
-    },
-  )
-  expect(created.ok(), `no se pudo crear ${name}: ${await created.text()}`).toBe(true)
+    })
 
-  const quote = (await created.json()) as { id: string }
+  let created = units > 0 ? undefined : await attempt()
+
+  if (units > 0) {
+    const rates = await context.request.get(`${warehouse}/rates?availableForRent=true&limit=30`)
+    expect(rates.ok(), "no se pudieron leer las tarifas").toBe(true)
+    const { items } = (await rates.json()) as {
+      items: { measurementId: string; available: number }[]
+    }
+
+    // **En orden aleatorio, y reintentando.** Quedarse siempre con la más abundante hace que todas
+    // las pruebas que corren a la vez se peleen por la misma medida; y aun eligiendo al azar, otra
+    // prueba puede haberse llevado esas unidades entre la consulta y el alta. La existencia libre
+    // que se leyó hace un instante es una foto, no una reserva.
+    const roomy = items
+      .filter((item) => item.available >= units)
+      .map((item) => ({ item, order: Math.random() }))
+      .sort((a, b) => a.order - b.order)
+      .map(({ item }) => item)
+    expect(roomy.length, "el almacén no tiene equipo libre que rentar").toBeGreaterThan(0)
+
+    for (const { measurementId } of roomy) {
+      created = await attempt(measurementId)
+      if (created.ok()) break
+    }
+  }
+
+  expect(created?.ok(), `no se pudo crear ${name}: ${await created?.text()}`).toBe(true)
+
+  const quote = (await (created as import("@playwright/test").APIResponse).json()) as {
+    id: string
+  }
   trash.push({ companyId, warehouseId, quoteId: quote.id })
   return quote.id
 }
@@ -87,6 +97,21 @@ async function ownQuote(
 async function sweep(context: import("@playwright/test").BrowserContext, trash: Created[]) {
   for (const { companyId, warehouseId, quoteId } of trash.splice(0)) {
     const base = `/api/companies/${companyId}/warehouses/${warehouseId}/quotes/${quoteId}`
+
+    // Primero el retorno de lo que esté fuera: cancelar proyecta el inventario a disponible, y con
+    // el equipo en la calle el servidor lo rechaza —con razón, porque escribiría que hay cámaras
+    // en el estante que no están.
+    const out = await context.request.get(`${base}/units`)
+    if (out.ok()) {
+      const { items } = (await out.json()) as { items: { id: string; status: string }[] }
+      const rented = items.filter((unit) => unit.status === "rented")
+      if (rented.length > 0) {
+        await context.request.post(`${base}/returns`, {
+          data: { units: rented.map((unit) => ({ unitId: unit.id, status: "available" })) },
+        })
+      }
+    }
+
     await context.request.patch(`${base}/status`, { data: { status: "canceled" } })
     await context.request.delete(base)
   }
@@ -148,9 +173,11 @@ test.describe("la ficha de una cotización", () => {
     await page.getByRole("link", { name: "Rodaje Serie Norte · bloque 1" }).click()
     await page.waitForURL(/\/quotes\/[^/]+$/)
 
-    // El estado proyectado sobre el inventario: en renta significa equipo fuera de la nave.
+    // El estado proyectado sobre el inventario: en renta significa equipo fuera de la nave, y con
+    // el equipo fuera las líneas se enseñan pero no se editan.
     await expect(page.getByText("En renta").first()).toBeVisible()
-    await expect(page.getByRole("heading", { name: "Equipo de la cotización" })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Líneas" })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Equipo de la cotización" })).toHaveCount(0)
 
     // Los importes vienen calculados del servidor, con su cadena entera visible.
     await expect(page.getByRole("heading", { name: "Importes" })).toBeVisible()
@@ -353,6 +380,24 @@ test.describe("el retorno del equipo", () => {
     // Cada unidad por su código, que es lo que lleva escrito la etiqueta de la nave.
     await expect(returns.getByRole("listitem").first()).toBeVisible()
     await expect(page.getByRole("button", { name: /Registrar/ })).toBeDisabled()
+  })
+
+  test("con el equipo fuera la ficha no ofrece editar las líneas", async ({ as, companies }) => {
+    // Ofrecer el editor sería ofrecer un botón cuyo guardado responde `409` siempre. Y el motivo no
+    // es el documento: bajar una cantidad soltaría el vínculo de una unidad que está en un rodaje.
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+
+    await rentedQuote(context, page, companyId, warehouseId)
+
+    await expect(page.getByRole("button", { name: "Guardar líneas" })).toHaveCount(0)
+    await expect(page.getByLabel("Cantidad")).toHaveCount(0)
+    await expect(page.getByText(/ya salió de la nave/i)).toBeVisible()
+
+    // Y el camino de vuelta está en la misma página.
+    await expect(page.getByRole("region", { name: "Retorno del equipo" })).toBeVisible()
   })
 
   test("registrar el retorno devuelve el equipo al inventario", async ({ as, companies }) => {
