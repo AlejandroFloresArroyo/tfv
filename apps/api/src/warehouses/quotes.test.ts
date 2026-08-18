@@ -1738,6 +1738,51 @@ describe("un producto provisional", () => {
     expect(response.status).toBe(409)
   })
 
+  it("se puede dar de alta con su medida y sus unidades de una vez", async () => {
+    // Es lo que hace posible el alta desde el constructor: producto, medida y existencias en una
+    // sola transacción. Encadenar tres peticiones desde el navegador dejaría productos huérfanos
+    // el día que la segunda falle.
+    await clearWarehouse()
+    const product = await json<Product & { measurements: { id: string; name: string }[] }>(
+      await request(
+        "POST",
+        `${base}/products`,
+        {
+          name: "Grúa prestada",
+          isProvisional: true,
+          availableForRent: true,
+          measurements: [{ name: "Única", initialQuantity: 2 }],
+        },
+        cookie,
+      ),
+    )
+
+    expect(product.isProvisional).toBe(true)
+    expect(product.measurements).toHaveLength(1)
+
+    // Y sus unidades quedan libres, listas para que una línea las aparte.
+    const measurementId = product.measurements[0]?.id as string
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ available: 2 })
+  })
+
+  it("la bandeja los encuentra por su marca", async () => {
+    // Sin filtro, «ya lo completaré luego» es una intención; con él es una lista.
+    await clearWarehouse()
+    await request("POST", `${base}/products`, { name: "De catálogo" }, cookie)
+    await request(
+      "POST",
+      `${base}/products`,
+      { name: "A medio hacer", isProvisional: true },
+      cookie,
+    )
+
+    const tray = await json<{ items: { name: string }[] }>(
+      await request("GET", `${base}/products?isProvisional=true`, undefined, cookie),
+    )
+
+    expect(tray.items.map((row) => row.name)).toEqual(["A medio hacer"])
+  })
+
   it("quitarle la marca exige la clave de catálogo", async () => {
     await clearWarehouse()
     const product = await json<Product>(

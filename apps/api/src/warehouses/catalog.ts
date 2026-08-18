@@ -130,6 +130,8 @@ export const productQuery: QuerySchema = {
     globalCategoryId: { type: "id", label: "Categoría global" },
     storageId: { type: "id", label: "Ubicación" },
     isPublished: { type: "boolean", label: "Publicación" },
+    /** La bandeja de lo que se dio de alta a la carrera y está pendiente de completarse. */
+    isProvisional: { type: "boolean", label: "Provisional" },
     availableForSale: { type: "boolean", label: "Venta" },
     availableForRent: { type: "boolean", label: "Renta" },
     createdAt: { type: "date", range: true, label: "Alta" },
@@ -145,6 +147,7 @@ const mapping = {
     globalCategoryId: warehouseProducts.globalCategoryId,
     storageId: warehouseProducts.storageId,
     isPublished: warehouseProducts.isPublished,
+    isProvisional: warehouseProducts.isProvisional,
     availableForSale: warehouseProducts.availableForSale,
     availableForRent: warehouseProducts.availableForRent,
     name: warehouseProducts.name,
