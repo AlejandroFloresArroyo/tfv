@@ -10,7 +10,8 @@
     "./query": "./src/query.ts",
     "./quotation": "./src/quotation.ts",
     "./rate": "./src/rate.ts",
-    "./quote-status": "./src/quote-status.ts"
+    "./quote-status": "./src/quote-status.ts",
+    "./order-status": "./src/order-status.ts"
   },
   "scripts": {
     "check": "tsc --noEmit",
