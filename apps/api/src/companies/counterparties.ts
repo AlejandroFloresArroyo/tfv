@@ -268,7 +268,8 @@ export async function deleteCounterparty(
     const live = await liveDocuments(tx, counterpartyId)
     if (live.quotes + live.orders > 0) {
       throw new UnprocessableError(
-        `Esta contraparte figura en ${describe(live)}. Ciérralos o reasígnalos antes de darla de baja.`,
+        `Esta contraparte figura en ${describe(live)}. Cierra o reasigna esos documentos antes ` +
+          "de darla de baja.",
       )
     }
 
