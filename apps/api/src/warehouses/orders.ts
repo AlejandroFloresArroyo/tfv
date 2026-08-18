@@ -52,7 +52,6 @@ import {
   warehouseProducts,
   warehouseQuoteLines,
   warehouseQuotes,
-  warehouseStockUnits,
 } from "@tfv/db/schema"
 import { and, count, eq, inArray, isNull, ne, sql } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"

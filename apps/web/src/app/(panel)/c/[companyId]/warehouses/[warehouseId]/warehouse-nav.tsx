@@ -1,6 +1,6 @@
 "use client"
 
-import { Boxes, FileText, MapPinned, Warehouse } from "lucide-react"
+import { Boxes, ClipboardList, FileText, MapPinned, Warehouse } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
@@ -12,6 +12,7 @@ export function WarehouseNav({
   canViewProducts,
   canViewStorages,
   canViewQuotes,
+  canViewOrders,
 }: {
   companyId: string
   warehouseId: string
@@ -20,6 +21,7 @@ export function WarehouseNav({
   canViewStorages: boolean
   /** Sin valor por omisión: una pantalla nueva que lo olvide no compila, en vez de perder la pestaña. */
   canViewQuotes: boolean
+  canViewOrders: boolean
 }) {
   const t = useTranslations("warehouses")
   const pathname = usePathname()
@@ -52,6 +54,16 @@ export function WarehouseNav({
             label: t("quotes.title"),
             icon: FileText,
             active: pathname.startsWith(`${base}/quotes`),
+          },
+        ]
+      : []),
+    ...(canViewOrders
+      ? [
+          {
+            href: `${base}/orders`,
+            label: t("orders.title"),
+            icon: ClipboardList,
+            active: pathname.startsWith(`${base}/orders`),
           },
         ]
       : []),

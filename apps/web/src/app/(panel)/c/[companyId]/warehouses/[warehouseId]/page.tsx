@@ -132,6 +132,7 @@ export default async function WarehouseCatalogPage({
         canViewProducts={canViewProducts}
         canViewStorages={canViewStorages}
         canViewQuotes={can(company, "warehouses.quotes.view")}
+        canViewOrders={can(company, "warehouses.orders.view")}
       />
 
       <Collection

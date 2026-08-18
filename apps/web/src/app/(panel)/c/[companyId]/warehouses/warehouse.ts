@@ -113,6 +113,48 @@ export interface ItemsEnvelope<T> {
 
 // ─── Cotizaciones ────────────────────────────────────────────────────────────
 
+/** Los estados de un pedido de almacén, en el orden de su ciclo. */
+export const ORDER_STATUSES = ["pending", "accepted", "delivered", "finished", "canceled"] as const
+
+export type OrderStatus = (typeof ORDER_STATUSES)[number]
+
+export interface OrderRow {
+  id: string
+  warehouseId: string
+  code: string
+  name: string
+  observations: string
+  origin: "production" | "storefront"
+  type: "rent" | "sale"
+  status: OrderStatus
+  quoteId: string | null
+  purchaseOrderId: string | null
+  buyerOrderId: string | null
+  clientId: string | null
+  providerId: string | null
+  canceledAt: string | null
+  canceledById: string | null
+  cancelReason: string | null
+  /** Mensajes de la conversación que este lado no ha leído. */
+  unread: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface OrderLineRow {
+  id: string
+  orderId: string
+  measurementId: string
+  measurementName: string
+  productId: string
+  productName: string
+  productCode: string
+  quantity: number
+  /** Unidades libres de la medida. Es lo que decide si la línea cabe al aceptar. */
+  available: number
+  position: number
+}
+
 export const QUOTE_STATUSES = [
   "pre_quote",
   "pending",

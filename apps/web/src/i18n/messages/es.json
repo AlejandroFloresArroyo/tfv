@@ -659,6 +659,47 @@
       "extensionFailed": "No se pudo crear la extensión",
       "extends": "Extiende a"
     },
-    "completeOnly": "Sólo los completos"
+    "completeOnly": "Sólo los completos",
+    "orders": {
+      "title": "Pedidos",
+      "subtitle": "Las solicitudes que esperan una decisión del almacén.",
+      "detail": "Ficha de pedido",
+      "searchPlaceholder": "Buscar por nombre, código u observaciones…",
+      "empty": "Todavía no hay pedidos",
+      "emptyBody": "Aquí aparecerán las solicitudes de equipo, con lo que hay que atender antes primero.",
+      "status": "Estado",
+      "origin": "Origen",
+      "lines": "Lo que se pide",
+      "noLines": "Este pedido no detalla equipo.",
+      "asked": "{count, plural, one {# unidad pedida} other {# unidades pedidas}}",
+      "unread": "{count, plural, one {# sin leer} other {# sin leer}}",
+      "decision": "Decisión",
+      "decisionHint": "Aceptar genera la cotización con el equipo ya apartado. Rechazar pide un motivo.",
+      "accept": "Aceptar y cotizar",
+      "reject": "Rechazar",
+      "rejectTitle": "Rechazar el pedido",
+      "rejectDescription": "El motivo lo lee quien hizo la solicitud desde la otra empresa.",
+      "reason": "Motivo",
+      "reasonHint": "Concreto: «no hay dos cámaras libres esa semana» sirve; «no se puede» obliga a llamar por teléfono.",
+      "rejectSubmit": "Rechazar el pedido",
+      "shortLines": "{count, plural, one {Una línea pide más equipo del que hay libre} other {# líneas piden más equipo del que hay libre}}. Sin incluirlas, la cotización sale sin ellas.",
+      "includeAll": "Incluir también las líneas que no caben",
+      "allowMinting": "Autorizar el alta del inventario que falte",
+      "actionFailed": "No se pudo completar la operación",
+      "noDecisionPermission": "Sin permiso para aceptar ni rechazar",
+      "canceledWith": "Rechazado: {reason}",
+      "goToQuote": "Ver la cotización que generó",
+      "state": {
+        "pending": "Pendiente",
+        "accepted": "Aceptado",
+        "delivered": "Entregado",
+        "finished": "Finalizado",
+        "canceled": "Cancelado"
+      },
+      "originOf": {
+        "production": "De producción",
+        "storefront": "De tienda"
+      }
+    }
   }
 }

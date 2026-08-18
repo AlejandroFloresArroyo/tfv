@@ -1,5 +1,5 @@
-import { ItemCard } from "@tfv/ui"
-import { FileText } from "lucide-react"
+import { Badge, ItemCard } from "@tfv/ui"
+import { ClipboardList } from "lucide-react"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
 import Link from "next/link"
@@ -10,22 +10,24 @@ import { PageShell } from "~/components/page-shell.tsx"
 import { apiGet } from "~/lib/api.server.ts"
 import { can } from "~/lib/can.ts"
 import { requireCompany, requireProfile } from "~/lib/session.ts"
-import { QUOTE_STATUSES, type QuoteRow, type WarehouseRow } from "../../warehouse.ts"
+import { ORDER_STATUSES, type OrderRow, type WarehouseRow } from "../../warehouse.ts"
 import { WarehouseNav } from "../warehouse-nav.tsx"
-import { QuoteStatusBadge, QuoteTypeBadge } from "./quote-badges.tsx"
+import { OrderStatusBadge } from "./order-badges.tsx"
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: (await getTranslations())("warehouses.quotes.title") }
+  return { title: (await getTranslations())("warehouses.orders.title") }
 }
 
 /**
- * La bandeja de trabajo.
+ * La bandeja del operador.
  *
- * El orden por defecto es el del servidor —prioridad descendente—, así que lo que hay que atender
- * antes sale antes sin que la pantalla decida nada. Cambiarlo aquí desharía la prioridad derivada
- * del estado, que es justo lo que la hace fiable.
+ * Igual que la de cotizaciones, el orden por defecto lo pone el servidor —prioridad descendente,
+ * derivada del estado—, así que lo pendiente sale primero sin que la pantalla decida nada.
+ *
+ * La diferencia está en lo que se señala: un pedido con mensajes sin leer es un pedido que espera
+ * respuesta de este lado del mostrador, y ésa es la razón de que la bandeja exista.
  */
-export default async function QuotesPage({
+export default async function OrdersPage({
   params,
   searchParams,
 }: {
@@ -37,17 +39,17 @@ export default async function QuotesPage({
   const { companyId, warehouseId } = await params
   const query = toSearchParams(await searchParams)
   const path =
-    (await headers()).get("x-pathname") ?? `/c/${companyId}/warehouses/${warehouseId}/quotes`
+    (await headers()).get("x-pathname") ?? `/c/${companyId}/warehouses/${warehouseId}/orders`
   const profile = await requireProfile(path)
   const company = requireCompany(profile, companyId)
   const canViewWarehouses = can(company, "warehouses.warehouses.view")
 
-  const [warehouseResult, quotesResult] = await Promise.all([
+  const [warehouseResult, ordersResult] = await Promise.all([
     canViewWarehouses
       ? apiGet<WarehouseRow>(`/companies/${companyId}/warehouses/${warehouseId}`)
       : Promise.resolve(null),
-    apiGet<PageEnvelope<QuoteRow>>(
-      `/companies/${companyId}/warehouses/${warehouseId}/quotes?${toApiQuery(query)}`,
+    apiGet<PageEnvelope<OrderRow>>(
+      `/companies/${companyId}/warehouses/${warehouseId}/orders?${toApiQuery(query)}`,
     ),
   ])
 
@@ -55,10 +57,10 @@ export default async function QuotesPage({
     {
       kind: "multi",
       key: "status",
-      label: t("warehouses.quotes.status"),
-      options: QUOTE_STATUSES.map((status) => ({
+      label: t("warehouses.orders.status"),
+      options: ORDER_STATUSES.map((status) => ({
         value: status,
-        label: t(`warehouses.quotes.state.${status}`),
+        label: t(`warehouses.orders.state.${status}`),
       })),
     },
     {
@@ -71,11 +73,13 @@ export default async function QuotesPage({
       ],
     },
     {
-      kind: "dateRange",
-      key: "startsOn",
-      label: t("warehouses.quotes.window"),
-      fromLabel: t("collection.from"),
-      toLabel: t("collection.to"),
+      kind: "select",
+      key: "origin",
+      label: t("warehouses.orders.origin"),
+      options: [
+        { value: "production", label: t("warehouses.orders.originOf.production") },
+        { value: "storefront", label: t("warehouses.orders.originOf.storefront") },
+      ],
     },
     {
       kind: "dateRange",
@@ -88,8 +92,8 @@ export default async function QuotesPage({
 
   return (
     <PageShell
-      title={warehouseResult?.ok ? warehouseResult.data.name : t("warehouses.quotes.title")}
-      subtitle={t("warehouses.quotes.subtitle")}
+      title={warehouseResult?.ok ? warehouseResult.data.name : t("warehouses.orders.title")}
+      subtitle={t("warehouses.orders.subtitle")}
     >
       <WarehouseNav
         companyId={companyId}
@@ -103,39 +107,39 @@ export default async function QuotesPage({
 
       <Collection
         params={query}
-        result={quotesResult}
+        result={ordersResult}
         filters={filters}
-        searchPlaceholder={t("warehouses.quotes.searchPlaceholder")}
-        emptyTitle={t("warehouses.quotes.empty")}
-        emptyBody={t("warehouses.quotes.emptyBody")}
+        searchPlaceholder={t("warehouses.orders.searchPlaceholder")}
+        emptyTitle={t("warehouses.orders.empty")}
+        emptyBody={t("warehouses.orders.emptyBody")}
       >
         {(items, view) =>
-          items.map((quote) => (
+          items.map((order) => (
             <ItemCard
-              key={quote.id}
+              key={order.id}
               view={view}
               media={
                 <span className="grid size-9 shrink-0 place-items-center rounded-sm bg-panel-hover text-content-muted">
-                  <FileText className="size-4" aria-hidden="true" />
+                  <ClipboardList className="size-4" aria-hidden="true" />
                 </span>
               }
               title={
                 <Link
-                  href={`/c/${companyId}/warehouses/${warehouseId}/quotes/${quote.id}`}
+                  href={`/c/${companyId}/warehouses/${warehouseId}/orders/${order.id}`}
                   className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
                 >
-                  {quote.name || quote.folio}
+                  {order.name || order.code}
                 </Link>
               }
-              subtitle={
-                quote.startsOn && quote.endsOn
-                  ? `${quote.folio} · ${format.dateTime(new Date(quote.startsOn), { dateStyle: "medium" })} – ${format.dateTime(new Date(quote.endsOn), { dateStyle: "medium" })}`
-                  : quote.folio
-              }
+              subtitle={`${order.code} · ${format.dateTime(new Date(order.createdAt), { dateStyle: "medium" })}`}
               meta={
                 <>
-                  <QuoteTypeBadge type={quote.type} />
-                  <QuoteStatusBadge status={quote.status} />
+                  <OrderStatusBadge status={order.status} />
+                  {order.unread > 0 ? (
+                    <Badge tone="accent">
+                      {t("warehouses.orders.unread", { count: order.unread })}
+                    </Badge>
+                  ) : null}
                 </>
               }
             />
