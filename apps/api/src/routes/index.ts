@@ -87,6 +87,8 @@ import {
   getQuoteRoute,
   listQuoteLinesRoute,
   listQuotesRoute,
+  reservationCoherenceRoute,
+  returnQuoteUnitsRoute,
   setQuoteContactsRoute,
   setQuoteLinesRoute,
   setQuotePaymentRoute,
@@ -251,6 +253,8 @@ export const routes: readonly RegisteredRoute[] = [
   changeQuoteStatusRoute,
   listQuoteLinesRoute,
   setQuoteLinesRoute,
+  returnQuoteUnitsRoute,
+  reservationCoherenceRoute,
   deleteQuoteRoute,
 
   // ─── Producciones ──────────────────────────────────────────────────────────

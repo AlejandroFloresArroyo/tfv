@@ -24,9 +24,53 @@
 
 import { newId, UnprocessableError } from "@tfv/contracts"
 import type { Transaction } from "@tfv/db"
-import { warehouseStockReservations, warehouseStockUnits } from "@tfv/db/schema"
+import {
+  warehouseMeasurements,
+  warehouseProducts,
+  warehouseQuotes,
+  warehouseStockReservations,
+  warehouseStockUnits,
+} from "@tfv/db/schema"
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm"
+import type { QuoteStatus, TradeType } from "./quotes.ts"
 import { recordEvents, type StockStatus } from "./stock.ts"
+
+/**
+ * Qué estado tienen las unidades de una cotización según el estado de ésta.
+ *
+ * **En un solo lugar.** La spec la escribe como tabla y aquí es una tabla: repartida por endpoints
+ * es donde aparecen las contradicciones.
+ *
+ * El caso que más se presta a error: **una cotización de renta completada deja las unidades
+ * rentadas, no disponibles.** Completar significa que el equipo salió, no que volvió. El retorno es
+ * un acto posterior y explícito, y hasta que ocurra ese equipo no está en la nave.
+ */
+export function projectedStatus(status: QuoteStatus, type: TradeType): StockStatus {
+  switch (status) {
+    case "pre_quote":
+    case "pending":
+    case "in_progress":
+      return "in_quote"
+    case "in_rent":
+      return "rented"
+    case "completed":
+      return type === "rent" ? "rented" : "sold"
+    case "sold":
+      return "sold"
+    case "canceled":
+      return "available"
+  }
+}
+
+/**
+ * Estados en los que la unidad **deja de estar apartada**.
+ *
+ * Una venta cerrada no necesita el vínculo: la unidad salió del inventario y no vuelve. Una renta
+ * sí lo conserva, porque es lo único que dice qué equipo hay que reclamar cuando toque el retorno.
+ */
+function releasesLink(projected: StockStatus): boolean {
+  return projected === "available" || projected === "sold"
+}
 
 export interface ReservationContext {
   readonly quoteId: string
@@ -291,4 +335,252 @@ const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 function unitCode(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(12))
   return Array.from(bytes, (byte) => ALPHABET[byte % ALPHABET.length]).join("")
+}
+
+// ─── Proyección ──────────────────────────────────────────────────────────────
+
+/**
+ * Lleva todas las unidades apartadas de una cotización al estado que le corresponde.
+ *
+ * **Atómica**: todas cambian o ninguna, porque corre dentro de la transacción que cambia el estado
+ * de la cotización. Un cambio de estado que se confirmara sin mover el inventario dejaría el
+ * documento diciendo una cosa y la nave otra, y no habría forma de saber cuál miente.
+ */
+export async function projectQuote(
+  tx: Transaction,
+  quoteId: string,
+  status: QuoteStatus,
+  type: TradeType,
+  actorId: string,
+): Promise<void> {
+  const held = await liveByQuote(tx, quoteId)
+  if (held.length === 0) return
+
+  const projected = projectedStatus(status, type)
+  const moving = held.filter((row) => row.status !== projected)
+
+  if (moving.length > 0) {
+    await tx
+      .update(warehouseStockUnits)
+      .set({ status: projected, updatedAt: new Date() })
+      .where(
+        inArray(
+          warehouseStockUnits.id,
+          moving.map((row) => row.stockUnitId),
+        ),
+      )
+
+    await recordEvents(
+      tx,
+      moving.map((row) => ({ unitId: row.stockUnitId, from: row.status, to: projected })),
+      "quote_status",
+      actorId,
+      undefined,
+      quoteId,
+    )
+  }
+
+  if (releasesLink(projected)) {
+    await tx
+      .update(warehouseStockReservations)
+      .set({ releasedAt: new Date() })
+      .where(
+        inArray(
+          warehouseStockReservations.id,
+          held.map((row) => row.id),
+        ),
+      )
+  }
+}
+
+// ─── Retorno ─────────────────────────────────────────────────────────────────
+
+export interface UnitReturn {
+  readonly unitId: string
+  /** Disponible si vuelve en condiciones; el estado de incidencia que corresponda si no. */
+  readonly status: StockStatus
+  readonly note?: string | undefined
+}
+
+/**
+ * Registra el retorno del equipo rentado, unidad por unidad.
+ *
+ * El retorno **no existía** en la implementación anterior: una renta completada devolvía el equipo
+ * al inventario sola, con lo que el sistema daba por disponible equipo que seguía en un camión.
+ * Aquí es un acto explícito, y por eso puede distinguir lo que vuelve en condiciones de lo que
+ * vuelve dañado.
+ */
+export async function registerReturn(
+  tx: Transaction,
+  quoteId: string,
+  returns: readonly UnitReturn[],
+  actorId: string,
+): Promise<void> {
+  if (returns.length === 0) return
+
+  const held = new Map(
+    await liveByQuote(tx, quoteId).then((rows) =>
+      rows.map((row) => [row.stockUnitId, row] as const),
+    ),
+  )
+
+  const foreign = returns.filter((row) => !held.has(row.unitId))
+  if (foreign.length > 0) {
+    throw new UnprocessableError(
+      `${foreign.length === 1 ? "Una unidad no salió" : `${foreign.length} unidades no salieron`} con esta cotización. Sólo se devuelve lo que se llevó.`,
+    )
+  }
+
+  for (const item of returns) {
+    const current = held.get(item.unitId)
+    if (!current) continue
+
+    await tx
+      .update(warehouseStockUnits)
+      .set({ status: item.status, updatedAt: new Date() })
+      .where(eq(warehouseStockUnits.id, item.unitId))
+
+    await recordEvents(
+      tx,
+      [{ unitId: item.unitId, from: current.status, to: item.status }],
+      "rental_return",
+      actorId,
+      item.note,
+      quoteId,
+    )
+  }
+
+  await tx
+    .update(warehouseStockReservations)
+    .set({ releasedAt: new Date() })
+    .where(
+      inArray(
+        warehouseStockReservations.id,
+        returns.map((row) => held.get(row.unitId)?.id ?? ""),
+      ),
+    )
+}
+
+/** Cuántas unidades de la cotización siguen fuera de la nave. */
+export async function pendingReturn(tx: Transaction, quoteId: string): Promise<number> {
+  const held = await liveByQuote(tx, quoteId)
+  return held.filter((row) => row.status === "rented").length
+}
+
+// ─── Coherencia ──────────────────────────────────────────────────────────────
+
+export interface Discrepancy {
+  readonly unitId: string
+  readonly code: string
+  readonly status: StockStatus
+  readonly reason: "committed_without_link" | "link_without_projection"
+  readonly quoteId: string | null
+}
+
+/**
+ * Comprueba que el inventario y las reservas dicen lo mismo.
+ *
+ * Dos formas de romperse, y las dos se comunican identificando la unidad:
+ *
+ * - Una unidad **en cotización sin vínculo vivo**: figura comprometida y nadie la reclama, así que
+ *   está bloqueada para siempre sin que nadie sepa por qué.
+ * - Un vínculo vivo cuya unidad **no está en el estado que su cotización proyecta**: alguien movió
+ *   el inventario por detrás y el documento dejó de ser cierto.
+ *
+ * Se comprueba a petición y no en cada escritura: es una consulta sobre todo el almacén, y las
+ * escrituras ya son transaccionales. Su sitio es una ejecución programada.
+ */
+export async function checkCoherence(tx: Transaction, warehouseId: string): Promise<Discrepancy[]> {
+  const committed = await tx
+    .select({
+      unitId: warehouseStockUnits.id,
+      code: warehouseStockUnits.code,
+      status: warehouseStockUnits.status,
+      reservationId: warehouseStockReservations.id,
+    })
+    .from(warehouseStockUnits)
+    .innerJoin(
+      warehouseMeasurements,
+      eq(warehouseMeasurements.id, warehouseStockUnits.measurementId),
+    )
+    .innerJoin(warehouseProducts, eq(warehouseProducts.id, warehouseMeasurements.productId))
+    .leftJoin(
+      warehouseStockReservations,
+      and(
+        eq(warehouseStockReservations.stockUnitId, warehouseStockUnits.id),
+        isNull(warehouseStockReservations.releasedAt),
+      ),
+    )
+    .where(
+      and(
+        eq(warehouseProducts.warehouseId, warehouseId),
+        eq(warehouseStockUnits.status, "in_quote"),
+        isNull(warehouseStockUnits.deletedAt),
+      ),
+    )
+
+  const orphans: Discrepancy[] = committed
+    .filter((row) => row.reservationId === null)
+    .map((row) => ({
+      unitId: row.unitId,
+      code: row.code,
+      status: row.status,
+      reason: "committed_without_link" as const,
+      quoteId: null,
+    }))
+
+  const linked = await tx
+    .select({
+      unitId: warehouseStockUnits.id,
+      code: warehouseStockUnits.code,
+      status: warehouseStockUnits.status,
+      quoteId: warehouseQuotes.id,
+      quoteStatus: warehouseQuotes.status,
+      quoteType: warehouseQuotes.type,
+    })
+    .from(warehouseStockReservations)
+    .innerJoin(
+      warehouseStockUnits,
+      eq(warehouseStockUnits.id, warehouseStockReservations.stockUnitId),
+    )
+    .innerJoin(warehouseQuotes, eq(warehouseQuotes.id, warehouseStockReservations.quoteId))
+    .where(
+      and(
+        isNull(warehouseStockReservations.releasedAt),
+        eq(warehouseQuotes.warehouseId, warehouseId),
+      ),
+    )
+
+  const drifted: Discrepancy[] = linked
+    .filter((row) => row.status !== projectedStatus(row.quoteStatus, row.quoteType))
+    .map((row) => ({
+      unitId: row.unitId,
+      code: row.code,
+      status: row.status,
+      reason: "link_without_projection" as const,
+      quoteId: row.quoteId,
+    }))
+
+  return [...orphans, ...drifted]
+}
+
+/** Las reservas vivas de una cotización, con el estado actual de cada unidad. */
+async function liveByQuote(tx: Transaction, quoteId: string) {
+  return tx
+    .select({
+      id: warehouseStockReservations.id,
+      stockUnitId: warehouseStockReservations.stockUnitId,
+      status: warehouseStockUnits.status,
+    })
+    .from(warehouseStockReservations)
+    .innerJoin(
+      warehouseStockUnits,
+      eq(warehouseStockUnits.id, warehouseStockReservations.stockUnitId),
+    )
+    .where(
+      and(
+        eq(warehouseStockReservations.quoteId, quoteId),
+        isNull(warehouseStockReservations.releasedAt),
+      ),
+    )
 }

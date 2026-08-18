@@ -135,6 +135,19 @@ async function clearQuotes() {
   )
 }
 
+/**
+ * Vacía también el catálogo.
+ *
+ * Lo necesitan las pruebas que miran el almacén **entero**: `clearQuotes` deja las unidades de las
+ * pruebas anteriores en el estado en que quedaron, y una verificación de coherencia las encuentra
+ * con toda la razón.
+ */
+async function clearWarehouse() {
+  await db.execute(
+    sql`truncate table ${warehouseStockReservations}, ${warehouseQuoteLines}, ${warehouseQuotes}, ${warehouseStockEvents}, ${warehouseStockUnits}, ${warehouseMeasurements}, ${warehouseProductPrices}, ${warehousePriceLists}, ${warehouseProducts} cascade`,
+  )
+}
+
 /** Una cotización con lo mínimo. Devuelve la respuesta sin interpretarla. */
 function createQuote(body: Record<string, unknown> = {}) {
   return request("POST", `${base}/quotes`, { clientId, type: "rent", ...body }, cookie)
@@ -711,5 +724,221 @@ describe("la cotización nace donde corresponde", () => {
     const quote = await newQuote({ ...WINDOW, lines: [{ measurementId, quantity: 2 }] })
 
     expect(quote.status).toBe("in_progress")
+  })
+})
+
+// ─── Proyección del estado sobre el inventario ───────────────────────────────
+
+/** Una cotización con equipo apartado, lista para moverse de estado. */
+async function stockedQuote(
+  quantity: number,
+  overrides: Record<string, unknown> = {},
+): Promise<{ quote: Quote; measurementId: string }> {
+  const measurementId = await newStocked(`Equipo ${newId().slice(0, 8)}`, quantity)
+  const quote = await newQuote({ ...WINDOW, lines: [{ measurementId, quantity }], ...overrides })
+  return { quote, measurementId }
+}
+
+function statusesOf(units: Unit[]): Record<string, number> {
+  const tally: Record<string, number> = {}
+  for (const unit of units) tally[unit.status] = (tally[unit.status] ?? 0) + 1
+  return tally
+}
+
+describe("el estado de la cotización proyecta al inventario", () => {
+  it("cancelar libera todo el inventario", async () => {
+    // Escenario: «Cancelar libera todo el inventario».
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(4)
+
+    expect((await moveTo(quote.id, "canceled")).status).toBe(200)
+
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ available: 4 })
+  })
+
+  it("pasar a renta saca el equipo", async () => {
+    // Escenario: «Pasar a renta saca el equipo».
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(4)
+
+    expect((await moveTo(quote.id, "in_rent")).status).toBe(200)
+
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ rented: 4 })
+  })
+
+  it("una venta completada marca las unidades vendidas", async () => {
+    // Escenario: «Una venta completada marca las unidades vendidas».
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(2, { type: "sale" })
+
+    expect((await moveTo(quote.id, "completed")).status).toBe(200)
+
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ sold: 2 })
+  })
+
+  it("completar una renta deja el equipo fuera, no disponible", async () => {
+    // Escenario: «Completar una renta no devuelve el equipo». Es el caso contraintuitivo:
+    // completar significa que el equipo salió, no que volvió.
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(6)
+
+    await moveTo(quote.id, "completed")
+
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ rented: 6 })
+
+    // Y no cuentan como disponibles para otra cotización.
+    const other = await newQuote({ ...WINDOW })
+    expect((await setLines(other.id, [{ measurementId, quantity: 1 }])).status).toBe(422)
+  })
+})
+
+// ─── Retorno ─────────────────────────────────────────────────────────────────
+
+describe("retorno del equipo rentado", () => {
+  it("devuelve al inventario las que vuelven en condiciones", async () => {
+    // Escenario: «El retorno devuelve el equipo al inventario».
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(6)
+    await moveTo(quote.id, "completed")
+    const rented = await unitsOf(measurementId)
+
+    const response = await request(
+      "POST",
+      `${base}/quotes/${quote.id}/returns`,
+      { units: rented.map((unit) => ({ unitId: unit.id, status: "available" })) },
+      cookie,
+    )
+    expect(response.status).toBe(200)
+
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ available: 6 })
+  })
+
+  it("no devuelve al inventario útil la que vuelve dañada", async () => {
+    // Escenario: «Una unidad dañada no vuelve al inventario útil».
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(6)
+    await moveTo(quote.id, "completed")
+    const rented = await unitsOf(measurementId)
+
+    await request(
+      "POST",
+      `${base}/quotes/${quote.id}/returns`,
+      {
+        units: rented.map((unit, index) => ({
+          unitId: unit.id,
+          status: index === 0 ? "damaged" : "available",
+          ...(index === 0 ? { note: "Volvió con la montura rota" } : {}),
+        })),
+      },
+      cookie,
+    )
+
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ available: 5, damaged: 1 })
+
+    // Y la dañada no cuenta como disponible.
+    const other = await newQuote({ ...WINDOW })
+    expect((await setLines(other.id, [{ measurementId, quantity: 6 }])).status).toBe(422)
+  })
+
+  it("no acepta el retorno de una unidad que no salió con esta cotización", async () => {
+    await clearQuotes()
+    const { quote } = await stockedQuote(2)
+    await moveTo(quote.id, "completed")
+    const foreign = await newStocked("Ajena", 1)
+    const [unit] = await unitsOf(foreign)
+
+    const response = await request(
+      "POST",
+      `${base}/quotes/${quote.id}/returns`,
+      { units: [{ unitId: unit?.id, status: "available" }] },
+      cookie,
+    )
+
+    expect(response.status).toBe(422)
+  })
+})
+
+// ─── Eliminación ─────────────────────────────────────────────────────────────
+
+describe("eliminación de una cotización", () => {
+  it("libera lo reservado", async () => {
+    await clearQuotes()
+    const { quote, measurementId } = await stockedQuote(3)
+
+    const response = await request("DELETE", `${base}/quotes/${quote.id}`, undefined, cookie)
+    expect(response.status).toBe(204)
+
+    expect(statusesOf(await unitsOf(measurementId))).toEqual({ available: 3 })
+  })
+
+  it("respeta lo vendido", async () => {
+    // Escenario: «Se libera lo reservado y se respeta lo vendido».
+    await clearQuotes()
+    const sold = await newStocked("Vendida", 2)
+    const held = await newStocked("Apartada", 3)
+    const quote = await newQuote({ lines: [{ measurementId: sold, quantity: 2 }], type: "sale" })
+    await moveTo(quote.id, "sold")
+
+    const lines = await linesOf(quote.id)
+    await request(
+      "PUT",
+      `${base}/quotes/${quote.id}/lines`,
+      {
+        lines: [
+          ...lines.map((row) => ({ id: row.id, measurementId: row.measurementId, quantity: 0 })),
+        ],
+      },
+      cookie,
+    )
+
+    expect(statusesOf(await unitsOf(sold))).toEqual({ sold: 2 })
+    expect(statusesOf(await unitsOf(held))).toEqual({ available: 3 })
+  })
+
+  it("no se elimina con equipo sin devolver", async () => {
+    // Escenario: «No se elimina con equipo fuera».
+    await clearQuotes()
+    const { quote } = await stockedQuote(2)
+    await moveTo(quote.id, "in_rent")
+
+    const response = await request("DELETE", `${base}/quotes/${quote.id}`, undefined, cookie)
+
+    expect(response.status).toBe(422)
+    expect((await json<{ message: string }>(response)).message).toMatch(/devolver|retorno/i)
+  })
+})
+
+// ─── Coherencia ──────────────────────────────────────────────────────────────
+
+describe("coherencia entre reservas e inventario", () => {
+  it("no comunica nada cuando todo cuadra", async () => {
+    await clearWarehouse()
+    await stockedQuote(3)
+
+    const report = await json<{ items: { unitId: string; reason: string }[] }>(
+      await request("GET", `${base}/reservation-coherence`, undefined, cookie),
+    )
+
+    expect(report.items).toHaveLength(0)
+  })
+
+  it("detecta una unidad en cotización sin vínculo vivo", async () => {
+    // Escenario: «La verificación detecta una discrepancia».
+    await clearWarehouse()
+    const { measurementId } = await stockedQuote(3)
+    const [unit] = await unitsOf(measurementId)
+
+    // Se rompe por debajo, que es como se rompería de verdad.
+    await db
+      .update(warehouseStockReservations)
+      .set({ releasedAt: new Date() })
+      .where(eq(warehouseStockReservations.stockUnitId, unit?.id ?? ""))
+
+    const report = await json<{ items: { unitId: string; reason: string }[] }>(
+      await request("GET", `${base}/reservation-coherence`, undefined, cookie),
+    )
+
+    expect(report.items).toHaveLength(1)
+    expect(report.items[0]?.unitId).toBe(unit?.id)
   })
 })

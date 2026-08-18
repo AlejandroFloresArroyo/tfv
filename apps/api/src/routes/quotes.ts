@@ -27,6 +27,8 @@ import {
   quoteQuery,
   RENT_FREQUENCIES,
   ROUND_DIRECTIONS,
+  reservationCoherence,
+  returnUnits,
   setContacts,
   setLines,
   setPaymentTerms,
@@ -35,6 +37,7 @@ import {
   TRADE_TYPES,
   updateQuote,
 } from "../warehouses/quotes.ts"
+import { STOCK_STATUSES } from "../warehouses/stock.ts"
 import { collectionQuery, pageSchema, queryOf, serializePage } from "./pagination.ts"
 
 // ─── Esquemas ────────────────────────────────────────────────────────────────
@@ -594,6 +597,99 @@ export const setQuoteLinesRoute = defineRoute({
       body.lines,
       body.allowMinting ?? false,
     )
+    return c.json({ items }, 200)
+  },
+})
+
+// ─── Retorno y coherencia ────────────────────────────────────────────────────
+
+/**
+ * Devolver el equipo es el acto que cierra una renta, así que va bajo la misma clave que darla por
+ * terminada. No se inventa una clave nueva: el catálogo de 255 es un contrato con la matriz de
+ * permisos que ya existe, y añadirle una entrada obliga a revisarla entera.
+ */
+export const returnQuoteUnitsRoute = defineRoute({
+  access: REQUIRES("warehouses.quotes.finished"),
+  config: {
+    method: "post",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/quotes/{quoteId}/returns",
+    summary: "Registrar el retorno del equipo rentado",
+    tags: ["Cotizaciones"],
+    request: {
+      params: quoteParams,
+      body: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              units: z
+                .array(
+                  z.object({
+                    unitId: z.string(),
+                    status: z.enum(STOCK_STATUSES),
+                    note: z.string().max(2000).optional(),
+                  }),
+                )
+                .min(1)
+                .max(500)
+                .readonly(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Registrado. Lo que volvió en condiciones queda disponible",
+        content: { "application/json": { schema: quoteSchema } },
+      },
+      422: { description: "Alguna unidad no salió con esta cotización" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const quote = await returnUnits(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.quoteId,
+      c.req.valid("json").units,
+    )
+    return c.json(serializeQuote(quote), 200)
+  },
+})
+
+export const reservationCoherenceRoute = defineRoute({
+  access: REQUIRES("warehouses.quotes.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/reservation-coherence",
+    summary: "Verificar que las reservas y el inventario dicen lo mismo",
+    tags: ["Cotizaciones"],
+    request: { params: warehouseParams },
+    responses: {
+      200: {
+        description: "Las discrepancias encontradas, vacío si todo cuadra",
+        content: {
+          "application/json": {
+            schema: z.object({
+              items: z.array(
+                z.object({
+                  unitId: z.string(),
+                  code: z.string(),
+                  status: z.enum(STOCK_STATUSES),
+                  reason: z.enum(["committed_without_link", "link_without_projection"]),
+                  quoteId: z.string().nullable(),
+                }),
+              ),
+            }),
+          },
+        },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const items = await reservationCoherence(actorOf(c), params.companyId, params.warehouseId)
     return c.json({ items }, 200)
   },
 })

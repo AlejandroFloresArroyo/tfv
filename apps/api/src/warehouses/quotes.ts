@@ -44,7 +44,17 @@ import {
 import { and, count, eq, inArray, isNull } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
-import { reconcileLine, releaseLine, reservedByLine } from "./reservations.ts"
+import {
+  checkCoherence,
+  type Discrepancy,
+  pendingReturn,
+  projectQuote,
+  reconcileLine,
+  registerReturn,
+  releaseLine,
+  reservedByLine,
+  type UnitReturn,
+} from "./reservations.ts"
 import { loadWarehouse } from "./warehouses.ts"
 
 export const QUOTE_STATUSES = [
@@ -416,7 +426,11 @@ export async function changeQuoteStatus(
     assertTransition(quote.status, next, quote.type)
     assertWindow(quote.type, next, quote.startsOn, quote.endsOn)
 
-    return toRecord(await patch(tx, quoteId, { status: next }))
+    // El estado y el inventario se confirman **juntos**: si algo falla, ni uno ni otro cambian.
+    const updated = await patch(tx, quoteId, { status: next })
+    await projectQuote(tx, quoteId, next, quote.type, actor.userId)
+
+    return toRecord(updated)
   })
 }
 
@@ -462,6 +476,15 @@ function assertOpen(status: QuoteStatus): void {
 
 // ─── Baja ────────────────────────────────────────────────────────────────────
 
+/**
+ * Da de baja una cotización y libera lo que tuviera apartado.
+ *
+ * **No se elimina con equipo sin devolver.** Una renta cuyo equipo sigue fuera no puede
+ * desaparecer: el vínculo con la cotización es lo único que dice qué hay que reclamar y a quién.
+ * Primero se registra el retorno.
+ *
+ * Lo vendido se respeta: ya no tiene vínculo vivo —la venta lo soltó al cerrarse— y sigue vendido.
+ */
 export async function deleteQuote(
   actor: Actor,
   companyId: string,
@@ -472,10 +495,66 @@ export async function deleteQuote(
     await loadWarehouse(tx, companyId, warehouseId)
     await loadQuote(tx, warehouseId, quoteId)
 
+    const outstanding = await pendingReturn(tx, quoteId)
+    if (outstanding > 0) {
+      throw new UnprocessableError(
+        `Hay ${outstanding === 1 ? "una unidad" : `${outstanding} unidades`} sin devolver. ` +
+          "Registra el retorno del equipo antes de dar de baja la cotización.",
+      )
+    }
+
+    const lines = await tx
+      .select({ id: warehouseQuoteLines.id })
+      .from(warehouseQuoteLines)
+      .where(eq(warehouseQuoteLines.quoteId, quoteId))
+
+    for (const line of lines) {
+      await releaseLine(tx, line.id, { actorId: actor.userId, quoteId })
+    }
+
     await tx
       .update(warehouseQuotes)
-      .set({ deletedAt: new Date() })
+      .set({ deletedAt: new Date(), orderId: null })
       .where(eq(warehouseQuotes.id, quoteId))
+  })
+}
+
+// ─── Retorno y coherencia ────────────────────────────────────────────────────
+
+/**
+ * Registra el retorno del equipo de una cotización de renta.
+ *
+ * Se puede registrar en varias tandas: el equipo no siempre vuelve el mismo día.
+ */
+export async function returnUnits(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  quoteId: string,
+  units: readonly UnitReturn[],
+): Promise<QuoteRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    const quote = await loadQuote(tx, warehouseId, quoteId)
+
+    if (quote.type !== "rent") {
+      throw new UnprocessableError("Sólo vuelve el equipo de una cotización de renta")
+    }
+
+    await registerReturn(tx, quoteId, units, actor.userId)
+    return toRecord(quote)
+  })
+}
+
+/** La verificación de coherencia entre las reservas y el inventario de un almacén. */
+export async function reservationCoherence(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+): Promise<Discrepancy[]> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    return checkCoherence(tx, warehouseId)
   })
 }
 
