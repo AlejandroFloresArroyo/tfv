@@ -102,24 +102,15 @@ export function EditRate({
     >
       {(state) => (
         <>
-          <Field
+          <AmountField
             label={t("sale")}
             hint={t("amountHint")}
+            value={form.sale}
             error={state.fieldErrors.get("sale")}
+            autoFocus
             className="tablet:max-w-56"
-          >
-            {(ids) => (
-              <Input
-                {...ids}
-                type="text"
-                inputMode="decimal"
-                value={form.sale}
-                autoFocus
-                placeholder={t("noPrice")}
-                onChange={(event) => setForm({ ...form, sale: event.target.value })}
-              />
-            )}
-          </Field>
+            onChange={(sale) => setForm({ ...form, sale })}
+          />
 
           <Separator />
 
@@ -188,23 +179,14 @@ function ScheduleFields({
 
       {value.isFixed ? (
         <>
-          <Field
+          <AmountField
             label={t("fixedAmount")}
             hint={t("amountHint")}
+            value={value.fixed}
             error={errors.get(`${name}.fixed`)}
             className="tablet:max-w-56"
-          >
-            {(ids) => (
-              <Input
-                {...ids}
-                type="text"
-                inputMode="decimal"
-                value={value.fixed}
-                placeholder={t("noPrice")}
-                onChange={(event) => onChange({ ...value, fixed: event.target.value })}
-              />
-            )}
-          </Field>
+            onChange={(fixed) => onChange({ ...value, fixed })}
+          />
 
           <p className="inline-flex items-start gap-1.5 text-body3 text-content-muted">
             <Info className="mt-0.5 size-4 shrink-0 text-content-faint" aria-hidden="true" />
@@ -214,26 +196,69 @@ function ScheduleFields({
       ) : (
         <div className="grid gap-3 tablet:grid-cols-3">
           {FREQUENCIES.map((frequency) => (
-            <Field
+            <AmountField
               key={frequency}
               label={t(`frequencyOf.${frequency}`)}
+              value={value[frequency]}
               error={errors.get(`${name}.${frequency}`)}
-            >
-              {(ids) => (
-                <Input
-                  {...ids}
-                  type="text"
-                  inputMode="decimal"
-                  value={value[frequency]}
-                  placeholder={t("noPrice")}
-                  onChange={(event) => onChange({ ...value, [frequency]: event.target.value })}
-                />
-              )}
-            </Field>
+              onChange={(amount) => onChange({ ...value, [frequency]: amount })}
+            />
           ))}
         </div>
       )}
     </fieldset>
+  )
+}
+
+/**
+ * Un campo de importe.
+ *
+ * Es el **único** sitio de esta pantalla donde se teclea dinero, y está extraído a propósito:
+ * cuando exista el primitivo de entrada de importe de la 28e, se cambia aquí y no en los nueve
+ * campos que lo usan.
+ *
+ * Mientras tanto es un campo de texto con teclado decimal, no un `type="number"`: el numérico
+ * redondea, admite notación científica, cambia de valor con la rueda del ratón y devuelve un
+ * número de coma flotante. Un importe no puede pasar por ninguna de esas cuatro cosas.
+ *
+ * En blanco es **sin precio**, que es lo que significa un cero: por eso el marcador de posición lo
+ * dice en lugar de sugerir un formato.
+ */
+function AmountField({
+  label,
+  hint,
+  value,
+  error,
+  autoFocus,
+  className,
+  onChange,
+}: {
+  label: string
+  // Con `| undefined` explícito, como `Field`: sin él, `exactOptionalPropertyTypes` obliga a que
+  // cada sitio que lo use monte la propiedad condicionalmente para decir «no hay error».
+  hint?: string | undefined
+  value: string
+  error?: string | undefined
+  autoFocus?: boolean | undefined
+  className?: string | undefined
+  onChange: (value: string) => void
+}) {
+  const t = useTranslations("warehouses.priceLists")
+
+  return (
+    <Field label={label} hint={hint} error={error} className={className}>
+      {(ids) => (
+        <Input
+          {...ids}
+          type="text"
+          inputMode="decimal"
+          value={value}
+          autoFocus={autoFocus}
+          placeholder={t("noPrice")}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+    </Field>
   )
 }
 
