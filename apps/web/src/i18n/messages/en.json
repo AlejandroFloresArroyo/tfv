@@ -772,7 +772,8 @@
       "assignNoMatches": "No product matches.",
       "assignMore": "{count, plural, one {There is # more match: narrow the search or tick them all.} other {There are # more matches: narrow the search or tick them all.}}",
       "assignEmptyCatalog": "This warehouse has no products to assign yet.",
-      "catalogFailed": "The warehouse catalog could not be read: rates show without a name and products cannot be assigned."
+      "catalogFailed": "The warehouse catalog could not be read: rates show without a name and products cannot be assigned.",
+      "nameRequired": "Write a name for the list."
     }
   }
 }

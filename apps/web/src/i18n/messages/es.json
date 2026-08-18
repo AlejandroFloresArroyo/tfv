@@ -772,7 +772,8 @@
       "assignNoMatches": "Ningún producto coincide.",
       "assignMore": "{count, plural, one {Hay # producto más que coincide: afina la búsqueda o márcalos todos.} other {Hay # productos más que coinciden: afina la búsqueda o márcalos todos.}}",
       "assignEmptyCatalog": "Este almacén todavía no tiene productos que asignar.",
-      "catalogFailed": "No se pudo leer el catálogo del almacén: las tarifas salen sin nombre y no se pueden asignar productos."
+      "catalogFailed": "No se pudo leer el catálogo del almacén: las tarifas salen sin nombre y no se pueden asignar productos.",
+      "nameRequired": "Escribe un nombre para la lista."
     }
   }
 }

@@ -7,12 +7,25 @@ import { type ItemAction, ItemActions } from "~/components/collection/item-actio
 import { ConfirmDestructive } from "~/components/confirm-destructive.tsx"
 import { FormDialog } from "~/components/form-dialog.tsx"
 import { optional, text } from "~/components/use-submit.ts"
-import { api } from "~/lib/api.client.ts"
+import { ApiError, api } from "~/lib/api.client.ts"
 import type { PriceListRow } from "../../warehouse.ts"
 
 /** La ruta de las listas de un almacén, que es la única parte que las cuatro acciones comparten. */
 function pathOf(companyId: string, warehouseId: string): string {
   return `/companies/${companyId}/warehouses/${warehouseId}/price-lists`
+}
+
+/**
+ * El nombre, o el aviso de que falta.
+ *
+ * El servidor también lo rechaza —y ésa es la comprobación que manda—, pero su mensaje es el del
+ * validador y llega crudo y en inglés: «Too small: expected string to have >=1 characters». Esto no
+ * lo sustituye; le pone delante una frase que se entiende, en el campo que le corresponde.
+ */
+function nameOf(data: FormData, message: string): string {
+  const name = text(data, "name")
+  if (name === "") throw new ApiError(400, message, new Map([["name", message]]))
+  return name
 }
 
 export function CreatePriceList({
@@ -37,7 +50,10 @@ export function CreatePriceList({
       action={(data) =>
         api(pathOf(companyId, warehouseId), {
           method: "POST",
-          body: { name: text(data, "name"), description: optional(data, "description") },
+          body: {
+            name: nameOf(data, t("warehouses.priceLists.nameRequired")),
+            description: optional(data, "description"),
+          },
         })
       }
     >
@@ -87,7 +103,10 @@ export function EditPriceList({
           // La descripción vacía viaja como cadena vacía y no como ausencia: es «bórrala», que no
           // es lo mismo que «no la toques». Al crear sí es ausencia, porque no había nada que
           // borrar.
-          body: { name: text(data, "name"), description: text(data, "description") },
+          body: {
+            name: nameOf(data, t("warehouses.priceLists.nameRequired")),
+            description: text(data, "description"),
+          },
         })
       }
     >
