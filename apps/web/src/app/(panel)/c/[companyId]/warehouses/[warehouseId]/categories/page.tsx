@@ -6,15 +6,16 @@ import { PageShell } from "~/components/page-shell.tsx"
 import { apiGet } from "~/lib/api.server.ts"
 import { can } from "~/lib/can.ts"
 import { requireCompany, requireProfile } from "~/lib/session.ts"
-import type { ItemsEnvelope, StorageRow, WarehouseRow } from "../../warehouse.ts"
+import type { WarehouseRow } from "../../warehouse.ts"
 import { WarehouseNav } from "../warehouse-nav.tsx"
-import { StorageBrowser } from "./storage-browser.tsx"
+import { CategoryBrowser } from "./category-browser.tsx"
+import { loadCategoryLevels } from "./category-data.ts"
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: (await getTranslations())("warehouses.storages.title") }
+  return { title: (await getTranslations())("warehouses.categories.title") }
 }
 
-export default async function StoragesPage({
+export default async function CategoriesPage({
   params,
 }: {
   params: Promise<{ companyId: string; warehouseId: string }>
@@ -22,26 +23,25 @@ export default async function StoragesPage({
   const t = await getTranslations()
   const { companyId, warehouseId } = await params
   const path =
-    (await headers()).get("x-pathname") ?? `/c/${companyId}/warehouses/${warehouseId}/storages`
+    (await headers()).get("x-pathname") ?? `/c/${companyId}/warehouses/${warehouseId}/categories`
   const profile = await requireProfile(path)
   const company = requireCompany(profile, companyId)
   const canViewWarehouses = can(company, "warehouses.warehouses.view")
-  const canViewStorages = can(company, "warehouses.storages.view")
-  const [warehouseResult, rootsResult] = await Promise.all([
+  const canViewProducts = can(company, "warehouses.products.view")
+
+  const [warehouseResult, levels] = await Promise.all([
     canViewWarehouses
       ? apiGet<WarehouseRow>(`/companies/${companyId}/warehouses/${warehouseId}`)
       : Promise.resolve(null),
-    apiGet<ItemsEnvelope<StorageRow>>(`/companies/${companyId}/warehouses/${warehouseId}/storages`),
+    loadCategoryLevels(companyId, warehouseId),
   ])
 
   return (
     <PageShell
-      title={t("warehouses.storages.title")}
+      title={t("warehouses.categories.title")}
       {...(warehouseResult?.ok
         ? {
-            subtitle: t("warehouses.storages.subtitle", {
-              warehouse: warehouseResult.data.name,
-            }),
+            subtitle: t("warehouses.categories.subtitle", { warehouse: warehouseResult.data.name }),
           }
         : {})}
     >
@@ -49,23 +49,25 @@ export default async function StoragesPage({
         companyId={companyId}
         warehouseId={warehouseId}
         canViewWarehouses={canViewWarehouses}
-        canViewProducts={can(company, "warehouses.products.view")}
+        canViewProducts={canViewProducts}
         canViewCategories={can(company, "warehouses.categories.view")}
-        canViewStorages={canViewStorages}
+        canViewStorages={can(company, "warehouses.storages.view")}
         canViewQuotes={can(company, "warehouses.quotes.view")}
         canViewOrders={can(company, "warehouses.orders.view")}
       />
-      {rootsResult.ok ? (
-        <StorageBrowser
+
+      {levels.failure ? (
+        <ApiFailure result={levels.failure} />
+      ) : (
+        <CategoryBrowser
           companyId={companyId}
           warehouseId={warehouseId}
-          roots={rootsResult.data.items}
-          canCreate={can(company, "warehouses.storages.create")}
-          canEdit={can(company, "warehouses.storages.edit")}
-          canDelete={can(company, "warehouses.storages.delete")}
+          roots={levels.roots}
+          canCreate={can(company, "warehouses.categories.create")}
+          canEdit={can(company, "warehouses.categories.edit")}
+          canDelete={can(company, "warehouses.categories.delete")}
+          canCountProducts={canViewProducts}
         />
-      ) : (
-        <ApiFailure result={rootsResult} />
       )}
     </PageShell>
   )

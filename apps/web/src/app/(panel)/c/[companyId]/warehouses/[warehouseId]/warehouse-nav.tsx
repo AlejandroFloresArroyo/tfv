@@ -1,6 +1,14 @@
 "use client"
 
-import { Boxes, ClipboardList, FileText, MapPinned, Tags, Warehouse } from "lucide-react"
+import {
+  Boxes,
+  ClipboardList,
+  FileText,
+  FolderTree,
+  MapPinned,
+  Tags,
+  Warehouse,
+} from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
@@ -10,6 +18,7 @@ export function WarehouseNav({
   warehouseId,
   canViewWarehouses,
   canViewProducts,
+  canViewCategories = false,
   canViewStorages,
   canViewQuotes,
   canViewOrders,
@@ -19,6 +28,15 @@ export function WarehouseNav({
   warehouseId: string
   canViewWarehouses: boolean
   canViewProducts: boolean
+  /**
+   * Con valor por omisión, y es la excepción a la regla de al lado.
+   *
+   * La pestaña llega con las pantallas de categorías, y las seis del almacén que ya existían quedan
+   * fuera de ese encargo. Hacerla obligatoria las dejaría sin compilar; con omisión, la pestaña no
+   * aparece en ellas hasta que cada una pase su permiso. **Debe volverse obligatoria** en cuanto se
+   * puedan tocar: mientras tanto, la navegación del almacén no es la misma en todas sus pantallas.
+   */
+  canViewCategories?: boolean
   canViewStorages: boolean
   /** Sin valor por omisión: una pantalla nueva que lo olvide no compila, en vez de perder la pestaña. */
   canViewQuotes: boolean
@@ -44,6 +62,16 @@ export function WarehouseNav({
             label: t("catalog"),
             icon: Boxes,
             active: pathname === base || pathname.startsWith(`${base}/products/`),
+          },
+        ]
+      : []),
+    ...(canViewCategories
+      ? [
+          {
+            href: `${base}/categories`,
+            label: t("categories.title"),
+            icon: FolderTree,
+            active: pathname.startsWith(`${base}/categories`),
           },
         ]
       : []),

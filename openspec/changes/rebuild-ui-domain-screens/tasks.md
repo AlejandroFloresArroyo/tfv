@@ -42,8 +42,9 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
       penalización, fija o por periodicidad— y **asignación masiva** en las dos direcciones. Falta
       la advertencia que la spec pide cuando la lista está **referenciada por cotizaciones en
       curso**: no hay dato en la API con el que darla (H-38)
-- [ ] Categorías anidadas
-- [x] **Ubicaciones como organigrama navegable**
+- [x] Categorías anidadas
+- [x] **Ubicaciones como organigrama navegable**, y editable sobre él: crear dentro, renombrar,
+      cambiar de padre y eliminar
 - [x] Bandeja de cotizaciones y ficha, con su equipo apartado y sus importes
 - [x] Alta de cotización desde la bandeja: tipo, cliente y ventana, y de ahí al constructor
 - [~] **Constructor de cotizaciones**: el editor de líneas con la disponibilidad delante, el cambio

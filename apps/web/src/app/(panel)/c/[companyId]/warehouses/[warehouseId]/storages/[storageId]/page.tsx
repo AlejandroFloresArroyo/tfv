@@ -65,6 +65,7 @@ export default async function StoragePage({
           warehouseId={warehouseId}
           canViewWarehouses={canViewWarehouses}
           canViewProducts={canViewProducts}
+          canViewCategories={can(company, "warehouses.categories.view")}
           canViewStorages={canViewStorages}
           canViewQuotes={can(company, "warehouses.quotes.view")}
           canViewOrders={can(company, "warehouses.orders.view")}
@@ -93,6 +94,7 @@ export default async function StoragePage({
         warehouseId={warehouseId}
         canViewWarehouses={canViewWarehouses}
         canViewProducts={canViewProducts}
+        canViewCategories={can(company, "warehouses.categories.view")}
         canViewStorages={canViewStorages}
         canViewQuotes={can(company, "warehouses.quotes.view")}
         canViewOrders={can(company, "warehouses.orders.view")}
@@ -104,6 +106,9 @@ export default async function StoragePage({
         roots={rootsResult.data.items}
         path={pathResult.data.items}
         directChildren={childrenResult.data.items}
+        canCreate={can(company, "warehouses.storages.create")}
+        canEdit={can(company, "warehouses.storages.edit")}
+        canDelete={can(company, "warehouses.storages.delete")}
       />
 
       {productsResult ? (
