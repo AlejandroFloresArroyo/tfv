@@ -256,6 +256,22 @@ Dos cosas que no van en esta lista porque no dependen de nosotros: la **medició
 de la 05, que necesita tráfico real de la pila anterior, y la **medición de importes** de la 14
 —cuántas cotizaciones abiertas cambian y en cuánto—. Su sitio es junto a la rebanada 30.
 
+Lo que queda, sin orden acordado todavía:
+
+- **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04). Es lo
+  único de la lista anterior que quedó sin hacer, y a propósito: reescribe el camino de
+  autenticación y necesita configuración externa.
+- **El detalle de producto y sus asistentes** (29b). Sin ellos no se puede completar un alta
+  provisional ni editar una medida desde la pantalla.
+- **Los manejadores de eventos de pago**, que esperan a suscripciones (11) y a la compra en
+  tienda (17).
+- **El sitio público** (29e): el formulario de contacto y la tienda de almacén. Con él llegan
+  también la compra pública de la 15 y las unidades concretas por línea.
+- **Un área de administración de plataforma**, que hoy no existe: la bandeja de prospectos es su
+  primer inquilino.
+- **El idioma de los importes** (H-25): `es` agrupa a la europea y esto es un sistema mexicano. Es
+  decisión de producto.
+
 ## Decisiones pendientes que bloquean
 
 Ninguna bloquea el trabajo en curso. Por orden de cuándo harán falta:
