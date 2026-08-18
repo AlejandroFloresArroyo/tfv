@@ -80,7 +80,9 @@ describe("precio unitario de renta y de venta", () => {
     expect(result.lines[0]?.unitCost).toBe("500.00")
   })
 
-  it("recurre al precio base cuando la frecuencia no tiene tarifa", () => {
+  it("sin tarifa para la frecuencia, la línea queda sin precio", () => {
+    // Escenario: «Sin tarifa para la frecuencia la línea queda sin precio». El precio base es el
+    // de **venta**: multiplicado por los días de una renta, cobra el equipo catorce veces.
     const result = computeQuotation(
       quote({
         lines: [
@@ -93,17 +95,27 @@ describe("precio unitario de renta y de venta", () => {
       }),
     )
 
-    expect(result.lines[0]?.unitCost).toBe("300.00")
+    expect(result.lines[0]?.total).toBe("0.00")
+    expect(result.lines[0]?.unpriced).toBe(true)
   })
 
-  it("una tarifa fija sin importe cobra cero, no el precio base", () => {
-    // Sólo la rama no fija recae en el precio base. Marcar una tarifa como fija y dejarla vacía
-    // es declarar que no se cobra por periodicidad, no pedir que se cobre el catálogo.
+  it("una tarifa fija sin importe cobra cero", () => {
+    // Marcar una tarifa como fija y dejarla vacía es declarar que no se cobra por periodicidad.
     const result = computeQuotation(
       quote({ lines: [line({ basePrice: "300.00", rent: { isFixed: true, weekly: "80.00" } })] }),
     )
 
     expect(result.lines[0]?.unitCost).toBe("0.00")
+  })
+
+  it("una venta sí usa el precio base y no queda sin precio", () => {
+    // Escenario: «Una venta sí usa el precio base». La regla nueva alcanza sólo a la renta.
+    const result = computeQuotation(
+      quote({ type: "sale", lines: [line({ basePrice: "1500.00" })] }),
+    )
+
+    expect(result.lines[0]?.unitCost).toBe("1500.00")
+    expect(result.lines[0]?.unpriced).toBe(false)
   })
 
   it("una venta cobra el precio base", () => {
@@ -540,5 +552,78 @@ describe("trazabilidad del cálculo", () => {
     expect(formatMoney(add(step(result.base), step(result.taxTotal)))).toBe(result.net)
     expect(formatMoney(add(step(result.net), step(result.fees)))).toBe(result.gross)
     expect(formatMoney(subtract(step(result.gross), step(result.advance)))).toBe(result.total)
+  })
+})
+
+describe("precio negociado de una línea", () => {
+  it("sustituye a la tarifa y al periodo", () => {
+    // Escenario: «El precio negociado sustituye a la tarifa y a los días». No se multiplica ni por
+    // los días aplicados ni por la cantidad: es el total de esa línea, negociado.
+    const result = computeQuotation(
+      quote({
+        lines: [
+          line({
+            quantity: 3,
+            frequency: "daily",
+            rent: { isFixed: false, daily: "100.00" },
+            linePrice: "3500.00",
+          }),
+        ],
+      }),
+    )
+
+    expect(result.lines[0]?.total).toBe("3500.00")
+    expect(result.subtotal).toBe("3500.00")
+  })
+
+  it("una línea con precio negociado no informa precio unitario", () => {
+    // Repartir 3500 entre tres no da un importe exacto, y un unitario que no multiplica hasta el
+    // total es un dato falso en el documento con el que el cliente discute.
+    const result = computeQuotation(quote({ lines: [line({ quantity: 3, linePrice: "3500.00" })] }))
+
+    expect(result.lines[0]?.unitCost).toBeUndefined()
+    expect(result.lines[0]?.unitTotal).toBeUndefined()
+  })
+
+  it("retirarlo devuelve el cálculo por tarifa", () => {
+    // Escenario: «Retirar el precio negociado devuelve la tarifa». Diez días a 100.00 por tres.
+    const result = computeQuotation(
+      quote({
+        lines: [
+          line({ quantity: 3, frequency: "daily", rent: { isFixed: false, daily: "100.00" } }),
+        ],
+      }),
+    )
+
+    expect(result.lines[0]?.total).toBe("3000.00")
+  })
+
+  it("una línea con precio negociado nunca queda sin precio", () => {
+    const result = computeQuotation(quote({ lines: [line({ linePrice: "500.00" })] }))
+
+    expect(result.lines[0]?.unpriced).toBe(false)
+  })
+
+  it("el descuento por producto se aplica sobre el precio negociado", () => {
+    // El precio negociado sustituye a la tarifa, no a la negociación que va encima.
+    const result = computeQuotation(
+      quote({
+        lines: [line({ linePrice: "1000.00" })],
+        payment: { version: 1, discount: { type: "percent", value: "10", perProduct: true } },
+      }),
+    )
+
+    expect(result.lines[0]?.total).toBe("900.00")
+  })
+
+  it("en una venta también manda sobre el precio base", () => {
+    const result = computeQuotation(
+      quote({
+        type: "sale",
+        lines: [line({ quantity: 4, basePrice: "1500.00", linePrice: "5000.00" })],
+      }),
+    )
+
+    expect(result.lines[0]?.total).toBe("5000.00")
   })
 })

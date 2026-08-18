@@ -139,6 +139,15 @@ export interface QuotationLineInput {
   readonly frequency: RentFrequency
   /** Tarifa de venta, o precio del producto, o cero. Ver `warehouse-catalog`. */
   readonly basePrice: string
+  /**
+   * Precio negociado de la línea: **el total, para el periodo completo**.
+   *
+   * Sustituye a toda tarifa y no se multiplica ni por los días ni por la cantidad. Es como se
+   * cotiza en la práctica cuando la lista de precios está sin llenar, que es casi siempre.
+   *
+   * Convive con la tarifa sin borrarla: retirarlo devuelve el cálculo por tarifa.
+   */
+  readonly linePrice?: string | undefined
   readonly rent?: RateSchedule | undefined
   readonly penalty?: RateSchedule | undefined
   /** Orden de presentación de la línea dentro de su producto. */
@@ -237,9 +246,16 @@ export interface QuotationLineBreakdown {
   readonly quantity: number
   readonly frequency: RentFrequency
   readonly appliedDays: string
-  readonly unitCost: string
+  /**
+   * **Ausente en una línea con precio negociado.**
+   *
+   * Repartir un total entre sus unidades no da un importe exacto, y un unitario que no multiplica
+   * hasta el total es un dato falso en el documento con el que el cliente discute. Se prefiere no
+   * informarlo a informarlo mal.
+   */
+  readonly unitCost?: string | undefined
   readonly unitDiscount: string
-  readonly unitTotal: string
+  readonly unitTotal?: string | undefined
   readonly cost: string
   readonly discount: string
   readonly total: string
@@ -249,6 +265,14 @@ export interface QuotationLineBreakdown {
   readonly unitFee: string
   /** El total de la línea con su comisión incorporada. Es lo que se imprime al repartir. */
   readonly totalWithFee: string
+  /**
+   * Nadie fijó precio para esta línea.
+   *
+   * Una renta cuya lista no tiene tarifa para la frecuencia elegida y que tampoco lleva precio
+   * negociado. El total es cero porque **no hay precio**, no porque sea gratis, y la interfaz tiene
+   * que poder distinguir las dos cosas para pedir uno.
+   */
+  readonly unpriced: boolean
 }
 
 /**
@@ -318,25 +342,26 @@ export function periodDays(startsOn?: Date | null, endsOn?: Date | null): number
 }
 
 /**
- * El importe de una tarifa según su periodicidad, con lo que se cobra cuando no lo tiene.
+ * El importe de una tarifa según su periodicidad. **Cero cuando nadie la fijó.**
  *
- * **Una tarifa fija ignora la frecuencia**, y si está marcada como fija y vacía cobra cero: sólo
- * la rama por periodicidad recae en el respaldo. Mirar la frecuencia antes haría que una tarifa
- * fija con un importe semanal suelto cobrara el semanal, que es lo que marcarla fija evita.
+ * **Una tarifa fija ignora la frecuencia.** Mirar la frecuencia antes haría que una tarifa fija con
+ * un importe semanal suelto cobrara el semanal, que es lo que marcarla fija evita.
+ *
+ * Lo que **no** hace, y hacía: recaer en el precio base del producto. Ese precio es el de venta, y
+ * multiplicado por los días de una renta cobra el equipo tantas veces como días tenga la ventana.
+ * Con las listas de precios sin llenar —la situación normal— ése era el camino por omisión. Ver la
+ * corrección en `quotation-pricing/spec.md`: sin tarifa la línea queda **sin precio**, y quien
+ * cotiza fija uno.
  *
  * Se publica porque la interfaz enseña este importe antes de que exista la línea —en el buscador
  * del constructor—, y enseñar ahí otro número sería prometer un precio que luego no se cobra.
  */
-export function rateFor(
-  schedule: RateSchedule | undefined,
-  frequency: RentFrequency,
-  fallback: Money,
-): Money {
-  if (!schedule) return fallback
+export function rateFor(schedule: RateSchedule | undefined, frequency: RentFrequency): Money {
+  if (!schedule) return ZERO
   if (schedule.isFixed) return schedule.fixed === undefined ? ZERO : money(schedule.fixed)
 
   const rate = schedule[frequency]
-  return rate === undefined ? fallback : money(rate)
+  return rate === undefined ? ZERO : money(rate)
 }
 
 function computeLine(
@@ -346,10 +371,35 @@ function computeLine(
   discount: QuotationDiscount | undefined,
 ): QuotationLineBreakdown {
   const basePrice = money(input.basePrice)
+  const penaltyPrice = rateFor(input.penalty, input.frequency)
 
-  // Sin tarifa para la frecuencia, la renta recurre al precio base y la penalización a cero.
-  const rentPrice = rateFor(input.rent, input.frequency, basePrice)
-  const penaltyPrice = rateFor(input.penalty, input.frequency, ZERO)
+  // El precio negociado es el total de la línea para el periodo completo: ni se multiplica por los
+  // días ni por la cantidad, y por eso la línea no tiene precio unitario que informar.
+  if (input.linePrice !== undefined) {
+    const negotiated = money(input.linePrice)
+    const lineDiscount = discount?.perProduct ? discountOf(negotiated, discount) : ZERO
+    const total = subtract(negotiated, lineDiscount)
+
+    return {
+      lineId: input.id,
+      productId: input.productId,
+      measurementId: input.measurementId,
+      quantity: input.quantity,
+      frequency: input.frequency,
+      appliedDays: days,
+      unitDiscount: "0.00",
+      discount: formatMoney(lineDiscount),
+      cost: formatMoney(negotiated),
+      total: formatMoney(total),
+      penalty: formatMoney(multiply(penaltyPrice, input.quantity)),
+      fee: "0.00",
+      unitFee: "0.00",
+      totalWithFee: formatMoney(total),
+      unpriced: false,
+    }
+  }
+
+  const rentPrice = rateFor(input.rent, input.frequency)
 
   const unitCost = type === "rent" ? rentPrice : basePrice
   const unitDiscount = discount?.perProduct ? discountOf(unitCost, discount) : ZERO
@@ -373,6 +423,8 @@ function computeLine(
     fee: "0.00",
     unitFee: "0.00",
     totalWithFee: formatMoney(multiply(unitTotal, input.quantity)),
+    // Una renta sin tarifa para su frecuencia no vale cero: **no tiene precio**, y hay que fijarlo.
+    unpriced: type === "rent" && isZero(rentPrice),
   }
 }
 
