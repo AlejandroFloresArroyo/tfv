@@ -1,0 +1,2 @@
+DROP INDEX "warehouse_quotes_folio_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "warehouse_quotes_folio_unique" ON "warehouse_quotes" USING btree ("warehouse_id","folio") WHERE deleted_at IS NULL;

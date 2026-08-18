@@ -210,11 +210,16 @@ export const rentFrequency = pgEnum("rent_frequency", ["daily", "weekly", "month
 
 export const roundDirection = pgEnum("round_direction", ["up", "down"])
 
-/** Contacto de una de las partes. */
+/**
+ * Contacto de una de las partes.
+ *
+ * Con `| undefined` explícito por lo mismo que la tarifa por periodicidad: lo que llega de un
+ * esquema de ruta es «presente con valor indefinido», no «ausente».
+ */
 export interface QuoteContact {
   readonly name: string
-  readonly phone?: string
-  readonly position?: string
+  readonly phone?: string | undefined
+  readonly position?: string | undefined
 }
 
 /**
@@ -296,7 +301,12 @@ export const warehouseQuotes = pgTable(
   },
   (table) => [
     uniqueIndex("warehouse_quotes_code_unique").on(table.code),
-    uniqueIndex("warehouse_quotes_folio_unique").on(table.folio).where(sql`deleted_at IS NULL`),
+    // El folio es **del almacén**, no de la instalación: dos casas de renta numeran sus documentos
+    // cada una desde uno, y una única secuencia global obligaría a que la segunda empresa en dar de
+    // alta una cotización viera un folio que delata cuántas lleva la primera.
+    uniqueIndex("warehouse_quotes_folio_unique")
+      .on(table.warehouseId, table.folio)
+      .where(sql`deleted_at IS NULL`),
     index("warehouse_quotes_queue_idx")
       .on(table.warehouseId, table.priority, table.createdAt)
       .where(sql`deleted_at IS NULL`),

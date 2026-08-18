@@ -81,6 +81,18 @@ import {
 import { health } from "./health.ts"
 import { permissionCatalogRoute } from "./permissions.ts"
 import {
+  changeQuoteStatusRoute,
+  createQuoteRoute,
+  deleteQuoteRoute,
+  getQuoteRoute,
+  listQuotesRoute,
+  setQuoteContactsRoute,
+  setQuotePaymentRoute,
+  setQuoteResponsibleRoute,
+  setQuoteTaxesRoute,
+  updateQuoteRoute,
+} from "./quotes.ts"
+import {
   changeUnitStatusRoute,
   createPriceListRoute,
   createUnitsRoute,
@@ -225,6 +237,17 @@ export const routes: readonly RegisteredRoute[] = [
   deleteUnitsRoute,
   findUnitByCodeRoute,
   unitHistoryRoute,
+
+  listQuotesRoute,
+  createQuoteRoute,
+  getQuoteRoute,
+  updateQuoteRoute,
+  setQuoteContactsRoute,
+  setQuotePaymentRoute,
+  setQuoteTaxesRoute,
+  setQuoteResponsibleRoute,
+  changeQuoteStatusRoute,
+  deleteQuoteRoute,
 
   // ─── Producciones ──────────────────────────────────────────────────────────
   // Pendiente: rebanada 20.

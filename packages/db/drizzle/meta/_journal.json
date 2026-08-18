@@ -71,6 +71,13 @@
       "when": 1787000000000,
       "tag": "0009_search_normalization",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787020461868,
+      "tag": "0010_quote_folio_per_warehouse",
+      "breakpoints": true
     }
   ]
 }

@@ -144,6 +144,13 @@ export interface QuotationDiscount {
   readonly perProduct?: boolean | undefined
 }
 
+/** Un anticipo o un depósito, tal y como se pactan. */
+export interface QuotationPayment {
+  readonly amount: string
+  readonly method?: "card" | "cash" | "transfer" | undefined
+  readonly date?: string | undefined
+}
+
 /** Condiciones de pago. Se leen enteras y no se consultan por campo suelto. */
 export interface QuotePaymentTerms {
   readonly version: 1
@@ -151,12 +158,8 @@ export interface QuotePaymentTerms {
   readonly transferFeeRate?: string | undefined
   readonly additionalFeeRate?: string | undefined
   readonly spreadFeesAcrossLines?: boolean | undefined
-  readonly advance?:
-    | { amount: string; method?: "card" | "cash" | "transfer"; date?: string }
-    | undefined
-  readonly deposit?:
-    | { amount: string; method?: "card" | "cash" | "transfer"; date?: string }
-    | undefined
+  readonly advance?: QuotationPayment | undefined
+  readonly deposit?: QuotationPayment | undefined
   readonly fixedPrice?: string | undefined
   readonly penalty?: { fixed?: string | undefined; concept?: string | undefined } | undefined
   readonly discount?: QuotationDiscount | undefined
