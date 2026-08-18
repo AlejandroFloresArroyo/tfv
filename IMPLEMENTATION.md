@@ -235,7 +235,8 @@ En este orden, y con el motivo de que sea ése:
 6. **La extensión de renta** (hecho): cotización nueva enlazada, parcial y encadenable, que
    traspasa los vínculos vivos sin que la unidad pase por disponible. **Nace en renta**, no en
    borrador como esbozamos — el motivo está en la bitácora y merece una revisión.
-7. **Pedidos de almacén** (rebanada 15).
+7. **Pedidos de almacén** (hecho): ciclo, aceptación atómica, rechazo con motivo y su bandeja.
+   Quedan cuatro tareas de la rebanada esperando al escaparate y al servicio de producciones.
 8. **Lo que queda de la 10**: los prospectos. Las comprobaciones de «en uso» siguen esperando a los
    documentos que aún no existen.
 9. **Base de pruebas separada de la de desarrollo.** Sigue estorbando, y ahora de dos maneras:
@@ -2181,3 +2182,55 @@ Los seis paquetes, Biome, **301 pruebas** de la API y **60 de extremo a extremo*
 dejar rastro y con la verificación de coherencia del almacén limpia. Se miró en pantalla: tres
 unidades fuera, dos que continúan, la extensión con su ventana nueva y su enlace hacia la original,
 y la original quedándose con la unidad que no siguió.
+
+### 2026-08-18 · La bandeja del operador
+
+Séptimo punto: la rebanada 15 entera salvo lo que depende de rebanadas que no existen. El modelo
+llevaba en el esquema desde la 03 sin que nadie lo usara.
+
+**Aceptar es atómico, y ése es el cambio de fondo**
+
+La pila anterior creaba la cotización, reservaba el inventario y enlazaba el pedido en pasos
+sueltos. Un fallo a mitad dejaba un pedido aceptado sin cotización, o una cotización con reservas
+que ningún pedido reclamaba — y las dos cosas no se descubren el día que pasan, sino semanas
+después, cuando alguien va a la nave a buscar equipo que figura comprometido con nadie.
+
+Ahora todo ocurre en una transacción. La prueba lo comprueba pidiendo más de lo que hay con
+«incluir todo»: la reserva falla y el pedido sigue pendiente, sin cotización y sin unidades.
+
+**Lo que no cabe se dice antes de aceptar**
+
+Cada línea llega con la existencia libre de su medida, así que la ficha señala la falta **antes** de
+decidir. Enterarse al fallar la reserva es enterarse tarde: el operador ya le dijo que sí al
+cliente. Por defecto entra lo que cabe y se informa de lo que no; incluir todo obliga a autorizar la
+creación de inventario, que es la regla de `stock-reservation` y no se relaja aquí.
+
+**El rechazo sube**
+
+Cancelar la orden de compra cuando su último pedido vivo se rechaza evita órdenes zombis. La
+comprobación va **dentro** de la transacción que acaba de cancelar uno, de modo que la carrera de la
+pila anterior —dos rechazos simultáneos, ninguno el «último»— no puede darse.
+
+**Un código que colisionaba**
+
+El primer intento derivaba el código del pedido de su identificador. Los identificadores llevan el
+instante en los bits altos, así que dos pedidos creados en el mismo milisegundo compartían prefijo —
+y el prefijo era justo lo que cabía en un código corto. Nueve pruebas fallaron a la vez con un
+`500` de clave duplicada. Es aleatorio, con el mismo alfabeto que el resto de códigos.
+
+**Fuera de alcance, a propósito**
+
+La compra pública —el pedido que nace finalizado— y las unidades concretas por línea necesitan el
+escaparate, que no existe. La cancelación descendente desde la orden de compra necesita el servicio
+de producciones. Quedan cuatro tareas de treinta y tres, todas señaladas con lo que esperan.
+
+**Comprobado**
+
+Los seis paquetes, Biome, **316 pruebas** de la API —quince nuevas— y **62 de extremo a extremo**,
+dos pasadas sin dejar rastro. Se miró en pantalla: la bandeja con lo pendiente delante, la ficha
+diciendo «2 unidades pedidas · 5 libres» junto a «8 unidades pedidas · sin unidades libres», y
+aceptar llevando a la cotización con el folio del pedido.
+
+Un detalle que la limpieza de las pruebas destapó: dar de baja un pedido **desvincula** su
+cotización en vez de borrarla —es un documento con importes—, así que una prueba que acepta tiene
+que llevarse las dos o deja rastro.
