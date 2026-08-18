@@ -79,6 +79,8 @@ const productSchema = z.object({
   responsibleId: z.string().nullable(),
   slug: z.string().nullable(),
   isPublished: z.boolean(),
+  /** Alta provisional desde una cotización, pendiente de completarse. */
+  isProvisional: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
 })
@@ -410,6 +412,8 @@ export const createProductRoute = defineRoute({
               globalCategoryId: z.string().nullable().optional(),
               responsibleId: z.string().nullable().optional(),
               isPublished: z.boolean().optional(),
+              /** Alta provisional desde una cotización: mientras lo sea no se publica. */
+              isProvisional: z.boolean().optional(),
               measurements: z.array(measurementBody).max(50).optional(),
               variants: z.array(childBody).max(50).optional(),
               accessories: z.array(childBody).max(50).optional(),
@@ -469,6 +473,8 @@ export const updateProductRoute = defineRoute({
               globalCategoryId: z.string().nullable().optional(),
               responsibleId: z.string().nullable().optional(),
               isPublished: z.boolean().optional(),
+              /** Retirarla es convertirlo en producto de catálogo, y eso pide su clave. */
+              isProvisional: z.boolean().optional(),
               slug: z.string().trim().min(1).max(280).optional(),
             }),
           },
@@ -508,6 +514,9 @@ export const updateProductRoute = defineRoute({
     requires("warehouses.products.select_category", body.globalCategoryId)
     requires("warehouses.products.edit_payment", body.cost ?? body.price)
     requires("warehouses.products.website", body.isPublished)
+    // Convertir un alta provisional en producto de catálogo es dar de alta catálogo, aunque la
+    // fila ya exista: es el momento en que alguien mira el producto y responde por él.
+    requires("warehouses.products.create", body.isProvisional)
 
     const params = c.req.valid("param")
     const product = await updateProduct(

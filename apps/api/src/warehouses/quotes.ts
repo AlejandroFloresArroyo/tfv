@@ -716,6 +716,8 @@ export interface QuoteLineRecord {
   readonly basePrice: string
   readonly rent?: RateSchedule | undefined
   readonly penalty?: RateSchedule | undefined
+  /** Precio negociado de la línea, si lo lleva. Manda sobre la tarifa. */
+  readonly price: string | null
   /** Unidades libres de esa medida, **sin contar las de esta línea**. El tope es ésta más aquéllas. */
   readonly available: number
   /** No es una columna: es **cuántas unidades tiene apartadas**. Ver `stock-reservation`. */
@@ -732,6 +734,8 @@ export interface QuoteLineInput {
   readonly quantity: number
   readonly frequency?: RentFrequency | undefined
   readonly productPriceId?: string | null | undefined
+  /** Precio negociado: el total de la línea para el periodo. Nulo para volver a la tarifa. */
+  readonly price?: string | null | undefined
   readonly position?: number | undefined
   readonly positionProduct?: number | undefined
 }
@@ -809,6 +813,8 @@ async function applyLines(
     const values = {
       measurementId: line.measurementId,
       productPriceId: line.productPriceId ?? null,
+      // Nulo explícito para retirarlo: la tarifa sigue ahí y vuelve a mandar.
+      price: line.price ?? null,
       frequency: line.frequency ?? "weekly",
       position: line.position ?? index,
       positionProduct: line.positionProduct ?? index,
@@ -889,6 +895,7 @@ async function readLines(tx: Transaction, quoteId: string): Promise<QuoteLineRec
       frequency: line.frequency,
       // La misma regla que usa el motor al calcular. Ver `resolveRate` y `quote-pricing.ts`.
       ...resolveRate({ productPrice, priceDifference, ...(rate ? { listed: rate } : {}) }),
+      price: line.price,
       available: free.get(line.measurementId) ?? 0,
       quantity: unitIds.length,
       unitIds,

@@ -166,6 +166,8 @@ const lineSchema = z.object({
   productCode: z.string(),
   productPriceId: z.string().nullable(),
   frequency: z.enum(RENT_FREQUENCIES),
+  /** Precio negociado: el total de la línea para el periodo. Manda sobre la tarifa sin borrarla. */
+  price: z.string().nullable(),
   /** La tarifa resuelta con la que se calculó, para que el navegador previsualice con la misma. */
   basePrice: z.string(),
   rent: rateScheduleSchema.optional(),
@@ -183,6 +185,8 @@ const lineInput = z.object({
   quantity: z.number().int().min(0).max(9999),
   frequency: z.enum(RENT_FREQUENCIES).optional(),
   productPriceId: z.string().nullable().optional(),
+  /** Nulo explícito para retirarlo y volver al cálculo por tarifa. */
+  price: moneyField.nullable().optional(),
   position: z.number().int().min(0).optional(),
   positionProduct: z.number().int().min(0).optional(),
 })
@@ -194,9 +198,10 @@ const lineBreakdownSchema = z.object({
   quantity: z.number().int(),
   frequency: z.enum(RENT_FREQUENCIES),
   appliedDays: z.string(),
-  unitCost: z.string(),
+  /** Ausentes en una línea con precio negociado: su total no se reparte exacto entre sus unidades. */
+  unitCost: z.string().optional(),
   unitDiscount: z.string(),
-  unitTotal: z.string(),
+  unitTotal: z.string().optional(),
   cost: z.string(),
   discount: z.string(),
   total: z.string(),
@@ -204,6 +209,8 @@ const lineBreakdownSchema = z.object({
   fee: z.string(),
   unitFee: z.string(),
   totalWithFee: z.string(),
+  /** Nadie fijó precio: el total es cero porque falta, no porque sea gratis. */
+  unpriced: z.boolean(),
 })
 
 /** Todos los importes son cadenas decimales: `1234.56` no sobrevive a un viaje como número JSON. */

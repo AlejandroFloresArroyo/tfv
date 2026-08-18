@@ -85,6 +85,8 @@ export interface ProductRecord {
   readonly responsibleId: string | null
   readonly slug: string | null
   readonly isPublished: boolean
+  /** Alta provisional desde una cotización, pendiente de completarse. */
+  readonly isProvisional: boolean
   readonly createdAt: Date
   readonly updatedAt: Date
 }
@@ -261,6 +263,8 @@ export interface CreateProductInput {
   readonly globalCategoryId?: string | null | undefined
   readonly responsibleId?: string | null | undefined
   readonly isPublished?: boolean | undefined
+  /** Alta provisional desde una cotización: mientras lo sea, no se publica. */
+  readonly isProvisional?: boolean | undefined
   readonly measurements?: readonly MeasurementInput[] | undefined
   readonly variants?: readonly ChildInput[] | undefined
   readonly accessories?: readonly ChildInput[] | undefined
@@ -303,7 +307,10 @@ export async function createProduct(
         ...(input.availableForRent === undefined
           ? {}
           : { availableForRent: input.availableForRent }),
-        ...(input.isPublished === undefined ? {} : { isPublished: input.isPublished }),
+        // Un producto provisional no se publica, aunque se pida. La marca es lo que impide que un
+        // alta hecha a la carrera delante de un cliente acabe en la tienda pública.
+        isProvisional: input.isProvisional ?? false,
+        isPublished: input.isProvisional ? false : (input.isPublished ?? false),
         storageId: input.storageId ?? null,
         categoryId: input.categoryId ?? null,
         globalCategoryId: input.globalCategoryId ?? null,
@@ -349,6 +356,8 @@ export interface UpdateProductInput {
   readonly globalCategoryId?: string | null | undefined
   readonly responsibleId?: string | null | undefined
   readonly isPublished?: boolean | undefined
+  /** Retirar la marca provisional es **convertirlo en producto de catálogo**. Ver la ruta. */
+  readonly isProvisional?: boolean | undefined
   readonly slug?: string | undefined
 }
 
@@ -386,7 +395,19 @@ export async function updateProduct(
     if (input.availableForSale !== undefined) patch.availableForSale = input.availableForSale
     if (input.availableForRent !== undefined) patch.availableForRent = input.availableForRent
     if (input.responsibleId !== undefined) patch.responsibleId = input.responsibleId
-    if (input.isPublished !== undefined) patch.isPublished = input.isPublished
+    if (input.isProvisional !== undefined) patch.isProvisional = input.isProvisional
+
+    // Mientras siga provisional no se publica. Es la única prohibición que necesita la marca: sin
+    // publicar no llega a la tienda, y ahí es donde un alta a medias haría daño de verdad.
+    const provisional = input.isProvisional ?? current.isProvisional
+    if (input.isPublished !== undefined) {
+      if (input.isPublished && provisional) {
+        throw new ConflictError(
+          "Un producto provisional no se publica. Complétalo y retira la marca antes.",
+        )
+      }
+      patch.isPublished = input.isPublished
+    }
 
     if (input.slug !== undefined) {
       const slug = slugify(input.slug, "producto")
@@ -881,6 +902,7 @@ function toProductRecord(row: typeof warehouseProducts.$inferSelect): ProductRec
     responsibleId: row.responsibleId,
     slug: row.slug,
     isPublished: row.isPublished,
+    isProvisional: row.isProvisional,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }

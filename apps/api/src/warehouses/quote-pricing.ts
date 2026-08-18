@@ -83,6 +83,8 @@ export async function resolveLines(
       quantity: (reserved.get(row.line.id) ?? []).length,
       frequency: row.line.frequency,
       ...rate,
+      // El precio negociado manda sobre la tarifa resuelta, pero no la borra.
+      ...(row.line.price === null ? {} : { linePrice: row.line.price }),
       position: row.line.position,
       positionProduct: row.line.positionProduct,
     }

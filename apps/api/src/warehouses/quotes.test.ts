@@ -366,6 +366,8 @@ interface Line {
 
 interface Product {
   id: string
+  isPublished: boolean
+  isProvisional: boolean
   measurements: { id: string; name: string }[]
 }
 
@@ -980,7 +982,13 @@ interface Breakdown {
   gross: string
   total: string
   penalty: string
-  lines: { lineId: string; unitCost: string; total: string; appliedDays: string }[]
+  lines: {
+    lineId: string
+    unitCost?: string
+    total: string
+    appliedDays: string
+    unpriced: boolean
+  }[]
   groups: { productId: string; subtotal: string }[]
 }
 
@@ -1278,6 +1286,157 @@ describe("sacar el equipo tiene su propia clave", () => {
     )
 
     expect(done.status).toBe(403)
+  })
+})
+
+// ─── Precio negociado y renta sin tarifa ─────────────────────────────────────
+
+describe("el precio negociado de una línea", () => {
+  it("sustituye a la tarifa y vale por el periodo completo", async () => {
+    // Escenario: «El precio negociado sustituye a la tarifa y a los días».
+    await clearWarehouse()
+    const measurementId = await newStocked("Grúa", 3)
+    const quote = await newQuote({ ...WINDOW })
+
+    expect(
+      (await setLines(quote.id, [{ measurementId, quantity: 3, price: "3500.00" }])).status,
+    ).toBe(200)
+
+    const amounts = await breakdownOf(quote.id)
+    expect(amounts.lines[0]?.total).toBe("3500.00")
+    expect(amounts.subtotal).toBe("3500.00")
+    expect(amounts.lines[0]?.unitCost).toBeUndefined()
+  })
+
+  it("retirarlo deja la línea como estaba", async () => {
+    await clearWarehouse()
+    const measurementId = await newStocked("Tramoya", 2)
+    const quote = await newQuote({ ...WINDOW })
+    await setLines(quote.id, [{ measurementId, quantity: 2, price: "900.00" }])
+    const [line] = await linesOf(quote.id)
+
+    expect((await breakdownOf(quote.id)).subtotal).toBe("900.00")
+
+    await setLines(quote.id, [{ id: line?.id, measurementId, quantity: 2, price: null }])
+
+    expect(await breakdownOf(quote.id)).toMatchObject({ subtotal: "0.00" })
+  })
+})
+
+describe("una renta sin tarifa no se cobra al precio de venta", () => {
+  it("la línea queda sin precio en vez de cobrar el catálogo por día", async () => {
+    // La corrección de `quotation-pricing`: el precio base es el de **venta**, y multiplicado por
+    // los diez días de la ventana cobraría el equipo diez veces.
+    await clearWarehouse()
+    const product = await json<Product>(
+      await request(
+        "POST",
+        `${base}/products`,
+        {
+          name: "Cámara",
+          price: "50000.00",
+          measurements: [{ name: "Cuerpo", initialQuantity: 1 }],
+        },
+        cookie,
+      ),
+    )
+    const measurementId = product.measurements[0]?.id as string
+    const quote = await newQuote({ ...WINDOW })
+
+    await setLines(quote.id, [{ measurementId, quantity: 1 }])
+
+    const amounts = await breakdownOf(quote.id)
+    expect(amounts.subtotal).toBe("0.00")
+    expect(amounts.lines[0]?.unpriced).toBe(true)
+  })
+
+  it("una venta sí cobra el precio del producto", async () => {
+    await clearWarehouse()
+    const product = await json<Product>(
+      await request(
+        "POST",
+        `${base}/products`,
+        { name: "Cable", price: "250.00", measurements: [{ name: "Pieza", initialQuantity: 2 }] },
+        cookie,
+      ),
+    )
+    const measurementId = product.measurements[0]?.id as string
+    const quote = await newQuote({ type: "sale" })
+
+    await setLines(quote.id, [{ measurementId, quantity: 2 }])
+
+    const amounts = await breakdownOf(quote.id)
+    expect(amounts.subtotal).toBe("500.00")
+    expect(amounts.lines[0]?.unpriced).toBe(false)
+  })
+})
+
+describe("un producto provisional", () => {
+  it("no se publica mientras lo sea", async () => {
+    // La marca no es informativa: es lo que impide que un alta hecha a la carrera delante de un
+    // cliente acabe en la tienda pública.
+    await clearWarehouse()
+    const product = await json<Product>(
+      await request(
+        "POST",
+        `${base}/products`,
+        { name: "Equipo sin catalogar", isProvisional: true, isPublished: true },
+        cookie,
+      ),
+    )
+
+    expect(product.isProvisional).toBe(true)
+    expect(product.isPublished).toBe(false)
+  })
+
+  it("publicarlo después tampoco funciona mientras siga provisional", async () => {
+    await clearWarehouse()
+    const product = await json<Product>(
+      await request(
+        "POST",
+        `${base}/products`,
+        { name: "Equipo sin catalogar", isProvisional: true },
+        cookie,
+      ),
+    )
+
+    const response = await request(
+      "PATCH",
+      `${base}/products/${product.id}`,
+      { isPublished: true },
+      cookie,
+    )
+
+    expect(response.status).toBe(409)
+  })
+
+  it("quitarle la marca exige la clave de catálogo", async () => {
+    await clearWarehouse()
+    const product = await json<Product>(
+      await request(
+        "POST",
+        `${base}/products`,
+        { name: "Equipo sin catalogar", isProvisional: true },
+        cookie,
+      ),
+    )
+    const scoped = await memberWith(["warehouses.products.view", "warehouses.products.edit_info"])
+
+    const denied = await request(
+      "PATCH",
+      `${base}/products/${product.id}`,
+      { isProvisional: false },
+      scoped,
+    )
+    expect(denied.status).toBe(403)
+
+    const allowed = await request(
+      "PATCH",
+      `${base}/products/${product.id}`,
+      { isProvisional: false },
+      cookie,
+    )
+    expect(allowed.status).toBe(200)
   })
 })
 
