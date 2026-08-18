@@ -80,6 +80,13 @@ imágenes en el momento de crearse, y SHALL poder divergir después.
 - **WHEN** se crean una variante y un accesorio de un mismo producto
 - **THEN** cada uno recibe su propio código identificativo único
 
+#### Scenario: Se añade una variante a un producto que ya existe
+
+- **GIVEN** un producto clasificado y ubicado, creado hace tiempo
+- **WHEN** se le añade una variante
+- **THEN** la variante nace con la clasificación y la ubicación del padre en ese momento
+- **AND** con su propio código
+
 ### Requirement: Creación de un producto con toda su estructura
 
 El sistema SHALL permitir crear en una sola operación un producto junto con sus medidas, sus
