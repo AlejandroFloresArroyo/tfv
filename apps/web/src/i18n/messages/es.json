@@ -439,6 +439,26 @@
         "bin": "Contenedor"
       }
     },
+    "warehouses": {
+      "create": "Nuevo almacén",
+      "createTitle": "Nuevo almacén",
+      "createBody": "El identificador de su tienda pública se deriva del nombre. Podrás cambiarlo después.",
+      "editTitle": "Editar {name}",
+      "deleteTitle": "Dar de baja el almacén",
+      "description": "Descripción",
+      "namePlaceholder": "Nave central",
+      "slug": "Identificador legible",
+      "slugHint": "Es la dirección de su tienda pública, y es único en toda la plataforma. Si ya está ocupado, el cambio se rechaza en lugar de asignarte otro.",
+      "publish": "Publicado",
+      "publishHint": "Un almacén publicado aparece en su tienda pública.",
+      "publishHintNew": "Puedes publicarlo ahora o dejarlo oculto hasta que tenga catálogo.",
+      "scopeCounting": "Contando lo que se lleva por delante…",
+      "scopeFailed": "No se pudo contar el contenido del almacén.",
+      "scopeStorages": "{count, plural, =0 {Ninguna ubicación} one {# ubicación} other {# ubicaciones}}",
+      "scopeCategories": "{count, plural, =0 {Ninguna categoría} one {# categoría} other {# categorías}}",
+      "scopeProducts": "{count, plural, =0 {Ningún producto} one {# producto} other {# productos}}",
+      "scopeCommerce": "Sus listas de precios, cotizaciones y pedidos"
+    },
     "quotes": {
       "title": "Cotizaciones",
       "subtitle": "La bandeja de trabajo del almacén, con lo más urgente primero.",

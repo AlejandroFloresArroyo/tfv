@@ -439,6 +439,26 @@
         "bin": "Bin"
       }
     },
+    "warehouses": {
+      "create": "New warehouse",
+      "createTitle": "New warehouse",
+      "createBody": "Its public storefront identifier is derived from the name. You can change it later.",
+      "editTitle": "Edit {name}",
+      "deleteTitle": "Delete warehouse",
+      "description": "Description",
+      "namePlaceholder": "Main warehouse",
+      "slug": "Readable identifier",
+      "slugHint": "It is the address of its public storefront, and it is unique across the whole platform. If it is already taken, the change is rejected instead of being given a different one.",
+      "publish": "Published",
+      "publishHint": "A published warehouse appears in its public storefront.",
+      "publishHintNew": "You can publish it now, or leave it hidden until it has a catalogue.",
+      "scopeCounting": "Counting what this takes with it…",
+      "scopeFailed": "The warehouse contents could not be counted.",
+      "scopeStorages": "{count, plural, =0 {No storages} one {# storage} other {# storages}}",
+      "scopeCategories": "{count, plural, =0 {No categories} one {# category} other {# categories}}",
+      "scopeProducts": "{count, plural, =0 {No products} one {# product} other {# products}}",
+      "scopeCommerce": "Its price lists, quotations and orders"
+    },
     "quotes": {
       "title": "Quotations",
       "subtitle": "The warehouse work tray, most urgent first.",
