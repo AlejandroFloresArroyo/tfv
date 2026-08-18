@@ -23,6 +23,7 @@ import { QuoteStatusBadge, QuoteTypeBadge } from "../quote-badges.tsx"
 import { QuoteAmounts } from "./quote-amounts.tsx"
 import { QuoteEditor } from "./quote-editor.tsx"
 import { QuotePaymentTermsPanel } from "./quote-payment.tsx"
+import { type PaymentRow, QuotePayments } from "./quote-payments.tsx"
 import { QuotePreview } from "./quote-preview.tsx"
 import { type OutUnit, QuoteReturns } from "./quote-returns.tsx"
 import { QuoteStatusControl } from "./quote-status.tsx"
@@ -62,12 +63,14 @@ export default async function QuotePage({
 
   const warehouse = `/companies/${companyId}/warehouses/${warehouseId}`
   const base = `${warehouse}/quotes/${quoteId}`
-  const [quoteResult, linesResult, breakdownResult, unitsResult] = await Promise.all([
-    apiGet<QuoteRow>(base),
-    apiGet<ItemsEnvelope<QuoteLineRow>>(`${base}/lines`),
-    apiGet<QuoteBreakdown>(`${base}/breakdown`),
-    apiGet<ItemsEnvelope<OutUnit>>(`${base}/units`),
-  ])
+  const [quoteResult, linesResult, breakdownResult, unitsResult, paymentsResult] =
+    await Promise.all([
+      apiGet<QuoteRow>(base),
+      apiGet<ItemsEnvelope<QuoteLineRow>>(`${base}/lines`),
+      apiGet<QuoteBreakdown>(`${base}/breakdown`),
+      apiGet<ItemsEnvelope<OutUnit>>(`${base}/units`),
+      apiGet<ItemsEnvelope<PaymentRow>>(`${base}/payments`),
+    ])
 
   if (!quoteResult.ok) {
     return (
@@ -290,6 +293,15 @@ export default async function QuotePage({
               quoteId={quoteId}
               taxes={quote.taxes}
               editable={can(company, "warehouses.quotes.edit_tax") && !closed}
+            />
+
+            <QuotePayments
+              companyId={companyId}
+              warehouseId={warehouseId}
+              quoteId={quoteId}
+              payments={paymentsResult.ok ? paymentsResult.data.items : []}
+              // Una cotización cerrada **sí** admite cobro: una renta que terminó se sigue pagando.
+              editable={can(company, "warehouses.quotes.edit_payment")}
             />
 
             {canFinish && unitsResult.ok ? (

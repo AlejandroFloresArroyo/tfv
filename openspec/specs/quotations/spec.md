@@ -296,11 +296,47 @@ generado.
 El sistema SHALL permitir registrar el pago de una cotización con su importe, método, descripción,
 quién lo registró y los comprobantes adjuntos.
 
+Lo cobrado SHALL contarse **aparte del anticipo pactado**: el anticipo mueve el total del documento
+y lo cobrado mueve el **saldo**, que SHALL calcularse como el bruto menos lo cobrado.
+
+Una cotización **cerrada** SHALL seguir admitiendo cobro, y su saldo SHALL recalcularse aunque sus
+importes estén congelados.
+
+> El saldo se cuenta desde el bruto y no desde el total porque el total ya descontó el anticipo
+> pactado: descontar además lo cobrado contaría dos veces el mismo dinero en cuanto ese anticipo se
+> cobre, que es el caso normal. Cuando se cobra y se registra, saldo y total coinciden.
+
 #### Scenario: Se registra un pago con comprobante
 
 - **WHEN** se registra un pago aportando importe, método y un comprobante
 - **THEN** queda asociado a la cotización
 - **AND** el comprobante es consultable
+
+> **Incumplido a propósito.** El registro entra sin comprobantes porque no existe todavía
+> almacenamiento de ficheros; la tabla está en el esquema esperándolo. Se decidió que entrara antes:
+> llevar la cuenta a mano mientras tanto es peor que llevarla sin el papel escaneado. Este escenario
+> se cumple con la rebanada de medios.
+
+#### Scenario: Pactar no es cobrar
+
+- **GIVEN** una cotización de `1000.00` con un anticipo pactado de `300.00`
+- **WHEN** nadie ha pagado todavía
+- **THEN** el total a pagar es `700.00`
+- **AND** el saldo es `1000.00`
+
+#### Scenario: El cobro mueve el saldo y no el total
+
+- **GIVEN** la misma cotización
+- **WHEN** se registra un cobro de `300.00`
+- **THEN** el total a pagar sigue siendo `700.00`
+- **AND** el saldo pasa a `700.00`
+
+#### Scenario: Una cotización cerrada se sigue cobrando
+
+- **GIVEN** una cotización cerrada con sus importes congelados
+- **WHEN** se registra un cobro
+- **THEN** se acepta
+- **AND** el saldo se recalcula aunque el resto de importes no se muevan
 
 ### Requirement: Documento y enlace público
 

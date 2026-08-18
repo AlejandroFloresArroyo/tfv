@@ -621,7 +621,16 @@
       "discountAsRate": "Discount (%)",
       "discountAsAmount": "Discount (amount)",
       "linesFrozen": "This quote's equipment has left the warehouse. Lines stay locked until it comes back: register it under equipment return, below.",
-      "unpricedLine": "Nobody set a price for this line. It is not free."
+      "unpricedLine": "Nobody set a price for this line. It is not free.",
+      "payments": "Collections",
+      "paymentsHint": "Money that came in. The advance above is what was agreed; this is what was collected, and it is what moves the balance.",
+      "noPayments": "Nothing collected yet.",
+      "addPayment": "Record collection",
+      "removePayment": "Remove the {amount} collection",
+      "paymentNote": "Note",
+      "collected": "Collected",
+      "balance": "Balance",
+      "balanceHint": "What is left to collect, counted from the gross."
     }
   }
 }

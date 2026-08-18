@@ -621,7 +621,16 @@
       "discountAsRate": "Descuento (%)",
       "discountAsAmount": "Descuento (importe)",
       "linesFrozen": "El equipo de esta cotización ya salió de la nave. Las líneas no se modifican hasta que vuelva: regístralo en el retorno del equipo, más abajo.",
-      "unpricedLine": "Nadie fijó precio para esta línea. No es que sea gratis."
+      "unpricedLine": "Nadie fijó precio para esta línea. No es que sea gratis.",
+      "payments": "Cobros",
+      "paymentsHint": "Dinero que entró. El anticipo de arriba es lo pactado; esto es lo cobrado, y es lo que mueve el saldo.",
+      "noPayments": "Todavía no se ha cobrado nada.",
+      "addPayment": "Registrar cobro",
+      "removePayment": "Dar de baja el cobro de {amount}",
+      "paymentNote": "Nota",
+      "collected": "Cobrado",
+      "balance": "Saldo",
+      "balanceHint": "Lo que falta por cobrar, contado desde el bruto."
     }
   }
 }

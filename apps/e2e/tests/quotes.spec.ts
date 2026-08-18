@@ -379,7 +379,7 @@ test.describe("el retorno del equipo", () => {
 
     // Cada unidad por su código, que es lo que lleva escrito la etiqueta de la nave.
     await expect(returns.getByRole("listitem").first()).toBeVisible()
-    await expect(page.getByRole("button", { name: /Registrar/ })).toBeDisabled()
+    await expect(page.getByRole("button", { name: "Registrar retorno" })).toBeDisabled()
   })
 
   test("con el equipo fuera la ficha no ofrece editar las líneas", async ({ as, companies }) => {
@@ -608,6 +608,52 @@ test.describe("las condiciones de pago", () => {
     await deposit.getByLabel("Importe").fill("")
     await deposit.getByLabel("Importe").blur()
     await expect(amounts).not.toContainText("Depósito en garantía")
+  })
+})
+
+test.describe("los cobros", () => {
+  const trash: Created[] = []
+  test.afterEach(async ({ as }) => await sweep(await as("owner"), trash))
+
+  test("un cobro mueve el saldo y deja quieto el total pactado", async ({ as, companies }) => {
+    // El anticipo es lo pactado y mueve el documento; el cobro es lo que entró y mueve el saldo.
+    // Pactar no es cobrar, y hasta que alguien registre el pago no tienen por qué coincidir.
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+    const quoteId = await ownQuote(
+      context,
+      companyId,
+      warehouseId,
+      `Cobros ${Date.now()}`,
+      trash,
+      2,
+    )
+
+    await page.goto(`${QUOTES(companyId, warehouseId)}/${quoteId}`)
+    const amounts = page.getByRole("heading", { name: "Importes" }).locator("..")
+    const pactado = await total(amounts)
+
+    // Sin nada cobrado el bloque no se enseña: «Saldo» y «Total a pagar» serían dos cifras
+    // distintas sin que hubiera pasado nada.
+    await expect(amounts).not.toContainText("Saldo")
+
+    const collections = page.getByRole("region", { name: "Cobros" })
+    await collections.getByLabel("Importe").fill("120.00")
+    await collections.getByLabel("Nota").fill("Depósito en ventanilla")
+    await collections.getByRole("button", { name: "Registrar cobro" }).click()
+
+    await expect(amounts).toContainText("Cobrado")
+    await expect(amounts).toContainText("Saldo")
+    await expect.poll(() => total(amounts)).toBe(pactado)
+
+    // Y darlo de baja devuelve el saldo a donde estaba.
+    await collections
+      .getByRole("button", { name: /Dar de baja/ })
+      .first()
+      .click()
+    await expect(amounts).not.toContainText("Saldo")
   })
 })
 

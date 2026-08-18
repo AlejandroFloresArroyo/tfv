@@ -9,6 +9,10 @@ import { usePreviewedQuote } from "./quote-preview.tsx"
 /**
  * La cadena de importes, de subtotal a total.
  *
+ * El bloque de cobro **sólo aparece cuando hay algo cobrado**. Con cero, «Saldo» sería el bruto
+ * entero mientras «Total a pagar» ya descontó el anticipo pactado: dos cifras distintas sin que
+ * nada haya pasado, que es la clase de contradicción aparente que enseña a desconfiar del panel.
+ *
  * **Enseña lo que el constructor está calculando si hay algo sin guardar**, y lo que devolvió el
  * servidor si no. Es la única manera de que estas cifras y los totales de línea que tiene al lado
  * digan lo mismo mientras se edita; con el desglose guardado a secas, tocar una cantidad hacía que
@@ -78,6 +82,17 @@ export function QuoteAmounts({
           {amount(breakdown.total)}
         </dd>
       </dl>
+
+      {breakdown.collected !== "0.00" ? (
+        <>
+          <Separator className="my-4" />
+          <dl className="grid gap-3">
+            <Row label={t("collected")} value={`−${amount(breakdown.collected)}`} />
+            <Row label={t("balance")} value={amount(breakdown.balance)} />
+          </dl>
+          <p className="mt-2 text-body3 text-content-faint">{t("balanceHint")}</p>
+        </>
+      ) : null}
 
       {breakdown.penalty !== "0.00" || breakdown.deposit !== "0.00" ? (
         <>
