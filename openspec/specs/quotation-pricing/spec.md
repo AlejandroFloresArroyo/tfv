@@ -26,34 +26,48 @@ díasAplicados   = si se redondea → techo o piso de frecuenciaDías, según la
 
 precioBase      = tarifa de venta, o precio del producto, o cero    (ver warehouse-catalog)
 precioRenta     = si la tarifa de renta es fija → su importe fijo
-                  si no                         → la tarifa de la frecuencia, o precioBase
+                  si no                         → la tarifa de la frecuencia
+                  sin tarifa para la frecuencia → la línea queda sin precio
 precioPenaliz.  = si la penalización es fija    → su importe fijo
                   si no                         → la penalización de la frecuencia, o cero
 
-costoUnitario   = renta → precioRenta ; venta → precioBase
-descUnitario    = hay descuento por producto → round(costoUnitario × desc% ÷ 100, 2) ; si no → 0
-totalUnitario   = (renta → round(precioRenta × díasAplicados, 2) ; venta → precioBase) − descUnitario
+si la línea lleva precio negociado:
+  total     = precio negociado − descuento por producto
+  sin unitarios: el total no se reparte exacto entre las unidades
 
-costo     = round(costoUnitario  × cantidad, 2)
-descuento = round(descUnitario   × cantidad, 2)
-total     = round(totalUnitario  × cantidad, 2)
-penaliz.  = round(precioPenaliz. × cantidad, 2)
+si no:
+  costoUnitario   = renta → precioRenta ; venta → precioBase
+  totalUnitario   = renta → round(precioRenta × díasAplicados, 2) ; venta → precioBase
+  descUnitario    = descuento por producto en porcentaje
+                    → round(totalUnitario × desc% ÷ 100, 2)
+                    en importe → no hay, y la línea se queda sin unitarios
+
+  costo     = round(costoUnitario  × cantidad, 2)
+  descuento = por porcentaje → round(descUnitario × cantidad, 2)
+              por importe    → el importe, una sola vez
+  total     = round(totalUnitario  × cantidad, 2) − descuento
+  penaliz.  = round(precioPenaliz. × cantidad, 2)
 ```
 
 **Del documento:**
 
 ```
-1.  subtotal        = Σ total de líneas + Σ conceptos adicionales
-2.  descuentoGlobal = si hay descuento global → por porcentaje o por importe
-3.  base            = subtotal − descuentoGlobal
-4.  si hay precio fijo → base = precio fijo, con su descuento aplicado igual
-5.  impuestos       = Σ de los que aumentan − Σ de los que disminuyen   (ver tabla)
-6.  neto            = base + impuestos
-7.  comisiones      = comisión por transferencia + comisión adicional, como porcentaje sobre el neto
-8.  bruto           = neto + comisiones
-9.  total           = bruto − anticipo, si lo hay
-10. penalización    = si hay penalización → importe fijo, o Σ penalizaciones de línea
+1.  totalLíneas     = Σ total de líneas
+2.  precioPaquete   = si hay precio por paquete → sustituye a totalLíneas
+3.  subtotal        = (precioPaquete, o totalLíneas) + Σ conceptos adicionales
+4.  descuentoGlobal = si hay descuento global → por porcentaje o por importe, sobre el subtotal
+5.  base            = subtotal − descuentoGlobal
+6.  impuestos       = Σ de los que aumentan − Σ de los que disminuyen   (ver tabla)
+7.  neto            = base + impuestos
+8.  comisiones      = comisión por transferencia + comisión adicional, como porcentaje sobre el neto
+9.  bruto           = neto + comisiones
+10. total           = bruto − anticipo, si lo hay
+11. penalización    = si hay penalización → importe fijo, o Σ penalizaciones de línea  ← contingente
+12. depósito        = el depósito pactado, tal cual                                    ← contingente
 ```
+
+Los dos contingentes **no entran en el total**: la penalización sólo se cobra si procede, y el
+depósito se devuelve.
 
 ### Tratamiento de cada impuesto
 
@@ -230,11 +244,20 @@ por la cantidad, sin intervenir los días.
 
 ### Requirement: Descuento por producto
 
-Cuando la cotización indique descuento por producto, el sistema SHALL aplicarlo sobre el costo
-unitario de cada línea antes de multiplicar por la cantidad.
+Cuando la cotización indique descuento por producto, el sistema SHALL aplicarlo sobre **el importe
+de cada línea**: como porcentaje, sobre el total unitario antes de multiplicar por la cantidad;
+como importe fijo, restándolo una sola vez al total de la línea.
 
-Cuando no lo indique, el descuento unitario SHALL ser cero y el descuento se aplicará de forma
-global.
+Cuando el descuento por producto sea un importe fijo, la línea NO SHALL informar descuento ni total
+unitarios.
+
+Cuando no se indique por producto, el descuento unitario SHALL ser cero y el descuento se aplicará
+de forma global.
+
+> **Corregido.** Decía «sobre el costo unitario», y el costo unitario de una renta es la **tarifa**,
+> no lo que vale la línea: un diez por ciento sobre una renta de diez días descontaba el uno por
+> ciento. Con porcentaje el resultado no cambia en una venta —de ahí que el escenario siga en pie—,
+> pero sí en toda renta de más de un día.
 
 #### Scenario: El descuento por producto reduce cada línea
 
@@ -242,6 +265,20 @@ global.
 - **WHEN** se calcula
 - **THEN** el descuento de la línea es `80.00`
 - **AND** su total es `720.00`
+
+#### Scenario: Un porcentaje por producto baja el total de la línea, no la tarifa
+
+- **GIVEN** un descuento por producto del diez por ciento
+- **AND** una línea de dos unidades a `100.00` diarios durante diez días
+- **WHEN** se calcula
+- **THEN** el total unitario es `900.00` y el de la línea `1800.00`
+
+#### Scenario: Un importe por producto se resta una vez al total de la línea
+
+- **GIVEN** un descuento por producto de `100.00` y una línea de cuatro unidades a `200.00`
+- **WHEN** se calcula
+- **THEN** el descuento de la línea es `100.00` y su total `700.00`
+- **AND** la línea no informa descuento ni total unitarios
 
 ### Requirement: Redondeo por línea antes de sumar
 
@@ -282,23 +319,41 @@ porcentaje o como importe según se indique.
 - **WHEN** se calcula
 - **THEN** la base es `880.00`
 
-### Requirement: Precio fijo que sustituye a la base
+### Requirement: Precio por paquete que sustituye al total de las líneas
 
-Cuando la cotización declare un precio fijo, éste SHALL sustituir a la base calculada, y el
-descuento global SHALL aplicarse igualmente sobre él.
+Cuando la cotización declare un precio por paquete, éste SHALL sustituir a **lo que sumen las
+líneas**, y los conceptos adicionales SHALL seguir sumándose encima. El descuento global SHALL
+aplicarse igualmente sobre el subtotal resultante.
 
-Las líneas SHALL seguir mostrándose con sus importes, pero el documento SHALL dejar claro que el
-importe acordado es el fijo.
+El desglose SHALL informar el precio del paquete como cifra propia, y omitirlo cuando no se haya
+pactado ninguno.
 
-#### Scenario: El precio fijo manda
+Mientras haya precio por paquete, los importes de línea NO SHALL mostrarse: ni en el documento ni
+en la pantalla que lo construye. El precio acordado es el del paquete, y enseñar al lado las cifras
+que ya no rigen sólo invita a discutir sobre ellas.
 
-- **GIVEN** líneas que suman `1000.00` y un precio fijo de `800.00`
+> **Corregido dos veces.** Decía que sustituía a la **base**, y la base viene del subtotal, que
+> incluye los conceptos adicionales: declarar un precio de paquete hacía desaparecer un flete
+> registrado aparte sin decirlo. Y decía que las líneas seguirían mostrando sus importes, que es lo
+> contrario de lo que se decidió: es un hábito contable de la industria, no una necesidad del
+> documento.
+
+#### Scenario: El precio por paquete manda sobre lo que sumen las líneas
+
+- **GIVEN** líneas que suman `1000.00` y un precio por paquete de `800.00`
 - **WHEN** se calcula
-- **THEN** la base es `800.00`
+- **THEN** el total de líneas sigue siendo `1000.00`
+- **AND** el subtotal y la base son `800.00`
 
-#### Scenario: El descuento se aplica sobre el precio fijo
+#### Scenario: El precio por paquete no absorbe los conceptos adicionales
 
-- **GIVEN** un precio fijo de `800.00` y un descuento global del diez por ciento
+- **GIVEN** un precio por paquete de `800.00` y un concepto adicional de `150.00`
+- **WHEN** se calcula
+- **THEN** el subtotal es `950.00`
+
+#### Scenario: El descuento se aplica sobre el precio del paquete
+
+- **GIVEN** un precio por paquete de `800.00` y un descuento global del diez por ciento
 - **WHEN** se calcula
 - **THEN** la base es `720.00`
 
@@ -412,6 +467,24 @@ La penalización no SHALL sumarse al total: es un importe contingente que sólo 
 - **GIVEN** una penalización declarada fija
 - **WHEN** se calcula
 - **THEN** su importe es el declarado, con independencia de las líneas
+
+### Requirement: El depósito en garantía es contingente
+
+Cuando la cotización declare un depósito, el sistema SHALL informarlo en el desglose y NO SHALL
+sumarlo ni restarlo del total: es una garantía que se cobra por adelantado y se devuelve.
+
+#### Scenario: El depósito no altera el total
+
+- **GIVEN** una cotización cuyo total a pagar es `1000.00` y un depósito de `5000.00`
+- **WHEN** se calcula
+- **THEN** el total sigue siendo `1000.00`
+- **AND** el depósito se informa aparte, junto a la penalización
+
+#### Scenario: Sin depósito pactado el importe es cero
+
+- **GIVEN** una cotización sin depósito
+- **WHEN** se calcula
+- **THEN** el depósito informado es `0.00`
 
 ### Requirement: Los importes se congelan al cerrar
 
