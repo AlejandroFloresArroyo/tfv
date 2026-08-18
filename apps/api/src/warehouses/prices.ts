@@ -36,7 +36,7 @@ import {
   warehouseProductPrices,
   warehouseProducts,
 } from "@tfv/db/schema"
-import { and, count, eq, inArray, isNull } from "drizzle-orm"
+import { and, asc, count, eq, inArray, isNull } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 import { loadWarehouse } from "./warehouses.ts"
@@ -62,6 +62,15 @@ export interface ProductPriceRecord {
   readonly id: string
   readonly priceListId: string
   readonly productId: string
+  /**
+   * El nombre y el código de su producto, con la tarifa.
+   *
+   * Sin ellos, pintar doscientas tarifas obliga a traerse el catálogo entero del almacén y
+   * cruzarlo en memoria: tres peticiones en una nave de doscientos productos, veintiuna en una de
+   * dos mil (H-34). Es lo mismo que la línea de cotización ya hace con su producto y su medida.
+   */
+  readonly productName: string
+  readonly productCode: string
   readonly sale: string
   readonly rent: RateSchedule
   readonly penalty: RateSchedule
@@ -225,6 +234,17 @@ export async function deletePriceList(
 
 // ─── Tarifas ─────────────────────────────────────────────────────────────────
 
+/**
+ * Las tarifas de una lista, **con el producto de cada una**.
+ *
+ * La unión es interna y deja fuera a los productos dados de baja: una tarifa que no se puede
+ * nombrar no es una tarifa, y `warehouse-catalog` dice que dar de baja un producto se lleva las
+ * suyas. Es la misma condición que cuenta `withProductCounts`, para que la ficha no diga «veinte
+ * productos» encima de una tabla de diecisiete filas.
+ *
+ * Ordenadas por nombre de producto: doscientas tarifas se leen, y ordenar en la pantalla obliga a
+ * tenerlas todas antes de enseñar la primera.
+ */
 export async function listPrices(
   actor: Actor,
   companyId: string,
@@ -236,11 +256,22 @@ export async function listPrices(
     await loadPriceList(tx, warehouseId, priceListId)
 
     const rows = await tx
-      .select()
+      .select({
+        price: warehouseProductPrices,
+        productName: warehouseProducts.name,
+        productCode: warehouseProducts.code,
+      })
       .from(warehouseProductPrices)
-      .where(eq(warehouseProductPrices.priceListId, priceListId))
+      .innerJoin(warehouseProducts, eq(warehouseProducts.id, warehouseProductPrices.productId))
+      .where(
+        and(
+          eq(warehouseProductPrices.priceListId, priceListId),
+          isNull(warehouseProducts.deletedAt),
+        ),
+      )
+      .orderBy(asc(warehouseProducts.name), asc(warehouseProducts.code))
 
-    return rows.map(toPriceRecord)
+    return rows.map((row) => toPriceRecord(row.price, row))
   })
 }
 
@@ -268,7 +299,7 @@ export async function setPrice(
   return withRequester(actor, async (tx) => {
     await loadWarehouse(tx, companyId, warehouseId)
     await loadPriceList(tx, warehouseId, priceListId)
-    await assertProduct(tx, warehouseId, productId)
+    const product = await assertProduct(tx, warehouseId, productId)
 
     const values = {
       ...(input.sale === undefined ? {} : { sale: input.sale }),
@@ -286,7 +317,7 @@ export async function setPrice(
       .returning()
 
     if (!row) throw new Error("la escritura de la tarifa no devolvió fila")
-    return toPriceRecord(row)
+    return toPriceRecord(row, { productName: product.name, productCode: product.code })
   })
 }
 
@@ -539,6 +570,13 @@ async function findPrice(tx: Transaction, priceListId: string, productId: string
 
 // ─── Ayuda ───────────────────────────────────────────────────────────────────
 
+/**
+ * Cuántos productos tienen tarifa en cada lista.
+ *
+ * Cuenta **lo que se puede enseñar**: la misma unión interna con el catálogo que usa `listPrices`,
+ * para que la cifra de la ficha y las filas de su tabla no puedan discrepar. Sin ella, dar de baja
+ * un producto dejaba su tarifa contando en el encabezado de una lista donde ya no aparece.
+ */
 async function withProductCounts(
   tx: Transaction,
   rows: readonly (typeof warehousePriceLists.$inferSelect)[],
@@ -548,10 +586,14 @@ async function withProductCounts(
   const counts = await tx
     .select({ priceListId: warehouseProductPrices.priceListId, value: count() })
     .from(warehouseProductPrices)
+    .innerJoin(warehouseProducts, eq(warehouseProducts.id, warehouseProductPrices.productId))
     .where(
-      inArray(
-        warehouseProductPrices.priceListId,
-        rows.map((row) => row.id),
+      and(
+        inArray(
+          warehouseProductPrices.priceListId,
+          rows.map((row) => row.id),
+        ),
+        isNull(warehouseProducts.deletedAt),
       ),
     )
     .groupBy(warehouseProductPrices.priceListId)
@@ -603,11 +645,16 @@ async function assertProduct(tx: Transaction, warehouseId: string, productId: st
   return row
 }
 
-function toPriceRecord(row: typeof warehouseProductPrices.$inferSelect): ProductPriceRecord {
+function toPriceRecord(
+  row: typeof warehouseProductPrices.$inferSelect,
+  product: { productName: string; productCode: string },
+): ProductPriceRecord {
   return {
     id: row.id,
     priceListId: row.priceListId,
     productId: row.productId,
+    productName: product.productName,
+    productCode: product.productCode,
     sale: row.sale,
     rent: row.rent,
     penalty: row.penalty,

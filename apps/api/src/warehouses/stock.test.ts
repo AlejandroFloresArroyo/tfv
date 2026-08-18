@@ -572,6 +572,65 @@ describe("listas de precios", () => {
     expect(response.status).toBe(404)
   })
 
+  it("cada tarifa viaja con el nombre y el código de su producto", async () => {
+    // H-34: la pantalla se traía el catálogo entero del almacén —hasta tres peticiones y dos mil
+    // productos— sólo para nombrar las filas. Es H-08b otra vez, en el recurso de al lado.
+    await clearCatalog()
+    const camara = await newStocked("Cámara", 0)
+    const tripie = await newStocked("Tripié", 0)
+    const list = await newList("Pública")
+
+    await request(
+      "PUT",
+      `${base}/price-lists/${list.id}/prices/${tripie.id}`,
+      { sale: "300.00" },
+      cookie,
+    )
+    await request(
+      "PUT",
+      `${base}/price-lists/${list.id}/prices/${camara.id}`,
+      { sale: "1200.00" },
+      cookie,
+    )
+
+    const prices = await json<{
+      items: { productId: string; productName: string; productCode: string; sale: string }[]
+    }>(await request("GET", `${base}/price-lists/${list.id}/prices`, undefined, cookie))
+
+    // Por nombre de producto: una lista de doscientas tarifas se lee, no se ordena en la pantalla.
+    expect(prices.items.map((row) => row.productName)).toEqual(["Cámara", "Tripié"])
+    expect(prices.items[0]).toMatchObject({ productId: camara.id, productCode: camara.code })
+  })
+
+  it("la tarifa de un producto dado de baja deja de figurar y de contarse", async () => {
+    // Las dos cifras se sacan de la misma condición: la ficha no puede decir «dos productos» y
+    // enseñar una fila.
+    await clearCatalog()
+    const a = await newStocked("A", 0)
+    const b = await newStocked("B", 0)
+    const list = await newList("Pública")
+
+    await request(
+      "PUT",
+      `${base}/price-lists/${list.id}/products`,
+      { productIds: [a.id, b.id] },
+      cookie,
+    )
+    expect((await request("DELETE", `${base}/products/${a.id}`, undefined, cookie)).status).toBe(
+      204,
+    )
+
+    const prices = await json<{ items: { productId: string }[] }>(
+      await request("GET", `${base}/price-lists/${list.id}/prices`, undefined, cookie),
+    )
+    expect(prices.items.map((row) => row.productId)).toEqual([b.id])
+
+    const ficha = await json<{ productCount: number }>(
+      await request("GET", `${base}/price-lists/${list.id}`, undefined, cookie),
+    )
+    expect(ficha.productCount).toBe(1)
+  })
+
   it("un producto figura en dos listas con tarifas distintas", async () => {
     // Escenario: «Un producto figura en dos listas».
     await clearCatalog()

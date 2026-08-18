@@ -69,6 +69,9 @@ const productPriceSchema = z.object({
   id: z.string(),
   priceListId: z.string(),
   productId: z.string(),
+  /** Con la tarifa, para no pedir el catálogo entero sólo para nombrar las filas (H-34). */
+  productName: z.string(),
+  productCode: z.string(),
   sale: z.string(),
   rent: rateSchema,
   penalty: rateSchema,
