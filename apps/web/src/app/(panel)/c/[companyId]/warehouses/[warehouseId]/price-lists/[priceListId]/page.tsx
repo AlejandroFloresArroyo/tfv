@@ -311,9 +311,15 @@ async function RateCell({ label, schedule }: { label: string; schedule: RateSche
         ) : (
           <ul className="grid gap-0.5">
             {entries.map((entry) => (
-              <li key={entry.key} className="flex items-baseline justify-between gap-3">
+              // Con periodicidad, la etiqueta a un lado y el importe al otro; sin ella —la tarifa
+              // fija— el importe se queda a la izquierda, alineado con el de venta. Empujarlo al
+              // borde lo separaría del encabezado al que pertenece.
+              <li
+                key={entry.key}
+                className={entry.label ? "flex items-baseline justify-between gap-3" : undefined}
+              >
                 {entry.label ? <span className="text-content-muted">{entry.label}</span> : null}
-                <span className="ml-auto font-semibold text-content tabular-nums">
+                <span className="font-semibold text-content tabular-nums">
                   {formatAmount(entry.amount, format)}
                 </span>
               </li>
