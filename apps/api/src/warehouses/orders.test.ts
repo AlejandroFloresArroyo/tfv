@@ -16,6 +16,8 @@ import {
   counterparties,
   loginAttempts,
   notificationDeliveries,
+  productionPurchaseOrders,
+  productions,
   roles,
   services,
   sessions,
@@ -23,6 +25,7 @@ import {
   warehouseCategories,
   warehouseMeasurements,
   warehouseOrderLines,
+  warehouseOrderMessages,
   warehouseOrders,
   warehousePriceLists,
   warehouseProductPrices,
@@ -45,7 +48,7 @@ const PASSWORD = "una-frase-larga-y-buena"
 
 async function reset() {
   await db.execute(
-    sql`truncate table ${notificationDeliveries}, ${sessions}, ${loginAttempts}, ${users}, ${companyMembers}, ${roles}, ${companyServices}, ${counterparties}, ${warehouseOrderLines}, ${warehouseOrders}, ${warehouseStockReservations}, ${warehouseQuoteLines}, ${warehouseQuotes}, ${warehouseStockEvents}, ${warehouseStockUnits}, ${warehouseMeasurements}, ${warehouseProductPrices}, ${warehousePriceLists}, ${warehouseProducts}, ${warehouseCategories}, ${warehouseStorages}, ${warehouses}, ${services}, ${companies} cascade`,
+    sql`truncate table ${productionPurchaseOrders}, ${productions}, ${warehouseOrderMessages}, ${notificationDeliveries}, ${sessions}, ${loginAttempts}, ${users}, ${companyMembers}, ${roles}, ${companyServices}, ${counterparties}, ${warehouseOrderLines}, ${warehouseOrders}, ${warehouseStockReservations}, ${warehouseQuoteLines}, ${warehouseQuotes}, ${warehouseStockEvents}, ${warehouseStockUnits}, ${warehouseMeasurements}, ${warehouseProductPrices}, ${warehousePriceLists}, ${warehouseProducts}, ${warehouseCategories}, ${warehouseStorages}, ${warehouses}, ${services}, ${companies} cascade`,
   )
 }
 
@@ -63,6 +66,7 @@ async function json<T>(response: Response): Promise<T> {
 
 let cookie = ""
 let base = ""
+let companyId = ""
 
 interface Order {
   id: string
@@ -90,6 +94,7 @@ beforeAll(async () => {
   const company = await json<{ id: string }>(
     await request("POST", "/companies", { name: "Renta del Bajío" }, cookie),
   )
+  companyId = company.id
 
   const serviceId = newId()
   await db.insert(services).values({ id: serviceId, keycode: "warehouses", name: "Almacenes" })
@@ -375,6 +380,105 @@ describe("eliminar un pedido", () => {
       await request("GET", `${base}/rates?measurementId=${measurementId}`, undefined, cookie),
     )
     expect(rates.items[0]?.available).toBe(2)
+  })
+})
+
+describe("el rechazo sube hasta la orden de compra", () => {
+  /** Una orden de compra de producción, insertada a mano: su servicio es de otra rebanada. */
+  async function purchaseOrder(): Promise<string> {
+    const productionId = newId()
+    await db
+      .insert(productions)
+      .values({ id: productionId, companyId, name: `Rodaje ${Date.now()}` })
+
+    const purchaseOrderId = newId()
+    await db.insert(productionPurchaseOrders).values({
+      id: purchaseOrderId,
+      productionId,
+      code: `OC-${newId().slice(0, 8)}`,
+      name: "Equipo de cámara",
+    })
+    return purchaseOrderId
+  }
+
+  async function orderFor(purchaseOrderId: string, measurementId: string) {
+    const response = await request(
+      "POST",
+      `${base}/orders`,
+      {
+        origin: "production",
+        type: "rent",
+        name: "De la orden de compra",
+        purchaseOrderId,
+        lines: [{ measurementId, quantity: 1 }],
+      },
+      cookie,
+    )
+    expect(response.status).toBe(201)
+    return json<Order>(response)
+  }
+
+  function reject(orderId: string) {
+    return request("POST", `${base}/orders/${orderId}/rejection`, { reason: "No hay" }, cookie)
+  }
+
+  it("el último rechazo la cancela", async () => {
+    // Escenario: «El último rechazo cancela la orden». La comprobación va dentro de la misma
+    // transacción que acaba de cancelar uno, así que dos rechazos simultáneos sin «último» no
+    // pueden darse.
+    const measurementId = await stocked("Angenieux", 4)
+    const purchaseOrderId = await purchaseOrder()
+    const first = await orderFor(purchaseOrderId, measurementId)
+    const second = await orderFor(purchaseOrderId, measurementId)
+
+    await reject(first.id)
+    const [midway] = await db
+      .select({ status: productionPurchaseOrders.status })
+      .from(productionPurchaseOrders)
+      .where(eq(productionPurchaseOrders.id, purchaseOrderId))
+    // Escenario: «Un rechazo parcial no cancela la orden».
+    expect(midway?.status).toBe("open")
+
+    await reject(second.id)
+    const [after] = await db
+      .select({
+        status: productionPurchaseOrders.status,
+        cancelReason: productionPurchaseOrders.cancelReason,
+      })
+      .from(productionPurchaseOrders)
+      .where(eq(productionPurchaseOrders.id, purchaseOrderId))
+
+    expect(after?.status).toBe("canceled")
+    expect(after?.cancelReason).toContain("rechazados")
+  })
+})
+
+describe("el contador de mensajes sin leer", () => {
+  it("cuenta lo que este lado no ha leído, y no lo suyo", async () => {
+    // Escenario: «El contador es por parte». Es por lado y no por persona: si tres personas del
+    // almacén están en la conversación y una lee, queda leído para el lado del proveedor.
+    const measurementId = await stocked("Cooke", 2)
+    const order = await newOrder([{ measurementId, quantity: 1 }])
+
+    await db.insert(warehouseOrderMessages).values([
+      { id: newId(), orderId: order.id, side: "client", body: "¿Está listo?" },
+      { id: newId(), orderId: order.id, side: "client", body: "¿Y el trípode?" },
+      // Lo que escribió este lado no cuenta como pendiente de leer para este lado.
+      { id: newId(), orderId: order.id, side: "provider", body: "Mañana" },
+      // Y lo ya leído tampoco.
+      {
+        id: newId(),
+        orderId: order.id,
+        side: "client",
+        body: "Gracias",
+        readByProviderAt: new Date(),
+      },
+    ])
+
+    const read = await json<Order>(
+      await request("GET", `${base}/orders/${order.id}`, undefined, cookie),
+    )
+    expect(read.unread).toBe(2)
   })
 })
 

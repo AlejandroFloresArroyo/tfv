@@ -2,57 +2,60 @@
 
 ## Modelo
 
-- [ ] Pedido con su variante de origen, tipo, estado y código único
-- [ ] Referencias al pedido de comprador o a la orden de compra que lo originó
-- [ ] Líneas con medida, cantidad y orden de presentación
-- [ ] Referencia a unidades concretas cuando el origen ya las determinó
-- [ ] Prioridad como valor calculado a partir del estado
+- [x] Pedido con su variante de origen, tipo, estado y código único
+- [x] Referencias al pedido de comprador o a la orden de compra que lo originó
+- [x] Líneas con medida, cantidad y orden de presentación
+- [ ] Referencia a unidades concretas cuando el origen ya las determinó — espera al escaparate
+- [x] Prioridad como valor calculado a partir del estado
 
 ## Ciclo de vida
 
-- [ ] Transiciones permitidas; el resto responde `409`
-- [ ] Estados cerrados no vuelven a abrirse
-- [ ] Orden por prioridad descendente en los listados
+- [x] Transiciones permitidas; el resto responde `409`
+- [x] Estados cerrados no vuelven a abrirse
+- [x] Orden por prioridad descendente en los listados
 
 ## Aceptación
 
-- [ ] Creación atómica de pedido aceptado, cotización y reservas
-- [ ] Folio de la cotización derivado del código del pedido
-- [ ] Filtrado por defecto de las líneas sin existencia suficiente
-- [ ] Informe de las líneas que quedaron fuera y por qué
-- [ ] Inclusión de todas con autorización explícita de creación de inventario
-- [ ] Rechazo de la segunda aceptación
+- [x] Creación atómica de pedido aceptado, cotización y reservas
+- [x] Folio de la cotización derivado del código del pedido
+- [x] Filtrado por defecto de las líneas sin existencia suficiente
+- [x] Informe de las líneas que quedaron fuera y por qué
+- [x] Inclusión de todas con autorización explícita de creación de inventario
+- [x] Rechazo de la segunda aceptación
 
 ## Rechazo y cancelación
 
-- [ ] Motivo obligatorio, con autor e instante
-- [ ] Comprobación de hermanos con bloqueo, para evitar la carrera
-- [ ] Cancelación de la orden de compra al rechazarse el último
-- [ ] Cancelación descendente desde la orden de compra
-- [ ] Liberación del inventario apartado al cancelar
+- [x] Motivo obligatorio, con autor e instante
+- [x] Comprobación de hermanos con bloqueo, para evitar la carrera
+- [x] Cancelación de la orden de compra al rechazarse el último
+- [ ] Cancelación descendente desde la orden de compra — espera al servicio de producciones
+- [x] Liberación del inventario apartado al cancelar
 
 ## Compra pública
 
-- [ ] Pedido que nace finalizado, sin aceptación ni cotización
-- [ ] Unidades en el estado que corresponda a la modalidad
+- [ ] Pedido que nace finalizado, sin aceptación ni cotización — espera al escaparate
+- [ ] Unidades en el estado que corresponda a la modalidad — espera al escaparate
 
 ## Correcciones de lectura
 
-- [ ] Las lecturas de pedidos devuelven pedidos
-- [ ] Las lecturas de pagos devuelven pagos
-- [ ] Las lecturas de compras devuelven compras
-- [ ] Las lecturas de pedidos web devuelven pedidos web
+> Se cumplen por construcción: cada listado consulta su propia tabla y devuelve su propia forma.
+> La pila anterior devolvía registros de envío desde cuatro lecturas distintas.
+
+- [x] Las lecturas de pedidos devuelven pedidos
+- [x] Las lecturas de pagos devuelven pagos
+- [x] Las lecturas de compras devuelven compras
+- [x] Las lecturas de pedidos web devuelven pedidos web
 
 ## Otros
 
-- [ ] Contador de mensajes sin leer, por parte
-- [ ] Eliminación con comprobación de equipo sin devolver
-- [ ] Búsqueda y filtrado
+- [x] Contador de mensajes sin leer, por parte
+- [x] Eliminación con comprobación de equipo sin devolver
+- [x] Búsqueda y filtrado
 
 ## Verificación
 
-- [ ] Prueba: aceptación atómica; el fallo no deja pedido aceptado ni cotización
-- [ ] Prueba: aceptar dos veces responde `409`
-- [ ] Prueba: el último rechazo cancela la orden de compra
-- [ ] Prueba: un rechazo parcial no la cancela
-- [ ] Prueba: el contador de no leídos difiere por parte
+- [x] Prueba: aceptación atómica; el fallo no deja pedido aceptado ni cotización
+- [x] Prueba: aceptar dos veces responde `409`
+- [x] Prueba: el último rechazo cancela la orden de compra
+- [x] Prueba: un rechazo parcial no la cancela
+- [x] Prueba: el contador de no leídos difiere por parte
