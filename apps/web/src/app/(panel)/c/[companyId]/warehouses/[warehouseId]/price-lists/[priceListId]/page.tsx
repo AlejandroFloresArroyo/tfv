@@ -1,5 +1,5 @@
 import { isZero, money } from "@tfv/contracts/money"
-import { Badge, Panel, Separator } from "@tfv/ui"
+import { Badge, Callout, Panel, Separator } from "@tfv/ui"
 import { ChevronLeft, Tags } from "lucide-react"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
@@ -16,7 +16,9 @@ import { requireCompany, requireProfile } from "~/lib/session.ts"
 import type { ItemsEnvelope, ProductPriceRow, RateSchedule } from "../../../warehouse.ts"
 import { WarehouseNav } from "../../warehouse-nav.tsx"
 import { PriceListActions } from "../price-list-actions.tsx"
-import { findPriceList, fold, loadCatalog, type ProductOption, pageOf } from "../price-lists.ts"
+import { findPriceList, loadCatalog, pageOf } from "../price-lists.ts"
+import { fold, type ProductOption } from "../products.ts"
+import { AssignProducts } from "./assign-products.tsx"
 import { RateActions, type RateRow } from "./rate-actions.tsx"
 
 /** Las tres periodicidades, en el orden en que se cotizan. */
@@ -149,15 +151,31 @@ export default async function PriceListPage({
       title={list.name}
       {...(list.description ? { subtitle: list.description } : {})}
       actions={
-        <PriceListActions
-          companyId={companyId}
-          warehouseId={warehouseId}
-          list={list}
-          canEdit={canEdit}
-          canDelete={canDelete}
-          redirectOnDelete={`${base}/price-lists`}
-          label={t("warehouses.priceLists.listActions")}
-        />
+        <>
+          {/* Sin catálogo no hay a quién asignar, y sin permiso de edición no se ofrece: las dos
+              cosas se omiten en lugar de pintarse apagadas. */}
+          {canEdit && catalogResult.ok && catalogResult.data.products.length > 0 ? (
+            <AssignProducts
+              base={apiBase}
+              listName={list.name}
+              catalog={catalogResult.data.products}
+              priced={
+                pricesResult.ok ? pricesResult.data.items.map((price) => price.productId) : []
+              }
+              truncated={catalogResult.data.truncated}
+            />
+          ) : null}
+
+          <PriceListActions
+            companyId={companyId}
+            warehouseId={warehouseId}
+            list={list}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            redirectOnDelete={`${base}/price-lists`}
+            label={t("warehouses.priceLists.listActions")}
+          />
+        </>
       }
     >
       {nav}
@@ -171,6 +189,12 @@ export default async function PriceListPage({
           {t("warehouses.priceLists.allLists")}
         </Link>
       </nav>
+
+      {catalogResult.ok ? null : (
+        <Callout tone="warning" className="mb-4">
+          {t("warehouses.priceLists.catalogFailed")}
+        </Callout>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Badge tone={list.productCount > 0 ? "accent" : "neutral"}>

@@ -19,6 +19,7 @@
 import type { PageEnvelope } from "~/components/collection/collection.tsx"
 import { type ApiResult, apiGet } from "~/lib/api.server.ts"
 import type { PriceListRow, ProductRow } from "../../warehouse.ts"
+import type { ProductOption } from "./products.ts"
 
 /** El tope de página del lenguaje de consulta. Pedir más lo rechaza el servidor. */
 const PAGE_SIZE = 96
@@ -34,13 +35,6 @@ const LIST_PAGES = 10
  * más.
  */
 const CATALOG_PAGES = 21
-
-/** Un producto, reducido a lo que la ficha necesita: nombrarlo y poder buscarlo. */
-export interface ProductOption {
-  readonly id: string
-  readonly name: string
-  readonly code: string
-}
 
 export interface Catalog {
   readonly products: readonly ProductOption[]
@@ -126,6 +120,9 @@ function toOption(product: ProductRow): ProductOption {
   return { id: product.id, name: product.name, code: product.code }
 }
 
+// `fold` y `ProductOption` viven en `products.ts`: los necesita también el diálogo de asignación,
+// que corre en el navegador y no puede arrastrar la capa de transporte del servidor.
+
 /**
  * Una página de una lista que ya está entera en memoria.
  *
@@ -149,18 +146,4 @@ export function pageOf<T>(items: readonly T[], page: number, limit: number): Pag
     previousPage: current > 1 ? current - 1 : null,
     nextPage: current < totalPages ? current + 1 : null,
   }
-}
-
-/**
- * El texto sin acentos y en minúsculas.
- *
- * La búsqueda del servidor es insensible a acentos, y una que se hace aquí no puede comportarse
- * distinto: quien escribe «camara» en el catálogo y encuentra la cámara espera lo mismo al buscarla
- * dentro de una lista.
- */
-export function fold(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
 }

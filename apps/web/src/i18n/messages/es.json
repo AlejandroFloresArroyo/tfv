@@ -753,7 +753,26 @@
       "removeTitle": "Quitar el producto de la lista",
       "removeCascade": "El producto sigue en el catálogo: lo que se borra es la tarifa que tenía en esta lista.",
       "listActions": "Acciones de la lista",
-      "rateActions": "Acciones de {product}"
+      "rateActions": "Acciones de {product}",
+      "assign": "Asignar productos",
+      "assignTitle": "Qué productos lleva {name}",
+      "assignBody": "Marca los que deben tener tarifa en esta lista. Se guarda el conjunto entero: lo que desmarques se retira.",
+      "assignSave": "Guardar el conjunto",
+      "assignSearch": "Buscar en el catálogo",
+      "assignSearchPlaceholder": "Nombre o código…",
+      "assignOnlyChosen": "Sólo los de la lista",
+      "assignSelectMatches": "Marcar los {count}",
+      "assignClearMatches": "Desmarcar los {count}",
+      "assignInList": "{count, plural, =0 {Ninguno en la lista} one {# en la lista} other {# en la lista}}",
+      "assignAdding": "{count, plural, one {# alta} other {# altas}}",
+      "assignRemoving": "{count, plural, one {# baja} other {# bajas}}",
+      "assignRemovingWarning": "{count, plural, one {Se borrará la tarifa de # producto. El producto sigue en el catálogo.} other {Se borrarán las tarifas de # productos. Los productos siguen en el catálogo.}}",
+      "assignAddedWithoutPrice": "Los que entren lo hacen sin precio: un cero es ausencia de precio, no un regalo. Ponles tarifa después.",
+      "assignKeptOutside": "{count, plural, one {# producto con tarifa no cabe en esta pantalla y se conserva.} other {# productos con tarifa no caben en esta pantalla y se conservan.}}",
+      "assignNoMatches": "Ningún producto coincide.",
+      "assignMore": "{count, plural, one {Hay # producto más que coincide: afina la búsqueda o márcalos todos.} other {Hay # productos más que coinciden: afina la búsqueda o márcalos todos.}}",
+      "assignEmptyCatalog": "Este almacén todavía no tiene productos que asignar.",
+      "catalogFailed": "No se pudo leer el catálogo del almacén: las tarifas salen sin nombre y no se pueden asignar productos."
     }
   }
 }
