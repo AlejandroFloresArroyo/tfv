@@ -149,7 +149,15 @@ El costo unitario SHALL ser el precio de renta cuando la cotización sea de rent
 cuando sea de venta.
 
 El precio de renta SHALL ser el importe fijo cuando la tarifa lo declare fijo, y en caso contrario
-el correspondiente a la frecuencia, recurriendo al precio base cuando la frecuencia no tenga tarifa.
+el correspondiente a la frecuencia. Cuando la frecuencia no tenga tarifa, la línea SHALL quedar
+**sin precio**, y el sistema SHALL señalarlo para que se fije uno.
+
+> **Corregido al implementarlo.** Decía «recurriendo al precio base cuando la frecuencia no tenga
+> tarifa», y el precio base de un producto es su precio de **venta**. Multiplicado por los días de
+> una renta de dos semanas, eso cobra el equipo catorce veces. No es un caso extremo: las listas de
+> precios por día, semana y mes están sin llenar en la inmensa mayoría de los almacenes, así que
+> ése era el camino normal. Un importe inventado con apariencia de cifra correcta es peor que la
+> ausencia de importe. Ver `HALLAZGOS.md`.
 
 #### Scenario: Una tarifa fija ignora los días
 
@@ -157,11 +165,46 @@ el correspondiente a la frecuencia, recurriendo al precio base cuando la frecuen
 - **WHEN** se calcula
 - **THEN** el costo unitario es `500.00` con independencia de la frecuencia
 
-#### Scenario: Sin tarifa para la frecuencia se usa el precio base
+#### Scenario: Sin tarifa para la frecuencia la línea queda sin precio
 
 - **GIVEN** una tarifa de renta sin importe mensual y una línea con frecuencia mensual
 - **WHEN** se calcula
-- **THEN** el precio de renta es el precio base del producto
+- **THEN** el total de la línea es `0.00`
+- **AND** la línea queda señalada como sin precio
+
+#### Scenario: Una venta sí usa el precio base
+
+- **GIVEN** una cotización de venta y un producto con precio base `1500.00`
+- **WHEN** se calcula
+- **THEN** el costo unitario es `1500.00`
+- **AND** la línea no queda señalada como sin precio
+
+### Requirement: Precio negociado de una línea
+
+Una línea SHALL poder declarar un **precio negociado** que sustituya a toda tarifa. Ese importe
+SHALL ser el total de la línea **para el periodo completo**: no se multiplica por los días
+aplicados ni por la cantidad.
+
+Una línea con precio negociado no SHALL tener precio unitario: repartir el total entre sus unidades
+no da un importe exacto, y un precio unitario que no multiplica hasta el total es un dato falso en
+el documento que el cliente usa para discutir.
+
+El precio negociado SHALL convivir con la tarifa de la línea sin borrarla, de modo que retirarlo
+devuelva el cálculo por tarifa.
+
+#### Scenario: El precio negociado sustituye a la tarifa y a los días
+
+- **GIVEN** una línea de renta de tres unidades con tarifa de `100.00` diarios, diez días aplicados
+  y un precio negociado de `3500.00`
+- **WHEN** se calcula
+- **THEN** el total de la línea es `3500.00`
+- **AND** la línea no informa precio unitario
+
+#### Scenario: Retirar el precio negociado devuelve la tarifa
+
+- **GIVEN** la misma línea sin precio negociado
+- **WHEN** se calcula
+- **THEN** el total de la línea es `3000.00`
 
 ### Requirement: Total de una línea de renta
 
