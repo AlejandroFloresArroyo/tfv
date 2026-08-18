@@ -229,9 +229,8 @@ En este orden, y con el motivo de que sea ése:
 3. **Congelar las líneas al salir el equipo** (hecho), con el retorno anticipado declarado y el
    agujero de las huérfanas rentadas tapado por los dos lados: ya no se crea, y la verificación lo
    vería si existiera.
-4. **Pagos cobrados**, separados del anticipo pactado: el primero mueve el documento, el saldo se
-   calcula con el segundo. Entran sin comprobantes, con el escenario de la spec incumplido a
-   propósito hasta que exista almacenamiento de ficheros.
+4. **Pagos cobrados** (hecho), separados del anticipo pactado y sin comprobantes, con el escenario
+   de la spec incumplido a propósito hasta que exista almacenamiento de ficheros.
 5. **El alta provisional desde el constructor**, con su bandeja de productos por completar.
 6. **La extensión de renta**: cotización nueva enlazada, posiblemente parcial, que traspasa los
    vínculos vivos sin que la unidad pase por disponible. Encadenable.
@@ -2037,3 +2036,55 @@ de web y 287 de API— y **57 de extremo a extremo**. La suite se corrió **cinc
 dejar rastro: cuatro cotizaciones antes y cuatro después, y la verificación de coherencia del
 almacén sin una sola discrepancia. Se miró en pantalla: la renta en curso con sus tres unidades
 fuera, la nota de por qué no se editan, y cancelar respondiendo «Hay 3 unidades sin devolver».
+
+### 2026-08-18 · Pactar no es cobrar
+
+Cuarto punto, y el primero de la tanda autónoma. Las decisiones que aparecieron y no eran mías —el
+permiso— quedan tomadas por el criterio más conservador y anotadas.
+
+**Dos cifras que no son la misma**
+
+El **anticipo** de las condiciones de pago es lo pactado, y mueve el total del documento. Un **cobro**
+es dinero que entró, y mueve el saldo. Estaban confundidos en una sola cifra, y el resultado era que
+el sistema no sabía responder a la única pregunta que importa cuando un cliente llama por su cuenta:
+cuánto falta.
+
+El saldo se cuenta desde el **bruto**, no desde el total. El total ya descontó el anticipo pactado, y
+descontar además lo cobrado contaría dos veces el mismo dinero en cuanto ese anticipo se cobre —que
+es el caso normal—. Cuando se cobra y se registra, saldo y total coinciden, y ésa es la comprobación
+de que la cuenta está bien planteada.
+
+En la pantalla, el bloque de saldo **sólo aparece cuando hay algo cobrado**: con cero, «Saldo» sería
+el bruto entero mientras «Total a pagar» ya descontó el anticipo, y dos cifras distintas sin que
+haya pasado nada enseñan a desconfiar del panel.
+
+**Lo pactado se congela; lo que pasa después, no**
+
+Una cotización cerrada tiene sus importes congelados —es lo que permite explicar una cifra de hace
+ocho meses—, pero **se sigue cobrando**: una renta que terminó se paga después. Así que lo cobrado y
+el saldo se recalculan siempre, incluso sobre un desglose congelado. Un saldo que no se mueve al
+recibir el dinero es un saldo inservible.
+
+Es la regla contraria a la de las líneas, y conviene verlas juntas: las líneas se congelan porque
+tocarlas movería inventario real; el cobro no, porque el dinero sigue llegando.
+
+**El permiso que no inventé**
+
+Registrar un cobro y negociar las condiciones son actos distintos que suelen hacer personas
+distintas, y merecerían claves distintas. Pero el catálogo de permisos es un **conjunto cerrado de
+255 claves migradas**, escrito en la spec de control de acceso, y añadir una amplía la superficie de
+autorización: es decisión de producto, no de implementación, y menos estando solo. Va con
+`warehouses.quotes.edit_payment` y queda anotado en la propia ruta.
+
+**Y un escenario incumplido a propósito**
+
+La spec pide que el comprobante sea consultable. No lo es: falta el almacenamiento de ficheros, y la
+tabla de comprobantes lleva en el esquema desde la migración 0002 esperándolo. El registro entra
+igual, marcado en la spec como incumplido a propósito, porque llevar la cuenta a mano mientras tanto
+es peor que llevarla sin el papel escaneado.
+
+**Comprobado**
+
+Los seis paquetes, Biome, **524 pruebas** de vitest y **58 de extremo a extremo**, dos pasadas
+seguidas. Se miró en pantalla: 250,91 de bruto, 120,00 cobrados y 130,91 de saldo, y la baja del
+cobro devolviéndolo todo a su sitio.
