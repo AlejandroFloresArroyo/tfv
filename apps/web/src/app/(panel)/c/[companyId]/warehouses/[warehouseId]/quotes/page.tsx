@@ -13,6 +13,7 @@ import { requireCompany, requireProfile } from "~/lib/session.ts"
 import { QUOTE_STATUSES, type QuoteRow, type WarehouseRow } from "../../warehouse.ts"
 import { WarehouseNav } from "../warehouse-nav.tsx"
 import { QuoteStatusBadge, QuoteTypeBadge } from "./quote-badges.tsx"
+import { CreateQuote } from "./quote-create.tsx"
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations())("warehouses.quotes.title") }
@@ -41,6 +42,7 @@ export default async function QuotesPage({
   const profile = await requireProfile(path)
   const company = requireCompany(profile, companyId)
   const canViewWarehouses = can(company, "warehouses.warehouses.view")
+  const canCreate = can(company, "warehouses.quotes.create")
 
   const [warehouseResult, quotesResult] = await Promise.all([
     canViewWarehouses
@@ -90,6 +92,9 @@ export default async function QuotesPage({
     <PageShell
       title={warehouseResult?.ok ? warehouseResult.data.name : t("warehouses.quotes.title")}
       subtitle={t("warehouses.quotes.subtitle")}
+      actions={
+        canCreate ? <CreateQuote companyId={companyId} warehouseId={warehouseId} /> : undefined
+      }
     >
       <WarehouseNav
         companyId={companyId}
@@ -108,6 +113,9 @@ export default async function QuotesPage({
         searchPlaceholder={t("warehouses.quotes.searchPlaceholder")}
         emptyTitle={t("warehouses.quotes.empty")}
         emptyBody={t("warehouses.quotes.emptyBody")}
+        emptyAction={
+          canCreate ? <CreateQuote companyId={companyId} warehouseId={warehouseId} /> : undefined
+        }
       >
         {(items, view) =>
           items.map((quote) => (

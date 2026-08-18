@@ -1,39 +1,69 @@
 {
+  "account": {
+    "title": "My account",
+    "profile": "Profile",
+    "username": "Username",
+    "emailChange": {
+      "title": "Change sign-in email",
+      "description": "Your current email is {email}. We'll keep it until you confirm the new address.",
+      "newEmail": "New email",
+      "hint": "We'll send a one-time confirmation link to this address.",
+      "submit": "Send confirmation link",
+      "sent": "We sent the link to {email}. Your current email will keep working until you confirm it.",
+      "invalid": "Enter a valid email address.",
+      "same": "That is already your current email.",
+      "occupied": "That email already belongs to another account.",
+      "networkError": "We couldn't request the change. Check your connection and try again."
+    },
+    "sessions": {
+      "title": "Active sessions",
+      "subtitle": "Each row is a browser with an open session. Closing them all signs you out here too.",
+      "device": "Device",
+      "address": "Address",
+      "lastUsed": "Last used",
+      "started": "Started",
+      "current": "This session",
+      "unknownDevice": "Unknown device",
+      "closeAll": "Close all sessions",
+      "empty": "No active sessions."
+    }
+  },
+  "addresses": {
+    "title": "Addresses",
+    "subtitle": "Where {company} ships from and bills to.",
+    "create": "New address",
+    "createTitle": "Add an address",
+    "createBody": "The first one in the book becomes the primary.",
+    "editTitle": "Edit the address",
+    "deleteTitle": "Delete the address",
+    "deletePrimaryCascade": "It's the primary one: the oldest of the rest will take over.",
+    "label": "Label",
+    "labelHint": "So you recognise it at a glance. Optional.",
+    "labelPlaceholder": "Main warehouse",
+    "street": "Street",
+    "number": "Number",
+    "colony": "Neighbourhood",
+    "city": "City",
+    "state": "State",
+    "country": "Country",
+    "countryCode": "Code",
+    "countryCodeHint": "Two letters",
+    "postalCode": "Postal code",
+    "primary": "Primary",
+    "onlyPrimary": "Primary only",
+    "exceptPrimary": "All but the primary",
+    "isPrimary": "Mark as primary",
+    "isPrimaryHint": "This will unmark the current one.",
+    "makePrimary": "Mark as primary",
+    "makePrimaryTitle": "Change the primary address",
+    "makePrimaryBody": "The current one will stop being primary. It's the default for shipping and billing.",
+    "searchPlaceholder": "Search by label, street or city…",
+    "empty": "No addresses yet",
+    "emptyBody": "They're needed to work out shipping and to issue invoices."
+  },
   "app": {
     "name": "TFV",
     "tagline": "The Film Vault"
-  },
-  "common": {
-    "actions": "Actions",
-    "alsoAffects": "This will also:",
-    "back": "Back",
-    "cancel": "Cancel",
-    "cannotUndo": "This cannot be undone.",
-    "clear": "Clear",
-    "close": "Close",
-    "confirmDelete": "You are about to delete <entity></entity>.",
-    "create": "Create",
-    "delete": "Delete",
-    "edit": "Edit",
-    "loading": "Loading",
-    "name": "Name",
-    "networkError": "Could not reach the server. Check your connection.",
-    "never": "Never",
-    "next": "Next",
-    "remove": "Remove",
-    "retry": "Try again",
-    "save": "Save",
-    "search": "Search",
-    "unexpectedError": "Something went wrong. Please try again."
-  },
-  "theme": {
-    "label": "Theme",
-    "light": "Light",
-    "dark": "Dark",
-    "system": "Automatic"
-  },
-  "language": {
-    "label": "Language"
   },
   "auth": {
     "showPassword": "Show password",
@@ -88,26 +118,59 @@
       "missingToken": "This link is incomplete. Request a new one."
     }
   },
-  "shell": {
-    "openMenu": "Open menu",
-    "closeMenu": "Close menu",
-    "account": "My account",
-    "sessions": "Active sessions",
-    "logout": "Sign out",
-    "platformAdmin": "Platform administration",
-    "switchCompany": "Switch company",
-    "companies": "Companies",
-    "owner": "Owner",
-    "services": "Services",
-    "overview": "Overview",
-    "skipToContent": "Skip to content"
+  "collection": {
+    "searchLabel": "Search the list",
+    "clearSearch": "Clear the search",
+    "filters": "Filters",
+    "filtersHint": "They apply when you press “Apply”. Unapplied changes filter nothing.",
+    "apply": "Apply",
+    "clearFilters": "Clear",
+    "clearAll": "Clear all",
+    "any": "Any",
+    "removeFilter": "Remove the {field}: {value} filter",
+    "viewList": "View as list",
+    "viewGrid": "View as grid",
+    "pagination": "Pagination",
+    "summary": "Page {page} of {totalPages} · {totalItems} items",
+    "itemCount": "{count} items",
+    "perPage": "Per page",
+    "firstPage": "First page",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "lastPage": "Last page",
+    "goToPage": "Go to page {page}",
+    "loading": "Loading the list",
+    "noResultsTitle": "Nothing matches",
+    "noResultsBody": "Try other terms, or remove a filter.",
+    "errorTitle": "The list couldn't be loaded",
+    "errorBody": "It may be a momentary outage. Try again.",
+    "from": "From",
+    "to": "To",
+    "results": "Results",
+    "clearAndShowAll": "Clear the filters and show everything"
   },
-  "services": {
-    "warehouses": "Warehouses",
-    "productions": "Productions",
-    "pixit": "Pixit",
-    "websites": "Websites",
-    "locations": "Locations"
+  "common": {
+    "actions": "Actions",
+    "alsoAffects": "This will also:",
+    "back": "Back",
+    "cancel": "Cancel",
+    "cannotUndo": "This cannot be undone.",
+    "clear": "Clear",
+    "close": "Close",
+    "confirmDelete": "You are about to delete <entity></entity>.",
+    "create": "Create",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading",
+    "name": "Name",
+    "networkError": "Could not reach the server. Check your connection.",
+    "never": "Never",
+    "next": "Next",
+    "remove": "Remove",
+    "retry": "Try again",
+    "save": "Save",
+    "search": "Search",
+    "unexpectedError": "Something went wrong. Please try again."
   },
   "companies": {
     "title": "Choose a company",
@@ -135,37 +198,42 @@
       "body": "A platform administrator has to enable them."
     }
   },
-  "service": {
-    "notEnabled": "This company doesn't have that service enabled.",
-    "unknown": "That service doesn't exist."
-  },
-  "account": {
-    "title": "My account",
-    "profile": "Profile",
-    "username": "Username",
-    "emailChange": {
-      "title": "Change sign-in email",
-      "description": "Your current email is {email}. We'll keep it until you confirm the new address.",
-      "newEmail": "New email",
-      "hint": "We'll send a one-time confirmation link to this address.",
-      "submit": "Send confirmation link",
-      "sent": "We sent the link to {email}. Your current email will keep working until you confirm it.",
-      "invalid": "Enter a valid email address.",
-      "same": "That is already your current email.",
-      "occupied": "That email already belongs to another account.",
-      "networkError": "We couldn't request the change. Check your connection and try again."
+  "directory": {
+    "title": "Directory",
+    "alias": "Alias",
+    "aliasHint": "The name they appear under in your documents",
+    "name": "First name",
+    "lastname": "Last name",
+    "phone": "Phone",
+    "taxId": "Tax ID",
+    "companyName": "Legal name",
+    "account": "Account",
+    "external": "External",
+    "linked": "Has an account",
+    "tenant": "TFV company",
+    "since": "Added",
+    "searchPlaceholder": "Search by alias, name or email…",
+    "createBody": "The email is optional. If it matches a TFV account, they get linked to it.",
+    "editTitle": "Edit {name}",
+    "emailHint": "If they have a TFV account they get linked to it. This can't be changed later.",
+    "deleteCascade": "Quotes and orders already issued keep their name.",
+    "clients": {
+      "title": "Clients",
+      "subtitle": "Who {company} sells to.",
+      "create": "New client",
+      "createTitle": "Add a client",
+      "deleteTitle": "Remove the client",
+      "empty": "No clients yet",
+      "emptyBody": "Add them by hand, or let them appear when someone buys from your store."
     },
-    "sessions": {
-      "title": "Active sessions",
-      "subtitle": "Each row is a browser with an open session. Closing them all signs you out here too.",
-      "device": "Device",
-      "address": "Address",
-      "lastUsed": "Last used",
-      "started": "Started",
-      "current": "This session",
-      "unknownDevice": "Unknown device",
-      "closeAll": "Close all sessions",
-      "empty": "No active sessions."
+    "providers": {
+      "title": "Providers",
+      "subtitle": "Who {company} buys from.",
+      "create": "New provider",
+      "createTitle": "Add a provider",
+      "deleteTitle": "Remove the provider",
+      "empty": "No providers yet",
+      "emptyBody": "Add them by hand, or let them appear when you buy from another TFV company."
     }
   },
   "errors": {
@@ -180,10 +248,18 @@
       "body": "Your role does not include the required permission. Whoever administers the company can grant it."
     }
   },
-  "settings": {
-    "title": "Settings",
-    "members": "Members",
-    "roles": "Roles"
+  "forms": {
+    "errors": {
+      "required": "Required",
+      "tooLong": "Too long",
+      "tooShort": "Too short",
+      "tooBig": "Too large",
+      "tooSmall": "Too small",
+      "invalid": "Not in the expected format"
+    }
+  },
+  "language": {
+    "label": "Language"
   },
   "members": {
     "title": "Members",
@@ -237,107 +313,41 @@
     "searchRolePlaceholder": "Search role…",
     "peopleCount": "{count, plural, =0 {Nobody has it} one {# person} other {# people}}"
   },
-  "collection": {
-    "searchLabel": "Search the list",
-    "clearSearch": "Clear the search",
-    "filters": "Filters",
-    "filtersHint": "They apply when you press “Apply”. Unapplied changes filter nothing.",
-    "apply": "Apply",
-    "clearFilters": "Clear",
-    "clearAll": "Clear all",
-    "any": "Any",
-    "removeFilter": "Remove the {field}: {value} filter",
-    "viewList": "View as list",
-    "viewGrid": "View as grid",
-    "pagination": "Pagination",
-    "summary": "Page {page} of {totalPages} · {totalItems} items",
-    "itemCount": "{count} items",
-    "perPage": "Per page",
-    "firstPage": "First page",
-    "previousPage": "Previous page",
-    "nextPage": "Next page",
-    "lastPage": "Last page",
-    "goToPage": "Go to page {page}",
-    "loading": "Loading the list",
-    "noResultsTitle": "Nothing matches",
-    "noResultsBody": "Try other terms, or remove a filter.",
-    "errorTitle": "The list couldn't be loaded",
-    "errorBody": "It may be a momentary outage. Try again.",
-    "from": "From",
-    "to": "To",
-    "results": "Results",
-    "clearAndShowAll": "Clear the filters and show everything"
+  "service": {
+    "notEnabled": "This company doesn't have that service enabled.",
+    "unknown": "That service doesn't exist."
   },
-  "directory": {
-    "title": "Directory",
-    "alias": "Alias",
-    "aliasHint": "The name they appear under in your documents",
-    "name": "First name",
-    "lastname": "Last name",
-    "phone": "Phone",
-    "taxId": "Tax ID",
-    "companyName": "Legal name",
-    "account": "Account",
-    "external": "External",
-    "linked": "Has an account",
-    "tenant": "TFV company",
-    "since": "Added",
-    "searchPlaceholder": "Search by alias, name or email…",
-    "createBody": "The email is optional. If it matches a TFV account, they get linked to it.",
-    "editTitle": "Edit {name}",
-    "emailHint": "If they have a TFV account they get linked to it. This can't be changed later.",
-    "deleteCascade": "Quotes and orders already issued keep their name.",
-    "clients": {
-      "title": "Clients",
-      "subtitle": "Who {company} sells to.",
-      "create": "New client",
-      "createTitle": "Add a client",
-      "deleteTitle": "Remove the client",
-      "empty": "No clients yet",
-      "emptyBody": "Add them by hand, or let them appear when someone buys from your store."
-    },
-    "providers": {
-      "title": "Providers",
-      "subtitle": "Who {company} buys from.",
-      "create": "New provider",
-      "createTitle": "Add a provider",
-      "deleteTitle": "Remove the provider",
-      "empty": "No providers yet",
-      "emptyBody": "Add them by hand, or let them appear when you buy from another TFV company."
-    }
+  "services": {
+    "warehouses": "Warehouses",
+    "productions": "Productions",
+    "pixit": "Pixit",
+    "websites": "Websites",
+    "locations": "Locations"
   },
-  "addresses": {
-    "title": "Addresses",
-    "subtitle": "Where {company} ships from and bills to.",
-    "create": "New address",
-    "createTitle": "Add an address",
-    "createBody": "The first one in the book becomes the primary.",
-    "editTitle": "Edit the address",
-    "deleteTitle": "Delete the address",
-    "deletePrimaryCascade": "It's the primary one: the oldest of the rest will take over.",
-    "label": "Label",
-    "labelHint": "So you recognise it at a glance. Optional.",
-    "labelPlaceholder": "Main warehouse",
-    "street": "Street",
-    "number": "Number",
-    "colony": "Neighbourhood",
-    "city": "City",
-    "state": "State",
-    "country": "Country",
-    "countryCode": "Code",
-    "countryCodeHint": "Two letters",
-    "postalCode": "Postal code",
-    "primary": "Primary",
-    "onlyPrimary": "Primary only",
-    "exceptPrimary": "All but the primary",
-    "isPrimary": "Mark as primary",
-    "isPrimaryHint": "This will unmark the current one.",
-    "makePrimary": "Mark as primary",
-    "makePrimaryTitle": "Change the primary address",
-    "makePrimaryBody": "The current one will stop being primary. It's the default for shipping and billing.",
-    "searchPlaceholder": "Search by label, street or city…",
-    "empty": "No addresses yet",
-    "emptyBody": "They're needed to work out shipping and to issue invoices."
+  "settings": {
+    "title": "Settings",
+    "members": "Members",
+    "roles": "Roles"
+  },
+  "shell": {
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "account": "My account",
+    "sessions": "Active sessions",
+    "logout": "Sign out",
+    "platformAdmin": "Platform administration",
+    "switchCompany": "Switch company",
+    "companies": "Companies",
+    "owner": "Owner",
+    "services": "Services",
+    "overview": "Overview",
+    "skipToContent": "Skip to content"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "Automatic"
   },
   "warehouses": {
     "added": "Added",
@@ -663,7 +673,16 @@
       "extensionSubmit": "Create the extension",
       "extensionName": "{name} · extension",
       "extensionFailed": "Could not create the extension",
-      "extends": "Extends"
+      "extends": "Extends",
+      "create": "New quotation",
+      "createTitle": "New quotation",
+      "createBody": "The minimum to get started. The rest is assembled in the builder.",
+      "createNote": "It is born pending and without lines. Name and description are edited later in their own block.",
+      "createNeedsWindow": "A rental needs its dates: without them, its lines do not know how many days they charge.",
+      "createEndsBefore": "The end date must be later than the start date.",
+      "createClientEmpty": "There are no clients in the directory yet. You can create it without a client and assign one later.",
+      "createClientForbidden": "You do not have permission to see the client directory. The quotation will be created without a client.",
+      "createClientFailed": "The client directory could not be loaded. The quotation will be created without a client."
     },
     "rent": "Rental",
     "sale": "Sale",
@@ -771,16 +790,31 @@
       "usesPriceLists": "Uses price lists",
       "usesPriceListsHint": "If ticked, the rate comes from the list and this price is the fallback.",
       "variantsHelp": "The same thing with another trait: another colour, another size."
-    }
-  },
-  "forms": {
-    "errors": {
-      "required": "Required",
-      "tooLong": "Too long",
-      "tooShort": "Too short",
-      "tooBig": "Too large",
-      "tooSmall": "Too small",
-      "invalid": "Not in the expected format"
+    },
+    "warehouses": {
+      "create": "New warehouse",
+      "createTitle": "New warehouse",
+      "createBody": "Its public storefront identifier is derived from the name. You can change it later.",
+      "editTitle": "Edit {name}",
+      "deleteTitle": "Delete warehouse",
+      "description": "Description",
+      "namePlaceholder": "Main warehouse",
+      "slug": "Readable identifier",
+      "slugHint": "It is the address of its public storefront, and it is unique across the whole platform. If it is already taken, the change is rejected instead of being given a different one.",
+      "publish": "Published",
+      "publishHint": "A published warehouse appears in its public storefront.",
+      "publishHintNew": "You can publish it now, or leave it hidden until it has a catalogue.",
+      "scopeCounting": "Counting what this takes with it…",
+      "scopeFailed": "The warehouse contents could not be counted.",
+      "scopeStorages": "{count, plural, one {# storage} other {# storages}}",
+      "scopeCategories": "{count, plural, one {# category} other {# categories}}",
+      "scopeProducts": "{count, plural, one {# product} other {# products}}",
+      "scopePriceLists": "{count, plural, one {# price list} other {# price lists}}",
+      "scopeQuotes": "{count, plural, one {# quotation} other {# quotations}}",
+      "scopeOrders": "{count, plural, one {# order} other {# orders}}",
+      "scopeOpenQuotes": "{count, plural, one {# quotation in progress} other {# quotations in progress}}",
+      "scopeOpenOrders": "{count, plural, one {# order in progress} other {# orders in progress}}",
+      "scopeBlocked": "It cannot be deleted: it has {what}. Close or cancel them first."
     }
   }
 }

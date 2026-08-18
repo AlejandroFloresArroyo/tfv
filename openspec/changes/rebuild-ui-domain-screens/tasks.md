@@ -27,7 +27,9 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 
 ## 29b · Almacenes
 
-- [ ] Almacenes y su panel
+- [~] Almacenes: listado, alta, edición y baja desde la pantalla, con el identificador legible
+      editable sólo donde el servicio respeta lo escrito y la baja enumerando su alcance. **Falta
+      el panel** del almacén — el resumen propio de uno, que hoy no tiene pantalla
 - [x] Catálogo con rejilla, filtros y paginación
 - [ ] **Asistente de producto de cinco pasos**
 - [ ] **Asistente de variante de cuatro pasos**
@@ -37,6 +39,7 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 - [ ] Categorías anidadas
 - [x] **Ubicaciones como organigrama navegable**
 - [x] Bandeja de cotizaciones y ficha, con su equipo apartado y sus importes
+- [x] Alta de cotización desde la bandeja: tipo, cliente y ventana, y de ahí al constructor
 - [~] **Constructor de cotizaciones**: el editor de líneas con la disponibilidad delante, el cambio
       de estado, el registro del retorno, y los bloques de condiciones de pago e impuestos, que se
       guardan solos. Faltan los de identidad y contactos, que tienen su ruta y su permiso pero
