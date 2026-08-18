@@ -92,5 +92,6 @@ pnpm test:e2e        # Pruebas E2E en navegador contra build de producción (Pla
 - [📘 Guía de Onboarding Paso a Paso](docs/ONBOARDING.md) — Explicación detallada del entorno y flujos cotidianos.
 - [🏛️ Arquitectura del Sistema](docs/ARCHITECTURE.md) — Multi-tenancy, RLS en dos capas, BFF en Next.js y los 5 servicios.
 - [🛠️ Guía de Desarrollo y Convenciones](docs/DEVELOPMENT_GUIDE.md) — Cómo agregar tablas, endpoints, permisos y pantallas respetando OpenSpec.
+- [🔎 Hallazgos de Implementación](openspec/HALLAZGOS.md) — Lo que apareció al construir: specs que no se sostenían, huecos y decisiones pendientes.
 - [📜 Glosario de Términos](openspec/GLOSARIO.md) — Vocabulario oficial (ej. la distinción entre los 4 tipos de "pedidos").
 - [📋 Plan de Implementación](IMPLEMENTATION.md) — Estado vivo del avance de la migración y rebanadas de trabajo.

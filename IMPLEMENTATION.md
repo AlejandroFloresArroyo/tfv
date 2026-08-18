@@ -6,6 +6,10 @@ verdad sobre dónde estamos.
 El **qué** vive en [`openspec/specs/`](./openspec/specs/). El **por qué y en qué orden** vive en
 [`openspec/changes/`](./openspec/changes/). Esto es el **cómo y el ahora**.
 
+Lo que aparece al construir —specs que no se sostenían, huecos, claves sin ruta— se registra en
+[`openspec/HALLAZGOS.md`](./openspec/HALLAZGOS.md), para que una corrección no quede sólo en el
+diff.
+
 ## Reglas de trabajo
 
 1. **No se toca `tfv-backend/` ni `tfv-frontend/`.** Son la referencia y siguen en producción. Todo
@@ -1682,3 +1686,28 @@ verificación de coherencia —lo único que le falta a la 13— espera al despa
 TypeScript en los seis paquetes, Biome, y las **479 pruebas**: 98 de contratos, 59 de datos, 254 de
 API, 29 de web y 39 de extremo a extremo. La suite de la API volvió a vaciar la base de desarrollo,
 y se volvió a sembrar.
+
+### 2026-08-17 · Una clave del catálogo que nadie podía ejercer
+
+Al repasar lo escrito apareció que el comentario de la ruta de estado prometía tres claves de
+permiso y la ruta declaraba una. No era sólo un comentario desactualizado: `warehouses.quotes.rented`
+era una clave del catálogo que **ninguna ruta exigía**, y colapsar en `edit_status` las tres que la
+matriz anterior separa amplía en silencio la autoridad de quien sólo tenía la general — mover una
+cotización por la bandeja pasaba a incluir sacar el equipo de la nave.
+
+La ruta declara la general, que es lo que mantiene cierto que ninguna escritura llega sin permiso, y
+el manejador exige además la del destino contra la autorización que el guardián ya resolvió. La del
+destino sólo puede estrechar, nunca abrir. Tres pruebas con un rol acotado lo fijan.
+
+**Los hallazgos dejan de vivir sólo en la bitácora**
+
+Doce cosas de este tipo —specs que no se sostenían al escribirlas, huecos que sólo se ven con el
+código delante, decisiones pendientes— estaban repartidas entre entradas de bitácora y comentarios
+de `design.md`. Ahora están en [`openspec/HALLAZGOS.md`](./openspec/HALLAZGOS.md), que es el
+complemento de `DEFECTS.md`: aquél registra defectos de la implementación anterior, éste lo que
+aparece construyendo la nueva. La regla 4 pide anotar cada corrección de spec, y una corrección
+anotada sólo en el diff no la encuentra nadie.
+
+**Comprobado**
+
+TypeScript, Biome y las **257 pruebas de API**, cincuenta de ellas de cotizaciones.
