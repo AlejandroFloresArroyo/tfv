@@ -61,6 +61,19 @@ export const TYPE_ONLY: Partial<Record<QuoteStatus, TradeType>> = {
 /** Desde aquí, una renta necesita su ventana de fechas: hay equipo comprometido para unos días. */
 const WINDOW_FROM: readonly QuoteStatus[] = ["in_progress", "in_rent", "completed"]
 
+/**
+ * Estados en los que **el equipo ya salió de la nave**.
+ *
+ * Es lo que congela las líneas: mientras el equipo está fuera, cambiar una cantidad no cambia un
+ * documento, cambiaría dónde dice el sistema que está una cámara que está en un rodaje. El equipo
+ * vuelve registrando su retorno, unidad por unidad, que es la única operación que sabe en qué
+ * condiciones volvió.
+ *
+ * Una renta **completada** también lo tiene fuera: terminó el periodo, pero la devolución puede
+ * llegar después.
+ */
+const EQUIPMENT_OUT: readonly QuoteStatus[] = ["in_rent", "completed"]
+
 export function isClosed(status: QuoteStatus): boolean {
   return CLOSED.includes(status)
 }
@@ -68,6 +81,18 @@ export function isClosed(status: QuoteStatus): boolean {
 /** Si llegar a este estado exige que la cotización tenga fechas. Sólo las rentas las necesitan. */
 export function needsWindow(status: QuoteStatus, type: TradeType): boolean {
   return type === "rent" && WINDOW_FROM.includes(status)
+}
+
+/**
+ * Si las líneas de la cotización ya no se tocan.
+ *
+ * Dos motivos distintos con la misma consecuencia: el documento está **cerrado**, o el equipo está
+ * **fuera**. En el segundo caso las líneas no se congelan por burocracia sino porque bajar una
+ * cantidad soltaría el vínculo de una unidad que sigue en la calle, y el inventario pasaría a decir
+ * que está libre.
+ */
+export function linesFrozen(status: QuoteStatus, type: TradeType): boolean {
+  return isClosed(status) || (type === "rent" && EQUIPMENT_OUT.includes(status))
 }
 
 /**

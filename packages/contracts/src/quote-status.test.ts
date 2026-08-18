@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { allowedTransitions, isClosed, needsWindow } from "./quote-status.ts"
+import { allowedTransitions, isClosed, linesFrozen, needsWindow } from "./quote-status.ts"
 
 describe("allowedTransitions", () => {
   it("una cotización cerrada no ofrece ninguna salida", () => {
@@ -49,5 +49,34 @@ describe("needsWindow", () => {
 
   it("los primeros estados de una renta tampoco", () => {
     expect(needsWindow("pending", "rent")).toBe(false)
+  })
+})
+
+describe("las líneas se congelan al salir el equipo", () => {
+  it("una renta en curso no se edita", () => {
+    // No es burocracia: bajar una cantidad soltaría el vínculo de una unidad que está en un rodaje,
+    // y el inventario pasaría a decir que está libre.
+    expect(linesFrozen("in_rent", "rent")).toBe(true)
+  })
+
+  it("una renta completada tampoco, porque el equipo puede seguir fuera", () => {
+    expect(linesFrozen("completed", "rent")).toBe(true)
+  })
+
+  it("una cotización abierta sin equipo fuera sí se edita", () => {
+    expect(linesFrozen("pre_quote", "rent")).toBe(false)
+    expect(linesFrozen("pending", "rent")).toBe(false)
+    expect(linesFrozen("in_progress", "rent")).toBe(false)
+  })
+
+  it("una venta sólo se congela al cerrarse", () => {
+    // «En renta» no existe para una venta, y «completada» es cerrada de todos modos.
+    expect(linesFrozen("in_progress", "sale")).toBe(false)
+    expect(linesFrozen("sold", "sale")).toBe(true)
+  })
+
+  it("una cotización cerrada nunca se edita", () => {
+    expect(linesFrozen("canceled", "rent")).toBe(true)
+    expect(linesFrozen("completed", "sale")).toBe(true)
   })
 })
