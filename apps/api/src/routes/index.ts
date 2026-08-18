@@ -89,6 +89,7 @@ import {
   listOrdersRoute,
   rejectOrderRoute,
 } from "./orders.ts"
+import { paymentWebhookRoute } from "./payments.ts"
 import { permissionCatalogRoute } from "./permissions.ts"
 import {
   acceptProspectRoute,
@@ -178,6 +179,9 @@ export const routes: readonly RegisteredRoute[] = [
   updateProspectRoute,
   acceptProspectRoute,
   discardProspectRoute,
+
+  // Eventos del procesador de pagos. Público y protegido por la firma del remitente.
+  paymentWebhookRoute,
 
   // ─── Autorización ──────────────────────────────────────────────────────────
   permissionCatalogRoute,

@@ -60,6 +60,15 @@ describe("superficie pública", () => {
     /**
      * Añadida el 2026-08-18, de forma deliberada.
      *
+     * La recibe el procesador de pagos, que no tiene sesión. **Lo que la protege es la firma del
+     * remitente**, verificada antes de mirar el cuerpo — al contrario que la implementación
+     * anterior, que fabricaba la firma que después comprobaba (`DEFECTS.md` S-01) y dejaba a
+     * cualquiera activar suscripciones o materializar pedidos no pagados.
+     */
+    "POST /payments/events",
+    /**
+     * Añadida el 2026-08-18, de forma deliberada.
+     *
      * El formulario de contacto: quien deja sus datos no tiene cuenta, y exigirle una lo dejaría
      * sin sentido. **No escribe sobre ninguna empresa**: un prospecto es una intención de contacto
      * con la plataforma, y ni siquiera devuelve el identificador de lo que creó.

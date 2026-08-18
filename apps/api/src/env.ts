@@ -11,51 +11,79 @@
 
 import { z } from "zod"
 
-const schema = z.object({
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  API_PORT: z.coerce.number().int().positive().default(5000),
-  API_HOST: z.string().default("0.0.0.0"),
+const schema = z
+  .object({
+    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+    API_PORT: z.coerce.number().int().positive().default(5000),
+    API_HOST: z.string().default("0.0.0.0"),
 
-  DATABASE_URL: z.string().min(1, "Sin base de datos el servicio no puede atender nada"),
+    DATABASE_URL: z.string().min(1, "Sin base de datos el servicio no puede atender nada"),
 
-  /**
-   * Orígenes permitidos, separados por comas.
-   *
-   * Enumerados de forma explícita: nunca comodín. La implementación anterior combinaba origen
-   * comodín con envío de credenciales, que es una combinación que los navegadores rechazan y que
-   * enmascaraba qué orígenes se pretendían permitir (`DEFECTS.md` S-12).
-   */
-  CORS_ORIGINS: z
-    .string()
-    .default("http://localhost:3000")
-    .transform((value) =>
-      value
-        .split(",")
-        .map((origin) => origin.trim())
-        .filter((origin) => origin.length > 0),
-    )
-    .refine((origins) => !origins.includes("*"), {
-      message: "No se admite un origen comodín. Enumera los orígenes permitidos.",
-    }),
+    /**
+     * Orígenes permitidos, separados por comas.
+     *
+     * Enumerados de forma explícita: nunca comodín. La implementación anterior combinaba origen
+     * comodín con envío de credenciales, que es una combinación que los navegadores rechazan y que
+     * enmascaraba qué orígenes se pretendían permitir (`DEFECTS.md` S-12).
+     */
+    CORS_ORIGINS: z
+      .string()
+      .default("http://localhost:3000")
+      .transform((value) =>
+        value
+          .split(",")
+          .map((origin) => origin.trim())
+          .filter((origin) => origin.length > 0),
+      )
+      .refine((origins) => !origins.includes("*"), {
+        message: "No se admite un origen comodín. Enumera los orígenes permitidos.",
+      }),
 
-  /**
-   * Prefijo bajo el que el navegador ve la API.
-   *
-   * Existe por una sola razón: **la credencial de renovación viaja con `Path=/auth`**, para no
-   * enviarse en cada petición. Cuando la aplicación web sirve la API tras un proxy —`/api/auth/…`
-   * en su propio origen, que es como se evita el envío entre orígenes— el camino que el navegador
-   * ve ya no es el que la cookie declara, y la cookie deja de enviarse a su propia ruta.
-   *
-   * Poniendo aquí el mismo prefijo que usa el proxy, la restricción se conserva en lugar de
-   * relajarse a `/`, que es la salida fácil y la que anula la propiedad.
-   */
-  COOKIE_PATH_PREFIX: z
-    .string()
-    .default("")
-    .refine((value) => value === "" || (value.startsWith("/") && !value.endsWith("/")), {
-      message: 'Debe empezar por "/" y no terminar en "/", o quedar vacío.',
-    }),
-})
+    /**
+     * Prefijo bajo el que el navegador ve la API.
+     *
+     * Existe por una sola razón: **la credencial de renovación viaja con `Path=/auth`**, para no
+     * enviarse en cada petición. Cuando la aplicación web sirve la API tras un proxy —`/api/auth/…`
+     * en su propio origen, que es como se evita el envío entre orígenes— el camino que el navegador
+     * ve ya no es el que la cookie declara, y la cookie deja de enviarse a su propia ruta.
+     *
+     * Poniendo aquí el mismo prefijo que usa el proxy, la restricción se conserva en lugar de
+     * relajarse a `/`, que es la salida fácil y la que anula la propiedad.
+     */
+    COOKIE_PATH_PREFIX: z
+      .string()
+      .default("")
+      .refine((value) => value === "" || (value.startsWith("/") && !value.endsWith("/")), {
+        message: 'Debe empezar por "/" y no terminar en "/", o quedar vacío.',
+      }),
+
+    /**
+     * El secreto compartido con el procesador de pagos.
+     *
+     * **Obligatorio en producción**, y por eso lo comprueba el refinamiento de abajo. Fuera de
+     * producción es opcional para que levantar el servicio no exija una cuenta del procesador; sin
+     * él, el endpoint de eventos rechaza **todo**, que es lo contrario de lo que hacía la
+     * implementación anterior — donde el valor por defecto era la palabra `secret` (`DEFECTS.md`
+     * S-13) y cualquiera que la conociera podía firmar.
+     *
+     * Nunca hay un valor por defecto. Un secreto con valor por defecto es un secreto público.
+     */
+    PAYMENTS_WEBHOOK_SECRET: z.string().min(1).optional(),
+
+    /** Tolerancia de la marca de tiempo firmada, en segundos. Impide reproducir eventos capturados. */
+    PAYMENTS_WEBHOOK_TOLERANCE: z.coerce.number().int().positive().default(300),
+  })
+  .superRefine((value, ctx) => {
+    if (value.NODE_ENV === "production" && !value.PAYMENTS_WEBHOOK_SECRET) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["PAYMENTS_WEBHOOK_SECRET"],
+        message:
+          "En producción es obligatorio: sin él, el endpoint de eventos de pago no puede verificar " +
+          "nada y queda abierto a cualquiera que publique un evento falso.",
+      })
+    }
+  })
 
 const parsed = schema.safeParse(process.env)
 

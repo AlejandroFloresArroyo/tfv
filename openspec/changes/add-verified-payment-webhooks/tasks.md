@@ -2,40 +2,41 @@
 
 ## Verificación
 
-- [ ] Acceder al cuerpo sin procesar, sin transformación previa
-- [ ] Verificar con la firma que acompaña a la petición y el secreto compartido
-- [ ] Eliminar la generación de la firma propia
-- [ ] Ventana temporal de tolerancia
-- [ ] Confirmar el secreto configurado en cada entorno antes de activar
+- [x] Acceder al cuerpo sin procesar, sin transformación previa
+- [x] Verificar con la firma que acompaña a la petición y el secreto compartido
+- [x] Eliminar la generación de la firma propia
+- [x] Ventana temporal de tolerancia
+- [ ] Confirmar el secreto configurado en cada entorno antes de activar — es obligatorio en
+      producción y el servicio no arranca sin él; falta ponerlo donde se despliegue
 - [ ] Revisar si algún proceso interno publica contra este endpoint
 
 ## Deduplicación
 
-- [ ] Tabla de eventos recibidos con restricción única sobre el identificador del proveedor
-- [ ] Reclamar el evento por inserción; el conflicto significa duplicado
-- [ ] Responder éxito ante duplicado, sin repetir efectos
-- [ ] Prueba de dos entregas simultáneas
+- [x] Tabla de eventos recibidos con restricción única sobre el identificador del proveedor
+- [x] Reclamar el evento por inserción; el conflicto significa duplicado
+- [x] Responder éxito ante duplicado, sin repetir efectos
+- [x] Prueba de dos entregas simultáneas
 
 ## Transaccionalidad
 
-- [ ] Todos los efectos de un evento en una transacción
-- [ ] Responder con error ante fallo, para provocar el reintento
+- [x] Todos los efectos de un evento en una transacción
+- [x] Responder con error ante fallo, para provocar el reintento
 - [ ] Confirmar la recepción dentro del plazo del procesador
 - [ ] Encolar el trabajo que no quepa en ese plazo, conservando la ejecución única
 
 ## Manejadores
 
-- [ ] Sesión de pago completada, con derivación por tipo
-- [ ] Sesión de pago caducada: liberar existencias y marcar la compra
-- [ ] Factura cobrada: registrar, sincronizar y avisar
-- [ ] Factura próxima
-- [ ] Fallo de cobro: periodo de gracia, **sin eliminar la suscripción**
-- [ ] Suscripción modificada
-- [ ] Suscripción terminada
-- [ ] Cuenta de comercio actualizada
-- [ ] Reembolso: registrar y ajustar el pago y el pedido
-- [ ] Disputa: registrar y avisar
-- [ ] Tipo no atendido: éxito, sin efectos, con registro
+- [ ] Sesión de pago completada, con derivación por tipo — espera a suscripciones (11) y a la compra (17)
+- [ ] Sesión de pago caducada: liberar existencias y marcar la compra — espera a suscripciones (11) y a la compra (17)
+- [ ] Factura cobrada: registrar, sincronizar y avisar — espera a suscripciones (11) y a la compra (17)
+- [ ] Factura próxima — espera a suscripciones (11) y a la compra (17)
+- [ ] Fallo de cobro: periodo de gracia, **sin eliminar la suscripción** — espera a suscripciones (11) y a la compra (17)
+- [ ] Suscripción modificada — espera a suscripciones (11) y a la compra (17)
+- [ ] Suscripción terminada — espera a suscripciones (11) y a la compra (17)
+- [ ] Cuenta de comercio actualizada — espera a suscripciones (11) y a la compra (17)
+- [ ] Reembolso: registrar y ajustar el pago y el pedido — espera a suscripciones (11) y a la compra (17)
+- [ ] Disputa: registrar y avisar — espera a suscripciones (11) y a la compra (17)
+- [x] Tipo no atendido: éxito, sin efectos, con registro
 
 ## Correcciones asociadas
 
