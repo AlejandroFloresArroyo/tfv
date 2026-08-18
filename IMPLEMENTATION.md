@@ -105,14 +105,14 @@ Lo construido hasta ahora, medido y no estimado:
 
 | | |
 |---|---|
-| Rebanadas | 9 de 30 empezadas, **ninguna cerrada del todo** |
-| Código sin pruebas | 27 714 líneas |
-| Código de prueba | 8 586 líneas |
-| Pruebas | **432** — 98 contratos, 59 datos, 207 API, 29 web, 39 de extremo a extremo |
+| Rebanadas | 10 de 30 empezadas, **ninguna cerrada del todo** |
+| Código sin pruebas | 30 197 líneas |
+| Código de prueba | 9 743 líneas |
+| Pruebas | **479** — 98 contratos, 59 datos, 254 API, 29 web, 39 de extremo a extremo |
 | Esquema | 91 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
 | Aislamiento | 195 políticas · 91/91 tablas · 0 con identidad cruda |
-| Migraciones | 10, replicadas desde cero en cada verificación |
-| Rutas | **88** registradas, 66 con permiso declarado, 10 públicas y enumeradas |
+| Migraciones | 11, replicadas desde cero en cada verificación |
+| Rutas | **104** registradas, 81 con permiso declarado, 10 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
 | Pantallas | 17, en español e inglés (261 mensajes, sin desalinear) |
 
@@ -121,10 +121,12 @@ Lo construido hasta ahora, medido y no estimado:
 colecciones explorables** y **el almacén entero, del catálogo a las existencias**. La parte ancha
 del trabajo siguen siendo las rebanadas 08 a 27; la 10 está casi entera y las demás sin tocar.
 
-**La aritmética de las cotizaciones ya está escrita y probada.** El motor de cálculo es una función
-pura de los contratos, con un caso de prueba por cada escenario de su spec. Todavía no la llama
-nadie: las cotizaciones no existen en la API. Pero el día que existan, el importe no lo decidirá el
-navegador.
+**El inventario ya es comercio.** Hay cotizaciones, y reservan equipo de verdad: unidades
+concretas apartadas con bloqueo, reconciliadas por diferencia, proyectadas sobre el inventario al
+cambiar de estado y devueltas con un retorno explícito. El importe lo calcula el servidor con la
+misma función pura que usará el navegador, y se congela al cerrar. Es la corrección de los tres
+defectos más caros del servicio: la reserva sin atomicidad, la acuñación silenciosa de inventario y
+el motor de cálculo viviendo en el cliente.
 
 **Las colecciones ya se comportan como colecciones.** Los seis listados hablan el lenguaje de
 consulta —búsqueda insensible a acentos, filtros de gramática cerrada, orden estable, sobre de
@@ -177,8 +179,8 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
 | 12 | `migrate-warehouse-catalog` | 🟡 | Entera salvo lo que depende de documentos que no existen: las comprobaciones de compromiso necesitan las rebanadas 14 y 15 |
-| 13 | `add-transactional-stock-reservation` | ⬜ | **Bloqueada**: decisión M-04 |
-| 14 | `add-server-side-quotation-pricing` | 🟡 | Motor de cálculo entero y probado, 22/36. Lo que falta —recalcular al guardar, congelar al cerrar, el documento— espera a que las cotizaciones existan. La decisión M-05 sigue sin confirmar: se implementó el criterio de la spec |
+| 13 | `add-transactional-stock-reservation` | 🟡 | Entera, 29/31. Falta sólo la ejecución programada de la verificación de coherencia, que espera al despachador de la 09. M-04 sigue sin confirmar: se implementó el criterio de la spec |
+| 14 | `add-server-side-quotation-pricing` | 🟡 | Motor, autoridad del servidor y congelación al cerrar, 27/36. Falta el documento comercial —espera a `pdf-documents`— y que la interfaz consuma la misma función. M-05 sigue sin confirmar: se implementó el criterio de la spec |
 | 15 | `migrate-warehouse-orders` | ⬜ | |
 | 16 | `migrate-order-chat-realtime` | ⬜ | |
 | 17 | `migrate-shipping-rates` | ⬜ | |
@@ -215,24 +217,24 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 En este orden, y con el motivo de que sea ése:
 
-1. **Las cotizaciones, y con ellas la reserva de existencias** (rebanada 13 y lo que queda de la
-   14). Es lo que convierte el inventario en comercio, y lo que desbloquea las tres comprobaciones
-   de compromiso que la 12 dejó anotadas. Van juntas porque no se sostienen por separado: reservar
-   es vincular unidades a **una línea de cotización**, y hoy no hay ninguna cotización en la API.
-   El orden dentro del bloque es alta de cotización y sus líneas, reconciliación de reservas con
-   bloqueo, proyección del estado sobre el inventario, retorno del equipo rentado, y por último
-   congelar el desglose al cerrar, que es lo que cierra la 14.
-2. **Lo que queda de la 10**: los prospectos. Las comprobaciones de «en uso» siguen esperando a los
+1. **Las pantallas de cotización** (29b): la bandeja de trabajo, el editor de líneas con su
+   disponibilidad, el desglose de importes y el retorno del equipo. Es todo lo que las rebanadas 13
+   y 14 acaban de dejar hecho y no se puede mirar, y es lo que cierra las dos tareas que quedan de
+   la 14 —que la interfaz consuma la misma función de cálculo, en vez de reimplementarla—.
+2. **Pedidos de almacén** (rebanada 15). Es lo que da entrada a las cotizaciones desde fuera:
+   aceptar un pedido crea su cotización con las líneas y el inventario ya apartado, que es la
+   transición central del servicio. Se apoya entera en lo que acaba de quedar construido.
+3. **Lo que queda de la 10**: los prospectos. Las comprobaciones de «en uso» siguen esperando a los
    documentos que aún no existen.
-3. **Base de pruebas separada de la de desarrollo.** Sigue estorbando: `pnpm test` borra los datos
+4. **Base de pruebas separada de la de desarrollo.** Sigue estorbando: `pnpm test` borra los datos
    con los que se está mirando la aplicación, y con ellos la siembra de volumen que hace falta para
    ver funcionar las colecciones.
-4. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
+5. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
    **recepción verificada de eventos de cobro** (07), que cierra el bloque crítico.
 
-La **medición previa al corte** de la 05 no va aquí porque no depende de nosotros: necesita tráfico
-real de la pila anterior, y su sitio es junto a la rebanada 30. La **medición de importes** de la 14
-—cuántas cotizaciones abiertas cambian y en cuánto— está en el mismo caso.
+Dos cosas que no van en esta lista porque no dependen de nosotros: la **medición previa al corte**
+de la 05, que necesita tráfico real de la pila anterior, y la **medición de importes** de la 14
+—cuántas cotizaciones abiertas cambian y en cuánto—. Su sitio es junto a la rebanada 30.
 
 ## Decisiones pendientes que bloquean
 
@@ -248,8 +250,10 @@ Ninguna bloquea el trabajo en curso. Por orden de cuándo harán falta:
 | Rebanada 28e | Si la licencia del editor de imagen es transferible (F-13) | Legal |
 | Rebanada 30 | Qué se hace con las cuentas existentes marcadas como verificadas | Producto |
 
-La de la 14 ya está implementada con el criterio de la spec y señalada en el código, según la regla
-5: confirmarla es cambiar una fila de la tabla de tratamiento, no reestructurar nada.
+Las de la 13 y la 14 ya están implementadas con el criterio de la spec y señaladas en el código,
+según la regla 5. Confirmar la de la 14 es cambiar una fila de la tabla de tratamiento; confirmar la
+de la 13, el valor por defecto de un parámetro. Ninguna de las dos toca el modelo, y la marca de
+trazabilidad de las unidades acuñadas se conserva se decida lo que se decida.
 
 Resueltas: **cómo se propaga la identidad al motor** (rebanada 06, ver D-07 y la bitácora del
 2026-08-16), **si se acepta la ventana de revocación** —no se acepta, se paga la consulta— y
@@ -1583,3 +1587,98 @@ siguiente, junto con la 13.
 TypeScript en los seis paquetes, Biome, y las **432 pruebas** —98 de contratos, 59 de datos, 207 de
 API y 29 de web— y las **39 de extremo a extremo**, que se volvieron a correr en vez de darlas por
 buenas. La suite de la API volvió a vaciar la base de desarrollo, y se volvió a sembrar.
+
+### 2026-08-17 · El inventario se convierte en comercio
+
+Las rebanadas **13 y 14**, y con ellas el tramo más delicado del servicio de almacenes. Hay
+cotizaciones en la API, reservan equipo de verdad, y el importe lo decide el servidor.
+
+Son cuatro incrementos encadenados: el documento con su máquina de estados, el motor de reserva, la
+proyección sobre el inventario, y el cálculo como autoridad del servidor. Cada uno con sus pruebas
+transcritas de los escenarios de su spec —cuarenta y siete en total, contra la base real—.
+
+**El folio es del almacén, no de la instalación**
+
+El índice único del folio era global. En un sistema multi-arrendatario eso significa que dos casas
+de renta no pueden numerar sus documentos cada una desde uno, y que la segunda en dar de alta una
+cotización vería un folio que delata cuántas lleva la primera. Se corrigió el índice —migración 10,
+`(warehouse_id, folio)`— y se anotó en el `design.md` de `quotation-pricing`, que lo declaraba
+global.
+
+El correlativo se asigna tomando el bloqueo de la fila del almacén antes de contar. Serializa las
+altas por almacén, que es gratis cuando las cotizaciones se crean a mano, y evita tener que
+explicar por qué a veces falla la segunda.
+
+**`for update skip locked`, y por qué es la pieza y no un detalle**
+
+Sin él, dos reservas simultáneas sobre la misma medida se serializan y la segunda puede fallar por
+espera en lugar de tomar limpiamente otras unidades. Con él, la segunda **salta** las filas
+bloqueadas y coge las siguientes; si no quedan, falla por existencia insuficiente, que es la
+respuesta correcta y no un error de infraestructura. La prueba lanza las dos reservas a la vez sobre
+una única unidad disponible y comprueba que exactamente una lo consigue.
+
+Debajo, el índice único parcial `(stock_unit_id) where released_at is null` es la garantía
+estructural: una unidad no se compromete dos veces aunque la aplicación se equivoque.
+
+**Se reconcilia por diferencia, y hay un caso que la spec no contemplaba**
+
+Subir de dos a cinco aparta tres más y conserva las dos; bajar libera empezando por las más
+recientes, para que lo que lleva más tiempo apartado siga estándolo. Reservar de nuevo desde cero
+devolvería equipo al inventario por un instante, y otra cotización simultánea podría llevárselo.
+
+Al implementarlo apareció un caso que ni la spec ni el diseño mencionan: **cambiar la medida de una
+línea**. La reconciliación mira la cantidad, así que con la misma cantidad no habría hecho nada, y
+la línea acabaría diciendo una medida y sujetando unidades de otra — el descuadre que sólo se
+descubre el día que alguien va a la nave a buscar el equipo. Se suelta lo ajeno antes de apartar lo
+nuevo, con su prueba.
+
+**Acuñar inventario exige decirlo (M-04)**
+
+La implementación anterior creaba unidades en silencio y siempre cuando no había existencia, de modo
+que una cotización podía comprometer equipo que no existía en la nave. Ahora, sin autorización
+explícita en la operación, la falta de existencia rechaza la reserva con `422` diciendo cuántas hay
+y cuántas se pidieron, y no reserva parcialmente. Con autorización, cada unidad creada queda marcada
+con quién la motivó y con qué cotización, y se puede filtrar por esa marca en el inventario.
+
+Es el criterio adoptado en la spec, implementado y señalado en el código. Si negocio confirma que la
+creación automática es deliberada, lo que cambia es el valor por defecto del parámetro, no el
+modelo.
+
+**Una cotización de renta completada deja el equipo fuera**
+
+Es el caso contraintuitivo, y tiene prueba propia y comentario en el código: completar significa que
+el equipo salió, no que volvió. Mientras no vuelva no cuenta como disponible para otra cotización.
+
+De ahí que el **retorno** sea un acto explícito, unidad por unidad, que distingue lo que vuelve en
+condiciones de lo que vuelve dañado. No existía: antes, completar una renta devolvía el equipo al
+inventario solo, y el sistema daba por disponible equipo que seguía en un camión. De ahí también que
+una cotización con equipo sin devolver no se pueda eliminar.
+
+Una venta cerrada suelta el vínculo —la unidad salió y no vuelve—; una renta lo conserva, porque es
+lo único que dice qué equipo hay que reclamar y a quién.
+
+**El importe lo decide el servidor (M-06)**
+
+Las líneas se resuelven contra el catálogo —tarifa de la lista, o precio del producto, o cero, más
+el ajuste de la medida— y se entregan al motor puro de los contratos, el mismo que correrá en el
+navegador. Con dos implementaciones no coincidirían, y la que mandaría sería la del navegador.
+
+La cantidad de una línea no se lee de una columna: es **cuántas unidades tiene apartadas**, la misma
+cifra que ve el almacén. Así un importe no puede cobrar por equipo que no está comprometido.
+
+**El desglose se congela al cerrar, y antes de proyectar.** El orden importa: cerrar suelta el
+vínculo de lo vendido y lo cancelado, así que calcular después congelaría ceros. Una cotización
+cerrada no se mueve aunque se dupliquen las tarifas; una abierta refleja el cambio.
+
+**Lo que no entra**
+
+El documento comercial y el enlace público de la 14 esperan a `pdf-documents`. Las firmas y los
+pagos de `quotations` van con la 15, que es quien los necesita. Y la ejecución programada de la
+verificación de coherencia —lo único que le falta a la 13— espera al despachador de trabajos de la
+09; la consulta y la comunicación de discrepancias ya están, en su endpoint.
+
+**Comprobado**
+
+TypeScript en los seis paquetes, Biome, y las **479 pruebas**: 98 de contratos, 59 de datos, 254 de
+API, 29 de web y 39 de extremo a extremo. La suite de la API volvió a vaciar la base de desarrollo,
+y se volvió a sembrar.

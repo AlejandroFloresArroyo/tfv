@@ -27,7 +27,7 @@ warehouse_quote
   computed_at  timestamptz nullable
 
 warehouse_quote_line
-  id, quote_id, measurement_id, price_list_id, frequency,
+  id, quote_id, measurement_id, product_price_id, frequency,
   position, position_product
 
 warehouse_quote_additional
@@ -105,11 +105,16 @@ La prueba que importa: la suma de las líneas es exactamente igual al total, sie
 ```
 INDEX (warehouse_id, status, priority DESC)   ← la bandeja de trabajo
 INDEX (client_id)
-UNIQUE (folio) WHERE deleted_at IS NULL
+UNIQUE (warehouse_id, folio) WHERE deleted_at IS NULL
 ```
 
 La prioridad es una columna calculada a partir del estado, no un valor que la aplicación escriba —
 así no puede quedar desincronizada.
+
+**El folio es del almacén, no de la instalación.** Este documento lo declaraba único a secas, y al
+implementarlo se vio que no puede serlo: dos casas de renta numeran sus documentos cada una desde
+uno, y una secuencia global haría además que el folio de una empresa delatara cuántas cotizaciones
+lleva la anterior. Corregido en la migración 10.
 
 ## Decisiones abiertas
 

@@ -31,15 +31,18 @@
 
 ## Servidor como autoridad
 
-- [ ] Recalcular al guardar; descartar los importes recibidos
+- [x] Recalcular al guardar; descartar los importes recibidos
 - [ ] La interfaz consume la misma función, no una reimplementación
 - [ ] Retirar el motor del código del navegador
 
+> Las dos esperan a que la interfaz tenga pantallas de cotización (29b). La función ya es la misma
+> y está publicada en `@tfv/contracts`; falta que alguien la llame desde el navegador.
+
 ## Congelación
 
-- [ ] Persistir el desglose al alcanzar estado cerrado
-- [ ] Las lecturas de una cotización cerrada usan el desglose persistido
-- [ ] Las abiertas se recalculan
+- [x] Persistir el desglose al alcanzar estado cerrado
+- [x] Las lecturas de una cotización cerrada usan el desglose persistido
+- [x] Las abiertas se recalculan
 
 ## Documento
 
@@ -54,5 +57,5 @@
 - [x] Prueba: la suma de líneas es exactamente el subtotal
 - [x] Prueba: activar el reparto no altera los impuestos
 - [x] Prueba: el reparto suma exactamente la comisión
-- [ ] Prueba: cotización cerrada no cambia al duplicar tarifas
+- [x] Prueba: cotización cerrada no cambia al duplicar tarifas
 - [ ] Medición: cuántas cotizaciones abiertas cambian de importe y en cuánto
