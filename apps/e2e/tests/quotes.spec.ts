@@ -261,3 +261,68 @@ test.describe("el retorno del equipo", () => {
     await expect(returns.getByRole("listitem")).toHaveCount(before - 1)
   })
 })
+
+test.describe("el precio negociado", () => {
+  test("sustituye a la tarifa y arrastra la cadena entera de importes", async ({
+    as,
+    companies,
+  }) => {
+    // Es el modo con el que se cotiza cuando la lista de precios está sin llenar, que es casi
+    // siempre. El importe escrito es el total de esa línea para el periodo: ni por día ni por
+    // unidad, y por eso la línea deja de tener precio unitario.
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+
+    await page.goto(`${QUOTES(companyId, warehouseId)}?status=in_progress`)
+    await page.getByRole("link", { name: "Comercial Cervecería" }).click()
+    await page.waitForURL(/\/quotes\/[^/]+$/)
+
+    const amounts = page.getByRole("heading", { name: "Importes" }).locator("..")
+    const before = await total(amounts)
+
+    await page.getByLabel("Precio negociado").first().fill("3500.00")
+
+    // La línea cobra lo escrito, sin multiplicarlo por los días ni por las unidades.
+    const lines = page.getByRole("listitem").filter({ has: page.getByLabel("Cantidad") })
+    await expect(lines.first()).toContainText("3500.00")
+
+    // Y el panel de al lado se mueve con ella: dos cifras a un palmo no pueden decir cosas
+    // distintas mientras se edita.
+    await expect.poll(() => total(amounts)).not.toBe(before)
+    await expect(amounts).toContainText(/todavía no se han guardado/i)
+  })
+
+  test("guardarlo lo conserva al recargar", async ({ as, companies }) => {
+    // La siembra de la suite **no borra**: respeta lo que ya existe, así que el valor de partida es
+    // el que dejó la pasada anterior. Se escribe **otro**: así la prueba comprueba que se guarda en
+    // vez de comprobar que ya estaba, y se puede repetir.
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+
+    await page.goto(`${QUOTES(companyId, warehouseId)}?status=pre_quote`)
+    await page.getByRole("link", { name: "Documental Sierra" }).click()
+    await page.waitForURL(/\/quotes\/[^/]+$/)
+
+    const field = page.getByLabel("Precio negociado").first()
+    const next = (await field.inputValue()) === "1234.00" ? "4321.00" : "1234.00"
+
+    await field.fill(next)
+    await page.getByRole("button", { name: "Guardar líneas" }).click()
+    await expect(page.getByText("Guardado")).toBeVisible()
+
+    // El aviso dice que la API contestó, no que el árbol de servidor haya terminado de rehacerse.
+    // Recargar encima de esa revalidación en vuelo sirve el documento anterior.
+    await page.waitForLoadState("networkidle")
+    await page.reload()
+    await expect(page.getByLabel("Precio negociado").first()).toHaveValue(next)
+  })
+})
+
+/** El total a pagar que enseña el panel de importes. */
+async function total(panel: import("@playwright/test").Locator): Promise<string> {
+  return (await panel.getByText("Total a pagar").locator("..").textContent()) ?? ""
+}
