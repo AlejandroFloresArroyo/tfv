@@ -51,6 +51,7 @@ export default async function StoragesPage({
         canViewWarehouses={canViewWarehouses}
         canViewProducts={can(company, "warehouses.products.view")}
         canViewStorages={canViewStorages}
+        canViewQuotes={can(company, "warehouses.quotes.view")}
       />
       {rootsResult.ok ? (
         <StorageBrowser

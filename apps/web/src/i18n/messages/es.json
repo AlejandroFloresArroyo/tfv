@@ -438,6 +438,73 @@
         "box": "Caja",
         "bin": "Contenedor"
       }
+    },
+    "quotes": {
+      "title": "Cotizaciones",
+      "subtitle": "La bandeja de trabajo del almacén, con lo más urgente primero.",
+      "searchPlaceholder": "Buscar por folio, nombre o descripción…",
+      "empty": "Todavía no hay cotizaciones",
+      "emptyBody": "Aquí aparecerán las cotizaciones de este almacén, ordenadas por lo que hay que atender antes.",
+      "detail": "Ficha de cotización",
+      "folio": "Folio",
+      "client": "Cliente",
+      "noClient": "Sin cliente asignado",
+      "responsible": "Responsable",
+      "window": "Ventana de renta",
+      "noWindow": "Sin fechas",
+      "days": "{count, plural, one {# día} other {# días}}",
+      "rounding": "Redondeo de días",
+      "roundUp": "Hacia arriba",
+      "roundDown": "Hacia abajo",
+      "noRounding": "Sin redondear",
+      "contacts": "Contactos",
+      "clientSide": "Del cliente",
+      "sellerSide": "Del vendedor",
+      "noContacts": "Todavía no se han registrado contactos.",
+      "lines": "Líneas",
+      "noLines": "Esta cotización todavía no tiene equipo apartado.",
+      "reserved": "{count, plural, one {# unidad apartada} other {# unidades apartadas}}",
+      "frequency": "Periodicidad",
+      "amounts": "Importes",
+      "amountsFrozen": "Importes congelados al cerrarse la cotización. No cambian aunque cambie el catálogo.",
+      "amountsLive": "Calculados con las tarifas de hoy. Se congelan al cerrar la cotización.",
+      "subtotal": "Subtotal",
+      "additionals": "Conceptos adicionales",
+      "discount": "Descuento",
+      "base": "Base",
+      "taxes": "Impuestos",
+      "net": "Neto",
+      "fees": "Comisiones",
+      "gross": "Bruto",
+      "advance": "Anticipo",
+      "total": "Total a pagar",
+      "penalty": "Penalización",
+      "penaltyHint": "Importe contingente. No forma parte del total.",
+      "appliedDays": "Días aplicados",
+      "unitCost": "Precio unitario",
+      "quantity": "Cantidad",
+      "lineTotal": "Total",
+      "type": "Tipo",
+      "status": "Estado",
+      "createdAt": "Alta",
+      "kind": {
+        "rent": "Renta",
+        "sale": "Venta"
+      },
+      "state": {
+        "pre_quote": "Pre-cotización",
+        "pending": "Pendiente",
+        "in_progress": "En progreso",
+        "in_rent": "En renta",
+        "completed": "Completada",
+        "sold": "Vendida",
+        "canceled": "Cancelada"
+      },
+      "frequencyOf": {
+        "daily": "Diaria",
+        "weekly": "Semanal",
+        "monthly": "Mensual"
+      }
     }
   }
 }

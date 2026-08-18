@@ -438,6 +438,73 @@
         "box": "Box",
         "bin": "Bin"
       }
+    },
+    "quotes": {
+      "title": "Quotations",
+      "subtitle": "The warehouse work tray, most urgent first.",
+      "searchPlaceholder": "Search by folio, name or description…",
+      "empty": "No quotations yet",
+      "emptyBody": "This warehouse's quotations will appear here, ordered by what needs attention first.",
+      "detail": "Quotation detail",
+      "folio": "Folio",
+      "client": "Client",
+      "noClient": "No client assigned",
+      "responsible": "Owner",
+      "window": "Rental window",
+      "noWindow": "No dates",
+      "days": "{count, plural, one {# day} other {# days}}",
+      "rounding": "Day rounding",
+      "roundUp": "Up",
+      "roundDown": "Down",
+      "noRounding": "No rounding",
+      "contacts": "Contacts",
+      "clientSide": "Client side",
+      "sellerSide": "Seller side",
+      "noContacts": "No contacts recorded yet.",
+      "lines": "Lines",
+      "noLines": "This quotation has no equipment held yet.",
+      "reserved": "{count, plural, one {# unit held} other {# units held}}",
+      "frequency": "Frequency",
+      "amounts": "Amounts",
+      "amountsFrozen": "Frozen when the quotation closed. They do not change even if the catalogue does.",
+      "amountsLive": "Computed with today's rates. They freeze when the quotation closes.",
+      "subtotal": "Subtotal",
+      "additionals": "Additional items",
+      "discount": "Discount",
+      "base": "Base",
+      "taxes": "Taxes",
+      "net": "Net",
+      "fees": "Fees",
+      "gross": "Gross",
+      "advance": "Advance",
+      "total": "Amount due",
+      "penalty": "Penalty",
+      "penaltyHint": "Contingent amount. Not part of the total.",
+      "appliedDays": "Applied days",
+      "unitCost": "Unit price",
+      "quantity": "Quantity",
+      "lineTotal": "Total",
+      "type": "Type",
+      "status": "Status",
+      "createdAt": "Created",
+      "kind": {
+        "rent": "Rental",
+        "sale": "Sale"
+      },
+      "state": {
+        "pre_quote": "Pre-quote",
+        "pending": "Pending",
+        "in_progress": "In progress",
+        "in_rent": "On rent",
+        "completed": "Completed",
+        "sold": "Sold",
+        "canceled": "Cancelled"
+      },
+      "frequencyOf": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly"
+      }
     }
   }
 }
