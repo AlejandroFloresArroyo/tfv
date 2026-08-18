@@ -173,7 +173,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | 04 | `add-session-lifecycle` | 🟡 | 31/36 | Sesiones revocables, rotación con detección de reutilización, y revocación exigida por el motor. Falta sustituir la maquinaria propia por el servicio gestionado |
 | 05 | `add-authorization-enforcement` | 🟡 | 21/29 | Catálogo de **255** claves, resolución de rol, elusión acotada de propietario y de plataforma, permisos efectivos para la interfaz. Falta la medición previa al corte, que es lo que impide cerrarla |
 | 06 | `add-tenant-scoping` | 🟡 | 24/29 | **Las dos capas en pie**: 195 políticas sobre las 91 tablas, y los manejadores corriendo bajo `withRequester`. Faltan las de los dominios que aún no existen |
-| 07 | `add-verified-payment-webhooks` | ⬜ | 0 | Lo último del bloque crítico |
+| 07 | `add-verified-payment-webhooks` | 🟡 | 11/38 | **Firma verificada de verdad**, unicidad por reclamación e inserción, y transaccionalidad. Los manejadores por tipo esperan a las rebanadas 11 y 17 |
 
 ### Servicios de plataforma
 
@@ -181,17 +181,17 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 |---|---|---|---|
 | 08 | `migrate-media-storage` | ⬜ | |
 | 09 | `migrate-activity-and-notifications` | ⬜ | |
-| 10 | `migrate-identity-and-companies` | 🟡 | Empresas, membresías, roles, direcciones, contrapartes y taxonomía global. Faltan los prospectos y las dos taxonomías que cuelgan de entidades que aún no existen |
+| 10 | `migrate-identity-and-companies` | 🟡 | Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen, y las pantallas de prospecto —el formulario público es de la 19 y la bandeja necesita un área de administración de plataforma |
 | 11 | `migrate-subscriptions-and-billing` | ⬜ | |
 
 ### Columna de comercio
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 12 | `migrate-warehouse-catalog` | 🟡 | Entera salvo lo que depende de documentos que no existen: las comprobaciones de compromiso necesitan las rebanadas 14 y 15 |
-| 13 | `add-transactional-stock-reservation` | 🟡 | Entera, 29/31. Falta sólo la ejecución programada de la verificación de coherencia, que espera al despachador de la 09. M-04 sigue sin confirmar: se implementó el criterio de la spec |
-| 14 | `add-server-side-quotation-pricing` | 🟡 | Motor, autoridad del servidor y congelación al cerrar, 27/36. Falta el documento comercial —espera a `pdf-documents`— y que la interfaz consuma la misma función. M-05 sigue sin confirmar: se implementó el criterio de la spec |
-| 15 | `migrate-warehouse-orders` | ⬜ | |
+| 12 | `migrate-warehouse-catalog` | 🟡 | Entera salvo el detalle de producto y sus asistentes, que son pantalla (29b). El **alta provisional** y su bandeja ya están |
+| 13 | `add-transactional-stock-reservation` | 🟡 | Entera, 30/31, con el **agujero de las huérfanas rentadas** tapado. Falta sólo la ejecución programada de la verificación de coherencia, que espera al despachador de la 09. M-04 sigue sin confirmar: se implementó el criterio de la spec |
+| 14 | `add-server-side-quotation-pricing` | 🟡 | Motor, autoridad del servidor, congelación al cerrar, **precio negociado, precio por paquete, cobros y saldo**. La interfaz consume ya la misma función. Falta el documento comercial, que espera a `pdf-documents`. M-05 sigue sin confirmar |
+| 15 | `migrate-warehouse-orders` | 🟡 | 29/33. Ciclo, **aceptación atómica**, rechazo con motivo, propagación a la orden de compra y su bandeja. Las cuatro que faltan esperan al escaparate (19) y al servicio de producciones (20) |
 | 16 | `migrate-order-chat-realtime` | ⬜ | |
 | 17 | `migrate-shipping-rates` | ⬜ | |
 | 18 | `add-transactional-checkout` | ⬜ | |
@@ -220,7 +220,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
 | 28 | `rebuild-ui-foundation` | 🟡 | Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial). Falta la exploración de colecciones (28d) y, de la 28e, el asistente por pasos y los controles ricos |
-| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, contrapartes y direcciones (29a); catálogo, árbol de ubicaciones, ficha de producto y **cotizaciones** de sólo lectura (29b). Falta la parte que escribe: asistentes de producto y constructor de cotizaciones. 29c–29e esperan a sus rebanadas de servidor |
+| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, contrapartes y direcciones (29a); catálogo, árbol de ubicaciones, **constructor de cotizaciones entero** —líneas, condiciones de pago, impuestos, cobros, retorno, extensión— y **pedidos con aceptación y rechazo** (29b). Faltan el detalle de producto y sus asistentes, los bloques de identidad y contactos, y el documento público. 29c–29e esperan a sus rebanadas de servidor |
 | 30 | `add-data-migration-and-cutover` | ⬜ | |
 
 ## Lo siguiente
