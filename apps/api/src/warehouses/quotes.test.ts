@@ -1277,3 +1277,150 @@ describe("sacar el equipo tiene su propia clave", () => {
     expect(done.status).toBe(403)
   })
 })
+
+// ─── Tarifas y existencia para el constructor ────────────────────────────────
+
+interface Candidate {
+  measurementId: string
+  measurementName: string
+  productId: string
+  productName: string
+  productCode: string
+  productPriceId: string | null
+  basePrice: string
+  rent?: { isFixed: boolean; daily?: string; weekly?: string; monthly?: string }
+  penalty?: { isFixed: boolean; fixed?: string }
+  available: number
+}
+
+async function ratesOf(query = "", auth = cookie): Promise<Response> {
+  return request("GET", `${base}/rates${query}`, undefined, auth)
+}
+
+async function candidates(query = ""): Promise<Candidate[]> {
+  const response = await ratesOf(query)
+  expect(response.status).toBe(200)
+  return (await json<{ items: Candidate[] }>(response)).items
+}
+
+describe("tarifas y existencia para el constructor", () => {
+  it("lista cada medida con lo que queda disponible de ella", async () => {
+    await clearWarehouse()
+    const measurementId = await newStocked("Grúa", 6)
+
+    const [candidate] = await candidates(`?measurementId=${measurementId}`)
+
+    expect(candidate?.measurementId).toBe(measurementId)
+    expect(candidate?.productName).toBe("Grúa")
+    expect(candidate?.available).toBe(6)
+  })
+
+  it("lo apartado por otra cotización deja de contar como disponible", async () => {
+    // Es la mitad del requisito de la 29b: la disponibilidad se ve mientras se edita, y tiene que
+    // ser la de verdad. Contar el inventario entero invitaría a comprometer equipo dos veces.
+    await clearWarehouse()
+    const measurementId = await newStocked("Tramoya", 5)
+    const quote = await newQuote({ ...WINDOW })
+    expect((await setLines(quote.id, [{ measurementId, quantity: 2 }])).status).toBe(200)
+
+    const [candidate] = await candidates(`?measurementId=${measurementId}`)
+
+    expect(candidate?.available).toBe(3)
+  })
+
+  it("sin lista de precios, el precio de partida es el del producto", async () => {
+    await clearWarehouse()
+    const product = await json<Product>(
+      await request(
+        "POST",
+        `${base}/products`,
+        { name: "Tripié", price: "1500.00", measurements: [{ name: "Cuerpo" }] },
+        cookie,
+      ),
+    )
+
+    const [candidate] = await candidates(`?productId=${product.id}`)
+
+    expect(candidate?.basePrice).toBe("1500.00")
+    expect(candidate?.productPriceId).toBeNull()
+    expect(candidate?.rent).toBeUndefined()
+  })
+
+  it("con lista de precios, devuelve la tarifa resuelta y de qué entrada salió", async () => {
+    await clearWarehouse()
+    const product = await json<Product>(
+      await request(
+        "POST",
+        `${base}/products`,
+        {
+          name: "Dolly",
+          price: "1500.00",
+          measurements: [{ name: "Cuerpo", priceDifference: "100.00" }],
+        },
+        cookie,
+      ),
+    )
+
+    const list = await json<{ id: string }>(
+      await request("POST", `${base}/price-lists`, { name: "Temporada alta" }, cookie),
+    )
+    const price = await json<{ id: string }>(
+      await request(
+        "PUT",
+        `${base}/price-lists/${list.id}/prices/${product.id}`,
+        { sale: "1200.00", rent: { isFixed: false, daily: "300.00" }, penalty: { isFixed: false } },
+        cookie,
+      ),
+    )
+
+    const [candidate] = await candidates(`?productId=${product.id}&priceListId=${list.id}`)
+
+    // La tarifa de la lista manda sobre el escalar, y el ajuste de la medida alcanza a las dos.
+    expect(candidate?.basePrice).toBe("1300.00")
+    expect(candidate?.rent).toEqual({ isFixed: false, daily: "400.00" })
+    expect(candidate?.productPriceId).toBe(price.id)
+  })
+
+  it("una lista sin entrada para el producto lo deja con su precio escalar", async () => {
+    await clearWarehouse()
+    const product = await json<Product>(
+      await request(
+        "POST",
+        `${base}/products`,
+        { name: "Reflector", price: "800.00", measurements: [{ name: "Cuerpo" }] },
+        cookie,
+      ),
+    )
+    const list = await json<{ id: string }>(
+      await request("POST", `${base}/price-lists`, { name: "Vacía" }, cookie),
+    )
+
+    const [candidate] = await candidates(`?productId=${product.id}&priceListId=${list.id}`)
+
+    expect(candidate?.basePrice).toBe("800.00")
+    expect(candidate?.productPriceId).toBeNull()
+  })
+
+  it("busca por nombre de producto sin acentos", async () => {
+    await clearWarehouse()
+    await newStocked("Cámara Alexa", 1)
+    await newStocked("Micrófono", 1)
+
+    const found = await candidates("?search=camara")
+
+    expect(found).toHaveLength(1)
+    expect(found[0]?.productName).toBe("Cámara Alexa")
+  })
+
+  it("exige la clave de editar las líneas, no la de mirar la cotización", async () => {
+    // Publica tarifas negociadas y existencia junto a ellas. Quien sólo puede mirar una cotización
+    // no tiene por qué ver la lista de precios entera del almacén.
+    await clearWarehouse()
+    const scoped = await memberWith(["warehouses.quotes.view"])
+
+    expect((await ratesOf("", scoped)).status).toBe(403)
+
+    const editor = await memberWith(["warehouses.quotes.view", "warehouses.quotes.edit_products"])
+    expect((await ratesOf("", editor)).status).toBe(200)
+  })
+})

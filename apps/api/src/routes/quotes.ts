@@ -17,6 +17,7 @@ import { allows } from "../auth/authorization.ts"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import { defineRoute, REQUIRES } from "../runtime/route.ts"
+import { listRates, rateQuery } from "../warehouses/quote-rates.ts"
 import {
   changeQuoteStatus,
   createQuote,
@@ -811,5 +812,79 @@ export const quoteBreakdownRoute = defineRoute({
       params.quoteId,
     )
     return c.json(breakdown, 200)
+  },
+})
+
+// ─── Tarifas y existencia ────────────────────────────────────────────────────
+
+const rateScheduleSchema = z.object({
+  isFixed: z.boolean(),
+  fixed: z.string().optional(),
+  daily: z.string().optional(),
+  weekly: z.string().optional(),
+  monthly: z.string().optional(),
+})
+
+const candidateSchema = z.object({
+  measurementId: z.string(),
+  measurementName: z.string(),
+  productId: z.string(),
+  productName: z.string(),
+  productCode: z.string(),
+  productPriceId: z.string().nullable(),
+  basePrice: z.string(),
+  rent: rateScheduleSchema.optional(),
+  penalty: rateScheduleSchema.optional(),
+  available: z.number().int(),
+})
+
+/**
+ * Lo que el constructor de cotizaciones pone delante de quien edita.
+ *
+ * Exige **la clave de editar las líneas**, no la de mirar la cotización. No es celo: la respuesta
+ * publica las tarifas negociadas del almacén junto a su existencia, y quien puede leer una
+ * cotización concreta no tiene por qué ver la lista de precios entera.
+ *
+ * `priceListId` no es un filtro —no reduce el conjunto, elige contra qué lista se resuelve la
+ * tarifa—, así que se lee aparte del lenguaje de colección.
+ */
+export const listRatesRoute = defineRoute({
+  access: REQUIRES("warehouses.quotes.edit_products"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/rates",
+    summary: "Las medidas del almacén con su tarifa resuelta y su existencia libre",
+    tags: ["Cotizaciones"],
+    request: {
+      params: warehouseParams,
+      query: collectionQuery(rateQuery).extend({
+        priceListId: z
+          .string()
+          .optional()
+          .openapi({ description: "Lista de precios contra la que resolver la tarifa" }),
+      }),
+    },
+    responses: {
+      200: {
+        description: "Medidas con su tarifa y sus unidades disponibles",
+        content: { "application/json": { schema: pageSchema(candidateSchema) } },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const priceListId = c.req.query("priceListId")
+
+    const page = await listRates(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      queryOf(c, rateQuery, ["priceListId"]),
+      priceListId,
+    )
+    return c.json(
+      serializePage(page, (item) => item),
+      200,
+    )
   },
 })

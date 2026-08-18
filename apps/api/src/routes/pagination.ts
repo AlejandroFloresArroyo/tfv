@@ -98,9 +98,23 @@ function describeFilter(definition: QuerySchema["filters"][string]): string {
  * claves declaradas y **una sola vez cada una**, y la gramática necesita las dos apariciones de un
  * campo para reconocer un intervalo. Un filtro no admitido no llega hasta aquí sin ser visto —
  * `parseQuery` lo rechaza con `400`.
+ *
+ * `except` deja fuera los parámetros que **no son del lenguaje de colección**: los que el manejador
+ * lee por su cuenta porque no filtran ni ordenan nada. Hay que nombrarlos aquí porque el análisis
+ * rechaza lo que no reconoce, y esa severidad es deseable — es lo que hace que un filtro mal
+ * escrito devuelva `400` en vez de la colección entera.
  */
-export function queryOf(c: Context, schema: QuerySchema): ParsedQuery {
-  return parseQuery(schema, c.req.queries())
+export function queryOf(
+  c: Context,
+  schema: QuerySchema,
+  except: readonly string[] = [],
+): ParsedQuery {
+  if (except.length === 0) return parseQuery(schema, c.req.queries())
+
+  const queries = { ...c.req.queries() }
+  for (const key of except) delete queries[key]
+
+  return parseQuery(schema, queries)
 }
 
 /** Serializa una página aplicando la conversión de cada elemento. */
