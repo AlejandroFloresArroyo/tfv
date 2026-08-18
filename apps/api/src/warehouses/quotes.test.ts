@@ -1278,6 +1278,62 @@ describe("sacar el equipo tiene su propia clave", () => {
   })
 })
 
+// ─── El equipo que tiene una cotización ──────────────────────────────────────
+
+interface HeldUnit {
+  id: string
+  code: string
+  status: string
+  productName: string
+  measurementName: string
+}
+
+async function heldBy(quoteId: string): Promise<HeldUnit[]> {
+  const response = await request("GET", `${base}/quotes/${quoteId}/units`, undefined, cookie)
+  expect(response.status).toBe(200)
+  return (await json<{ items: HeldUnit[] }>(response)).items
+}
+
+describe("el equipo que tiene apartado una cotización", () => {
+  it("nombra cada unidad, con su código y su estado", async () => {
+    // Sin esto no hay manera de registrar un retorno: hay que decir qué unidad vuelve y cómo.
+    await clearQuotes()
+    const { quote } = await stockedQuote(3)
+
+    const units = await heldBy(quote.id)
+
+    expect(units).toHaveLength(3)
+    expect(units[0]?.code).not.toBe("")
+    expect(units[0]?.status).toBe("in_quote")
+    expect(units[0]?.productName).not.toBe("")
+  })
+
+  it("una unidad rentada figura como tal", async () => {
+    await clearQuotes()
+    const { quote } = await stockedQuote(2)
+    expect((await moveTo(quote.id, "in_rent")).status).toBe(200)
+
+    expect((await heldBy(quote.id)).map((unit) => unit.status)).toEqual(["rented", "rented"])
+  })
+
+  it("lo devuelto deja de figurar", async () => {
+    await clearQuotes()
+    const { quote } = await stockedQuote(2)
+    await moveTo(quote.id, "in_rent")
+    const [first] = await heldBy(quote.id)
+
+    const returned = await request(
+      "POST",
+      `${base}/quotes/${quote.id}/returns`,
+      { units: [{ unitId: first?.id, status: "available" }] },
+      cookie,
+    )
+    expect(returned.status).toBe(200)
+
+    expect(await heldBy(quote.id)).toHaveLength(1)
+  })
+})
+
 // ─── Tarifas y existencia para el constructor ────────────────────────────────
 
 interface Candidate {
@@ -1399,6 +1455,19 @@ describe("tarifas y existencia para el constructor", () => {
 
     expect(candidate?.basePrice).toBe("800.00")
     expect(candidate?.productPriceId).toBeNull()
+  })
+
+  it("resuelve varias medidas de una vez, que es como las pide una cotización abierta", async () => {
+    // La ficha necesita la tarifa de las medidas que ya tiene, y son las que sean. Sin conjunto
+    // haría una petición por línea.
+    await clearWarehouse()
+    const first = await newStocked("Óptica 35", 1)
+    const second = await newStocked("Óptica 50", 1)
+    await newStocked("Óptica 85", 1)
+
+    const found = await candidates(`?measurementId=${first},${second}`)
+
+    expect(found.map((item) => item.measurementId).sort()).toEqual([first, second].sort())
   })
 
   it("busca por nombre de producto sin acentos", async () => {

@@ -28,6 +28,7 @@ import {
   QUOTE_STATUSES,
   quoteBreakdown,
   quoteQuery,
+  quoteUnits,
   RENT_FREQUENCIES,
   ROUND_DIRECTIONS,
   reservationCoherence,
@@ -739,6 +740,48 @@ export const returnQuoteUnitsRoute = defineRoute({
       c.req.valid("json").units,
     )
     return c.json(serializeQuote(quote), 200)
+  },
+})
+
+/**
+ * Qué equipo tiene fuera esta cotización.
+ *
+ * Bajo la clave de mirar y no la de terminar: es información del documento, y la necesita cualquiera
+ * que lo consulte. Registrar el retorno —que sí exige la suya— es el paso siguiente.
+ */
+export const listQuoteUnitsRoute = defineRoute({
+  access: REQUIRES("warehouses.quotes.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/quotes/{quoteId}/units",
+    summary: "Las unidades que la cotización tiene apartadas",
+    tags: ["Cotizaciones"],
+    request: { params: quoteParams },
+    responses: {
+      200: {
+        description: "Cada unidad con su código y su estado. Lo devuelto ya no aparece",
+        content: {
+          "application/json": {
+            schema: z.object({
+              items: z.array(
+                z.object({
+                  id: z.string(),
+                  code: z.string(),
+                  status: z.enum(STOCK_STATUSES),
+                  productName: z.string(),
+                  measurementName: z.string(),
+                }),
+              ),
+            }),
+          },
+        },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const items = await quoteUnits(actorOf(c), params.companyId, params.warehouseId, params.quoteId)
+    return c.json({ items }, 200)
   },
 })
 

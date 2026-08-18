@@ -56,7 +56,7 @@ export interface RateCandidate {
 export const rateQuery: QuerySchema = {
   filters: {
     productId: { type: "id", label: "Producto" },
-    measurementId: { type: "id", label: "Medida" },
+    measurementId: { type: "id", set: true, label: "Medida" },
     categoryId: { type: "id", label: "Categoría" },
     availableForRent: { type: "boolean", label: "Se renta" },
     availableForSale: { type: "boolean", label: "Se vende" },

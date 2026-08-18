@@ -564,6 +564,41 @@ export async function checkCoherence(tx: Transaction, warehouseId: string): Prom
   return [...orphans, ...drifted]
 }
 
+/**
+ * El equipo que una cotización tiene apartado, nombrado.
+ *
+ * Hace falta para registrar un retorno —hay que decir **qué** unidad vuelve y en qué condiciones—,
+ * y de paso es lo que la ficha necesita para enseñar qué salió. El código de la unidad es lo que
+ * lleva escrito la etiqueta física, así que es por lo que se la reconoce en la nave.
+ */
+export async function heldByQuote(tx: Transaction, quoteId: string) {
+  return tx
+    .select({
+      id: warehouseStockUnits.id,
+      code: warehouseStockUnits.code,
+      status: warehouseStockUnits.status,
+      measurementName: warehouseMeasurements.name,
+      productName: warehouseProducts.name,
+    })
+    .from(warehouseStockReservations)
+    .innerJoin(
+      warehouseStockUnits,
+      eq(warehouseStockUnits.id, warehouseStockReservations.stockUnitId),
+    )
+    .innerJoin(
+      warehouseMeasurements,
+      eq(warehouseMeasurements.id, warehouseStockUnits.measurementId),
+    )
+    .innerJoin(warehouseProducts, eq(warehouseProducts.id, warehouseMeasurements.productId))
+    .where(
+      and(
+        eq(warehouseStockReservations.quoteId, quoteId),
+        isNull(warehouseStockReservations.releasedAt),
+      ),
+    )
+    .orderBy(warehouseProducts.name, warehouseStockUnits.code)
+}
+
 /** Las reservas vivas de una cotización, con el estado actual de cada unidad. */
 async function liveByQuote(tx: Transaction, quoteId: string) {
   return tx

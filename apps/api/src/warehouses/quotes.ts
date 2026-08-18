@@ -21,14 +21,23 @@
 import {
   buildPage,
   ConflictError,
+  isClosed,
   NotFoundError,
+  needsWindow,
   newId,
   type Page,
   type ParsedQuery,
+  QUOTE_STATUSES,
   type QuerySchema,
   type QuotationBreakdown,
   type QuotePaymentTerms,
+  type QuoteStatus,
   type QuoteTaxes,
+  type RentFrequency,
+  TRADE_TYPES,
+  TRANSITIONS,
+  type TradeType,
+  TYPE_ONLY,
   UnprocessableError,
 } from "@tfv/contracts"
 import { type Transaction, withRequester } from "@tfv/db"
@@ -49,6 +58,7 @@ import { breakdownOf, computeOf } from "./quote-pricing.ts"
 import {
   checkCoherence,
   type Discrepancy,
+  heldByQuote,
   pendingReturn,
   projectQuote,
   reconcileLine,
@@ -57,65 +67,29 @@ import {
   reservedByLine,
   type UnitReturn,
 } from "./reservations.ts"
+import type { StockStatus } from "./stock.ts"
 import { loadWarehouse } from "./warehouses.ts"
 
-export const QUOTE_STATUSES = [
-  "pre_quote",
-  "pending",
-  "in_progress",
-  "in_rent",
-  "completed",
-  "sold",
-  "canceled",
-] as const
-
-export type QuoteStatus = (typeof QUOTE_STATUSES)[number]
-
-export const TRADE_TYPES = ["rent", "sale"] as const
-export type TradeType = (typeof TRADE_TYPES)[number]
-
-export const ROUND_DIRECTIONS = ["up", "down"] as const
-
-export const RENT_FREQUENCIES = ["daily", "weekly", "monthly"] as const
-export type RentFrequency = (typeof RENT_FREQUENCIES)[number]
-
 /**
- * Estados cerrados: el documento terminó, con efecto o sin él.
+ * La máquina de estados vive en `@tfv/contracts`.
  *
- * De aquí no se sale. Reabrir una cotización completada significaría recalcular importes que el
- * cliente ya firmó y volver a comprometer equipo que ya salió.
+ * La interfaz ofrece sólo las transiciones posibles, así que necesita el mismo mapa que aplicamos
+ * aquí. Se reexporta para que las rutas la sigan tomando de su servicio.
  */
-const CLOSED: readonly QuoteStatus[] = ["completed", "sold", "canceled"]
-
-/**
- * Las transiciones previstas. Lo que no está aquí responde `409`.
- *
- * Hacia atrás entre estados abiertos **sí** se puede —una cotización en progreso que el cliente
- * deja en el aire vuelve a pendiente—, porque nada se ha consumido todavía. Lo que no se deshace
- * es cerrar.
- */
-const TRANSITIONS: Readonly<Record<QuoteStatus, readonly QuoteStatus[]>> = {
-  pre_quote: ["pending", "in_progress", "canceled"],
-  pending: ["pre_quote", "in_progress", "canceled"],
-  in_progress: ["pending", "in_rent", "completed", "sold", "canceled"],
-  in_rent: ["completed", "canceled"],
-  completed: [],
-  sold: [],
-  canceled: [],
-}
-
-/** Estados que sólo tienen sentido en un tipo de cotización. */
-const TYPE_ONLY: Partial<Record<QuoteStatus, TradeType>> = {
-  in_rent: "rent",
-  sold: "sale",
-}
-
-/** Desde aquí, una renta necesita su ventana de fechas: hay equipo comprometido para unos días. */
-const NEEDS_WINDOW: readonly QuoteStatus[] = ["in_progress", "in_rent", "completed"]
-
-export function isClosed(status: QuoteStatus): boolean {
-  return CLOSED.includes(status)
-}
+export {
+  allowedTransitions,
+  isClosed,
+  needsWindow,
+  QUOTE_STATUSES,
+  type QuoteStatus,
+  RENT_FREQUENCIES,
+  type RentFrequency,
+  ROUND_DIRECTIONS,
+  TRADE_TYPES,
+  TRANSITIONS,
+  type TradeType,
+  TYPE_ONLY,
+} from "@tfv/contracts"
 
 export interface QuoteRecord {
   readonly id: string
@@ -469,7 +443,7 @@ function assertWindow(
   startsOn: Date | null,
   endsOn: Date | null,
 ): void {
-  if (type !== "rent" || !NEEDS_WINDOW.includes(status)) return
+  if (!needsWindow(status, type)) return
   if (startsOn && endsOn) return
 
   throw new UnprocessableError(
@@ -529,6 +503,33 @@ export async function deleteQuote(
 }
 
 // ─── Retorno y coherencia ────────────────────────────────────────────────────
+
+export interface HeldUnit {
+  readonly id: string
+  readonly code: string
+  readonly status: StockStatus
+  readonly productName: string
+  readonly measurementName: string
+}
+
+/**
+ * El equipo que la cotización tiene apartado ahora mismo.
+ *
+ * Lo pide el registro del retorno —que exige nombrar unidad por unidad—, y con él la ficha puede
+ * decir qué salió de la nave. Es la lista de vínculos vivos, así que lo ya devuelto no aparece.
+ */
+export async function quoteUnits(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  quoteId: string,
+): Promise<HeldUnit[]> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    await loadQuote(tx, warehouseId, quoteId)
+    return heldByQuote(tx, quoteId)
+  })
+}
 
 /**
  * Registra el retorno del equipo de una cotización de renta.
