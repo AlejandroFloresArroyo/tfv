@@ -231,7 +231,7 @@ En este orden, y con el motivo de que sea ése:
    vería si existiera.
 4. **Pagos cobrados** (hecho), separados del anticipo pactado y sin comprobantes, con el escenario
    de la spec incumplido a propósito hasta que exista almacenamiento de ficheros.
-5. **El alta provisional desde el constructor**, con su bandeja de productos por completar.
+5. **El alta provisional desde el constructor** (hecho), con su bandeja. Quitar la marca espera al detalle de producto.
 6. **La extensión de renta**: cotización nueva enlazada, posiblemente parcial, que traspasa los
    vínculos vivos sin que la unidad pase por disponible. Encadenable.
 7. **Pedidos de almacén** (rebanada 15).
@@ -2088,3 +2088,49 @@ es peor que llevarla sin el papel escaneado.
 Los seis paquetes, Biome, **524 pruebas** de vitest y **58 de extremo a extremo**, dos pasadas
 seguidas. Se miró en pantalla: 250,91 de bruto, 120,00 cobrados y 130,91 de saldo, y la baja del
 cobro devolviéndolo todo a su sitio.
+
+### 2026-08-18 · El equipo que no está en el catálogo
+
+Quinto punto. El modelo y el permiso ya estaban desde la primera tanda; lo que faltaba era la
+pantalla y una lista donde mirar.
+
+**Dónde aparece**
+
+Bajo el «no hay equipo que coincida» del buscador, que es donde se descubre que falta. El caso real
+es alguien cotizando con un cliente delante: el equipo existe en la nave pero no en el catálogo, y
+mandarle a rellenar cinco pasos en otra pantalla es lo que hace que la cotización acabe a mano en
+una hoja de cálculo.
+
+Producto, medida y unidades entran en **una sola petición**, que es una sola transacción. Encadenar
+tres llamadas desde el navegador dejaría productos huérfanos —sin medida, o con medida y sin
+existencias— el día que la segunda falle, y nadie los volvería a mirar.
+
+**Lo que no pide**
+
+Precio. Para eso está el precio negociado de la línea, que es como se cotiza cuando la lista está
+sin llenar; pedirlo aquí obligaría a inventar una tarifa en el peor momento posible para inventarla.
+La línea nace señalada como sin precio, que es exactamente lo que es.
+
+**La bandeja**
+
+Un filtro en la rejilla del catálogo, con su distintivo en la ficha. Una pantalla aparte para una
+lista filtrable es una pantalla de más. `isProvisional` entra en la gramática de la colección, que
+es cerrada y por eso rechazaba el filtro con un `400`.
+
+**Quitar la marca no entra**, y conviene decirlo en voz alta: eso es editar el producto, y el
+detalle de producto sigue siendo tarea pendiente de la 29b. Lo que la bandeja da hoy es que sean
+encontrables, que es la diferencia entre una intención y una lista.
+
+**Dos procesos de la API peleándose por el puerto**
+
+Costó una vuelta de diagnóstico: el filtro nuevo devolvía `400` en el navegador y pasaba en las
+pruebas. Había **dos** procesos con `--watch`, uno heredado de una sesión anterior; el que tenía el
+puerto era el viejo, y el nuevo reintentaba en vano. Es H-13 con una vuelta de tuerca, y se anota
+como H-27 porque el síntoma —código correcto que se comporta como si no lo fuera— es el mismo que
+lleva a dudar del cambio recién hecho.
+
+**Comprobado**
+
+Los seis paquetes, Biome, y **59 pruebas de extremo a extremo** en dos pasadas. Se miró en pantalla:
+el diálogo con el nombre ya escrito, la línea con sus dos unidades y su aviso de sin precio, y la
+bandeja con sus tres marcados como «Por completar» y «No publicado».
