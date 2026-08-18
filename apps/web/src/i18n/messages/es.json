@@ -201,7 +201,25 @@
     "createBody": "Quedas como propietaria.",
     "name": "Nombre",
     "description": "Descripción",
-    "email": "Correo de contacto"
+    "email": "Correo de contacto",
+    "manage": {
+      "nav": "Empresa",
+      "title": "Datos de la empresa",
+      "subtitle": "El nombre, el contacto y los servicios de {company}.",
+      "data": "Datos",
+      "actions": "Acciones de la empresa",
+      "editTitle": "Editar los datos",
+      "commission": "Comisión de la plataforma",
+      "commissionHint": "Porcentaje sobre las ventas. Sólo lo mueve la administración de plataforma.",
+      "created": "Alta",
+      "services": "Servicios contratados",
+      "servicesHint": "Los habilita la administración de plataforma.",
+      "noServices": "Todavía no tiene ninguno.",
+      "delete": "Dar de baja la empresa",
+      "deleteTitle": "Dar de baja la empresa",
+      "deleteScopeService": "{service}: sus datos dejan de estar accesibles.",
+      "deleteScopeMembers": "Sus miembros pierden el acceso; sus cuentas siguen existiendo."
+    }
   },
   "dashboard": {
     "welcome": "Hola, {name}",
