@@ -323,8 +323,11 @@ export function periodDays(startsOn?: Date | null, endsOn?: Date | null): number
  * **Una tarifa fija ignora la frecuencia**, y si está marcada como fija y vacía cobra cero: sólo
  * la rama por periodicidad recae en el respaldo. Mirar la frecuencia antes haría que una tarifa
  * fija con un importe semanal suelto cobrara el semanal, que es lo que marcarla fija evita.
+ *
+ * Se publica porque la interfaz enseña este importe antes de que exista la línea —en el buscador
+ * del constructor—, y enseñar ahí otro número sería prometer un precio que luego no se cobra.
  */
-function rateFor(
+export function rateFor(
   schedule: RateSchedule | undefined,
   frequency: RentFrequency,
   fallback: Money,
