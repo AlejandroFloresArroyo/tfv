@@ -9,7 +9,7 @@
  * - **Las tarifas llegan con el identificador del producto y nada más.** Para poder nombrarlas hay
  *   que traerse el catálogo del almacén y cruzarlo aquí. Es el mismo hueco que las líneas de
  *   cotización ya tenían resuelto —viajan con el nombre y el código del producto— y está anotado
- *   como H-31.
+ *   como H-34.
  *
  * Mientras el hueco siga abierto, el rodeo tiene un tope: se traen hasta veintiún páginas de
  * catálogo. Un almacén más grande que eso deja tarifas sin nombre, y la pantalla lo dice en lugar

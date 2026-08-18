@@ -19,7 +19,7 @@ import type { ItemsEnvelope, ProductRow, WarehouseCategoryRow } from "../../ware
  * Es el mismo árbol que el de ubicaciones y las mismas cuatro operaciones. Lo que cambia es lo que
  * se enumera antes de borrar: aquí lo que se queda huérfano son **productos sin clasificar**, y el
  * recuento hay que componerlo, porque las categorías no tienen la consulta de alcance que sí tienen
- * las ubicaciones (H-32):
+ * las ubicaciones (H-38):
  *
  * - **Cuántas categorías**, del árbol aplanado que ya hace falta para elegir padre.
  * - **Cuántos productos**, del propio listado del catálogo filtrado por la categoría, que es quien

@@ -10,7 +10,7 @@ import type { ItemsEnvelope, WarehouseCategoryRow } from "../../warehouse.ts"
  *
  * El recurso de categorías lista por padre y no tiene ni ruta desde la raíz ni consulta de una
  * suelta por su identificador. Las ubicaciones sí las tienen. Así que aquí la ruta se busca
- * bajando, y eso cuesta una petición por rama con descendencia en lugar de una. Anotado como H-32.
+ * bajando, y eso cuesta una petición por rama con descendencia en lugar de una. Anotado como H-38.
  *
  * Los fallos no se lanzan: se recogen. Una búsqueda que baja por varias ramas a la vez puede fallar
  * en cualquiera de ellas, y lo que la pantalla necesita es **el primer fallo**, para enseñarlo tal

@@ -41,7 +41,7 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
       y baja con la cascada contada por el servidor, ficha con las tarifas —venta, renta y
       penalización, fija o por periodicidad— y **asignación masiva** en las dos direcciones. Falta
       la advertencia que la spec pide cuando la lista está **referenciada por cotizaciones en
-      curso**: no hay dato en la API con el que darla (H-38)
+      curso**: no hay dato en la API con el que darla (H-37)
 - [x] Categorías anidadas
 - [x] **Ubicaciones como organigrama navegable**, y editable sobre él: crear dentro, renombrar,
       cambiar de padre y eliminar
