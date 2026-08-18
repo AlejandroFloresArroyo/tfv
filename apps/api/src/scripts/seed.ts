@@ -30,7 +30,13 @@ import {
   users,
   warehouseCategories,
   warehouseMeasurements,
+  warehousePriceLists,
+  warehouseProductPrices,
   warehouseProducts,
+  warehouseQuoteLines,
+  warehouseQuotes,
+  warehouseStockEvents,
+  warehouseStockReservations,
   warehouseStockUnits,
   warehouseStorages,
   warehouses,
@@ -417,6 +423,7 @@ interface VolumeReport {
   readonly addresses: number
   readonly products: number
   readonly units: number
+  readonly quotes: number
 }
 
 /**
@@ -448,7 +455,15 @@ async function seedVolume(
   const primary = companyIds.get("Renta Fílmica del Norte")
   const secondary = companyIds.get("Estudios Mariposa")
   if (!primary || !secondary) {
-    return { teammates: 0, clients: 0, providers: 0, addresses: 0, products: 0, units: 0 }
+    return {
+      teammates: 0,
+      clients: 0,
+      providers: 0,
+      addresses: 0,
+      products: 0,
+      units: 0,
+      quotes: 0,
+    }
   }
 
   const teammates = await seedTeammates(passwordHash, primary)
@@ -459,8 +474,9 @@ async function seedVolume(
   await seedCounterparties(secondary, "client", 40, 900)
   const addresses = await seedAddresses(primary)
   const catalog = await seedCatalogFor(primary)
+  const quotes = await seedQuotes(primary)
 
-  return { teammates, clients, providers, addresses, ...catalog }
+  return { teammates, clients, providers, addresses, ...catalog, quotes }
 }
 
 // ─── Almacén con catálogo ────────────────────────────────────────────────────
@@ -589,6 +605,221 @@ async function seedCatalogFor(companyId: string): Promise<{ products: number; un
   }
 
   return { products: GEAR.length, units }
+}
+
+// ─── Cotizaciones ────────────────────────────────────────────────────────────
+
+/**
+ * Cuatro cotizaciones en cuatro estados distintos.
+ *
+ * Los estados difieren a propósito, como todo lo demás de esta siembra: la bandeja ordena por
+ * prioridad derivada del estado, y con cuatro cotizaciones pendientes ese orden se comportaría
+ * igual estuviera bien o mal. Y el inventario tiene que verse **proyectado**: en cotización lo
+ * apartado, rentado lo que salió.
+ *
+ * Todas nacen abiertas. Una cerrada tendría que llevar su desglose congelado, y congelarlo aquí a
+ * mano sería reimplementar la transición: para verlo, se cierra desde la aplicación.
+ */
+const QUOTES = [
+  { name: "Rodaje Serie Norte · bloque 1", status: "in_rent", lines: 3, days: 14 },
+  { name: "Comercial Cervecería", status: "in_progress", lines: 2, days: 7 },
+  { name: "Cortometraje Estudiantil", status: "pending", lines: 1, days: 21 },
+  { name: "Documental Sierra · presupuesto", status: "pre_quote", lines: 2, days: 30 },
+] as const
+
+async function seedQuotes(companyId: string): Promise<number> {
+  const [warehouse] = await db
+    .select({ id: warehouses.id })
+    .from(warehouses)
+    .where(and(eq(warehouses.companyId, companyId), isNull(warehouses.deletedAt)))
+    .limit(1)
+
+  if (!warehouse) return 0
+
+  const [already] = await db
+    .select({ value: count() })
+    .from(warehouseQuotes)
+    .where(eq(warehouseQuotes.warehouseId, warehouse.id))
+
+  if ((already?.value ?? 0) > 0) return already?.value ?? 0
+
+  const priceListId = await seedPriceList(warehouse.id)
+  const clients = await db
+    .select({ id: counterparties.id })
+    .from(counterparties)
+    .where(and(eq(counterparties.companyId, companyId), eq(counterparties.role, "client")))
+    .limit(QUOTES.length)
+
+  const [owner] = await db
+    .select({ id: companyMembers.userId })
+    .from(companyMembers)
+    .where(and(eq(companyMembers.companyId, companyId), eq(companyMembers.isOwner, true)))
+    .limit(1)
+
+  for (const [index, spec] of QUOTES.entries()) {
+    const starts = new Date(Date.UTC(2026, 8, 1 + index * 3))
+    const ends = new Date(starts.getTime() + spec.days * 86_400_000)
+    const quoteId = newId()
+
+    await db.insert(warehouseQuotes).values({
+      id: quoteId,
+      warehouseId: warehouse.id,
+      clientId: clients[index]?.id ?? null,
+      responsibleId: owner?.id ?? null,
+      code: labelCode(),
+      folio: `COT-${String(index + 1).padStart(4, "0")}`,
+      name: spec.name,
+      description: "Sembrada para desarrollo.",
+      type: "rent",
+      status: spec.status,
+      startsOn: starts,
+      endsOn: ends,
+      clientContacts: [{ name: "Ana Villarreal", phone: "8112345678", position: "Productora" }],
+      sellerContacts: [{ name: "Luis Cantú", position: "Ventas" }],
+      taxes: { version: 1, iva: { enabled: true, rate: "16", type: "trasladado" } },
+      paymentTerms: { version: 1, transferFeeRate: "3" },
+    })
+
+    await seedQuoteLines(quoteId, warehouse.id, priceListId, spec.lines, spec.status)
+  }
+
+  return QUOTES.length
+}
+
+/** Una lista de precios con tarifa para todo el catálogo: sin ella, los importes salen a cero. */
+async function seedPriceList(warehouseId: string): Promise<string> {
+  const [existing] = await db
+    .select({ id: warehousePriceLists.id })
+    .from(warehousePriceLists)
+    .where(eq(warehousePriceLists.warehouseId, warehouseId))
+    .limit(1)
+
+  if (existing) return existing.id
+
+  const priceListId = newId()
+  await db.insert(warehousePriceLists).values({
+    id: priceListId,
+    warehouseId,
+    name: "Tarifas 2026",
+    description: "Renta por semana, venta al precio de catálogo.",
+  })
+
+  const products = await db
+    .select({ id: warehouseProducts.id, price: warehouseProducts.price })
+    .from(warehouseProducts)
+    .where(eq(warehouseProducts.warehouseId, warehouseId))
+
+  if (products.length > 0) {
+    await db.insert(warehouseProductPrices).values(
+      products.map((product) => {
+        const base = Number(product.price)
+        return {
+          id: newId(),
+          priceListId,
+          productId: product.id,
+          sale: product.price,
+          rent: { isFixed: false, weekly: (base / 10).toFixed(2) },
+          penalty: { isFixed: true, fixed: (base * 2).toFixed(2) },
+        }
+      }),
+    )
+  }
+
+  return priceListId
+}
+
+/**
+ * Las líneas y su equipo apartado, con el estado que proyecta la cotización.
+ *
+ * El vínculo se **libera** cuando la proyección lo suelta —una venta cerrada o una cancelación—;
+ * aquí todas las cotizaciones están abiertas o en renta, así que todas lo conservan. Mantenerlo
+ * coherente importa: la verificación de coherencia recorre este mismo inventario.
+ */
+async function seedQuoteLines(
+  quoteId: string,
+  warehouseId: string,
+  priceListId: string,
+  howMany: number,
+  status: (typeof QUOTES)[number]["status"],
+): Promise<void> {
+  const candidates = await db
+    .select({
+      measurementId: warehouseMeasurements.id,
+      productId: warehouseProducts.id,
+    })
+    .from(warehouseMeasurements)
+    .innerJoin(warehouseProducts, eq(warehouseProducts.id, warehouseMeasurements.productId))
+    .where(eq(warehouseProducts.warehouseId, warehouseId))
+    .limit(200)
+
+  const projected = status === "in_rent" ? ("rented" as const) : ("in_quote" as const)
+  let taken = 0
+
+  for (const candidate of candidates) {
+    if (taken >= howMany) break
+
+    const free = await db
+      .select({ id: warehouseStockUnits.id })
+      .from(warehouseStockUnits)
+      .where(
+        and(
+          eq(warehouseStockUnits.measurementId, candidate.measurementId),
+          eq(warehouseStockUnits.status, "available"),
+          isNull(warehouseStockUnits.deletedAt),
+        ),
+      )
+      .limit(2)
+
+    if (free.length === 0) continue
+
+    const [price] = await db
+      .select({ id: warehouseProductPrices.id })
+      .from(warehouseProductPrices)
+      .where(
+        and(
+          eq(warehouseProductPrices.priceListId, priceListId),
+          eq(warehouseProductPrices.productId, candidate.productId),
+        ),
+      )
+      .limit(1)
+
+    const lineId = newId()
+    await db.insert(warehouseQuoteLines).values({
+      id: lineId,
+      quoteId,
+      measurementId: candidate.measurementId,
+      productPriceId: price?.id ?? null,
+      frequency: "weekly",
+      position: taken,
+      positionProduct: taken,
+    })
+
+    const unitIds = free.map((row) => row.id)
+    await db.insert(warehouseStockReservations).values(
+      unitIds.map((stockUnitId) => ({
+        id: newId(),
+        stockUnitId,
+        quoteLineId: lineId,
+        quoteId,
+      })),
+    )
+    await db
+      .update(warehouseStockUnits)
+      .set({ status: projected })
+      .where(inArray(warehouseStockUnits.id, unitIds))
+    await db.insert(warehouseStockEvents).values(
+      unitIds.map((stockUnitId) => ({
+        id: newId(),
+        stockUnitId,
+        fromStatus: "available" as const,
+        toStatus: projected,
+        reason: "quote_reservation" as const,
+        causeId: quoteId,
+      })),
+    )
+
+    taken += 1
+  }
 }
 
 async function seedStorages(warehouseId: string): Promise<string[]> {
@@ -881,6 +1112,7 @@ function report(companyIds: Map<string, string>, volume: VolumeReport): void {
     "  Volumen en Renta Fílmica del Norte, para que las colecciones se comporten como tales:",
     `    ${volume.teammates} personas · ${volume.clients} clientes · ${volume.providers} proveedores · ${volume.addresses} direcciones`,
     `    Nave Monterrey: ${volume.products} productos · ${volume.units} unidades · 12 cajas en dos pisos`,
+    `    ${volume.quotes} cotizaciones en cuatro estados, con su equipo apartado`,
     "",
     `  Identificadores: ${[...companyIds.values()].join(", ")}`,
     "",
