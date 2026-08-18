@@ -201,6 +201,16 @@ export interface QuotationInput {
   readonly lines: readonly QuotationLineInput[]
   readonly payment?: QuotePaymentTerms | undefined
   readonly taxes?: QuoteTaxes | undefined
+  /**
+   * Lo **cobrado** hasta ahora: la suma de los pagos registrados contra la cotización.
+   *
+   * No se confunde con el anticipo de las condiciones de pago. El anticipo es lo **pactado** y
+   * mueve el documento; esto es lo que de verdad entró y es lo que decide el saldo. Pactar no es
+   * cobrar, y hasta que alguien registre el pago las dos cifras no tienen por qué coincidir.
+   *
+   * Llega ya sumado porque los pagos son filas de una tabla y el motor no toca datos.
+   */
+  readonly collected?: string | undefined
 }
 
 /** Si un concepto fiscal aumenta o disminuye la base. Ver la tabla de tratamiento. */
@@ -335,6 +345,19 @@ export interface QuotationBreakdown {
   readonly gross: string
   readonly advance: string
   readonly total: string
+  /** Lo que entró. Cero cuando nadie ha registrado ningún pago. */
+  readonly collected: string
+  /**
+   * Lo que falta por cobrar: **bruto menos cobrado**.
+   *
+   * Desde el bruto y no desde el total, porque el total ya descontó el anticipo *pactado* y
+   * descontarlo otra vez contaría dos veces el mismo dinero. Cuando el anticipo se cobra y se
+   * registra, saldo y total coinciden — que es el caso normal y la comprobación de que la cuenta
+   * está bien planteada.
+   *
+   * **Puede ser negativo.** Un cobro de más no se recorta a cero: esconderlo lo perpetúa.
+   */
+  readonly balance: string
   /** Contingente: no forma parte del total. Sólo se cobra si procede. */
   readonly penalty: string
   /** Contingente: se cobra por adelantado y se devuelve. Tampoco forma parte del total. */
@@ -601,6 +624,7 @@ export function computeQuotation(input: QuotationInput): QuotationBreakdown {
   )
   const gross = add(net, fees)
   const advance = money(input.payment?.advance?.amount ?? "0")
+  const collected = money(input.collected ?? "0")
 
   const spread = input.payment?.spreadFeesAcrossLines === true
   const presented = spread ? spreadFees(lines, fees) : lines
@@ -628,6 +652,8 @@ export function computeQuotation(input: QuotationInput): QuotationBreakdown {
     gross: formatMoney(gross),
     advance: formatMoney(advance),
     total: formatMoney(subtract(gross, advance)),
+    collected: formatMoney(collected),
+    balance: formatMoney(subtract(gross, collected)),
     penalty: formatMoney(penalty),
     deposit: formatMoney(money(input.payment?.deposit?.amount ?? "0")),
   }

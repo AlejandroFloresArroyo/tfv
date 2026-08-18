@@ -605,6 +605,51 @@ describe("el depósito en garantía es contingente", () => {
   })
 })
 
+describe("lo cobrado y el saldo", () => {
+  it("el saldo cuenta desde el bruto, no desde el total pactado", () => {
+    // El anticipo **pactado** mueve el documento; el saldo lo mueve lo que de verdad entró. Si el
+    // anticipo se cobra y se registra, las dos cifras coinciden — y ése es el caso normal.
+    const result = computeQuotation(
+      thousand({
+        payment: { version: 1, advance: { amount: "300.00" } },
+        collected: "300.00",
+      }),
+    )
+
+    expect(result.gross).toBe("1000.00")
+    expect(result.total).toBe("700.00")
+    expect(result.collected).toBe("300.00")
+    expect(result.balance).toBe("700.00")
+  })
+
+  it("sin cobrar nada, el saldo es el bruto entero", () => {
+    // Aunque se haya pactado un anticipo: pactar no es cobrar.
+    const result = computeQuotation(
+      thousand({ payment: { version: 1, advance: { amount: "300.00" } } }),
+    )
+
+    expect(result.total).toBe("700.00")
+    expect(result.collected).toBe("0.00")
+    expect(result.balance).toBe("1000.00")
+  })
+
+  it("cobrar de más deja el saldo en negativo, y lo dice", () => {
+    // No se recorta a cero: un saldo negativo es un cobro de más, y esconderlo lo perpetúa.
+    const result = computeQuotation(thousand({ collected: "1200.00" }))
+
+    expect(result.balance).toBe("-200.00")
+  })
+
+  it("las comisiones entran en el saldo, porque se cobran", () => {
+    const result = computeQuotation(
+      thousand({ payment: { version: 1, transferFeeRate: "3" }, collected: "500.00" }),
+    )
+
+    expect(result.gross).toBe("1030.00")
+    expect(result.balance).toBe("530.00")
+  })
+})
+
 describe("agrupación por producto en la presentación", () => {
   it("agrupa las medidas bajo su producto y respeta el orden de la cotización", () => {
     const result = computeQuotation(
