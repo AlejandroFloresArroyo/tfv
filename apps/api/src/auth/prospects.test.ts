@@ -103,7 +103,7 @@ describe("captura pública", () => {
       .from(notificationDeliveries)
       .where(eq(notificationDeliveries.kind, "prospect_acknowledged"))
     expect(delivery?.recipientId).toBeNull()
-    expect((delivery?.payload as { email?: string }).email).toBe(email)
+    expect((delivery?.payload as { email?: string } | undefined)?.email).toBe(email)
   })
 
   it("no exige sesión", async () => {

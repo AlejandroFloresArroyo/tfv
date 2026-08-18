@@ -29,7 +29,7 @@ import {
   type QuerySchema,
 } from "@tfv/contracts"
 import { db } from "@tfv/db"
-import { notificationDeliveries, prospects, users } from "@tfv/db/schema"
+import { notificationDeliveries, prospects } from "@tfv/db/schema"
 import { and, count, desc, eq, isNull, sql } from "drizzle-orm"
 import { invite } from "./accounts.ts"
 

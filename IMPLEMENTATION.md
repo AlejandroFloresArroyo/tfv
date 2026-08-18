@@ -50,7 +50,7 @@ pnpm dev            # API en :5000, web en :3000
 Y las pruebas:
 
 ```sh
-pnpm test           # Contratos, datos, API y transporte — vacía la base de desarrollo
+pnpm test           # Contratos, datos, API y transporte — sobre la base de pruebas
 pnpm test:e2e       # Navegador, sobre un build de producción en el :3100
 ```
 
@@ -69,8 +69,13 @@ Todo lo que difiere entre ellas difiere a propósito: las dos empresas tienen se
 —sin eso no se puede ver fallar la guarda de habilitación ni la equivalencia al cambiar de
 empresa—, y las cuatro cuentas cubren las cuatro vías por las que se concede o se niega.
 
-> `pnpm test` **vacía la base de desarrollo**: las pruebas de la API truncan sus tablas. Hay que
-> volver a sembrar después. Separar la base de pruebas de la de desarrollo está pendiente.
+> `pnpm test` corre contra **`tfv_test`**, una base aparte del mismo servidor local que se crea y se
+> migra sola la primera vez. Las suites truncan sus tablas, y ahora eso no toca los datos con los
+> que se está mirando la aplicación. `pnpm test:e2e` sí usa la de desarrollo —conduce la aplicación
+> que está corriendo—, pero no borra nada.
+>
+> Lo que sigue sin resolver: **dos ejecuciones simultáneas de `pnpm test` se pisan**, porque
+> comparten esa base de pruebas.
 
 ## Decisiones de herramientas
 
@@ -240,9 +245,8 @@ En este orden, y con el motivo de que sea ése:
 8. **Lo que queda de la 10** (hecho): los prospectos y la comprobación de «en uso» de una
    contraparte, que ya tiene documentos que consultar. Las pantallas esperan al sitio público y a
    un área de administración de plataforma.
-9. **Base de pruebas separada de la de desarrollo.** Sigue estorbando, y ahora de dos maneras:
-   `pnpm test` borra los datos con los que se está mirando la aplicación, y dos ejecuciones
-   simultáneas se truncan las tablas la una a la otra.
+9. **Base de pruebas separada de la de desarrollo** (hecho). Dos ejecuciones simultáneas siguen
+   pisándose, que es la mitad barata de vivir con ella.
 10. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
    **recepción verificada de eventos de cobro** (07), que cierra el bloque crítico.
 
