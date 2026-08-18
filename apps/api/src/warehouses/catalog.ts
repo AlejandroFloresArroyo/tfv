@@ -41,6 +41,14 @@ import {
   slugify,
   UnprocessableError,
 } from "@tfv/contracts"
+import {
+  LENGTH_UNITS,
+  type LengthUnit,
+  MASS_UNITS,
+  type MassUnit,
+  MEASUREMENT_KINDS,
+  type MeasurementKind,
+} from "@tfv/contracts/catalog"
 import { type Transaction, withRequester } from "@tfv/db"
 import {
   type ClothingSheet,
@@ -57,13 +65,16 @@ import { recordEvents } from "./stock.ts"
 import { loadWarehouse } from "./warehouses.ts"
 
 export type ProductRelation = "variant" | "accessory"
-export type MeasurementKind = "box" | "envelope" | "clothing" | "accessory" | "other"
-export type LengthUnit = "cm" | "m" | "in" | "ft"
-export type MassUnit = "g" | "kg" | "lb" | "oz"
 
-export const MEASUREMENT_KINDS = ["box", "envelope", "clothing", "accessory", "other"] as const
-export const LENGTH_UNITS = ["cm", "m", "in", "ft"] as const
-export const MASS_UNITS = ["g", "kg", "lb", "oz"] as const
+export type { LengthUnit, MassUnit, MeasurementKind }
+/**
+ * El vocabulario de las medidas vive en el contrato compartido.
+ *
+ * Se re-exporta desde aquí para no obligar a cada llamante a saber de dónde viene. La lista está
+ * también en el motor, como tipo enumerado; ésa es la copia que no se puede evitar, porque el
+ * navegador no puede importar el esquema de la base.
+ */
+export { LENGTH_UNITS, MASS_UNITS, MEASUREMENT_KINDS }
 
 export interface ProductRecord {
   readonly id: string

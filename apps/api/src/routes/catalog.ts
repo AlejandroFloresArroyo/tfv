@@ -18,6 +18,7 @@
 
 import { z } from "@hono/zod-openapi"
 import { ForbiddenError, toInstant } from "@tfv/contracts"
+import { createProductInput, measurementInput, updateProductInput } from "@tfv/contracts/catalog"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import { defineRoute, REQUIRES } from "../runtime/route.ts"
@@ -126,35 +127,6 @@ const productDetailSchema = productSchema.extend({
   measurements: z.array(measurementSchema),
   variants: z.array(productSchema),
   accessories: z.array(productSchema),
-})
-
-const measurementBody = z.object({
-  name: z.string().trim().min(1).max(200),
-  kind: z.enum(MEASUREMENT_KINDS).optional(),
-  priceDifference: z
-    .string()
-    .regex(/^-?\d+(\.\d{1,2})?$/)
-    .optional(),
-  dimensions: dimensionsSchema.optional(),
-  lengthUnit: z.enum(LENGTH_UNITS).optional(),
-  massUnit: z.enum(MASS_UNITS).optional(),
-  clothing: clothingSchema.optional(),
-  initialQuantity: z.number().int().min(0).max(1000).optional(),
-})
-
-const childBody = z.object({
-  name: z.string().trim().min(1).max(250),
-  description: z.string().max(8000).optional(),
-  internalCode: z.string().max(80).optional(),
-  cost: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/)
-    .optional(),
-  price: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/)
-    .optional(),
-  measurements: z.array(measurementBody).max(50).optional(),
 })
 
 const companyParams = z.object({ companyId: z.string() })
@@ -392,32 +364,7 @@ export const createProductRoute = defineRoute({
       body: {
         content: {
           "application/json": {
-            schema: z.object({
-              name: z.string().trim().min(1).max(250),
-              description: z.string().max(8000).optional(),
-              internalCode: z.string().max(80).optional(),
-              cost: z
-                .string()
-                .regex(/^\d+(\.\d{1,2})?$/)
-                .optional(),
-              price: z
-                .string()
-                .regex(/^\d+(\.\d{1,2})?$/)
-                .optional(),
-              usesPriceLists: z.boolean().optional(),
-              availableForSale: z.boolean().optional(),
-              availableForRent: z.boolean().optional(),
-              storageId: z.string().nullable().optional(),
-              categoryId: z.string().nullable().optional(),
-              globalCategoryId: z.string().nullable().optional(),
-              responsibleId: z.string().nullable().optional(),
-              isPublished: z.boolean().optional(),
-              /** Alta provisional desde una cotización: mientras lo sea no se publica. */
-              isProvisional: z.boolean().optional(),
-              measurements: z.array(measurementBody).max(50).optional(),
-              variants: z.array(childBody).max(50).optional(),
-              accessories: z.array(childBody).max(50).optional(),
-            }),
+            schema: createProductInput,
           },
         },
       },
@@ -453,30 +400,7 @@ export const updateProductRoute = defineRoute({
       body: {
         content: {
           "application/json": {
-            schema: z.object({
-              name: z.string().trim().min(1).max(250).optional(),
-              description: z.string().max(8000).optional(),
-              internalCode: z.string().max(80).nullable().optional(),
-              cost: z
-                .string()
-                .regex(/^\d+(\.\d{1,2})?$/)
-                .optional(),
-              price: z
-                .string()
-                .regex(/^\d+(\.\d{1,2})?$/)
-                .optional(),
-              usesPriceLists: z.boolean().optional(),
-              availableForSale: z.boolean().optional(),
-              availableForRent: z.boolean().optional(),
-              storageId: z.string().nullable().optional(),
-              categoryId: z.string().nullable().optional(),
-              globalCategoryId: z.string().nullable().optional(),
-              responsibleId: z.string().nullable().optional(),
-              isPublished: z.boolean().optional(),
-              /** Retirarla es convertirlo en producto de catálogo, y eso pide su clave. */
-              isProvisional: z.boolean().optional(),
-              slug: z.string().trim().min(1).max(280).optional(),
-            }),
+            schema: updateProductInput,
           },
         },
       },
@@ -595,7 +519,7 @@ export const addMeasurementRoute = defineRoute({
     tags: ["Catálogo"],
     request: {
       params: productParams,
-      body: { content: { "application/json": { schema: measurementBody } } },
+      body: { content: { "application/json": { schema: measurementInput } } },
     },
     responses: {
       201: {
