@@ -5,6 +5,7 @@ import {
   ClipboardList,
   FileText,
   FolderTree,
+  Gauge,
   MapPinned,
   Tags,
   Warehouse,
@@ -13,9 +14,37 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 
+/**
+ * La barra de secciones del almacén.
+ *
+ * **Ninguna de estas propiedades es opcional, y no se volverán a declarar así.** Con valor por
+ * omisión, una pantalla que se olvide de pasar un permiso pierde la pestaña en silencio: la
+ * navegación del almacén deja de ser la misma según por dónde se haya entrado, y nada falla. Con
+ * ellas obligatorias, olvidarse no compila. La deuda de las dos que nacieron opcionales ya se pagó
+ * una vez —repasando las catorce pantallas—, y la del panel se pagó al nacer.
+ *
+ * ## El panel es la primera pestaña y no la portada
+ *
+ * La portada del almacén sigue siendo el catálogo, en `…/warehouses/{id}`. Tres razones:
+ *
+ * 1. **Esa dirección ya significa algo para quien la comparte.** El estado de exploración del
+ *    catálogo vive en la dirección —`?search=`, `?categoryId=`, `?page=`—, así que hay enlaces
+ *    guardados y enviados que apuntan al catálogo filtrado. Convertirla en el panel no los rompería
+ *    con un error: los llevaría a una página que ignora esos parámetros en silencio, que es peor.
+ * 2. **El panel se apaga con los permisos y el catálogo no.** Un papel acotado que sólo tenga
+ *    `warehouses.products.view` entra a trabajar sobre el catálogo; darle como puerta un resumen
+ *    del que sólo puede ver un bloque es cambiarle la portada por una cifra.
+ * 3. **Hay gente acostumbrada al catálogo.** Cambiar dónde cae el clic de «entrar al almacén» se
+ *    hace cuando hay algo que ganar en la primera pantalla, no a la vez que se estrena.
+ *
+ * Va la primera porque el orden de la barra es el del recorrido, no el de la antigüedad: se mira el
+ * resumen y de ahí se baja al detalle. Promoverla a portada es cambiar dos rutas y añadir una
+ * redirección de la vieja, el día que se decida.
+ */
 export function WarehouseNav({
   companyId,
   warehouseId,
+  canViewPanel,
   canViewWarehouses,
   canViewProducts,
   canViewCategories,
@@ -26,35 +55,35 @@ export function WarehouseNav({
 }: {
   companyId: string
   warehouseId: string
+  /**
+   * El resumen del almacén.
+   *
+   * No tiene clave propia —el catálogo de permisos está cerrado— y no se inventa una: la regla vive
+   * en `panel/access.ts`, que la deriva de los tres recursos que el panel resume.
+   */
+  canViewPanel: boolean
   canViewWarehouses: boolean
   canViewProducts: boolean
-  /**
-   * Con valor por omisión, y es la excepción a la regla de al lado.
-   *
-   * La pestaña llega con las pantallas de categorías, y las seis del almacén que ya existían quedan
-   * fuera de ese encargo. Hacerla obligatoria las dejaría sin compilar; con omisión, la pestaña no
-   * aparece en ellas hasta que cada una pase su permiso. **Debe volverse obligatoria** en cuanto se
-   * puedan tocar: mientras tanto, la navegación del almacén no es la misma en todas sus pantallas.
-   */
   canViewCategories: boolean
   canViewStorages: boolean
-  /** Sin valor por omisión: una pantalla nueva que lo olvide no compila, en vez de perder la pestaña. */
   canViewQuotes: boolean
   canViewOrders: boolean
-  /**
-   * Las listas de precios.
-   *
-   * Con valor por omisión, al revés que sus vecinas: la pestaña llega después que las ocho
-   * pantallas que ya pintan esta navegación, y una que todavía no lo pase debe **perder la
-   * pestaña**, no dejar de compilar. Pintarla sin saber si hay permiso no es opción: ofrecería una
-   * pantalla que responde 403.
-   */
   canViewPrices: boolean
 }) {
   const t = useTranslations("warehouses")
   const pathname = usePathname()
   const base = `/c/${companyId}/warehouses/${warehouseId}`
   const entries = [
+    ...(canViewPanel
+      ? [
+          {
+            href: `${base}/panel`,
+            label: t("panel.tab"),
+            icon: Gauge,
+            active: pathname.startsWith(`${base}/panel`),
+          },
+        ]
+      : []),
     ...(canViewProducts
       ? [
           {

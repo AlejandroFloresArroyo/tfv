@@ -39,8 +39,11 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 ## 29b · Almacenes
 
 - [~] Almacenes: listado, alta, edición y baja desde la pantalla, con el identificador legible
-      editable sólo donde el servicio respeta lo escrito y la baja enumerando su alcance. **Falta
-      el panel** del almacén — el resumen propio de uno, que hoy no tiene pantalla
+      editable sólo donde el servicio respeta lo escrito y la baja enumerando su alcance. **El
+      panel ya existe**, como primera pestaña y no como portada —el porqué, en su commit—: cuenta
+      productos y altas por completar, las cotizaciones por estado y los pedidos por decidir, y
+      lista lo que pide atención. Le falta **el recuento de unidades por estado**, que la API de
+      hoy no permite componer sin una petición por medida (H-58)
 - [x] Catálogo con rejilla, filtros y paginación
 - [x] **Asistente de producto de cinco pasos**, con validación por paso contra el esquema del
       servidor y el paso en la dirección
@@ -62,10 +65,10 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
       cambiar de padre y eliminar
 - [x] Bandeja de cotizaciones y ficha, con su equipo apartado y sus importes
 - [x] Alta de cotización desde la bandeja: tipo, cliente y ventana, y de ahí al constructor
-- [~] **Constructor de cotizaciones**: el editor de líneas con la disponibilidad delante, el cambio
-      de estado, el registro del retorno, y los bloques de condiciones de pago e impuestos, que se
-      guardan solos. Faltan los de identidad y contactos, que tienen su ruta y su permiso pero
-      todavía no su formulario
+- [x] **Constructor de cotizaciones**: el editor de líneas con la disponibilidad delante, el cambio
+      de estado, el registro del retorno, y **los cuatro bloques que se guardan solos** —identidad,
+      contactos, condiciones de pago e impuestos—. La ventana de fechas entra en el punto de
+      composición, así que mover el fin rehace los días que cobra cada línea antes de guardar
 - [ ] Documento de cotización y su enlace público
 - [x] Pedidos con aceptación y rechazo
 - [ ] **Conversación en tiempo real del pedido**

@@ -20,6 +20,7 @@ import type {
   WarehouseRow,
 } from "../../../warehouse.ts"
 import { STOCK_STATUSES } from "../../../warehouse.ts"
+import { canViewPanel } from "../../panel/access.ts"
 import { WarehouseNav } from "../../warehouse-nav.tsx"
 import { AddMeasurement, MeasurementActions, ProductActions } from "./product-actions.tsx"
 
@@ -64,6 +65,7 @@ export default async function ProductPage({
         <WarehouseNav
           companyId={companyId}
           warehouseId={warehouseId}
+          canViewPanel={canViewPanel(company)}
           canViewWarehouses={canViewWarehouses}
           canViewProducts={can(company, "warehouses.products.view")}
           canViewCategories={can(company, "warehouses.categories.view")}
@@ -160,6 +162,7 @@ export default async function ProductPage({
       <WarehouseNav
         companyId={companyId}
         warehouseId={warehouseId}
+        canViewPanel={canViewPanel(company)}
         canViewWarehouses={canViewWarehouses}
         canViewProducts={can(company, "warehouses.products.view")}
         canViewCategories={can(company, "warehouses.categories.view")}

@@ -1,6 +1,6 @@
 import { isClosed, linesFrozen } from "@tfv/contracts/quote-status"
 import { Badge, Callout, Panel, Separator } from "@tfv/ui"
-import { CalendarRange, FileText, Package, Users } from "lucide-react"
+import { FileText, Package } from "lucide-react"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
 import Link from "next/link"
@@ -11,18 +11,15 @@ import { formatAmount } from "~/lib/amount.ts"
 import { apiGet } from "~/lib/api.server.ts"
 import { can } from "~/lib/can.ts"
 import { requireCompany, requireProfile } from "~/lib/session.ts"
-import type {
-  ItemsEnvelope,
-  QuoteBreakdown,
-  QuoteContact,
-  QuoteLineRow,
-  QuoteRow,
-} from "../../../warehouse.ts"
+import type { ItemsEnvelope, QuoteBreakdown, QuoteLineRow, QuoteRow } from "../../../warehouse.ts"
+import { canViewPanel } from "../../panel/access.ts"
 import { WarehouseNav } from "../../warehouse-nav.tsx"
 import { QuoteStatusBadge, QuoteTypeBadge } from "../quote-badges.tsx"
 import { QuoteAmounts } from "./quote-amounts.tsx"
+import { QuoteContacts } from "./quote-contacts.tsx"
 import { QuoteEditor } from "./quote-editor.tsx"
 import { QuoteExtension } from "./quote-extension.tsx"
+import { QuoteIdentity } from "./quote-identity.tsx"
 import { QuotePaymentTermsPanel } from "./quote-payment.tsx"
 import { type PaymentRow, QuotePayments } from "./quote-payments.tsx"
 import { QuotePreview } from "./quote-preview.tsx"
@@ -52,6 +49,7 @@ export default async function QuotePage({
     <WarehouseNav
       companyId={companyId}
       warehouseId={warehouseId}
+      canViewPanel={canViewPanel(company)}
       canViewWarehouses={can(company, "warehouses.warehouses.view")}
       canViewProducts={can(company, "warehouses.products.view")}
       canViewCategories={can(company, "warehouses.categories.view")}
@@ -123,7 +121,7 @@ export default async function QuotePage({
         </Callout>
       ) : null}
 
-      <QuotePreview quote={quote} lines={lines}>
+      <QuotePreview quote={quote} lines={lines} collected={breakdown?.collected}>
         <div className="grid gap-4 laptop:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="min-w-0 space-y-6">
             <Panel className="p-5">
@@ -154,50 +152,33 @@ export default async function QuotePage({
 
               <Separator className="my-4" />
 
-              <dl className="grid gap-3 tablet:grid-cols-2">
-                <Row
-                  label={t("warehouses.quotes.window")}
-                  value={
-                    quote.startsOn && quote.endsOn ? (
-                      <span className="inline-flex items-center gap-2">
-                        <CalendarRange className="size-4 text-content-faint" aria-hidden="true" />
-                        {format.dateTime(new Date(quote.startsOn), { dateStyle: "medium" })} –{" "}
-                        {format.dateTime(new Date(quote.endsOn), { dateStyle: "medium" })}
-                        {can(company, "warehouses.quotes.create") &&
-                        can(company, "warehouses.quotes.rented") &&
-                        unitsResult.ok ? (
-                          <QuoteExtension
-                            companyId={companyId}
-                            warehouseId={warehouseId}
-                            quoteId={quoteId}
-                            quoteName={quote.name || quote.folio}
-                            units={unitsResult.data.items.filter(
-                              (unit) => unit.status === "rented",
-                            )}
-                          />
-                        ) : null}
-                        {breakdown ? (
-                          <span className="text-content-faint">
-                            · {t("warehouses.quotes.days", { count: breakdown.days })}
-                          </span>
-                        ) : null}
-                      </span>
-                    ) : (
-                      t("warehouses.quotes.noWindow")
-                    )
-                  }
-                />
-                <Row
-                  label={t("warehouses.quotes.rounding")}
-                  value={
-                    quote.roundDays
-                      ? quote.roundDirection === "up"
-                        ? t("warehouses.quotes.roundUp")
-                        : t("warehouses.quotes.roundDown")
-                      : t("warehouses.quotes.noRounding")
-                  }
-                />
-              </dl>
+              {/*
+                La identidad vive **dentro** de la tarjeta del documento y no en una sección aparte:
+                el nombre, la descripción y la ventana son lo que este panel ya enseñaba, y sacarlos
+                habría dejado el folio solo arriba y sus fechas cien píxeles más abajo.
+              */}
+              <QuoteIdentity
+                companyId={companyId}
+                warehouseId={warehouseId}
+                quoteId={quoteId}
+                quote={quote}
+                editable={can(company, "warehouses.quotes.edit_info") && !closed}
+                extension={
+                  quote.startsOn &&
+                  quote.endsOn &&
+                  can(company, "warehouses.quotes.create") &&
+                  can(company, "warehouses.quotes.rented") &&
+                  unitsResult.ok ? (
+                    <QuoteExtension
+                      companyId={companyId}
+                      warehouseId={warehouseId}
+                      quoteId={quoteId}
+                      quoteName={quote.name || quote.folio}
+                      units={unitsResult.data.items.filter((unit) => unit.status === "rented")}
+                    />
+                  ) : null
+                }
+              />
             </Panel>
 
             {canEditLines ? (
@@ -285,7 +266,7 @@ export default async function QuotePage({
                               </dl>
 
                               {amounts.unpriced ? (
-                                <p className="mt-3 text-body3 text-warning">
+                                <p className="mt-3 text-body3 text-yellow-9 dark:text-yellow-2">
                                   {t("warehouses.quotes.unpricedLine")}
                                 </p>
                               ) : null}
@@ -337,7 +318,14 @@ export default async function QuotePage({
               />
             ) : null}
 
-            <Contacts client={quote.clientContacts} seller={quote.sellerContacts} />
+            <QuoteContacts
+              companyId={companyId}
+              warehouseId={warehouseId}
+              quoteId={quoteId}
+              clientContacts={quote.clientContacts}
+              sellerContacts={quote.sellerContacts}
+              editable={can(company, "warehouses.quotes.edit_contacts") && !closed}
+            />
           </div>
 
           <aside className="space-y-4">
@@ -362,53 +350,6 @@ export default async function QuotePage({
         </div>
       </QuotePreview>
     </PageShell>
-  )
-}
-
-async function Contacts({ client, seller }: { client: QuoteContact[]; seller: QuoteContact[] }) {
-  const t = await getTranslations("warehouses.quotes")
-  if (client.length === 0 && seller.length === 0) return null
-
-  return (
-    <section aria-labelledby="contacts-heading">
-      <div className="mb-3 flex items-center gap-2">
-        <Users className="size-5 text-content-faint" aria-hidden="true" />
-        <h2 id="contacts-heading" className="text-title2 font-bold text-content">
-          {t("contacts")}
-        </h2>
-      </div>
-
-      <div className="grid gap-3 tablet:grid-cols-2">
-        <ContactList title={t("clientSide")} contacts={client} />
-        <ContactList title={t("sellerSide")} contacts={seller} />
-      </div>
-    </section>
-  )
-}
-
-async function ContactList({ title, contacts }: { title: string; contacts: QuoteContact[] }) {
-  const t = await getTranslations("warehouses.quotes")
-
-  return (
-    <Panel className="p-4">
-      <h3 className="text-body2 font-bold text-content">{title}</h3>
-      {contacts.length > 0 ? (
-        <ul className="mt-3 grid gap-2">
-          {contacts.map((contact) => (
-            <li key={`${contact.name}-${contact.phone ?? ""}`} className="min-w-0">
-              <p className="truncate text-body2 font-semibold text-content">{contact.name}</p>
-              {contact.position || contact.phone ? (
-                <p className="truncate text-body3 text-content-faint">
-                  {[contact.position, contact.phone].filter(Boolean).join(" · ")}
-                </p>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-3 text-body3 text-content-muted">{t("noContacts")}</p>
-      )}
-    </Panel>
   )
 }
 
