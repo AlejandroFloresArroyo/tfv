@@ -37,7 +37,11 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 - [x] Unidades con etiquetas individuales y en lote. Pantalla de la medida con la tabla, el alta
       masiva, el cambio de estado en lote con motivo y la baja, el historial por unidad, y la hoja
       imprimible en los dos formatos de máquina
-- [ ] Listas de precios
+- [~] **Listas de precios**: listado con cuántos productos tienen tarifa en cada una, alta, edición
+      y baja con la cascada contada por el servidor, ficha con las tarifas —venta, renta y
+      penalización, fija o por periodicidad— y **asignación masiva** en las dos direcciones. Falta
+      la advertencia que la spec pide cuando la lista está **referenciada por cotizaciones en
+      curso**: no hay dato en la API con el que darla (H-38)
 - [ ] Categorías anidadas
 - [x] **Ubicaciones como organigrama navegable**
 - [x] Bandeja de cotizaciones y ficha, con su equipo apartado y sus importes

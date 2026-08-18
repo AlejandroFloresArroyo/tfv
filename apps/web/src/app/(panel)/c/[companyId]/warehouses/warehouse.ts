@@ -254,6 +254,24 @@ export interface StockUnitRow {
   updatedAt: string
 }
 
+// ─── Listas de precios ───────────────────────────────────────────────────────
+
+export interface PriceListRow {
+  id: string
+  warehouseId: string
+  name: string
+  description: string
+  /**
+   * Cuántos productos tienen tarifa en ella, contados por el servidor.
+   *
+   * Es lo que hace visible el alcance de eliminarla: la confirmación puede decir a cuántos
+   * productos se les quita el precio en lugar de advertir en abstracto de que «puede afectar».
+   */
+  productCount: number
+  createdAt: string
+  updatedAt: string
+}
+
 /** Quién provocó un cambio de estado. El motivo escrito va aparte, en `note`. */
 export const STOCK_REASONS = [
   "manual",
@@ -279,4 +297,21 @@ export interface StockEventRow {
   causeId: string | null
   note: string | null
   occurredAt: string
+}
+
+/**
+ * La tarifa de un producto en una lista.
+ *
+ * Los tres importes viajan como **cadena decimal** y aquí se quedan como tal. Renta y penalización
+ * pueden ser fijas o por periodicidad; cuál manda lo dice `isFixed` y no la presencia de importes.
+ */
+export interface ProductPriceRow {
+  id: string
+  priceListId: string
+  productId: string
+  sale: string
+  rent: RateSchedule
+  penalty: RateSchedule
+  createdAt: string
+  updatedAt: string
 }
