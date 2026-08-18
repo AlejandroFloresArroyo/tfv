@@ -65,6 +65,7 @@ export {
   MenuTrigger,
 } from "./components/menu.tsx"
 export { PasswordInput, type PasswordInputProps } from "./components/password-input.tsx"
+export { SearchSelect, type SearchSelectProps } from "./components/search-select.tsx"
 export { Spinner, type SpinnerProps } from "./components/spinner.tsx"
 export {
   Avatar,
@@ -87,5 +88,6 @@ export {
  */
 export { sanitizeAmount, toDecimalString } from "./lib/amount-input.ts"
 export { cn } from "./lib/cn.ts"
+export { filterOptions, type SelectOption } from "./lib/search-select.ts"
 export type { StepErrors, WizardState, WizardStep } from "./lib/wizard.ts"
 export * as wizard from "./lib/wizard.ts"
