@@ -17,6 +17,13 @@
  * Vía hasta la empresa: almacén → empresa. Todo lo demás cuelga del almacén.
  */
 
+/**
+ * La tarifa se declara en los contratos, no aquí: es la misma estructura que consume el motor de
+ * cálculo de cotizaciones, y tenerla en dos sitios es tenerla mal en uno de los dos.
+ */
+export type { RateSchedule } from "@tfv/contracts"
+
+import type { RateSchedule } from "@tfv/contracts"
 import { relations, sql } from "drizzle-orm"
 import {
   boolean,
@@ -404,20 +411,6 @@ export const warehousePriceLists = pgTable(
   },
   (table) => [index("warehouse_price_lists_warehouse_idx").on(table.warehouseId)],
 )
-
-/**
- * Tarifa de renta o de penalización: fija, o distinta por periodicidad.
- *
- * Con `| undefined` explícito por lo mismo que las dimensiones y la copia de una contraparte: lo
- * que llega de un esquema de ruta es «presente con valor indefinido», no «ausente».
- */
-export interface RateSchedule {
-  readonly isFixed: boolean
-  readonly fixed?: string | undefined
-  readonly daily?: string | undefined
-  readonly weekly?: string | undefined
-  readonly monthly?: string | undefined
-}
 
 /** El precio de un producto dentro de una lista. */
 export const warehouseProductPrices = pgTable(

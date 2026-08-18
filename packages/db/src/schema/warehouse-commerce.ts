@@ -13,6 +13,7 @@
  * Vía hasta la empresa: almacén → empresa.
  */
 
+import type { QuotationBreakdown, QuotePaymentTerms, QuoteTaxes } from "@tfv/contracts"
 import { relations, sql } from "drizzle-orm"
 import {
   boolean,
@@ -216,48 +217,14 @@ export interface QuoteContact {
   readonly position?: string
 }
 
-/** Condiciones de pago. Se leen enteras y no se consultan por campo suelto. */
-export interface QuotePaymentTerms {
-  readonly version: 1
-  readonly additionals?: { name: string; description?: string; amount: string }[]
-  readonly transferFeeRate?: string
-  readonly additionalFeeRate?: string
-  readonly spreadFeesAcrossLines?: boolean
-  readonly advance?: { amount: string; method: "card" | "cash" | "transfer"; date?: string }
-  readonly deposit?: { amount: string; method: "card" | "cash" | "transfer"; date?: string }
-  readonly fixedPrice?: string
-  readonly penalty?: { fixed?: string; concept?: string }
-  readonly discount?: { type: "percent" | "amount"; value: string; perProduct?: boolean }
-}
-
-/** Bloque fiscal mexicano. Ver la tabla de tratamiento en `quotation-pricing`. */
-export interface QuoteTaxes {
-  readonly version: 1
-  readonly iva?: { rate: string; type: "trasladado" | "acreditable" | "exento"; concept?: string }
-  readonly isr?: { rate: string; type: "retenido" | "directo"; concept?: string }
-  readonly ivaRetention?: string
-  readonly isrRetention?: string
-  readonly ieps?: string
-  readonly isn?: string
-  readonly hospitality?: string
-  readonly frontier?: string
-  readonly additional?: { name: string; type: "percent" | "amount"; value: string }[]
-}
-
-/** Desglose calculado, congelado al cerrar la cotización. */
-export interface QuoteComputed {
-  readonly version: 1
-  readonly subtotal: string
-  readonly discount: string
-  readonly base: string
-  readonly taxes: Readonly<Record<string, string>>
-  readonly net: string
-  readonly fees: string
-  readonly gross: string
-  readonly advance: string
-  readonly total: string
-  readonly penalty: string
-}
+/**
+ * Las condiciones de pago, el bloque fiscal y el desglose se declaran en los contratos.
+ *
+ * Son la entrada y la salida del motor de cálculo, que corre igual en el servidor y en el
+ * navegador. Declararlos aquí obligaría a mantener dos copias de la misma estructura, y el día que
+ * divergieran el importe guardado dejaría de ser el importe calculado.
+ */
+export type { QuotationBreakdown, QuotePaymentTerms, QuoteTaxes } from "@tfv/contracts"
 
 export const warehouseQuotes = pgTable(
   "warehouse_quotes",
@@ -309,7 +276,7 @@ export const warehouseQuotes = pgTable(
      * alcanzar un estado cerrado. Es lo que permite explicar un importe de hace ocho meses aunque
      * las tarifas hayan cambiado tres veces.
      */
-    computed: jsonb("computed").$type<QuoteComputed>(),
+    computed: jsonb("computed").$type<QuotationBreakdown>(),
     computedAt: timestamp("computed_at", { withTimezone: true, mode: "date" }),
 
     alert: text("alert"),
