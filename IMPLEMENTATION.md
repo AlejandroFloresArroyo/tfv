@@ -226,10 +226,9 @@ En este orden, y con el motivo de que sea ése:
    provisional.
 2. **El bloque de condiciones de pago entero** (hecho), y con él el fiscal: los dos se guardan solos
    y alimentan la misma previsualización.
-3. **Congelar las líneas al salir el equipo, y el retorno anticipado.** Ahí se tapa además un
-   agujero: bajar una cantidad de una cotización en renta suelta el vínculo y deja la unidad
-   `rented` sin dueño, y la verificación de coherencia **no la ve** porque sólo busca huérfanas
-   entre las `in_quote`.
+3. **Congelar las líneas al salir el equipo** (hecho), con el retorno anticipado declarado y el
+   agujero de las huérfanas rentadas tapado por los dos lados: ya no se crea, y la verificación lo
+   vería si existiera.
 4. **Pagos cobrados**, separados del anticipo pactado: el primero mueve el documento, el saldo se
    calcula con el segundo. Entran sin comprobantes, con el escenario de la spec incumplido a
    propósito hasta que exista almacenamiento de ficheros.
@@ -1990,3 +1989,51 @@ de web y 279 de API— y **56 de extremo a extremo**, dos pasadas seguidas sin d
 cotizaciones antes y cuatro después. Se miró en pantalla: 9 000.00 de paquete más 1 500.00 de
 traslado son 10 500.00 de subtotal, y de ahí 12 545.40 a pagar con el depósito y la penalización
 aparte.
+
+### 2026-08-18 · El equipo que ya salió
+
+Tercer punto: congelar las líneas cuando el equipo está fuera, y tapar el agujero que eso destapa.
+
+**Por qué se congelan**
+
+No es una regla de documento. Soltar una reserva devuelve a `available` **sólo lo que estaba
+apartado**: el `update` lleva un `where status = 'in_quote'` que existe por buenas razones —una
+unidad rentada no vuelve al estante porque alguien edite un papel—. La consecuencia es que bajar
+una cantidad en una renta en curso **suelta el vínculo y deja la unidad `rented` sin dueño**:
+comprometida indefinidamente, invisible en el catálogo, y sin nadie a quien reclamarla.
+
+Ahora `setLines` rechaza con `409` mientras el equipo está fuera —en renta, o completada con
+unidades sin devolver— y la ficha no ofrece el editor: enseña las líneas y dice a dónde ir. El
+equipo vuelve por el retorno, que es la única operación que sabe en qué condiciones volvió cada
+unidad. El retorno anticipado ya funcionaba y queda declarado en la spec.
+
+**Y el agujero que la verificación no podía ver**
+
+El escaneo de huérfanas miraba `in_quote` a secas. Es decir: el descuadre más caro —equipo que
+salió y que nadie reclama— caía **fuera de la comprobación**, y no por descuido de la
+implementación sino porque la spec lo enunciaba así, «unidades en estado de cotización». Ahora
+recorre `in_quote`, `in_order` y `rented`, y la spec dice «comprometida».
+
+Conviene ver el orden: la congelación evita que se cree desde la aplicación, pero cualquier
+descuadre que ya existiera —o que llegue por otra vía— seguía siendo invisible. Las dos cosas hacen
+falta, y sólo la segunda mira hacia atrás.
+
+**Cancelar tampoco, mientras haya equipo fuera**
+
+Cancelar proyecta el inventario a disponible. Con el equipo en la calle eso escribe en el sistema
+que hay cámaras en el estante que no están, y nadie lo nota hasta que alguien va a buscarlas. Es la
+misma guarda que ya protegía la eliminación de la cotización; ahora también la transición.
+
+**Sólo vuelve lo que salió**
+
+El retorno aceptaba cualquier unidad con vínculo vivo, incluidas las apartadas que nunca salieron de
+la nave: las soltaba sin pasar por la reconciliación, que es quien sabe qué líneas quedan y con
+cuántas unidades cada una. Ahora exige que esté fuera.
+
+**Comprobado**
+
+TypeScript en los seis paquetes, Biome, **520 pruebas** de vitest —137 de contratos, 59 de base, 37
+de web y 287 de API— y **57 de extremo a extremo**. La suite se corrió **cinco veces seguidas** sin
+dejar rastro: cuatro cotizaciones antes y cuatro después, y la verificación de coherencia del
+almacén sin una sola discrepancia. Se miró en pantalla: la renta en curso con sus tres unidades
+fuera, la nota de por qué no se editan, y cancelar respondiendo «Hay 3 unidades sin devolver».
