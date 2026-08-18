@@ -15,8 +15,8 @@
 
 import { ConflictError, newId, UnprocessableError, ValidationError } from "@tfv/contracts"
 import { db, type Transaction } from "@tfv/db"
-import { loginAttempts, oneTimeCredentials, users } from "@tfv/db/schema"
-import { and, count, desc, eq, gte, isNull, sql } from "drizzle-orm"
+import { loginAttempts, notificationDeliveries, oneTimeCredentials, users } from "@tfv/db/schema"
+import { and, count, desc, eq, gt, gte, isNull, sql } from "drizzle-orm"
 import { hashPassword, needsRehash, validatePassword, verifyPassword } from "./password.ts"
 import {
   type DeviceInfo,
@@ -45,6 +45,11 @@ export interface PendingVerification {
   readonly userId: string
   /** Viaja **sólo** al correo del titular. Nunca al cuerpo de una respuesta. */
   readonly token: string
+}
+
+export interface PendingEmailChange extends PendingVerification {
+  /** Destino de la verificación; el perfil conserva el correo anterior hasta consumir el enlace. */
+  readonly pendingEmail: string
 }
 
 export async function register(input: RegisterInput): Promise<PendingVerification> {
@@ -168,19 +173,88 @@ export type ConsumeOutcome =
 
 /** Confirma la dirección. El enlace es de un solo uso. */
 export async function verifyEmail(token: string): Promise<ConsumeOutcome> {
+  try {
+    return await db.transaction(async (tx) => {
+      const credential = await consumeCredential(token, "email_verification", tx)
+      if (!credential) return { kind: "invalid" }
+
+      // La dirección podía estar libre al solicitar el cambio y ser ocupada antes del clic. Esta
+      // comprobación vive en la misma transacción que el consumo: si falla, el enlace no se quema.
+      if (credential.pendingEmail) {
+        const [owner] = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(and(eq(users.email, credential.pendingEmail), isNull(users.deletedAt)))
+          .limit(1)
+
+        if (owner && owner.id !== credential.userId) {
+          throw new ConflictError("Ese correo ya pertenece a otra cuenta")
+        }
+      }
+
+      await tx
+        .update(users)
+        .set({
+          emailVerifiedAt: new Date(),
+          ...(credential.pendingEmail ? { email: credential.pendingEmail } : {}),
+        })
+        .where(eq(users.id, credential.userId))
+
+      return { kind: "ok", userId: credential.userId, pendingEmail: credential.pendingEmail }
+    })
+  } catch (failure) {
+    // La consulta previa mejora el mensaje normal; la restricción resuelve la carrera entre dos
+    // confirmaciones concurrentes. Ambas situaciones se presentan como el mismo conflicto.
+    const cause = (failure as { cause?: { code?: string; constraint_name?: string } }).cause
+    if (cause?.code === "23505" && cause.constraint_name === "users_email_unique") {
+      throw new ConflictError("Ese correo ya pertenece a otra cuenta")
+    }
+    throw failure
+  }
+}
+
+/** Solicita un cambio sin sustituir la dirección actual hasta que la nueva quede verificada. */
+export async function requestEmailChange(
+  userId: string,
+  email: string,
+): Promise<PendingEmailChange> {
+  const pendingEmail = normalizeEmail(email)
+
   return db.transaction(async (tx) => {
-    const credential = await consumeCredential(token, "email_verification", tx)
-    if (!credential) return { kind: "invalid" }
+    const [user] = await tx
+      .select({ email: users.email })
+      .from(users)
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+      .limit(1)
 
-    await tx
-      .update(users)
-      .set({
-        emailVerifiedAt: new Date(),
-        ...(credential.pendingEmail ? { email: credential.pendingEmail } : {}),
-      })
-      .where(eq(users.id, credential.userId))
+    if (!user) throw new UnprocessableError("La cuenta ya no está disponible")
+    if (user.email === pendingEmail) {
+      throw new UnprocessableError("Ese ya es tu correo actual")
+    }
+    if (await emailTaken(pendingEmail, tx)) {
+      throw new ConflictError("Ya existe una cuenta con este correo")
+    }
 
-    return { kind: "ok", userId: credential.userId, pendingEmail: credential.pendingEmail }
+    const token = await issueCredential(
+      userId,
+      "email_verification",
+      LIFETIMES.emailVerification,
+      tx,
+      pendingEmail,
+    )
+
+    // La credencial y su única vía de entrega forman una sola mutación. Si el outbox falla, la
+    // transacción conserva el enlace anterior y no deja un token nuevo imposible de recuperar.
+    await tx.insert(notificationDeliveries).values({
+      id: newId(),
+      recipientId: userId,
+      channel: "email",
+      kind: "email_change_verification",
+      // El perfil aún contiene el correo anterior: el despachador necesita el destino explícito.
+      payload: { token, email: pendingEmail },
+    })
+
+    return { userId, token, pendingEmail }
   })
 }
 
@@ -413,6 +487,11 @@ async function issueCredential(
   executor: Executor,
   pendingEmail?: string,
 ): Promise<string> {
+  // Dos solicitudes simultáneas del mismo propósito se serializan por usuario. En las rutas que
+  // emiten enlaces, `executor` es una transacción; la segunda espera, invalida la primera y deja
+  // exactamente una credencial viva.
+  await executor.execute(sql`select pg_advisory_xact_lock(hashtext(${`${userId}:${purpose}`}))`)
+
   // Un enlace nuevo invalida los anteriores del mismo propósito: si alguien pide tres
   // recuperaciones, sólo la última sirve.
   await executor
@@ -450,24 +529,22 @@ async function consumeCredential(
   executor: Executor,
 ): Promise<ConsumedCredential | null> {
   const [credential] = await executor
-    .select()
-    .from(oneTimeCredentials)
+    .update(oneTimeCredentials)
+    .set({ consumedAt: new Date() })
     .where(
       and(
         eq(oneTimeCredentials.tokenHash, hashToken(token)),
         eq(oneTimeCredentials.purpose, purpose),
+        isNull(oneTimeCredentials.consumedAt),
+        gt(oneTimeCredentials.expiresAt, new Date()),
       ),
     )
-    .limit(1)
+    .returning({
+      userId: oneTimeCredentials.userId,
+      pendingEmail: oneTimeCredentials.pendingEmail,
+    })
 
   if (!credential) return null
-  if (credential.consumedAt !== null) return null
-  if (credential.expiresAt.getTime() <= Date.now()) return null
-
-  await executor
-    .update(oneTimeCredentials)
-    .set({ consumedAt: new Date() })
-    .where(eq(oneTimeCredentials.id, credential.id))
 
   return { userId: credential.userId, pendingEmail: credential.pendingEmail }
 }

@@ -1,4 +1,4 @@
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import type { ReactNode } from "react"
 import { Logo } from "~/components/logo.tsx"
@@ -16,8 +16,11 @@ import { DEFAULT_THEME, isTheme, THEME_COOKIE } from "~/lib/theme.ts"
  * alguien añada se olvidará de ella.
  */
 export default async function AuthLayout({ children }: { children: ReactNode }) {
+  const pathname = ((await headers()).get("x-pathname") ?? "").split("?", 1)[0]
   const profile = await readProfile()
-  if (profile) redirect(landingPath(profile))
+  // El enlace que confirma un cambio de correo también se abre con sesión iniciada. Es la única
+  // pantalla de acceso que necesita dejar pasar a quien ya está dentro.
+  if (profile && pathname !== "/verify-email") redirect(landingPath(profile))
 
   const chosen = (await cookies()).get(THEME_COOKIE)?.value
   const theme = isTheme(chosen) ? chosen : DEFAULT_THEME

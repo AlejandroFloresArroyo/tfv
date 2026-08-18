@@ -1436,3 +1436,71 @@ corte**. Empieza donde empiece la pila nueva.
 
 Las tres comprobaciones de compromiso sobre productos y medidas —las de unidades ya están— y las
 etiquetas imprimibles, que son pantalla. El código ya usa el alfabeto que la etiqueta necesita.
+
+### 2026-08-17 · El almacén ya se puede recorrer
+
+Primer incremento visible de la **29b**: listado de almacenes, catálogo explorable, ficha de
+producto con medidas y disponibilidad, y árbol físico navegable. Son cinco rutas de pantalla
+nuevas; la selección de ubicación vive en la dirección y cada nodo muestra los productos asignados
+directamente, sin traer el árbol entero.
+
+**La disponibilidad sólo se consulta donde existe**
+
+La rejilla del catálogo no incluye medidas ni existencias en su contrato. Consultar la ficha de
+cada producto para dibujar un contador convertiría una página de veinticuatro elementos en
+veinticinco peticiones. La rejilla se limita por eso a lo que el listado devuelve, y la
+disponibilidad por los once estados aparece en la ficha, donde llega en una sola respuesta.
+
+Por la misma razón no se ofreció todavía el filtro general por ubicación: el filtro del servidor es
+exacto y el endpoint del árbol devuelve un nivel cada vez. Poblar un selector completo exigiría una
+petición por cada nodo con hijas en cada render. La exploración por ubicación sí está disponible en
+el árbol, de forma perezosa; el filtro global necesita una consulta plana o un selector jerárquico
+que cargue bajo demanda.
+
+**Un permiso de producto no descubre el almacén**
+
+Los permisos de almacén son independientes. `warehouses.products.view` abre el catálogo cuando ya
+se conoce el identificador del almacén, pero la única ruta para descubrirlo —`GET
+/companies/:companyId/warehouses`— exige `warehouses.warehouses.view`. La navegación del servicio
+entra por esa lista, así que el papel `Ventas` de la siembra, que tiene el primero y no el segundo,
+recibe `403` antes de poder elegir un almacén. Entrar con una dirección directa al catálogo sí
+funciona.
+
+No se hizo que un permiso implique al otro ni se amplió el papel en silencio. Hace falta decidir
+entre componer los papeles con `warehouses.warehouses.view`, definir herencia entre permisos o
+exponer una consulta de descubrimiento autorizada por los recursos hijos. Hasta entonces, una
+persona con permisos parciales necesita una dirección directa y conocer el identificador del
+almacén.
+
+**Comprobado**
+
+TypeScript, las **29 pruebas web**, Biome, el detector de interfaz y el build de producción con
+Webpack. Turbopack no pudo abrir su puerto interno de PostCSS en este entorno; el mismo árbol
+compiló y generó todas las rutas con Webpack.
+
+### 2026-08-17 · El correo nuevo se confirma antes de sustituir al anterior
+
+Cerrado el cambio de correo pendiente de la **10**. La cuenta permite solicitar desde su perfil
+una dirección nueva, pero conserva la vigente hasta que se consume el enlace de un solo uso. La
+sesión abierta no se invalida: identifica a la persona, no a su correo, y al confirmar vuelve a
+resolver el perfil con la dirección actualizada.
+
+**El destino viaja con la entrega**
+
+La entrega no puede deducir el destinatario leyendo `users.email`, porque ése sigue siendo el
+correo anterior precisamente hasta la confirmación. El outbox guarda por eso la dirección nueva en
+el payload del evento `email_change_verification`; cuando llegue el despachador de la 09 tendrá un
+destino inequívoco sin adelantar el cambio en la cuenta.
+
+La confirmación vuelve a comprobar la unicidad. Una dirección podía estar libre al solicitar y ser
+ocupada antes del clic; en ese caso responde conflicto, conserva el correo anterior y la
+transacción no consume el enlace. La restricción única de la base sigue siendo la última defensa
+ante dos confirmaciones simultáneas.
+
+**Comprobado sin tocar la siembra**
+
+La suite de autenticación corrió contra una base temporal aislada y pasó sus **41 pruebas**,
+incluidas solicitudes y confirmaciones concurrentes, dos cuentas disputando la misma dirección y
+un token abierto bajo una sesión ajena. La
+base y los volcados de esquema temporales se eliminaron al terminar. También pasaron TypeScript en
+API y web, las **29 pruebas web**, Biome y el build de producción con Webpack.

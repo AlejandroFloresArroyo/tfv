@@ -15,11 +15,12 @@ import {
   companyServices,
   loginAttempts,
   notificationDeliveries,
+  oneTimeCredentials,
   services,
   sessions,
   users,
 } from "@tfv/db/schema"
-import { desc, eq, sql } from "drizzle-orm"
+import { and, desc, eq, isNull, sql } from "drizzle-orm"
 import { afterAll, beforeEach, describe, expect, it } from "vitest"
 import type { Profile } from "../auth/profile.ts"
 import { routes } from "../routes/index.ts"
@@ -68,6 +69,19 @@ async function lastEmailedToken(kind: string): Promise<string> {
   const token = (row?.payload as { token?: string } | undefined)?.token
   if (!token) throw new Error(`no se encoló ningún enlace de tipo ${kind}`)
   return token
+}
+
+async function lastEmailPayload(kind: string): Promise<{ token: string; email?: string }> {
+  const [row] = await db
+    .select({ payload: notificationDeliveries.payload })
+    .from(notificationDeliveries)
+    .where(eq(notificationDeliveries.kind, kind))
+    .orderBy(desc(notificationDeliveries.createdAt))
+    .limit(1)
+
+  const payload = row?.payload as { token?: string; email?: string } | undefined
+  if (!payload?.token) throw new Error(`no se encoló ningún enlace de tipo ${kind}`)
+  return payload as { token: string; email?: string }
 }
 
 function cookiesFrom(response: Response): Record<string, string> {
@@ -186,6 +200,186 @@ describe("verificación de correo", () => {
     const second = await post("/auth/verify-email", { token })
 
     expect(second.status).toBe(400)
+  })
+})
+
+describe("cambio de correo verificado", () => {
+  it("exige sesión y conserva el correo anterior hasta confirmar", async () => {
+    const withoutSession = await post("/auth/change-email", { newEmail: "nueva@ejemplo.mx" })
+    expect(withoutSession.status).toBe(401)
+
+    const jar = await signedInUser()
+    const response = await post(
+      "/auth/change-email",
+      { newEmail: "  NUEVA@EJEMPLO.MX " },
+      { cookie: cookieHeader(jar) },
+    )
+
+    expect(response.status).toBe(200)
+    const [before] = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.email, EMAIL))
+    expect(before?.email).toBe(EMAIL)
+
+    const delivery = await lastEmailPayload("email_change_verification")
+    expect(delivery.email).toBe("nueva@ejemplo.mx")
+    expect(JSON.stringify(await readJson(response))).not.toContain(delivery.token)
+
+    const verify = await post(
+      "/auth/verify-email",
+      { token: delivery.token },
+      { cookie: cookieHeader(jar) },
+    )
+    expect(verify.status).toBe(200)
+    expect((await readJson<{ sameSession: boolean }>(verify)).sameSession).toBe(true)
+
+    const me = await app.request("/auth/me", { headers: { cookie: cookieHeader(jar) } })
+    expect((await readJson<Profile>(me)).email).toBe("nueva@ejemplo.mx")
+    expect((await post("/auth/login", { email: EMAIL, password: PASSWORD })).status).toBe(401)
+    expect(
+      (await post("/auth/login", { email: "nueva@ejemplo.mx", password: PASSWORD })).status,
+    ).toBe(200)
+    expect((await post("/auth/verify-email", { token: delivery.token })).status).toBe(400)
+  })
+
+  it("rechaza el correo actual o uno ocupado sin encolar", async () => {
+    const jar = await signedInUser()
+    await post("/auth/register", {
+      email: "ocupado@ejemplo.mx",
+      password: PASSWORD,
+      name: "Otra",
+    })
+    await db.delete(notificationDeliveries)
+
+    const same = await post(
+      "/auth/change-email",
+      { newEmail: ` ${EMAIL.toUpperCase()} ` },
+      { cookie: cookieHeader(jar) },
+    )
+    const occupied = await post(
+      "/auth/change-email",
+      { newEmail: "ocupado@ejemplo.mx" },
+      { cookie: cookieHeader(jar) },
+    )
+
+    expect(same.status).toBe(422)
+    expect(occupied.status).toBe(409)
+    expect(await db.select().from(notificationDeliveries)).toHaveLength(0)
+  })
+
+  it("no sustituye el correo si la dirección se ocupa antes de confirmar", async () => {
+    const jar = await signedInUser()
+    await post(
+      "/auth/change-email",
+      { newEmail: "disputado@ejemplo.mx" },
+      { cookie: cookieHeader(jar) },
+    )
+    const { token } = await lastEmailPayload("email_change_verification")
+
+    await post("/auth/register", {
+      email: "disputado@ejemplo.mx",
+      password: PASSWORD,
+      name: "Otra",
+    })
+    const verify = await post("/auth/verify-email", { token })
+
+    expect(verify.status).toBe(409)
+    const me = await app.request("/auth/me", { headers: { cookie: cookieHeader(jar) } })
+    expect((await readJson<Profile>(me)).email).toBe(EMAIL)
+  })
+
+  it("una segunda solicitud simultánea deja una sola credencial viva", async () => {
+    const jar = await signedInUser()
+    const headers = { cookie: cookieHeader(jar) }
+
+    const responses = await Promise.all([
+      post("/auth/change-email", { newEmail: "primera@ejemplo.mx" }, headers),
+      post("/auth/change-email", { newEmail: "segunda@ejemplo.mx" }, headers),
+    ])
+    expect(responses.map(({ status }) => status)).toEqual([200, 200])
+
+    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, EMAIL))
+    const live = await db
+      .select()
+      .from(oneTimeCredentials)
+      .where(
+        and(
+          eq(oneTimeCredentials.userId, user?.id ?? ""),
+          eq(oneTimeCredentials.purpose, "email_verification"),
+          isNull(oneTimeCredentials.consumedAt),
+        ),
+      )
+    expect(live).toHaveLength(1)
+  })
+
+  it("dos confirmaciones simultáneas sólo consumen el enlace una vez", async () => {
+    const jar = await signedInUser()
+    await post(
+      "/auth/change-email",
+      { newEmail: "concurrente@ejemplo.mx" },
+      { cookie: cookieHeader(jar) },
+    )
+    const { token } = await lastEmailPayload("email_change_verification")
+
+    const responses = await Promise.all([
+      post("/auth/verify-email", { token }),
+      post("/auth/verify-email", { token }),
+    ])
+
+    expect(responses.map(({ status }) => status).sort()).toEqual([200, 400])
+  })
+
+  it("no ofrece la cuenta activa cuando el token pertenece a otra persona", async () => {
+    const ownJar = await signedInUser()
+    const otherJar = await signedInUser("otra@ejemplo.mx")
+    await post(
+      "/auth/change-email",
+      { newEmail: "otra-nueva@ejemplo.mx" },
+      { cookie: cookieHeader(otherJar) },
+    )
+    const { token } = await lastEmailPayload("email_change_verification")
+
+    const verify = await post("/auth/verify-email", { token }, { cookie: cookieHeader(ownJar) })
+
+    expect(verify.status).toBe(200)
+    expect((await readJson<{ sameSession: boolean }>(verify)).sameSession).toBe(false)
+  })
+
+  it("dos cuentas no pueden confirmar simultáneamente la misma dirección", async () => {
+    const firstJar = await signedInUser("primera-persona@ejemplo.mx")
+    const secondJar = await signedInUser("segunda-persona@ejemplo.mx")
+
+    await post(
+      "/auth/change-email",
+      { newEmail: "compartido@ejemplo.mx" },
+      { cookie: cookieHeader(firstJar) },
+    )
+    const firstToken = (await lastEmailPayload("email_change_verification")).token
+    await post(
+      "/auth/change-email",
+      { newEmail: "compartido@ejemplo.mx" },
+      { cookie: cookieHeader(secondJar) },
+    )
+    const secondToken = (await lastEmailPayload("email_change_verification")).token
+
+    const responses = await Promise.all([
+      post("/auth/verify-email", { token: firstToken }),
+      post("/auth/verify-email", { token: secondToken }),
+    ])
+
+    expect(responses.map(({ status }) => status).sort()).toEqual([200, 409])
+    expect(
+      await db.select().from(users).where(eq(users.email, "compartido@ejemplo.mx")),
+    ).toHaveLength(1)
+
+    const credentials = await db
+      .select({ consumedAt: oneTimeCredentials.consumedAt })
+      .from(oneTimeCredentials)
+      .where(eq(oneTimeCredentials.pendingEmail, "compartido@ejemplo.mx"))
+    expect(credentials).toHaveLength(2)
+    expect(credentials.filter(({ consumedAt }) => consumedAt === null)).toHaveLength(1)
+    expect(credentials.filter(({ consumedAt }) => consumedAt !== null)).toHaveLength(1)
   })
 })
 

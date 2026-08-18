@@ -60,7 +60,12 @@
       "title": "Verify your email",
       "checking": "Checking the link…",
       "success": "Email verified. You can sign in now.",
+      "updated": "Email updated. You can now use the new address.",
+      "invalidLink": "This link is no longer valid. Request a new one.",
+      "occupied": "That address already belongs to another account. Request the change with a different email.",
       "goToLogin": "Go to sign in",
+      "continue": "Continue to my account",
+      "back": "Back to my account",
       "missingToken": "This link is incomplete. Request a new one from the sign-in screen.",
       "resendTitle": "Request another link",
       "resend": "Resend link"
@@ -134,6 +139,18 @@
     "title": "My account",
     "profile": "Profile",
     "username": "Username",
+    "emailChange": {
+      "title": "Change sign-in email",
+      "description": "Your current email is {email}. We'll keep it until you confirm the new address.",
+      "newEmail": "New email",
+      "hint": "We'll send a one-time confirmation link to this address.",
+      "submit": "Send confirmation link",
+      "sent": "We sent the link to {email}. Your current email will keep working until you confirm it.",
+      "invalid": "Enter a valid email address.",
+      "same": "That is already your current email.",
+      "occupied": "That email already belongs to another account.",
+      "networkError": "We couldn't request the change. Check your connection and try again."
+    },
     "sessions": {
       "title": "Active sessions",
       "subtitle": "Each row is a browser with an open session. Closing them all signs you out here too.",

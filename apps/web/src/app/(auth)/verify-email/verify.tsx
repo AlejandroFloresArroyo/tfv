@@ -8,7 +8,7 @@ import { ApiError, api } from "~/lib/api.client.ts"
 
 type State =
   | { kind: "checking" }
-  | { kind: "verified"; message: string }
+  | { kind: "verified"; message: string; sameSession: boolean }
   | { kind: "rejected"; message: string }
 
 /**
@@ -20,7 +20,7 @@ type State =
  * un solo uso**: sin la guarda, el segundo canje falla y la pantalla dice «este enlace ya no es
  * válido» sobre un enlace que acababa de funcionar.
  */
-export function VerifyEmail({ token }: { token: string }) {
+export function VerifyEmail({ token, signedIn }: { token: string; signedIn: boolean }) {
   const t = useTranslations()
   const [state, setState] = useState<State>({ kind: "checking" })
   const attempted = useRef(false)
@@ -29,18 +29,29 @@ export function VerifyEmail({ token }: { token: string }) {
     if (attempted.current) return
     attempted.current = true
 
-    api<{ message: string }>("/auth/verify-email", {
+    api<{ message: string; changed: boolean; sameSession: boolean }>("/auth/verify-email", {
       method: "POST",
       body: { token },
       withoutRefresh: true,
     })
-      .then((response) => setState({ kind: "verified", message: response.message }))
-      .catch((failure: unknown) =>
+      .then((response) =>
         setState({
-          kind: "rejected",
-          message: failure instanceof ApiError ? failure.message : t("common.networkError"),
+          kind: "verified",
+          message: t(response.changed ? "auth.verify.updated" : "auth.verify.success"),
+          sameSession: response.sameSession,
         }),
       )
+      .catch((failure: unknown) => {
+        const message =
+          failure instanceof ApiError && failure.status === 409
+            ? t("auth.verify.occupied")
+            : failure instanceof ApiError && failure.status === 400
+              ? t("auth.verify.invalidLink")
+              : failure instanceof ApiError
+                ? failure.message
+                : t("common.networkError")
+        setState({ kind: "rejected", message })
+      })
   }, [token, t])
 
   if (state.kind === "checking") {
@@ -52,6 +63,8 @@ export function VerifyEmail({ token }: { token: string }) {
     )
   }
 
+  const returnToAccount = state.kind === "verified" ? state.sameSession : signedIn
+
   return (
     <div className="flex flex-col gap-4">
       <Callout tone={state.kind === "verified" ? "success" : "danger"} live>
@@ -59,7 +72,9 @@ export function VerifyEmail({ token }: { token: string }) {
       </Callout>
 
       <Button asChild block size="lg" variant={state.kind === "verified" ? "primary" : "secondary"}>
-        <Link href="/login">{t("auth.verify.goToLogin")}</Link>
+        <Link href={returnToAccount ? "/account" : "/login"}>
+          {returnToAccount ? t("auth.verify.continue") : t("auth.verify.goToLogin")}
+        </Link>
       </Button>
     </div>
   )

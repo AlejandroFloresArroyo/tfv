@@ -10,7 +10,7 @@ prospectos y las dos taxonomías que cuelgan de entidades que aún no existen.
 Casi todo esto ya existía desde la rebanada 04, que construyó el ciclo de vida de la sesión.
 
 - [x] Registro y perfil — el avatar necesita almacenamiento (rebanada 08)
-- [ ] Cambio de correo con verificación de la dirección nueva
+- [x] Cambio de correo con verificación de la dirección nueva
 - [~] Nombre de usuario derivado y único. **Falta** la consulta de disponibilidad
 - [x] Activación y desactivación, con invalidación de sesiones
 - [x] Baja con borrado lógico y liberación del correo

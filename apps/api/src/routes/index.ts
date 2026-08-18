@@ -12,6 +12,7 @@
 import type { RegisteredRoute } from "../runtime/route.ts"
 import {
   acceptInvitationRoute,
+  changeEmailRoute,
   changePasswordRoute,
   forgotPasswordRoute,
   loginRoute,
@@ -128,6 +129,7 @@ export const routes: readonly RegisteredRoute[] = [
   forgotPasswordRoute,
   resetPasswordRoute,
   acceptInvitationRoute,
+  changeEmailRoute,
   changePasswordRoute,
 
   // ─── Autorización ──────────────────────────────────────────────────────────

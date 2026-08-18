@@ -22,6 +22,7 @@ import {
   changePassword,
   login,
   register,
+  requestEmailChange,
   requestPasswordReset,
   resendVerification,
   resetPassword,
@@ -37,6 +38,7 @@ import {
 import { loadProfile } from "../auth/profile.ts"
 import {
   listActiveSessions,
+  resolveSession,
   revokeAllForUser,
   revokeByAccessToken,
   rotateSession,
@@ -111,6 +113,11 @@ async function enqueueLink(userId: string, kind: string, token: string): Promise
 // ─── Esquemas ────────────────────────────────────────────────────────────────
 
 const acknowledged = z.object({ message: z.string() })
+const verificationResponse = acknowledged.extend({
+  changed: z.boolean(),
+  /** La sesión presentada pertenece a la misma cuenta que confirmó el token. */
+  sameSession: z.boolean(),
+})
 const sessionResponse = z.object({
   userId: z.string(),
   accessExpiresAt: z.string(),
@@ -430,9 +437,10 @@ export const verifyEmailRoute = defineRoute({
     responses: {
       200: {
         description: "Correo verificado",
-        content: { "application/json": { schema: acknowledged } },
+        content: { "application/json": { schema: verificationResponse } },
       },
       400: { description: "El enlace no es válido, caducó o ya se usó" },
+      409: { description: "La dirección quedó ocupada antes de confirmar el cambio" },
     },
   },
   handler: async (c) => {
@@ -443,7 +451,54 @@ export const verifyEmailRoute = defineRoute({
       return c.json({ message: "El enlace ya no es válido. Solicita uno nuevo." }, 400)
     }
 
-    return c.json({ message: "Correo verificado. Ya puedes iniciar sesión." }, 200)
+    const accessToken = readAccessToken(c)
+    const session = accessToken ? await resolveSession(accessToken) : null
+
+    return c.json(
+      {
+        message: outcome.pendingEmail
+          ? "Correo actualizado. Ya puedes usar la nueva dirección."
+          : "Correo verificado. Ya puedes iniciar sesión.",
+        changed: outcome.pendingEmail !== null,
+        sameSession: session?.userId === outcome.userId,
+      },
+      200,
+    )
+  },
+})
+
+export const changeEmailRoute = defineRoute({
+  access: AUTHENTICATED,
+  config: {
+    method: "post",
+    path: "/auth/change-email",
+    summary: "Solicitar el cambio de correo",
+    tags: ["Acceso"],
+    request: {
+      body: {
+        content: {
+          "application/json": { schema: z.object({ newEmail: z.string().trim().email() }) },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Enlace de confirmación encolado para la dirección nueva",
+        content: { "application/json": { schema: acknowledged } },
+      },
+      409: { description: "La dirección ya pertenece a otra cuenta" },
+      422: { description: "La dirección coincide con el correo actual" },
+    },
+  },
+  handler: async (c) => {
+    const session = requireSession(c)
+    const { newEmail } = c.req.valid("json")
+    await requestEmailChange(session.userId, newEmail)
+
+    return c.json(
+      { message: "Enviamos un enlace a la dirección nueva. Tu correo actual no cambia todavía." },
+      200,
+    )
   },
 })
 

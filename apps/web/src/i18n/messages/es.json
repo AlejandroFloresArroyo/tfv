@@ -60,7 +60,12 @@
       "title": "Verifica tu correo",
       "checking": "Comprobando el enlace…",
       "success": "Correo verificado. Ya puedes entrar.",
+      "updated": "Correo actualizado. Ya puedes usar la nueva dirección.",
+      "invalidLink": "El enlace ya no es válido. Solicita uno nuevo.",
+      "occupied": "La dirección ya pertenece a otra cuenta. Solicita el cambio con otro correo.",
       "goToLogin": "Ir a entrar",
+      "continue": "Continuar a mi cuenta",
+      "back": "Volver a mi cuenta",
       "missingToken": "Este enlace está incompleto. Pide uno nuevo desde la pantalla de acceso.",
       "resendTitle": "Pedir otro enlace",
       "resend": "Reenviar enlace"
@@ -134,6 +139,18 @@
     "title": "Mi cuenta",
     "profile": "Perfil",
     "username": "Nombre de usuario",
+    "emailChange": {
+      "title": "Cambiar correo de acceso",
+      "description": "Tu correo actual es {email}. Lo conservaremos hasta que confirmes la dirección nueva.",
+      "newEmail": "Correo nuevo",
+      "hint": "Te enviaremos un enlace de un solo uso a esta dirección.",
+      "submit": "Enviar enlace de confirmación",
+      "sent": "Enviamos el enlace a {email}. Tu correo actual seguirá funcionando hasta que lo confirmes.",
+      "invalid": "Escribe una dirección de correo válida.",
+      "same": "Ese ya es tu correo actual.",
+      "occupied": "Ese correo ya pertenece a otra cuenta.",
+      "networkError": "No pudimos solicitar el cambio. Revisa tu conexión e inténtalo de nuevo."
+    },
     "sessions": {
       "title": "Sesiones activas",
       "subtitle": "Cada renglón es un navegador con la sesión abierta. Cerrarlas todas te obliga a entrar de nuevo aquí también.",

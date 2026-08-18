@@ -5,6 +5,7 @@ import Link from "next/link"
 import { getTranslations } from "next-intl/server"
 import { PageShell } from "~/components/page-shell.tsx"
 import { requireProfile } from "~/lib/session.ts"
+import { ChangeEmail } from "./change-email.tsx"
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations())("account.title") }
@@ -57,6 +58,12 @@ export default async function AccountPage() {
           <Button asChild variant="secondary" className="mt-4 self-start">
             <Link href="/account/sessions">{t("shell.sessions")}</Link>
           </Button>
+        </Panel>
+
+        <Panel className="p-5 laptop:col-span-2">
+          <h2 className="text-title2 font-bold text-content">{t("account.emailChange.title")}</h2>
+          <Separator className="my-4" />
+          <ChangeEmail currentEmail={profile.email} />
         </Panel>
       </div>
     </PageShell>
