@@ -2291,3 +2291,37 @@ administración de plataforma que no existe. Queda anotado en la tarea.
 **Comprobado**
 
 Los seis paquetes, Biome, **327 pruebas** de la API —once nuevas— y **62 de extremo a extremo**.
+
+### 2026-08-18 · Las pruebas dejan de estorbar
+
+Noveno punto, y el que más había costado hoy: seis siembras, cada una precedida de un rato de
+desconcierto —«¿por qué no entro?»— hasta recordar que acababa de correr las pruebas.
+
+Las suites de integración truncan sus tablas. Lo hacían sobre la base de desarrollo, así que cada
+`pnpm test` borraba los datos con los que se está mirando la aplicación. Ahora hablan con
+`tfv_test`, otra base del mismo servidor local, que **se crea y se migra sola** la primera vez.
+
+No hace falta configurar nada: se deriva de `DATABASE_URL` cambiándole el nombre. `DATABASE_URL` se
+fija desde la configuración de vitest y no desde la preparación global, porque el cliente la lee al
+cargar su módulo y ponerla más tarde llegaría tarde.
+
+**La factura del acoplamiento con el proveedor, en factura**
+
+Una base nueva del mismo servidor no trae el esquema `auth` de Supabase, ni el `extensions` donde
+vive `unaccent`. Las migraciones fallaban en la primera línea que los nombra. Hay que reproducir las
+dos piezas, y no se inventa nada: son exactamente las que la migración 0006 ya dejó anotadas como
+acoplamiento real —«tabla del proveedor y esquema interno suyo… se acepta porque vive en un único
+predicado de una única función»—. Que hagan falta aquí es lo que cuesta ese acoplamiento, y verlo
+escrito es mejor que no verlo.
+
+**Lo que sigue abierto**
+
+Dos ejecuciones simultáneas se siguen pisando, porque comparten la base de pruebas. Resolverlo
+pediría un esquema por ejecución, y el remedio sería más complicado que la enfermedad mientras el
+caso sea «se me olvidó que ya la tenía corriendo».
+
+**Comprobado**
+
+**569 pruebas** de vitest —146 de contratos, 59 de base, 37 de web y 327 de API— contra la base
+nueva, y la sesión de desarrollo **seguía viva** al terminar, con sus cuatro cotizaciones sembradas.
+Que es el punto entero.
