@@ -232,3 +232,39 @@ export interface QuoteLineRow {
  * importe vacío en lugar de como un error de compilación.
  */
 export type QuoteBreakdown = QuotationBreakdown
+
+// ─── Los dos árboles del almacén ─────────────────────────────────────────────
+
+export type StorageKind = StorageRow["kind"]
+
+/**
+ * El orden de los diez tipos, del más general al más específico.
+ *
+ * Es un `Record` y no una lista suelta a propósito: la lista vive en el servidor y ésta es una
+ * copia. Declarada así, un tipo nuevo en `StorageRow` **deja de compilar** aquí en lugar de
+ * quedarse fuera del desplegable sin que nadie se entere.
+ */
+const STORAGE_KIND_ORDER: Record<StorageKind, number> = {
+  floor: 0,
+  area: 1,
+  aisle: 2,
+  section: 3,
+  bay: 4,
+  rack: 5,
+  shelf: 6,
+  pallet: 7,
+  box: 8,
+  bin: 9,
+}
+
+export const STORAGE_KINDS: readonly StorageKind[] = (
+  Object.keys(STORAGE_KIND_ORDER) as StorageKind[]
+).sort((first, second) => STORAGE_KIND_ORDER[first] - STORAGE_KIND_ORDER[second])
+
+/** Lo que se lleva por delante eliminar una ubicación. Lo cuenta el servidor, no la pantalla. */
+export interface StorageScope {
+  /** Ubicaciones del subárbol, ella incluida. */
+  storages: number
+  /** Productos que quedarán **sin ubicación**. No se eliminan. */
+  products: number
+}

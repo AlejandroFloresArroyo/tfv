@@ -59,6 +59,9 @@ export default async function StoragesPage({
           companyId={companyId}
           warehouseId={warehouseId}
           roots={rootsResult.data.items}
+          canCreate={can(company, "warehouses.storages.create")}
+          canEdit={can(company, "warehouses.storages.edit")}
+          canDelete={can(company, "warehouses.storages.delete")}
         />
       ) : (
         <ApiFailure result={rootsResult} />

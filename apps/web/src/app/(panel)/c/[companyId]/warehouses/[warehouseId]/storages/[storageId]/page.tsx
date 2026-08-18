@@ -104,6 +104,9 @@ export default async function StoragePage({
         roots={rootsResult.data.items}
         path={pathResult.data.items}
         directChildren={childrenResult.data.items}
+        canCreate={can(company, "warehouses.storages.create")}
+        canEdit={can(company, "warehouses.storages.edit")}
+        canDelete={can(company, "warehouses.storages.delete")}
       />
 
       {productsResult ? (
