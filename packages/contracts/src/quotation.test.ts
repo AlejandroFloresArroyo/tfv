@@ -71,7 +71,6 @@ function quote(overrides: Partial<QuotationInput> = {}): QuotationInput {
   return { type: "rent", ...WINDOW, lines: [line()], ...overrides }
 }
 
-
 describe("precio unitario de renta y de venta", () => {
   it("una tarifa fija ignora los días", () => {
     const result = computeQuotation(
@@ -366,7 +365,9 @@ describe("precio por paquete que sustituye al total de las líneas", () => {
 
   it("informa el precio del paquete, y lo omite cuando no lo hay", () => {
     // El documento no vuelve a componérselo por su cuenta: la cifra que sustituye viaja resuelta.
-    const withPackage = computeQuotation(thousand({ payment: { version: 1, fixedPrice: "800.00" } }))
+    const withPackage = computeQuotation(
+      thousand({ payment: { version: 1, fixedPrice: "800.00" } }),
+    )
     const without = computeQuotation(thousand())
 
     expect(withPackage.packagePrice).toBe("800.00")

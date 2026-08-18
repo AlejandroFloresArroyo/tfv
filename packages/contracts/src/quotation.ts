@@ -424,7 +424,9 @@ function computeLine(
   // tarifa, un diez por ciento en una renta de diez días descontaba el uno por ciento.
   const perUnit = perUnitDiscount(discount, unitGross)
   const lineDiscount =
-    perUnit === undefined ? fixedLineDiscount(discount, input.quantity) : multiply(perUnit, input.quantity)
+    perUnit === undefined
+      ? fixedLineDiscount(discount, input.quantity)
+      : multiply(perUnit, input.quantity)
   const total = subtract(gross, lineDiscount)
 
   return {
