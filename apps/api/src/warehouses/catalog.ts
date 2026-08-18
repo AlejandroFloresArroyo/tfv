@@ -593,6 +593,34 @@ export async function addMeasurement(
  * la alternativa —exigir la de borrado— pediría el permiso de la operación destructiva para hacer
  * la que no lo es.
  */
+/**
+ * Añadir una variante o un accesorio a un producto que ya existe.
+ *
+ * La creación con estructura completa deja crear los hijos **en el mismo acto que el padre**, y era
+ * la única forma que había. Pero una variante nace casi siempre después: llega la cámara negra
+ * cuando la gris lleva un año en la nave. La spec ya lo daba por supuesto —«**WHEN** se le crea una
+ * variante»— sin exigir que fuera en la misma operación.
+ *
+ * Hereda lo mismo que un hijo creado con su padre, y por el mismo motivo: **copiando**, no
+ * refiriendo. Poder divergir es lo que hace que una variante sea una variante.
+ */
+export async function addChild(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  productId: string,
+  relation: ProductRelation,
+  input: ChildInput,
+): Promise<ProductRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    const parent = await loadProduct(tx, warehouseId, productId)
+
+    const childId = await insertChild(tx, parent, relation, input, actor.userId)
+    return toProductRecord(await loadProduct(tx, warehouseId, childId))
+  })
+}
+
 export async function updateMeasurement(
   actor: Actor,
   companyId: string,
@@ -764,7 +792,7 @@ async function insertChild(
   relation: ProductRelation,
   input: ChildInput,
   actorId: string,
-): Promise<void> {
+): Promise<string> {
   const childId = newId()
 
   await tx.insert(warehouseProducts).values({
@@ -788,6 +816,8 @@ async function insertChild(
   for (const measurement of input.measurements ?? []) {
     await insertMeasurement(tx, childId, measurement, actorId)
   }
+
+  return childId
 }
 
 /**

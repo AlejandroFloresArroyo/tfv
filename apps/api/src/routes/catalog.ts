@@ -22,12 +22,14 @@ import {
   createProductInput,
   measurementInput,
   measurementPatchInput,
+  productChildInput,
   updateProductInput,
 } from "@tfv/contracts/catalog"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import { defineRoute, REQUIRES } from "../runtime/route.ts"
 import {
+  addChild,
   addMeasurement,
   createProduct,
   deleteMeasurement,
@@ -544,6 +546,48 @@ export const addMeasurementRoute = defineRoute({
       c.req.valid("json"),
     )
     return c.json(serializeMeasurement(measurement), 201)
+  },
+})
+
+export const addChildRoute = defineRoute({
+  access: REQUIRES("warehouses.products.create"),
+  config: {
+    method: "post",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/products/{productId}/children",
+    summary: "Añadir una variante o un accesorio a un producto que ya existe",
+    tags: ["Catálogo"],
+    request: {
+      params: productParams,
+      body: {
+        content: {
+          "application/json": {
+            schema: productChildInput.extend({
+              // Lo único que distingue a los dos: los datos son los mismos.
+              relation: z.enum(["variant", "accessory"]),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "Creado, heredando del padre lo que se hereda",
+        content: { "application/json": { schema: productSchema } },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const { relation, ...input } = c.req.valid("json")
+    const child = await addChild(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.productId,
+      relation,
+      input,
+    )
+    return c.json(serializeProduct(child), 201)
   },
 })
 

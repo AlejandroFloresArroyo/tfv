@@ -463,6 +463,89 @@ describe("eliminar un producto arrastra su estructura", () => {
   })
 })
 
+describe("añadir un hijo a un producto que ya existe", () => {
+  it("hereda del padre lo que se hereda, y trae código propio", async () => {
+    // Escenario: «Un hijo hereda la clasificación». La spec lo dice de crear una variante a un
+    // producto, sin exigir que sea en el mismo acto que el padre.
+    await clearCatalog()
+    const caja = await json<{ id: string }>(
+      await request("POST", `${base}/storages`, { name: "Caja 7", kind: "box" }, cookie),
+    )
+    const categoria = await json<{ id: string }>(
+      await request("POST", `${base}/categories`, { name: "Cámaras" }, cookie),
+    )
+
+    const padre = await newProduct({
+      name: "Cámara",
+      storageId: caja.id,
+      categoryId: categoria.id,
+    })
+
+    const response = await request(
+      "POST",
+      `${base}/products/${padre.id}/children`,
+      { relation: "variant", name: "Cámara negra" },
+      cookie,
+    )
+    expect(response.status).toBe(201)
+
+    const hija = await json<Product>(response)
+    expect(hija.parentId).toBe(padre.id)
+    expect(hija.storageId).toBe(caja.id)
+    expect(hija.categoryId).toBe(categoria.id)
+    expect(hija.code).not.toBe(padre.code)
+  })
+
+  it("distingue la variante del accesorio", async () => {
+    await clearCatalog()
+    const padre = await newProduct({ name: "Cámara" })
+
+    await request(
+      "POST",
+      `${base}/products/${padre.id}/children`,
+      { relation: "variant", name: "Negra" },
+      cookie,
+    )
+    await request(
+      "POST",
+      `${base}/products/${padre.id}/children`,
+      { relation: "accessory", name: "Trípode" },
+      cookie,
+    )
+
+    const detail = await json<Detail>(
+      await request("GET", `${base}/products/${padre.id}`, undefined, cookie),
+    )
+
+    expect(detail.variants.map((row) => row.name)).toEqual(["Negra"])
+    expect(detail.accessories.map((row) => row.name)).toEqual(["Trípode"])
+  })
+
+  it("nace con sus medidas y sus unidades", async () => {
+    await clearCatalog()
+    const padre = await newProduct({ name: "Cámara" })
+
+    const response = await request(
+      "POST",
+      `${base}/products/${padre.id}/children`,
+      {
+        relation: "variant",
+        name: "Negra",
+        measurements: [{ name: "Cuerpo", initialQuantity: 2 }],
+      },
+      cookie,
+    )
+    expect(response.status).toBe(201)
+
+    const hija = await json<Product>(response)
+    const detail = await json<Detail>(
+      await request("GET", `${base}/products/${hija.id}`, undefined, cookie),
+    )
+
+    expect(detail.measurements[0]?.units).toEqual({ available: 2 })
+  })
+})
+
 describe("corregir una medida", () => {
   it("conserva las unidades que ya existían", async () => {
     // El motivo de que exista este endpoint. Sin él, corregir una errata en el nombre obliga a

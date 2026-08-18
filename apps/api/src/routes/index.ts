@@ -27,6 +27,7 @@ import {
   verifyEmailRoute,
 } from "./auth.ts"
 import {
+  addChildRoute,
   addMeasurementRoute,
   createProductRoute,
   createWarehouseCategoryRoute,
@@ -258,6 +259,7 @@ export const routes: readonly RegisteredRoute[] = [
   productScopeRoute,
   deleteProductRoute,
 
+  addChildRoute,
   addMeasurementRoute,
   updateMeasurementRoute,
   deleteMeasurementRoute,
