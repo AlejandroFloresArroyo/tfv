@@ -43,7 +43,7 @@ import {
   warehouseStorages,
   warehouses,
 } from "@tfv/db/schema"
-import { and, count, eq, inArray, isNull, sql } from "drizzle-orm"
+import { and, count, eq, inArray, isNull, notExists, sql } from "drizzle-orm"
 import { hashPassword } from "../auth/password.ts"
 import { env } from "../env.ts"
 
@@ -574,6 +574,8 @@ async function seedCatalogFor(companyId: string): Promise<{ products: number; un
     .where(eq(warehouseProducts.warehouseId, warehouseId))
 
   if ((already?.value ?? 0) > 0) {
+    // El catálogo está; puede faltarle el alta a las unidades que sembró una versión anterior.
+    await seedCreationEvents(warehouseId)
     const [units] = await db.select({ value: count() }).from(warehouseStockUnits)
     return { products: already?.value ?? 0, units: units?.value ?? 0 }
   }
@@ -626,7 +628,70 @@ async function seedCatalogFor(companyId: string): Promise<{ products: number; un
     }
   }
 
+  await seedCreationEvents(warehouseId)
+
   return { products: GEAR.length, units }
+}
+
+/**
+ * El alta de cada unidad en su historial.
+ *
+ * La siembra inserta las unidades en la tabla y no por `createUnits`, así que el evento que la
+ * ruta escribe sola aquí hay que escribirlo (`HALLAZGOS.md` H-32). Sin él, `stock-units` queda
+ * incumplida —«todo cambio de estado deja rastro», y el alta es el primero— y una unidad sembrada
+ * que luego aparta una cotización enseña una vida que **empieza en su segundo estado**.
+ *
+ * Dos decisiones que la hacen segura de repetir:
+ *
+ * - Escribe **sólo a las que no tienen alta**, no a las que no tienen ningún evento. Así repara
+ *   también las que sembró una versión anterior de este guion y que ya acumularon movimientos —que
+ *   son todas las de cualquier base de desarrollo ya sembrada—, y correrla dos veces no duplica
+ *   nada.
+ * - El momento es el de la propia unidad, no ahora. El historial ordena por fecha: fechar el alta
+ *   hoy la pondría **encima** de los movimientos que la siguieron, que es la mitad del defecto que
+ *   se está corrigiendo.
+ */
+async function seedCreationEvents(warehouseId: string): Promise<void> {
+  const pending = await db
+    .select({ id: warehouseStockUnits.id, createdAt: warehouseStockUnits.createdAt })
+    .from(warehouseStockUnits)
+    .innerJoin(
+      warehouseMeasurements,
+      eq(warehouseMeasurements.id, warehouseStockUnits.measurementId),
+    )
+    .innerJoin(warehouseProducts, eq(warehouseProducts.id, warehouseMeasurements.productId))
+    .where(
+      and(
+        eq(warehouseProducts.warehouseId, warehouseId),
+        notExists(
+          db
+            .select({ uno: sql`1` })
+            .from(warehouseStockEvents)
+            .where(
+              and(
+                eq(warehouseStockEvents.stockUnitId, warehouseStockUnits.id),
+                eq(warehouseStockEvents.reason, "created"),
+              ),
+            ),
+        ),
+      ),
+    )
+
+  if (pending.length === 0) return
+
+  await db.insert(warehouseStockEvents).values(
+    pending.map((unit) => ({
+      id: newId(),
+      stockUnitId: unit.id,
+      fromStatus: null,
+      toStatus: "available" as const,
+      reason: "created" as const,
+      // Sin responsable: no hubo persona, hubo siembra. Es lo mismo que hacen los eventos que
+      // escriben aquí las cotizaciones sembradas.
+      actorId: null,
+      occurredAt: unit.createdAt,
+    })),
+  )
 }
 
 // ─── Cotizaciones ────────────────────────────────────────────────────────────
