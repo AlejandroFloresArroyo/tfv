@@ -1,4 +1,4 @@
-import { isClosed } from "@tfv/contracts/quote-status"
+import { isClosed, linesFrozen } from "@tfv/contracts/quote-status"
 import { Badge, Callout, Panel, Separator } from "@tfv/ui"
 import { CalendarRange, FileText, Package, Users } from "lucide-react"
 import type { Metadata } from "next"
@@ -81,10 +81,13 @@ export default async function QuotePage({
   const quote = quoteResult.data
   const lines = linesResult.ok ? linesResult.data.items : []
 
-  // Cerrada: ni se editan las líneas ni se recalculan los importes. Ofrecer el editor sería ofrecer
-  // un botón cuyo guardado responde `409` siempre.
+  // Ni cerrada ni con el equipo fuera. Lo primero porque los importes están congelados; lo segundo
+  // porque bajar una cantidad soltaría el vínculo de una unidad que sigue en la calle, y el
+  // inventario pasaría a decir que está libre. Ofrecer el editor sería ofrecer un botón cuyo
+  // guardado responde `409` siempre.
   const closed = isClosed(quote.status)
-  const canEditLines = can(company, "warehouses.quotes.edit_products") && !closed
+  const frozen = linesFrozen(quote.status, quote.type)
+  const canEditLines = can(company, "warehouses.quotes.edit_products") && !frozen
 
   // Las listas de precios sólo hacen falta para el buscador del editor, y sólo se saben necesarias
   // después de conocer el estado de la cotización.
@@ -183,6 +186,12 @@ export default async function QuotePage({
                     {t("warehouses.quotes.lines")}
                   </h2>
                 </div>
+
+                {frozen && !closed ? (
+                  <Callout tone="info" className="mb-3">
+                    {t("warehouses.quotes.linesFrozen")}
+                  </Callout>
+                ) : null}
 
                 {lines.length > 0 ? (
                   <div className="grid gap-3">

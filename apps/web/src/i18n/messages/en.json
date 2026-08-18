@@ -619,7 +619,8 @@
         "directo": "Direct"
       },
       "discountAsRate": "Discount (%)",
-      "discountAsAmount": "Discount (amount)"
+      "discountAsAmount": "Discount (amount)",
+      "linesFrozen": "This quote's equipment has left the warehouse. Lines stay locked until it comes back: register it under equipment return, below."
     }
   }
 }
