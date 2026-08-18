@@ -140,6 +140,7 @@ import {
   unitHistoryRoute,
   updatePriceListRoute,
 } from "./stock.ts"
+import { authorizeUploadRoute, confirmUploadRoute, reissueTargetsRoute } from "./uploads.ts"
 import {
   createStorageRoute,
   createWarehouseRoute,
@@ -312,6 +313,12 @@ export const routes: readonly RegisteredRoute[] = [
   rejectOrderRoute,
   changeOrderStatusRoute,
   deleteOrderRoute,
+
+  // ─── Archivos ──────────────────────────────────────────────────────────────
+
+  authorizeUploadRoute,
+  reissueTargetsRoute,
+  confirmUploadRoute,
 
   // ─── Producciones ──────────────────────────────────────────────────────────
   // Pendiente: rebanada 20.

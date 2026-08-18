@@ -72,8 +72,31 @@ const schema = z
 
     /** Tolerancia de la marca de tiempo firmada, en segundos. Impide reproducir eventos capturados. */
     PAYMENTS_WEBHOOK_TOLERANCE: z.coerce.number().int().positive().default(300),
+
+    /**
+     * El almacenamiento de objetos, y la credencial con la que se le pide permiso.
+     *
+     * Los bytes **no pasan por aquí**: la API firma una autorización de escritura acotada a un
+     * objeto concreto y con caducidad, y el navegador escribe directo. Por eso este servicio no
+     * necesita aceptar cargas grandes y por eso la credencial de servicio no sale nunca de aquí:
+     * lo que viaja al navegador es la autorización, no la llave.
+     */
+    STORAGE_URL: z.string().url().default("http://127.0.0.1:54321/storage/v1"),
+    STORAGE_BUCKET: z.string().min(1).default("tfv"),
+    /** **Obligatoria en producción**, como el secreto del procesador de pagos y por lo mismo. */
+    STORAGE_SERVICE_KEY: z.string().min(1).optional(),
   })
   .superRefine((value, ctx) => {
+    if (value.NODE_ENV === "production" && !value.STORAGE_SERVICE_KEY) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["STORAGE_SERVICE_KEY"],
+        message:
+          "En producción es obligatoria: sin ella no se puede firmar ninguna subida, y toda " +
+          "pantalla que suba un archivo queda inservible.",
+      })
+    }
+
     if (value.NODE_ENV === "production" && !value.PAYMENTS_WEBHOOK_SECRET) {
       ctx.addIssue({
         code: "custom",
