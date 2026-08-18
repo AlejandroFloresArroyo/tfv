@@ -40,6 +40,13 @@ export function QuoteAmounts({
       </p>
 
       <dl className="mt-4 grid gap-3">
+        <Row
+          label={breakdown.packagePrice === undefined ? t("linesTotal") : t("packagePrice")}
+          value={amount(breakdown.packagePrice ?? breakdown.linesTotal)}
+        />
+        {breakdown.additionals !== "0.00" ? (
+          <Row label={t("additionals")} value={amount(breakdown.additionals)} />
+        ) : null}
         <Row label={t("subtotal")} value={amount(breakdown.subtotal)} />
         {breakdown.discount !== "0.00" ? (
           <Row label={t("discount")} value={`−${amount(breakdown.discount)}`} />
@@ -72,15 +79,19 @@ export function QuoteAmounts({
         </dd>
       </dl>
 
-      {breakdown.penalty !== "0.00" ? (
+      {breakdown.penalty !== "0.00" || breakdown.deposit !== "0.00" ? (
         <>
           <Separator className="my-4" />
-          <dl className="grid gap-1">
-            <dt className="text-body3 font-semibold text-content-faint">{t("penalty")}</dt>
-            <dd className="text-body1 font-semibold text-content-muted">
-              {amount(breakdown.penalty)}
-            </dd>
-            <dd className="text-body3 text-content-faint">{t("penaltyHint")}</dd>
+          <p className="text-body3 font-semibold text-content-faint">{t("contingent")}</p>
+          <p className="mt-1 text-body3 text-content-faint">{t("contingentHint")}</p>
+
+          <dl className="mt-3 grid gap-3">
+            {breakdown.penalty !== "0.00" ? (
+              <Row label={t("penalty")} value={amount(breakdown.penalty)} />
+            ) : null}
+            {breakdown.deposit !== "0.00" ? (
+              <Row label={t("deposit")} value={amount(breakdown.deposit)} />
+            ) : null}
           </dl>
         </>
       ) : null}

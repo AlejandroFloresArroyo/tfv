@@ -1,24 +1,16 @@
 "use client"
 
 import { formatMoney, isZero } from "@tfv/contracts/money"
-import {
-  computeQuotation,
-  type QuotationBreakdown,
-  type QuotationLineInput,
-  type QuotePaymentTerms,
-  type QuoteTaxes,
-  type RateSchedule,
-  rateFor,
-} from "@tfv/contracts/quotation"
+import { type QuotationLineInput, type RateSchedule, rateFor } from "@tfv/contracts/quotation"
 import { Badge, Button, Callout, Field, Input, Panel, Select, Separator, Spinner } from "@tfv/ui"
-import { Check, Plus, Search, Trash2, TriangleAlert } from "lucide-react"
+import { Check, Eye, EyeOff, Package, Plus, Search, Trash2, TriangleAlert } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useFormatter, useTranslations } from "next-intl"
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { formatAmount } from "~/lib/amount.ts"
 import { ApiError, api, SessionExpiredError } from "~/lib/api.client.ts"
 import type { QuoteLineRow, QuoteRow, RentFrequency } from "../../../warehouse.ts"
-import { usePublishPreview } from "./quote-preview.tsx"
+import { usePreviewedQuote, usePublishPreview } from "./quote-preview.tsx"
 
 /**
  * El constructor de cotizaciones: el editor de líneas.
@@ -105,7 +97,7 @@ export function QuoteEditor({
 }: {
   companyId: string
   warehouseId: string
-  quote: QuoteRow & { paymentTerms: QuotePaymentTerms | null; taxes: QuoteTaxes | null }
+  quote: QuoteRow
   /** Cada línea llega con su tarifa ya resuelta por el servidor y con su existencia libre. */
   lines: readonly QuoteLineRow[]
   priceLists: readonly { id: string; name: string }[]
@@ -124,17 +116,28 @@ export function QuoteEditor({
 
   const base = `/companies/${companyId}/warehouses/${warehouseId}`
 
-  const breakdown = usePreview(quote, drafts)
   const dirty = useMemo(() => changed(lines, drafts), [lines, drafts])
+  const inputs = useMemo(() => lineInputs(drafts), [drafts])
 
-  // El panel de importes vive en la otra columna y tiene que enseñar **esto**, no lo guardado.
+  // El editor publica sus líneas y lee de vuelta el desglose que se calculó con ellas y con las
+  // condiciones de pago que se estén escribiendo al lado. Una sola cuenta para las dos columnas.
   const publish = usePublishPreview()
   useEffect(() => {
-    publish({ breakdown, dirty })
-  }, [publish, breakdown, dirty])
+    publish.lines(inputs, dirty)
+  }, [publish, inputs, dirty])
+
+  const { breakdown } = usePreviewedQuote()
+
+  // Con precio por paquete, los importes de línea no rigen y no se enseñan: ni aquí ni en el papel.
+  const packagePrice = breakdown?.packagePrice ?? null
+  const [showPrices, setShowPrices] = useState(false)
+  const prices = packagePrice === null || showPrices
+
   const overbooked = drafts.filter((draft) => draft.quantity > draft.free + draft.reserved)
   // Sin tarifa para la frecuencia y sin precio escrito, la línea no vale cero: no tiene precio.
-  const unpriced = breakdown?.lines.filter((line) => line.unpriced).length ?? 0
+  // Con precio por paquete deja de importar, porque el precio ya está puesto en otro sitio.
+  const unpriced =
+    packagePrice === null ? (breakdown?.lines.filter((line) => line.unpriced).length ?? 0) : 0
 
   function add(candidate: RateCandidate) {
     setSaved(false)
@@ -256,6 +259,31 @@ export function QuoteEditor({
         </Callout>
       ) : null}
 
+      {packagePrice === null ? null : (
+        <Panel className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <p className="inline-flex min-w-0 items-center gap-2 text-body2 text-content-muted">
+            <Package className="size-4 shrink-0 text-content-faint" aria-hidden="true" />
+            <span>
+              {t.rich("packageGoverns", {
+                amount: formatAmount(packagePrice, format),
+                strong: (chunks) => (
+                  <strong className="font-semibold text-content tabular-nums">{chunks}</strong>
+                ),
+              })}
+            </span>
+          </p>
+
+          <Button variant="ghost" size="sm" onClick={() => setShowPrices((current) => !current)}>
+            {showPrices ? (
+              <EyeOff className="size-4" aria-hidden="true" />
+            ) : (
+              <Eye className="size-4" aria-hidden="true" />
+            )}
+            {showPrices ? t("hideLinePrices") : t("showLinePrices")}
+          </Button>
+        </Panel>
+      )}
+
       <Panel className="p-4">
         <Picker
           base={base}
@@ -344,20 +372,22 @@ export function QuoteEditor({
                       </Field>
                     ) : null}
 
-                    <Field label={t("linePrice")} className="w-36">
-                      {(ids) => (
-                        <Input
-                          {...ids}
-                          type="text"
-                          inputMode="decimal"
-                          value={draft.price}
-                          placeholder={t("byTariff")}
-                          onChange={(event) =>
-                            update(draft.measurementId, { price: event.target.value })
-                          }
-                        />
-                      )}
-                    </Field>
+                    {prices ? (
+                      <Field label={t("linePrice")} className="w-36">
+                        {(ids) => (
+                          <Input
+                            {...ids}
+                            type="text"
+                            inputMode="decimal"
+                            value={draft.price}
+                            placeholder={t("byTariff")}
+                            onChange={(event) =>
+                              update(draft.measurementId, { price: event.target.value })
+                            }
+                          />
+                        )}
+                      </Field>
+                    ) : null}
 
                     <div className="grid gap-1">
                       <span className="text-body3 font-semibold text-content-faint">
@@ -368,7 +398,7 @@ export function QuoteEditor({
                       </Badge>
                     </div>
 
-                    {amounts ? (
+                    {amounts && packagePrice === null ? (
                       <div className="ml-auto grid gap-1 text-right">
                         <span className="text-body3 font-semibold text-content-faint">
                           {t("lineTotal")}
@@ -385,7 +415,7 @@ export function QuoteEditor({
                       <TriangleAlert className="size-4" aria-hidden="true" />
                       {t("notEnough", { count: ceiling })}
                     </p>
-                  ) : amounts?.unpriced ? (
+                  ) : amounts?.unpriced && packagePrice === null ? (
                     <p className="mt-3 inline-flex items-center gap-1.5 text-body3 text-warning">
                       <TriangleAlert className="size-4" aria-hidden="true" />
                       {t("unpriced")}
@@ -416,47 +446,25 @@ export function QuoteEditor({
 }
 
 /**
- * Los importes, recalculados en cada tecla.
+ * Las líneas del borrador, tal y como las quiere el motor.
  *
- * Es barato: el motor es aritmética entera sobre unas pocas líneas, sin red de por medio. Pedirlos
- * al servidor haría el editor inservible —una petición por pulsación— y, peor, enseñaría números de
- * hace un momento junto a los datos de ahora.
+ * No resuelve tarifas: cada borrador ya trae la suya, la que el servidor usó para calcular. Ver
+ * H-14 — el defecto no estaba en el cálculo sino en qué precio se le entregaba.
  */
-function usePreview(
-  quote: QuoteRow & { paymentTerms: QuotePaymentTerms | null; taxes: QuoteTaxes | null },
-  drafts: readonly Draft[],
-): QuotationBreakdown | null {
-  return useMemo(() => {
-    const lines: QuotationLineInput[] = drafts.map((draft, index) => ({
-      id: draft.id ?? draft.measurementId,
-      productId: draft.productId,
-      measurementId: draft.measurementId,
-      quantity: draft.quantity,
-      frequency: draft.frequency,
-      basePrice: draft.basePrice,
-      ...(draft.rent ? { rent: draft.rent } : {}),
-      ...(draft.penalty ? { penalty: draft.penalty } : {}),
-      ...(PRICE.test(draft.price.trim()) ? { linePrice: draft.price.trim() } : {}),
-      position: index,
-      positionProduct: index,
-    }))
-
-    try {
-      return computeQuotation({
-        type: quote.type,
-        startsOn: quote.startsOn ? new Date(quote.startsOn) : null,
-        endsOn: quote.endsOn ? new Date(quote.endsOn) : null,
-        roundDays: quote.roundDays,
-        roundDirection: quote.roundDirection,
-        lines,
-        ...(quote.paymentTerms ? { payment: quote.paymentTerms } : {}),
-        ...(quote.taxes ? { taxes: quote.taxes } : {}),
-      })
-    } catch {
-      // Un borrador a medias puede no ser calculable todavía. No se rompe la pantalla por eso.
-      return null
-    }
-  }, [quote, drafts])
+function lineInputs(drafts: readonly Draft[]): QuotationLineInput[] {
+  return drafts.map((draft, index) => ({
+    id: draft.id ?? draft.measurementId,
+    productId: draft.productId,
+    measurementId: draft.measurementId,
+    quantity: draft.quantity,
+    frequency: draft.frequency,
+    basePrice: draft.basePrice,
+    ...(draft.rent ? { rent: draft.rent } : {}),
+    ...(draft.penalty ? { penalty: draft.penalty } : {}),
+    ...(PRICE.test(draft.price.trim()) ? { linePrice: draft.price.trim() } : {}),
+    position: index,
+    positionProduct: index,
+  }))
 }
 
 /** El buscador del catálogo, con la existencia libre delante. */

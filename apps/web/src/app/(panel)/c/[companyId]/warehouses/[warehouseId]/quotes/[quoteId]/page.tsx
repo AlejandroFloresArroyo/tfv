@@ -22,9 +22,11 @@ import { WarehouseNav } from "../../warehouse-nav.tsx"
 import { QuoteStatusBadge, QuoteTypeBadge } from "../quote-badges.tsx"
 import { QuoteAmounts } from "./quote-amounts.tsx"
 import { QuoteEditor } from "./quote-editor.tsx"
+import { QuotePaymentTermsPanel } from "./quote-payment.tsx"
 import { QuotePreview } from "./quote-preview.tsx"
 import { type OutUnit, QuoteReturns } from "./quote-returns.tsx"
 import { QuoteStatusControl } from "./quote-status.tsx"
+import { QuoteTaxesPanel } from "./quote-taxes.tsx"
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations())("warehouses.quotes.detail") }
@@ -92,8 +94,11 @@ export default async function QuotePage({
       : null
 
   const breakdown = breakdownResult.ok ? breakdownResult.data : null
+  // Con precio por paquete, los importes de línea no rigen y no se enseñan. Ver `quotation-pricing`.
   const amountOf = (lineId: string) =>
-    breakdown?.lines.find((line) => line.lineId === lineId) ?? null
+    breakdown?.packagePrice !== undefined
+      ? null
+      : (breakdown?.lines.find((line) => line.lineId === lineId) ?? null)
 
   return (
     <PageShell title={quote.name || quote.folio} subtitle={quote.description || quote.code}>
@@ -105,7 +110,7 @@ export default async function QuotePage({
         </Callout>
       ) : null}
 
-      <QuotePreview>
+      <QuotePreview quote={quote} lines={lines}>
         <div className="grid gap-4 laptop:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="min-w-0 space-y-6">
             <Panel className="p-5">
@@ -250,6 +255,22 @@ export default async function QuotePage({
                 )}
               </section>
             )}
+
+            <QuotePaymentTermsPanel
+              companyId={companyId}
+              warehouseId={warehouseId}
+              quoteId={quoteId}
+              terms={quote.paymentTerms}
+              editable={can(company, "warehouses.quotes.edit_payment") && !closed}
+            />
+
+            <QuoteTaxesPanel
+              companyId={companyId}
+              warehouseId={warehouseId}
+              quoteId={quoteId}
+              taxes={quote.taxes}
+              editable={can(company, "warehouses.quotes.edit_tax") && !closed}
+            />
 
             {canFinish && unitsResult.ok ? (
               <QuoteReturns
