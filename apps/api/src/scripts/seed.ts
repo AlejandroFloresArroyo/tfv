@@ -527,11 +527,28 @@ const GEAR = [
   "Uniforme militar",
 ] as const
 
+const WAREHOUSE = "Nave Monterrey"
+
 async function seedCatalogFor(companyId: string): Promise<{ products: number; units: number }> {
+  /**
+   * El suyo, por su nombre, y no «el primero de la empresa».
+   *
+   * Buscar el primero funcionaba mientras la siembra era la única que creaba almacenes. Desde que
+   * se pueden crear desde la pantalla, un almacén ajeno —el que dejó un recorrido de pruebas que se
+   * cayó a mitad— puede salir el primero, y entonces la siembra intenta llenar **ése**: veinticinco
+   * productos con identificadores legibles que ya existen, y todo revienta con una colisión de
+   * clave que no se parece en nada a la causa.
+   */
   const [existing] = await db
     .select({ id: warehouses.id })
     .from(warehouses)
-    .where(and(eq(warehouses.companyId, companyId), isNull(warehouses.deletedAt)))
+    .where(
+      and(
+        eq(warehouses.companyId, companyId),
+        eq(warehouses.name, WAREHOUSE),
+        isNull(warehouses.deletedAt),
+      ),
+    )
     .limit(1)
 
   const warehouseId = existing?.id ?? newId()
@@ -540,7 +557,7 @@ async function seedCatalogFor(companyId: string): Promise<{ products: number; un
     await db.insert(warehouses).values({
       id: warehouseId,
       companyId,
-      name: "Nave Monterrey",
+      name: WAREHOUSE,
       description: "El almacén principal. Equipo de cámara, iluminación, grip y vestuario.",
       slug: "nave-monterrey",
       isPublished: true,
