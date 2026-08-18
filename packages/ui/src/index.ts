@@ -86,7 +86,11 @@ export {
  * `advance`, `back`, `submit` y `start` sueltos en la raíz del sistema de diseño chocarían con
  * medio vocabulario de cualquier pantalla. Los tipos sí van sueltos: sus nombres ya son suyos.
  */
-export { sanitizeAmount, toDecimalString } from "./lib/amount-input.ts"
+export {
+  type DecimalSeparator,
+  sanitizeAmount,
+  toDecimalString,
+} from "./lib/amount-input.ts"
 export { cn } from "./lib/cn.ts"
 export { filterOptions, type SelectOption } from "./lib/search-select.ts"
 export type { StepErrors, WizardState, WizardStep } from "./lib/wizard.ts"

@@ -6,8 +6,27 @@ describe("lo que se admite al teclear", () => {
     expect(sanitizeAmount("1234.5")).toBe("1234.5")
   })
 
-  it("admite la coma como separador decimal y la escribe como punto", () => {
-    expect(sanitizeAmount("1234,5")).toBe("1234.5")
+  it("descarta el separador de millar del idioma en lugar de confundirlo con el decimal", () => {
+    // Con punto decimal —`es-MX`, `en`— la coma agrupa: `12,345.678` son doce mil trescientos
+    // cuarenta y cinco, no doce con treinta y cuatro.
+    expect(sanitizeAmount("12,345.678")).toBe("12345.67")
+
+    // Con coma decimal —`es` a la europea— es al revés, y se escribe con coma.
+    expect(sanitizeAmount("12.345,678", { decimal: "," })).toBe("12345,67")
+  })
+
+  it("escribe con el separador del idioma, para que la siguiente tecla no lo destruya", () => {
+    // Es el paso que faltaba: si el campo enseña `12.` y luego lee el punto como millar, la
+    // pulsación siguiente se come el decimal y `12,3` acaba siendo `123`.
+    expect(sanitizeAmount(sanitizeAmount("12,", { decimal: "," }) + "3", { decimal: "," })).toBe(
+      "12,3",
+    )
+    expect(sanitizeAmount(sanitizeAmount("12.", {}) + "3", {})).toBe("12.3")
+  })
+
+  it("admite la coma como decimal cuando es la del idioma", () => {
+    expect(sanitizeAmount("1234,5", { decimal: "," })).toBe("1234,5")
+    expect(sanitizeAmount("1234.5")).toBe("1234.5")
   })
 
   it("descarta lo que no es número", () => {
@@ -18,12 +37,13 @@ describe("lo que se admite al teclear", () => {
     expect(sanitizeAmount("12.345")).toBe("12.34")
   })
 
-  it("se queda con el primer separador y descarta los demás", () => {
+  it("se queda con el primer separador decimal y descarta los demás", () => {
     expect(sanitizeAmount("1.2.3")).toBe("1.23")
   })
 
   it("conserva el separador recién tecleado, sin decimales todavía", () => {
     expect(sanitizeAmount("12.")).toBe("12.")
+    expect(sanitizeAmount("12,", { decimal: "," })).toBe("12,")
   })
 
   it("quita los ceros de la izquierda sin estropear el cero coma", () => {
@@ -49,6 +69,10 @@ describe("lo que se envía", () => {
     expect(toDecimalString(".5")).toBe("0.5")
   })
 
+  it("traduce el separador del idioma al que viaja en la petición", () => {
+    expect(toDecimalString("12345,67", ",")).toBe("12345.67")
+  })
+
   it("no devuelve nada cuando no hay número", () => {
     expect(toDecimalString("")).toBeUndefined()
     expect(toDecimalString(".")).toBeUndefined()
@@ -57,10 +81,15 @@ describe("lo que se envía", () => {
 
   it("da algo que el esquema del servicio acepta", () => {
     const pattern = /^-?\d+(\.\d{1,2})?$/
-    for (const raw of ["1234,5", "0", "0.05", "-30,25", "007.10"]) {
+    for (const raw of ["1,234.5", "0", "0.05", "-30.25", "007.10"]) {
       const value = toDecimalString(sanitizeAmount(raw, { negative: true }))
       expect(value).toBeDefined()
       expect(value).toMatch(pattern)
+    }
+
+    for (const raw of ["1.234,5", "0", "0,05", "-30,25", "007,10"]) {
+      const written = sanitizeAmount(raw, { negative: true, decimal: "," })
+      expect(toDecimalString(written, ",")).toMatch(pattern)
     }
   })
 })

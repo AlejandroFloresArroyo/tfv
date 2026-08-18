@@ -2,7 +2,7 @@
 
 import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react"
 import { forwardRef, useId } from "react"
-import { sanitizeAmount } from "../lib/amount-input.ts"
+import { type DecimalSeparator, sanitizeAmount } from "../lib/amount-input.ts"
 import { cn } from "../lib/cn.ts"
 
 /**
@@ -141,6 +141,13 @@ export interface AmountInputProps
   onValueChange: (value: string) => void
   /** Para diferencias de precio, que pueden restar. */
   negative?: boolean | undefined
+  /**
+   * Cuál de los dos signos separa los decimales en el idioma en que se está sirviendo la página.
+   *
+   * Sin él se supone el punto. Importa más de lo que parece: con el supuesto equivocado, teclear
+   * un importe agrupado sale con tres órdenes de magnitud de menos y sin aviso.
+   */
+  decimal?: DecimalSeparator | undefined
   /** Moneda o unidad, a la izquierda del control. */
   prefix?: string | undefined
 }
@@ -154,7 +161,7 @@ export interface AmountInputProps
  * teléfono, que es lo único que se quería del otro.
  */
 export const AmountInput = forwardRef<HTMLInputElement, AmountInputProps>(function AmountInput(
-  { value, onValueChange, negative, prefix, className, ...rest },
+  { value, onValueChange, negative, decimal, prefix, className, ...rest },
   ref,
 ) {
   const control = (
@@ -164,7 +171,7 @@ export const AmountInput = forwardRef<HTMLInputElement, AmountInputProps>(functi
       inputMode="decimal"
       autoComplete="off"
       value={value}
-      onChange={(event) => onValueChange(sanitizeAmount(event.target.value, { negative }))}
+      onChange={(event) => onValueChange(sanitizeAmount(event.target.value, { negative, decimal }))}
       className={cn("text-right tabular-nums", prefix ? "rounded-l-none" : "", className)}
       {...rest}
     />
