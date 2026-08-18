@@ -211,25 +211,21 @@ export const rentFrequency = pgEnum("rent_frequency", ["daily", "weekly", "month
 export const roundDirection = pgEnum("round_direction", ["up", "down"])
 
 /**
- * Contacto de una de las partes.
- *
- * Con `| undefined` explícito por lo mismo que la tarifa por periodicidad: lo que llega de un
- * esquema de ruta es «presente con valor indefinido», no «ausente».
- */
-export interface QuoteContact {
-  readonly name: string
-  readonly phone?: string | undefined
-  readonly position?: string | undefined
-}
-
-/**
- * Las condiciones de pago, el bloque fiscal y el desglose se declaran en los contratos.
+ * Las condiciones de pago, el bloque fiscal, el desglose y los contactos se declaran en los
+ * contratos.
  *
  * Son la entrada y la salida del motor de cálculo, que corre igual en el servidor y en el
  * navegador. Declararlos aquí obligaría a mantener dos copias de la misma estructura, y el día que
  * divergieran el importe guardado dejaría de ser el importe calculado.
  */
-export type { QuotationBreakdown, QuotePaymentTerms, QuoteTaxes } from "@tfv/contracts"
+export type {
+  QuotationBreakdown,
+  QuoteContact,
+  QuotePaymentTerms,
+  QuoteTaxes,
+} from "@tfv/contracts"
+
+import type { QuoteContact } from "@tfv/contracts"
 
 export const warehouseQuotes = pgTable(
   "warehouse_quotes",
