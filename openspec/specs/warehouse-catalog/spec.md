@@ -184,6 +184,35 @@ de unidades disponibles para ella.
 - **WHEN** se crea una medida sin indicar cantidad
 - **THEN** la medida existe con cero unidades
 
+### Requirement: Corregir una medida no toca sus unidades
+
+Una medida SHALL poder corregirse en cualquiera de sus datos, y la corrección SHALL dejar intactas
+las unidades que ya existen para ella.
+
+La cantidad inicial NO SHALL poder corregirse. Materializó unidades —objetos físicos, cada uno con
+su código y su etiqueta impresa—, y «que ahora sean cinco en vez de tres» no dice cuáles se
+destruyen. Las unidades se dan de alta y de baja por su cuenta.
+
+Una medida SHALL alcanzarse únicamente por el camino de su producto.
+
+#### Scenario: Se corrige una errata sin perder las existencias
+
+- **GIVEN** una medida con tres unidades
+- **WHEN** se corrige su nombre
+- **THEN** la medida pasa a llamarse como se corrigió
+- **AND** sus tres unidades siguen siendo las mismas
+
+#### Scenario: Se corrige sólo lo que se manda
+
+- **GIVEN** una medida con tipo y diferencia de precio
+- **WHEN** se corrige únicamente la diferencia de precio
+- **THEN** el resto de sus datos queda como estaba
+
+#### Scenario: La medida de otro producto no se alcanza
+
+- **WHEN** se intenta corregir una medida por el camino de un producto que no es el suyo
+- **THEN** se responde que no existe
+
 ### Requirement: Eliminar una medida arrastra sus unidades
 
 Eliminar una medida SHALL eliminar sus unidades, y SHALL rechazarse cuando alguna esté comprometida
