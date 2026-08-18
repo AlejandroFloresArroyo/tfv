@@ -33,7 +33,11 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 - [ ] **Asistente de variante de cuatro pasos**
 - [ ] Detalle de producto: información, medidas, precios, unidades
 - [ ] Unidades con etiquetas individuales y en lote
-- [ ] Listas de precios
+- [~] **Listas de precios**: listado con cuántos productos tienen tarifa en cada una, alta, edición
+      y baja con la cascada contada por el servidor, ficha con las tarifas —venta, renta y
+      penalización, fija o por periodicidad— y **asignación masiva** en las dos direcciones. Falta
+      la advertencia que la spec pide cuando la lista está **referenciada por cotizaciones en
+      curso**: no hay dato en la API con el que darla (H-34)
 - [ ] Categorías anidadas
 - [x] **Ubicaciones como organigrama navegable**
 - [x] Bandeja de cotizaciones y ficha, con su equipo apartado y sus importes
