@@ -26,8 +26,8 @@ import { SaveState } from "./quote-payment.tsx"
  *
  * El esquema exige nombre, así que una fila a medio escribir haría fallar el guardado **del bloque
  * entero** —el `PATCH` manda las dos listas completas, y mandarlas completas es lo que hace seguro
- * que el guardado automático repita; ver H-50— y el fallo se leería como si lo escrito en
- * las otras filas se hubiera perdido. Mientras le falte el nombre vive sólo aquí, señalada. No
+ * que el guardado automático repita; ver H-59— y el fallo se leería como si lo escrito en las otras
+ * filas se hubiera perdido. Mientras le falte el nombre vive sólo aquí, señalada. No
  * bloquea: no es un error, es una fila a medio hacer. El teléfono y el cargo sí son opcionales,
  * porque un contacto del que sólo se sabe el nombre sigue siendo útil.
  *

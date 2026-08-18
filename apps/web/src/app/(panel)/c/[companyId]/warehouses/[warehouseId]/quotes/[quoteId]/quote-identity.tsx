@@ -38,12 +38,13 @@ import { usePreviewedQuote, usePublishPreview } from "./quote-preview.tsx"
  * `PATCH` acepta cada campo por separado, pero este bloque manda **los seis juntos**: es el mismo
  * documento y mandarlo entero es lo que hace que reintentar sea seguro —el guardado automático
  * repite el estado más reciente, y con un cuerpo parcial repetir dejaría de ser inocuo—. Que eso
- * dependa de una costumbre y no del contrato es H-50: los cuatro bloques del documento se guardan
- * con dos verbos y tres formas de cuerpo. Una ventana con una sola
- * fecha escrita mandaría `null` en la otra y borraría del servidor la que había, así que el bloque
- * espera a que estén las dos —o ninguna, que sí es una instrucción—. Una renta sin fechas es legal
- * hasta que quiere avanzar; lo que no es legal es perder la mitad de la ventana por haber empezado
- * a escribir.
+ * dependa de una costumbre y no del contrato es H-59: los cuatro bloques del documento se guardan
+ * con dos verbos y tres formas de cuerpo.
+ *
+ * De ahí la regla: una ventana con una sola fecha escrita mandaría `null` en la otra y borraría del
+ * servidor la que había, así que el bloque espera a que estén las dos —o ninguna, que sí es una
+ * instrucción—. Una renta sin fechas es legal hasta que quiere avanzar; lo que no es legal es
+ * perder la mitad de la ventana por haber empezado a escribir.
  *
  * ## Qué no se enseña aquí
  *

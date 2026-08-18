@@ -48,7 +48,7 @@ export async function generateMetadata(): Promise<Metadata> {
  * unidades sólo se listan **por medida** (`…/measurements/{id}/units`), así que contarlas en un
  * almacén costaría una petición por medida del catálogo entero. No se ha inventado una cifra
  * aproximada ni se han pedido rutas nuevas: queda fuera y anotado en `openspec/HALLAZGOS.md`
- * (H-49).
+ * (H-58).
  *
  * ## Por qué cada bloque pide su cuenta por separado
  *
@@ -289,7 +289,7 @@ export default async function WarehousePanelPage({
  * decidir está bien; con cuatro, hay cuatro personas esperando respuesta.
  *
  * El color va con la pareja cruda de la paleta, la misma que usa `Badge` en su tono de aviso, y no
- * con `text-warning`: ese nombre no existe en los tokens. Ver H-48.
+ * con `text-warning`: ese nombre no existe en los tokens. Ver H-57.
  */
 function Stat({
   icon: Icon,

@@ -32,7 +32,7 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
       panel ya existe**, como primera pestaña y no como portada —el porqué, en su commit—: cuenta
       productos y altas por completar, las cotizaciones por estado y los pedidos por decidir, y
       lista lo que pide atención. Le falta **el recuento de unidades por estado**, que la API de
-      hoy no permite componer sin una petición por medida (H-49)
+      hoy no permite componer sin una petición por medida (H-58)
 - [x] Catálogo con rejilla, filtros y paginación
 - [x] **Asistente de producto de cinco pasos**, con validación por paso contra el esquema del
       servidor y el paso en la dirección

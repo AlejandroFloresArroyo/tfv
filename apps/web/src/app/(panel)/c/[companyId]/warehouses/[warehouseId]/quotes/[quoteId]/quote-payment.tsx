@@ -307,7 +307,7 @@ export function QuotePaymentTermsPanel({
  * `text-success`: esos dos nombres no existen. El sistema de diseño declara `danger` y ninguno de
  * los otros dos, así que la clase no generaba nada y el aviso salía del color del texto normal —
  * comprobado en el navegador, `rgb(30,30,30)` en los dos casos. Son las mismas parejas que usa
- * `Badge` para sus tonos. Ver H-48: cuando el token semántico exista, esto vuelve a un nombre.
+ * `Badge` para sus tonos. Ver H-57: cuando el token semántico exista, esto vuelve a un nombre.
  */
 export function SaveState({
   saving,
