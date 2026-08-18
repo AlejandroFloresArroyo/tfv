@@ -44,11 +44,15 @@ export {
   DialogTrigger,
 } from "./components/dialog.tsx"
 export {
+  AmountInput,
+  type AmountInputProps,
   Field,
   type FieldIds,
   type FieldProps,
   Input,
   type InputProps,
+  Textarea,
+  type TextareaProps,
 } from "./components/field.tsx"
 export {
   Menu,
@@ -75,12 +79,13 @@ export {
   type WizardLabels,
   type WizardStepView,
 } from "./components/wizard.tsx"
-export { cn } from "./lib/cn.ts"
-export type { StepErrors, WizardState, WizardStep } from "./lib/wizard.ts"
 /**
  * La máquina del asistente, agrupada.
  *
  * `advance`, `back`, `submit` y `start` sueltos en la raíz del sistema de diseño chocarían con
  * medio vocabulario de cualquier pantalla. Los tipos sí van sueltos: sus nombres ya son suyos.
  */
+export { sanitizeAmount, toDecimalString } from "./lib/amount-input.ts"
+export { cn } from "./lib/cn.ts"
+export type { StepErrors, WizardState, WizardStep } from "./lib/wizard.ts"
 export * as wizard from "./lib/wizard.ts"
