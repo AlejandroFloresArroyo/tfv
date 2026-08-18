@@ -112,7 +112,7 @@ Lo construido hasta ahora, medido y no estimado:
 | Rebanadas | 10 de 30 empezadas, **ninguna cerrada del todo** |
 | Código sin pruebas | 31 130 líneas |
 | Código de prueba | 9 973 líneas |
-| Pruebas | **488** — 98 contratos, 59 datos, 258 API, 29 web, 44 de extremo a extremo |
+| Pruebas | **489** — 99 contratos, 59 datos, 258 API, 29 web, 44 de extremo a extremo |
 | Esquema | 91 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
 | Aislamiento | 195 políticas · 91/91 tablas · 0 con identidad cruda |
 | Migraciones | 11, replicadas desde cero en cada verificación |
@@ -1755,10 +1755,23 @@ la verificación de coherencia pasa sobre la base sembrada en vez de encontrarse
 ahí. Todas nacen abiertas: congelar un desglose a mano en la siembra sería reimplementar la
 transición.
 
+**Dos defectos que sólo se vieron mirando la pantalla**
+
+Ninguna prueba los habría cazado, porque las dos cosas *funcionaban*: la ficha enseñaba **«iva»** en
+lugar de «IVA» —el desglose rellenaba el concepto con la clave interna cuando nadie había escrito
+uno, y un documento con consecuencias contractuales no puede mostrar el nombre de una columna— y la
+ventana de renta salía en crudo, «Mon Aug 31 2026 18:00:00 GMT-0600», porque pedía un formato con
+nombre que la configuración no define.
+
+El concepto pasa a ser lo que escribió quien registró el impuesto, **o nada**; ponerle nombre es
+trabajo de quien traduce. Tiene su prueba en los contratos.
+
 **Comprobado**
 
-TypeScript en los seis paquetes, Biome, las **444 pruebas** de vitest y las **44 de extremo a
-extremo**, cuatro de ellas nuevas. El build de producción con Webpack genera las dos rutas.
+TypeScript en los seis paquetes, Biome, las **445 pruebas** de vitest y las **44 de extremo a
+extremo**, cuatro de ellas nuevas. El build de producción con Webpack genera las dos rutas, y las
+dos pantallas se miraron de verdad: la cadena de importes cuadra a la vista —490.00 más 78.40 de
+IVA, 17.05 de comisión, 585.45 a pagar—.
 
 Una nota de entorno: la primera pasada de extremo a extremo falló entera porque el proceso de la API
 llevaba horas levantado sin recarga y servía un registro de rutas anterior a las cotizaciones. No
