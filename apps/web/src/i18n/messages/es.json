@@ -643,7 +643,21 @@
       "provisionalFailed": "No se pudo dar de alta el equipo",
       "provisional": "Por completar",
       "provisionalFilter": "Sólo lo que falta por completar",
-      "linesPriceOnly": "El equipo ya salió de la nave: no se añade, no se quita y no cambian las cantidades. El precio sí se puede ajustar. Para devolverlo, usa el retorno del equipo, más abajo."
+      "linesPriceOnly": "El equipo ya salió de la nave: no se añade, no se quita y no cambian las cantidades. El precio sí se puede ajustar. Para devolverlo, usa el retorno del equipo, más abajo.",
+      "extension": "Extensión de renta",
+      "extensionHint": "El cliente se queda el equipo más tiempo. Se crea una cotización nueva enlazada y el equipo no vuelve a la nave.",
+      "extend": "Extender la renta",
+      "extensionTitle": "Extender la renta",
+      "extensionDescription": "El equipo marcado sigue fuera bajo la cotización nueva. Lo que no marques se queda en ésta, esperando su retorno.",
+      "extensionStart": "Empieza",
+      "extensionEnd": "Termina",
+      "extensionUnits": "{count, plural, =0 {Sin equipo marcado} one {# unidad sigue fuera} other {# unidades siguen fuera}}",
+      "extensionUnitsHint": "Se elige por código, que es lo que lleva escrito la etiqueta de la nave.",
+      "extensionNote": "La extensión nace sin precio: su periodo es otro. Se pone en sus líneas.",
+      "extensionSubmit": "Crear la extensión",
+      "extensionName": "{name} · extensión",
+      "extensionFailed": "No se pudo crear la extensión",
+      "extends": "Extiende a"
     },
     "completeOnly": "Sólo los completos"
   }

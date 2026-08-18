@@ -22,6 +22,7 @@ import { WarehouseNav } from "../../warehouse-nav.tsx"
 import { QuoteStatusBadge, QuoteTypeBadge } from "../quote-badges.tsx"
 import { QuoteAmounts } from "./quote-amounts.tsx"
 import { QuoteEditor } from "./quote-editor.tsx"
+import { QuoteExtension } from "./quote-extension.tsx"
 import { QuotePaymentTermsPanel } from "./quote-payment.tsx"
 import { type PaymentRow, QuotePayments } from "./quote-payments.tsx"
 import { QuotePreview } from "./quote-preview.tsx"
@@ -134,7 +135,15 @@ export default async function QuotePage({
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {quote.extendsQuoteId ? (
+                    <Link
+                      href={`/c/${companyId}/warehouses/${warehouseId}/quotes/${quote.extendsQuoteId}`}
+                      className="rounded-xs text-body3 text-content-muted hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                    >
+                      ↗ {t("warehouses.quotes.extends")}
+                    </Link>
+                  ) : null}
                   <QuoteTypeBadge type={quote.type} />
                   <QuoteStatusBadge status={quote.status} />
                 </div>
@@ -151,6 +160,19 @@ export default async function QuotePage({
                         <CalendarRange className="size-4 text-content-faint" aria-hidden="true" />
                         {format.dateTime(new Date(quote.startsOn), { dateStyle: "medium" })} –{" "}
                         {format.dateTime(new Date(quote.endsOn), { dateStyle: "medium" })}
+                        {can(company, "warehouses.quotes.create") &&
+                        can(company, "warehouses.quotes.rented") &&
+                        unitsResult.ok ? (
+                          <QuoteExtension
+                            companyId={companyId}
+                            warehouseId={warehouseId}
+                            quoteId={quoteId}
+                            quoteName={quote.name || quote.folio}
+                            units={unitsResult.data.items.filter(
+                              (unit) => unit.status === "rented",
+                            )}
+                          />
+                        ) : null}
                         {breakdown ? (
                           <span className="text-content-faint">
                             · {t("warehouses.quotes.days", { count: breakdown.days })}

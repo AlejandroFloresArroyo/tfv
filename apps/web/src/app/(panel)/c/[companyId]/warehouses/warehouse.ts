@@ -131,6 +131,8 @@ export interface QuoteRow {
   id: string
   warehouseId: string
   orderId: string | null
+  /** La renta que ésta extiende, si lo es. Encadenable. */
+  extendsQuoteId: string | null
   clientId: string | null
   responsibleId: string | null
   code: string

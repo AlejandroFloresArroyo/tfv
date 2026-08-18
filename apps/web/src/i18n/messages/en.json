@@ -643,7 +643,21 @@
       "provisionalFailed": "Could not add the equipment",
       "provisional": "To complete",
       "provisionalFilter": "Only what is left to complete",
-      "linesPriceOnly": "The equipment has left the warehouse: nothing is added, removed or re-counted. Prices can still be adjusted. To bring it back, use the equipment return below."
+      "linesPriceOnly": "The equipment has left the warehouse: nothing is added, removed or re-counted. Prices can still be adjusted. To bring it back, use the equipment return below.",
+      "extension": "Rental extension",
+      "extensionHint": "The client keeps the equipment longer. A new linked quote is created and the equipment never comes back to the warehouse.",
+      "extend": "Extend the rental",
+      "extensionTitle": "Extend the rental",
+      "extensionDescription": "Ticked equipment stays out under the new quote. Whatever you leave unticked stays on this one, awaiting return.",
+      "extensionStart": "Starts",
+      "extensionEnd": "Ends",
+      "extensionUnits": "{count, plural, =0 {No equipment ticked} one {# unit stays out} other {# units stay out}}",
+      "extensionUnitsHint": "Picked by code, which is what the warehouse label reads.",
+      "extensionNote": "The extension is born with no price: its period is a different one. Set it on its lines.",
+      "extensionSubmit": "Create the extension",
+      "extensionName": "{name} · extension",
+      "extensionFailed": "Could not create the extension",
+      "extends": "Extends"
     },
     "completeOnly": "Only complete ones"
   }

@@ -615,6 +615,67 @@ test.describe("las condiciones de pago", () => {
   })
 })
 
+test.describe("la extensión de renta", () => {
+  const trash: Created[] = []
+  test.afterEach(async ({ as }) => await sweep(await as("owner"), trash))
+
+  test("se lleva el equipo que sigue fuera y deja el resto a la original", async ({
+    as,
+    companies,
+  }) => {
+    // Una renta no se alarga editándola: su equipo está fuera y su composición está congelada. La
+    // extensión recibe los vínculos sin que la unidad pase un instante por «disponible», que es
+    // donde otra cotización podría llevársela mientras sigue en un rodaje.
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+    const quoteId = await ownQuote(
+      context,
+      companyId,
+      warehouseId,
+      `Extender ${Date.now()}`,
+      trash,
+      3,
+    )
+
+    const base = `/api/companies/${companyId}/warehouses/${warehouseId}/quotes/${quoteId}/status`
+    for (const status of ["in_progress", "in_rent"]) {
+      await context.request.patch(base, { data: { status } })
+    }
+
+    await page.goto(`${QUOTES(companyId, warehouseId)}/${quoteId}`)
+    await page.getByRole("button", { name: "Extender la renta" }).click()
+
+    const dialog = page.getByRole("dialog")
+    await dialog.getByLabel("Empieza").fill("2026-09-17")
+    await dialog.getByLabel("Termina").fill("2026-10-01")
+    // Parcial: una unidad no sigue y se queda esperando su retorno en la original.
+    await dialog.getByRole("checkbox").first().uncheck()
+    await expect(dialog.getByText("2 unidades siguen fuera")).toBeVisible()
+
+    await page.getByRole("button", { name: "Crear la extensión" }).click()
+    await page.waitForURL((url) => !url.pathname.endsWith(quoteId), { timeout: 20_000 })
+
+    const extensionId = page.url().split("/quotes/")[1] as string
+    trash.unshift({ companyId, warehouseId, quoteId: extensionId })
+
+    // Nace en renta, enlazada, con su ventana y sin precio: el periodo es otro.
+    await expect(page.getByText("En renta").first()).toBeVisible()
+    await expect(page.getByRole("link", { name: /Extiende a/ })).toBeVisible()
+    await expect(page.getByText(/17 sept 2026/)).toBeVisible()
+    await expect(page.getByText(/no tiene precio/i)).toBeVisible()
+
+    // Dos unidades responden a la extensión, y la que no sigue se quedó en la original.
+    const kept = page.getByRole("region", { name: "Retorno del equipo" })
+    await expect(kept.getByRole("listitem")).toHaveCount(2)
+
+    await page.goto(`${QUOTES(companyId, warehouseId)}/${quoteId}`)
+    const left = page.getByRole("region", { name: "Retorno del equipo" })
+    await expect(left.getByRole("listitem")).toHaveCount(1)
+  })
+})
+
 test.describe("el alta provisional", () => {
   const trash: Created[] = []
   const products: { companyId: string; warehouseId: string; productId: string }[] = []
