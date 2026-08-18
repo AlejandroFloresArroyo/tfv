@@ -185,7 +185,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 08 | `migrate-media-storage` | ⬜ | |
+| 08 | `migrate-media-storage` | 🟡 | **Subida directa entera**: autorización de escritura acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión sobre el mismo registro, confirmación que dice qué se escribió, y validación de nombre, tipo y coherencia. Del lado del cliente, el selector con vista previa, reducción y reintento por objeto. Falta que las pantallas lo usen, y el recolector espera al despachador de trabajos (09) |
 | 09 | `migrate-activity-and-notifications` | ⬜ | |
 | 10 | `migrate-identity-and-companies` | 🟡 | Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen, y las pantallas de prospecto —el formulario público es de la 19 y la bandeja necesita un área de administración de plataforma |
 | 11 | `migrate-subscriptions-and-billing` | ⬜ | |
@@ -2477,3 +2477,64 @@ sembrada y crea **todo lo demás**.
 → producto por el asistente de cinco pasos → lista de precios con su asignación → cotización con su
 línea y su importe. Y las cuatro pantallas de los árboles de trabajo, cada una verificada por quien
 la escribió con dos cuentas de permisos distintos y en ancho de teléfono.
+
+
+### 2026-08-18 · Los archivos, y cuatro frentes a la vez
+
+Cinco frentes en paralelo: cuatro árboles de trabajo y el tronco. Lo que cierra la sesión es la
+**rebanada 08 entera del lado del servidor** —un archivo se registra, se autoriza su escritura y se
+confirma— más el selector que la usa desde el navegador.
+
+**Cómo se guarda un archivo**
+
+Subida directa: la API firma una autorización acotada a un objeto y con caducidad, y el navegador
+escribe contra el almacenamiento. Los bytes no pasan por el servicio, y por eso ningún endpoint
+necesita aceptar cargas grandes. Comprobado contra el almacenamiento **de verdad**, sin dobles,
+porque lo que se comprueba es una propiedad suya: la autorización escribe su objeto sin credencial
+ninguna, y sobre otro objeto responde que la firma no vale. Si eso no se cumpliera, entregarle la
+autorización al navegador sería entregarle el almacenamiento entero.
+
+Tres decisiones que no estaban en la spec y que salieron de escribir el cliente antes que el
+servidor:
+
+- **Un archivo son cinco objetos** —el original y cuatro derivados— y **los produce el navegador**.
+  La autorización se emite para los cinco de una vez.
+- **La confirmación dice qué se escribió**, no si todo fue bien. Un navegador que no descodifica
+  `heic` sube el original y ningún derivado: no es un fallo, es lo que ese navegador podía hacer.
+  Lo que sí es un fallo es que falte el original.
+- **Se puede volver a autorizar** el mismo registro. Que caduque una firma no puede costar resubir
+  doce megas.
+
+Las tres las pidió quien escribía el selector, antes de que existiera una línea del servidor. Es el
+argumento de escribir el cliente contra un contrato dicho en voz alta: las tres habrían costado
+mucho más descubiertas después.
+
+**Lo que apareció**
+
+- **Confirmar una subida era imposible** (H-55): la tabla de archivos tenía política de lectura, de
+  alta y la de plataforma, y ninguna de actualización. Confirmar *es* actualizar. Leyendo el modelo
+  no se ve; las tres políticas que había parecen las de una tabla terminada.
+- **`text-warning` y `text-success` no existían** (H-57), y se usaban en once sitios: todos los
+  avisos del constructor de cotizaciones eran invisibles. Al repararlos con las rampas crudas
+  pasaron a ilegibles —`yellow.9` da 2.63:1 sobre este lienzo—, así que los papeles entran donde
+  debían, medidos.
+- **`max-w-xl` mide veinte píxeles** en este tema (H-46), y llevaba tiempo encogiendo el formulario
+  de cambio de correo a una palabra por renglón.
+- **El cambio de contraseña cierra también la sesión actual**, y la spec decía lo contrario (H-45).
+  Corregida hacia lo que el sistema hace, con el requisito de que la pantalla lo advierta antes.
+- **La tabla de tipos de archivo estaba escrita dos veces**, en el sistema de diseño y en el
+  contrato. Coincidían —las noventa y siete pruebas del paquete pasando contra la del contrato lo
+  demuestran— y se unificaron antes de que dejaran de coincidir.
+
+**Lo que queda dicho y sin decidir**
+
+Una **firma de entrega** vive hoy en el mismo cubo de lectura abierta que una foto de catálogo
+(H-56), porque el modelo declara la dirección de lectura como pública. Para el catálogo es
+correcto; para una firma, nadie lo ha decidido a conciencia, y separarlo pide un segundo cubo con
+lecturas firmadas y caducas.
+
+**Comprobado**
+
+742 pruebas antes de la última fusión y las cinco suites en verde después. La base de pruebas
+compartida volvió a morder: dos ejecuciones simultáneas se pisan y producen fallos en archivos que
+nadie ha tocado (H-12). Se perdió una vuelta de diagnóstico por eso, en los dos lados.
