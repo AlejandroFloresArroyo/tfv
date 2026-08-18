@@ -9,19 +9,18 @@
  * implementaciones no coincidirían, y la que mandaría sería la del navegador, que es exactamente el
  * defecto M-06.
  *
- * Lo que sí decide aquí es **cuál es el precio**: la precedencia de `warehouse-catalog` —tarifa de
- * la lista, o precio del producto, o cero— más el ajuste propio de la medida.
+ * Tampoco decide **cuál es el precio**: la precedencia de `warehouse-catalog` —tarifa de la lista,
+ * o precio del producto, o cero— y el ajuste propio de la medida están en `resolveRate`, también
+ * compartida, por el mismo motivo: el constructor de cotizaciones resuelve la tarifa de una línea
+ * mientras se edita, y dos reglas darían dos precios. Lo que queda aquí es **leer** de la base lo
+ * que esa regla necesita.
  */
 
 import {
-  add,
   computeQuotation,
-  formatMoney,
-  isZero,
-  money,
   type QuotationBreakdown,
   type QuotationLineInput,
-  type RateSchedule,
+  resolveRate,
 } from "@tfv/contracts"
 import type { Transaction } from "@tfv/db"
 import {
@@ -69,12 +68,13 @@ export async function resolveLines(
   const reserved = await reservedByLine(tx, quoteId)
 
   return rows.map((row) => {
-    const difference = row.priceDifference
-
-    // Precedencia de `warehouse-catalog`: la tarifa de la lista, o el precio del producto, o cero.
-    // El escalar del producto **sólo aplica a la venta**; una renta sin tarifa la resuelve el motor.
-    const listed = row.rate?.sale
-    const base = listed && !isZero(money(listed)) ? listed : row.productPrice
+    // La precedencia y el ajuste de la medida son una sola regla, y vive en `@tfv/contracts`
+    // porque el navegador la necesita igual que nosotros. Ver `resolveRate`.
+    const rate = resolveRate({
+      productPrice: row.productPrice,
+      priceDifference: row.priceDifference,
+      ...(row.rate ? { listed: row.rate } : {}),
+    })
 
     return {
       id: row.line.id,
@@ -82,9 +82,7 @@ export async function resolveLines(
       measurementId: row.line.measurementId,
       quantity: (reserved.get(row.line.id) ?? []).length,
       frequency: row.line.frequency,
-      basePrice: adjust(base, difference),
-      ...(row.rate ? { rent: adjustSchedule(row.rate.rent, difference) } : {}),
-      ...(row.rate ? { penalty: adjustSchedule(row.rate.penalty, difference) } : {}),
+      ...rate,
       position: row.line.position,
       positionProduct: row.line.positionProduct,
     }
@@ -121,28 +119,4 @@ export async function computeOf(
     ...(quote.paymentTerms ? { payment: quote.paymentTerms } : {}),
     ...(quote.taxes ? { taxes: quote.taxes } : {}),
   })
-}
-
-/** Suma el ajuste de la medida al precio resuelto. En decimal exacto, nunca en coma flotante. */
-function adjust(amount: string, difference: string): string {
-  const value = money(amount)
-  return isZero(money(difference)) ? formatMoney(value) : formatMoney(add(value, money(difference)))
-}
-
-/**
- * El ajuste de la medida alcanza a **todos** los importes de la tarifa.
- *
- * Una medida más cara lo es por semana y por mes, no sólo al venderla. Dejar la renta sin ajustar
- * haría que el mismo equipo costara distinto según se compre o se rente, sin que nadie lo decidiera.
- */
-function adjustSchedule(schedule: RateSchedule, difference: string): RateSchedule {
-  if (isZero(money(difference))) return schedule
-
-  return {
-    isFixed: schedule.isFixed,
-    ...(schedule.fixed === undefined ? {} : { fixed: adjust(schedule.fixed, difference) }),
-    ...(schedule.daily === undefined ? {} : { daily: adjust(schedule.daily, difference) }),
-    ...(schedule.weekly === undefined ? {} : { weekly: adjust(schedule.weekly, difference) }),
-    ...(schedule.monthly === undefined ? {} : { monthly: adjust(schedule.monthly, difference) }),
-  }
 }
