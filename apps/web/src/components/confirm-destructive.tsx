@@ -3,7 +3,7 @@
 import { Button, Callout, Dialog, DialogClose, DialogContent } from "@tfv/ui"
 import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
-import { useState } from "react"
+import { useId, useState } from "react"
 import { useSubmit } from "./use-submit.ts"
 
 /**
@@ -39,7 +39,7 @@ export function ConfirmDestructive({
    * igual que el título y la etiqueta de confirmación. Ausente —lo normal— la cascada se conoce sin
    * preguntar y no hay nada que esperar.
    */
-  countingLabel,
+  blockedReason,
   confirmLabel,
   action,
   open: controlledOpen,
@@ -50,13 +50,14 @@ export function ConfirmDestructive({
   title: string
   entity: string
   cascade?: readonly string[]
-  countingLabel?: string
+  blockedReason?: string
   confirmLabel: string
   action: () => Promise<unknown>
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }) {
   const t = useTranslations()
+  const reasonId = useId()
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
 
   const open = controlledOpen ?? uncontrolledOpen
@@ -88,9 +89,9 @@ export function ConfirmDestructive({
             })}
           </p>
 
-          {countingLabel ? (
-            <p className="text-body2 text-content-muted" aria-live="polite">
-              {countingLabel}
+          {blockedReason ? (
+            <p id={reasonId} className="text-body2 text-content-muted" aria-live="polite">
+              {blockedReason}
             </p>
           ) : cascade.length > 0 ? (
             <div>
@@ -103,7 +104,11 @@ export function ConfirmDestructive({
             </div>
           ) : null}
 
-          <p className="text-body2 text-content-faint">{t("common.cannotUndo")}</p>
+          {/* Nada va a pasar todavía: advertir de que no se deshace lo que no se puede hacer
+              confunde. Vuelve en cuanto la baja sea posible. */}
+          {blockedReason ? null : (
+            <p className="text-body2 text-content-faint">{t("common.cannotUndo")}</p>
+          )}
 
           <div className="flex flex-wrap justify-end gap-2 pt-1">
             <DialogClose asChild>
@@ -112,11 +117,16 @@ export function ConfirmDestructive({
               </Button>
             </DialogClose>
 
+            {/* Deshabilitado **y explicado**: un botón apagado sin más deja a quien usa lector de
+                pantalla sin saber por qué, que es la queja que `item-actions` evita omitiendo las
+                acciones en lugar de apagarlas. Aquí no se puede omitir —es la acción del diálogo—,
+                así que se apunta al motivo. */}
             <Button
               type="submit"
               variant="danger"
               loading={form.pending}
-              disabled={countingLabel !== undefined}
+              disabled={blockedReason !== undefined}
+              {...(blockedReason ? { "aria-describedby": reasonId } : {})}
             >
               {confirmLabel}
             </Button>

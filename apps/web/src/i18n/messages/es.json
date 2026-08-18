@@ -454,10 +454,15 @@
       "publishHintNew": "Puedes publicarlo ahora o dejarlo oculto hasta que tenga catálogo.",
       "scopeCounting": "Contando lo que se lleva por delante…",
       "scopeFailed": "No se pudo contar el contenido del almacén.",
-      "scopeStorages": "{count, plural, =0 {Ninguna ubicación} one {# ubicación} other {# ubicaciones}}",
-      "scopeCategories": "{count, plural, =0 {Ninguna categoría} one {# categoría} other {# categorías}}",
-      "scopeProducts": "{count, plural, =0 {Ningún producto} one {# producto} other {# productos}}",
-      "scopeCommerce": "Sus listas de precios, cotizaciones y pedidos"
+      "scopeStorages": "{count, plural, one {# ubicación} other {# ubicaciones}}",
+      "scopeCategories": "{count, plural, one {# categoría} other {# categorías}}",
+      "scopeProducts": "{count, plural, one {# producto} other {# productos}}",
+      "scopePriceLists": "{count, plural, one {# lista de precios} other {# listas de precios}}",
+      "scopeQuotes": "{count, plural, one {# cotización} other {# cotizaciones}}",
+      "scopeOrders": "{count, plural, one {# pedido} other {# pedidos}}",
+      "scopeOpenQuotes": "{count, plural, one {# cotización en curso} other {# cotizaciones en curso}}",
+      "scopeOpenOrders": "{count, plural, one {# pedido en curso} other {# pedidos en curso}}",
+      "scopeBlocked": "No se puede dar de baja: tiene {what}. Ciérralos o cancélalos antes."
     },
     "quotes": {
       "title": "Cotizaciones",

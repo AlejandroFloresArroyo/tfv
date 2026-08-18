@@ -1,7 +1,7 @@
 "use client"
 
 import { Button, DialogTrigger, Field, Input, Switch } from "@tfv/ui"
-import { useTranslations } from "next-intl"
+import { useFormatter, useTranslations } from "next-intl"
 import { useEffect, useState } from "react"
 import { type ItemAction, ItemActions } from "~/components/collection/item-actions.tsx"
 import { ConfirmDestructive } from "~/components/confirm-destructive.tsx"
@@ -35,11 +35,22 @@ export interface WarehouseSummary {
   isPublished: boolean
 }
 
-/** Lo que se lleva por delante la baja, tal como lo cuenta el servidor. */
+/**
+ * Lo que se lleva por delante la baja, tal como lo cuenta el servidor.
+ *
+ * `quotes` y `orders` son **todas** —lo que deja de estar accesible—, y `openQuotes`/`openOrders`
+ * las que además la impiden. Son cifras distintas a propósito: la primera es lo que hay que
+ * enumerar, la segunda lo que hay que advertir.
+ */
 interface DeletionScope {
   storages: number
   categories: number
   products: number
+  priceLists: number
+  quotes: number
+  orders: number
+  openQuotes: number
+  openOrders: number
 }
 
 export function CreateWarehouse({ companyId }: { companyId: string }) {
@@ -140,11 +151,28 @@ function EditWarehouse({
 /**
  * La baja, con su alcance contado antes de confirmar.
  *
- * El recuento se pide **al abrir** y no con el listado: son tres consultas por almacén, y pedirlas
- * para los veinticuatro de una página costaría setenta y dos para enseñar como mucho una.
+ * El recuento se pide **al abrir** y no con el listado: es una consulta por almacén, y pedirla para
+ * los veinticuatro de una página costaría veinticuatro para enseñar como mucho una.
+ *
+ * ## El trabajo en curso se dice antes, no al confirmar
+ *
+ * El servicio impide la baja de un almacén con cotizaciones o pedidos en curso, y responde `409`.
+ * Ese `409` sigue haciendo falta —alguien puede abrir una cotización entre que se abre el diálogo y
+ * se pulsa—, pero llegar hasta el botón para que lo rechacen es enterarse tarde y a golpes. El
+ * alcance trae las abiertas aparte precisamente para poder decirlo al abrir.
+ *
+ * Y las cuenta **la misma función que decide la baja**, así que el número que se enseña no puede
+ * discrepar del que se aplica.
+ *
+ * ## Los ceros no se enumeran
+ *
+ * Seis recuentos, casi todos en cero en un almacén recién creado. «Ninguna categoría» ocupa una
+ * línea y no informa de nada, que es la misma razón por la que este diálogo omite la lista entera
+ * cuando no hay cascada.
  *
  * Si el recuento no llega, se dice y se deja seguir. Es una comodidad para decidir, no una
- * autorización: la autoridad sobre si la baja procede sigue siendo del servidor.
+ * autorización: la autoridad sobre si la baja procede sigue siendo del servidor, que la comprueba
+ * igual.
  */
 function DeleteWarehouse({
   companyId,
@@ -159,6 +187,7 @@ function DeleteWarehouse({
 }) {
   const t = useTranslations("warehouses.warehouses")
   const common = useTranslations("common")
+  const format = useFormatter()
   const [scope, setScope] = useState<DeletionScope | "failed" | null>(null)
 
   useEffect(() => {
@@ -180,25 +209,48 @@ function DeleteWarehouse({
     }
   }, [open, companyId, warehouse.id])
 
-  const cascade =
+  const settled = scope !== null && scope !== "failed" ? scope : null
+
+  const pending = settled
+    ? [
+        settled.openQuotes > 0 ? t("scopeOpenQuotes", { count: settled.openQuotes }) : null,
+        settled.openOrders > 0 ? t("scopeOpenOrders", { count: settled.openOrders }) : null,
+      ].filter((part) => part !== null)
+    : []
+
+  /** Por qué todavía no se puede confirmar: se está contando, o hay trabajo que lo impide. */
+  const blockedReason =
     scope === null
-      ? []
-      : scope === "failed"
-        ? [t("scopeFailed")]
-        : [
-            t("scopeStorages", { count: scope.storages }),
-            t("scopeCategories", { count: scope.categories }),
-            t("scopeProducts", { count: scope.products }),
-            // El listado no las cuenta, y callarlo haría creer que la baja no las toca.
-            t("scopeCommerce"),
-          ]
+      ? t("scopeCounting")
+      : pending.length > 0
+        ? t("scopeBlocked", { what: format.list(pending, { type: "conjunction" }) })
+        : undefined
+
+  const cascade =
+    scope === "failed"
+      ? [t("scopeFailed")]
+      : settled
+        ? (
+            [
+              ["scopeStorages", settled.storages],
+              ["scopeCategories", settled.categories],
+              ["scopeProducts", settled.products],
+              ["scopePriceLists", settled.priceLists],
+              // El total, no las abiertas: es lo que deja de estar accesible.
+              ["scopeQuotes", settled.quotes],
+              ["scopeOrders", settled.orders],
+            ] as const
+          )
+            .filter(([, count]) => count > 0)
+            .map(([key, count]) => t(key, { count }))
+        : []
 
   return (
     <ConfirmDestructive
       title={t("deleteTitle")}
       entity={warehouse.name}
       cascade={cascade}
-      {...(scope === null ? { countingLabel: t("scopeCounting") } : {})}
+      {...(blockedReason === undefined ? {} : { blockedReason })}
       confirmLabel={common("delete")}
       open={open}
       onOpenChange={onOpenChange}
