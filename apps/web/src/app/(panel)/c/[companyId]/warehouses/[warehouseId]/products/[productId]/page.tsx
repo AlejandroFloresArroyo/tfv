@@ -1,4 +1,4 @@
-import { Badge, Panel, Separator } from "@tfv/ui"
+import { Badge, Button, Panel, Separator } from "@tfv/ui"
 import { Box, PackageCheck, Ruler } from "lucide-react"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
@@ -271,6 +271,14 @@ export default async function ProductPage({
             title={t("warehouses.products.variants")}
             empty={t("warehouses.products.noVariants")}
             products={product.variants}
+            {...(permissions.canCreate
+              ? {
+                  add: {
+                    href: `/c/${companyId}/warehouses/${warehouseId}/products/${productId}/children/new?tipo=variant`,
+                    label: t("warehouses.wizard.addVariant"),
+                  },
+                }
+              : {})}
           />
 
           <RelatedProducts
@@ -279,6 +287,14 @@ export default async function ProductPage({
             title={t("warehouses.products.accessories")}
             empty={t("warehouses.products.noAccessories")}
             products={product.accessories}
+            {...(permissions.canCreate
+              ? {
+                  add: {
+                    href: `/c/${companyId}/warehouses/${warehouseId}/products/${productId}/children/new?tipo=accessory`,
+                    label: t("warehouses.wizard.addAccessory"),
+                  },
+                }
+              : {})}
           />
         </div>
 
@@ -475,16 +491,29 @@ async function RelatedProducts({
   title,
   empty,
   products,
+  add,
 }: {
   companyId: string
   warehouseId: string
   title: string
   empty: string
   products: readonly ProductRow[]
+  /** El enlace al asistente, o nada si no se puede dar de alta. */
+  add?: { href: string; label: string } | undefined
 }) {
   return (
     <section>
-      <h2 className="mb-3 text-title2 font-bold text-content">{title}</h2>
+      <div className="mb-3 flex items-center gap-2">
+        <h2 className="text-title2 font-bold text-content">{title}</h2>
+
+        <span className="flex-1" />
+
+        {add ? (
+          <Button asChild size="sm" variant="secondary">
+            <Link href={add.href}>{add.label}</Link>
+          </Button>
+        ) : null}
+      </div>
       {products.length > 0 ? (
         <ul className="grid gap-2 tablet:grid-cols-2">
           {products.map((product) => (

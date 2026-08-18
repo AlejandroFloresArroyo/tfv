@@ -31,9 +31,13 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
       editable sólo donde el servicio respeta lo escrito y la baja enumerando su alcance. **Falta
       el panel** del almacén — el resumen propio de uno, que hoy no tiene pantalla
 - [x] Catálogo con rejilla, filtros y paginación
-- [ ] **Asistente de producto de cinco pasos**
-- [ ] **Asistente de variante de cuatro pasos**
-- [ ] Detalle de producto: información, medidas, precios, unidades
+- [x] **Asistente de producto de cinco pasos**, con validación por paso contra el esquema del
+      servidor y el paso en la dirección
+- [x] **Asistente de variante de cuatro pasos**. Son cuatro y no cinco por el modelo: un hijo
+      hereda la clasificación del padre, así que ese paso no existe
+- [x] Detalle de producto: información, medidas, precios, unidades. Un diálogo por bloque, porque
+      cada bloque tiene su clave y un panel que se guarda solo mandaría peticiones que el
+      servidor rechaza a medias
 - [x] Unidades con etiquetas individuales y en lote. Pantalla de la medida con la tabla, el alta
       masiva, el cambio de estado en lote con motivo y la baja, el historial por unidad, y la hoja
       imprimible en los dos formatos de máquina
