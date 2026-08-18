@@ -18,9 +18,14 @@
 
 import {
   computeQuotation,
+  formatMoney,
+  type Money,
+  money,
   type QuotationBreakdown,
   type QuotationLineInput,
   resolveRate,
+  subtract,
+  sum,
 } from "@tfv/contracts"
 import type { Transaction } from "@tfv/db"
 import {
@@ -28,6 +33,7 @@ import {
   warehouseProductPrices,
   warehouseProducts,
   warehouseQuoteLines,
+  warehouseQuotePayments,
   type warehouseQuotes,
 } from "@tfv/db/schema"
 import { eq } from "drizzle-orm"
@@ -91,25 +97,47 @@ export async function resolveLines(
   })
 }
 
+/** Lo cobrado hasta ahora: la suma de los pagos registrados contra la cotización. */
+export async function collectedOf(tx: Transaction, quoteId: string): Promise<Money> {
+  const rows = await tx
+    .select({ amount: warehouseQuotePayments.amount })
+    .from(warehouseQuotePayments)
+    .where(eq(warehouseQuotePayments.quoteId, quoteId))
+
+  return sum(rows.map((row) => money(row.amount)))
+}
+
 /**
  * El desglose de una cotización.
  *
  * **Si está congelado, manda el congelado.** Es lo que hace cierto que una cotización cerrada no se
  * mueva aunque el catálogo cambie tres veces, y lo que permite explicar un importe de hace ocho
  * meses. Mientras está abierta se calcula al vuelo, y refleja el catálogo de hoy.
+ *
+ * **El cobro no se congela.** Un documento cerrado se sigue cobrando —una renta que terminó se
+ * paga después—, así que lo cobrado y el saldo se recalculan siempre, incluso sobre un desglose
+ * congelado. Congelarlos daría un saldo que no se mueve al recibir el dinero, que es un saldo
+ * inservible. Lo pactado se congela; lo que pasa después, no.
  */
 export async function breakdownOf(
   tx: Transaction,
   quote: typeof warehouseQuotes.$inferSelect,
 ): Promise<QuotationBreakdown> {
-  if (quote.computed) return quote.computed
-  return computeOf(tx, quote)
+  const collected = await collectedOf(tx, quote.id)
+  if (!quote.computed) return computeOf(tx, quote, collected)
+
+  return {
+    ...quote.computed,
+    collected: formatMoney(collected),
+    balance: formatMoney(subtract(money(quote.computed.gross), collected)),
+  }
 }
 
 /** Calcula el desglose desde el catálogo, ignorando lo que hubiera congelado. */
 export async function computeOf(
   tx: Transaction,
   quote: typeof warehouseQuotes.$inferSelect,
+  collected?: Money,
 ): Promise<QuotationBreakdown> {
   return computeQuotation({
     type: quote.type,
@@ -120,5 +148,6 @@ export async function computeOf(
     lines: await resolveLines(tx, quote.id),
     ...(quote.paymentTerms ? { payment: quote.paymentTerms } : {}),
     ...(quote.taxes ? { taxes: quote.taxes } : {}),
+    collected: formatMoney(collected ?? (await collectedOf(tx, quote.id))),
   })
 }

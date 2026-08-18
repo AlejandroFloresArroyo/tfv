@@ -17,6 +17,13 @@ import { allows } from "../auth/authorization.ts"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import { defineRoute, REQUIRES } from "../runtime/route.ts"
+import {
+  deletePayment,
+  listPayments,
+  PAYMENT_METHODS,
+  type PaymentRecord,
+  registerPayment,
+} from "../warehouses/payments.ts"
 import { listRates, rateQuery } from "../warehouses/quote-rates.ts"
 import {
   changeQuoteStatus,
@@ -774,6 +781,120 @@ export const returnQuoteUnitsRoute = defineRoute({
  * Bajo la clave de mirar y no la de terminar: es información del documento, y la necesita cualquiera
  * que lo consulte. Registrar el retorno —que sí exige la suya— es el paso siguiente.
  */
+const paymentSchema = z.object({
+  id: z.string(),
+  quoteId: z.string(),
+  amount: z.string(),
+  method: z.enum(PAYMENT_METHODS),
+  description: z.string().nullable(),
+  paidById: z.string().nullable(),
+  paidByName: z.string().nullable(),
+  createdAt: instant,
+})
+
+function serializePayment(payment: PaymentRecord) {
+  return { ...payment, createdAt: payment.createdAt.toISOString() }
+}
+
+export const listQuotePaymentsRoute = defineRoute({
+  access: REQUIRES("warehouses.quotes.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/quotes/{quoteId}/payments",
+    summary: "Los pagos cobrados contra la cotización",
+    tags: ["Cotizaciones"],
+    request: { params: quoteParams },
+    responses: {
+      200: {
+        description: "Del más reciente al más antiguo",
+        content: { "application/json": { schema: z.object({ items: z.array(paymentSchema) }) } },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const payments = await listPayments(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.quoteId,
+    )
+    return c.json({ items: payments.map(serializePayment) }, 200)
+  },
+})
+
+/**
+ * Registrar un cobro.
+ *
+ * Exige `edit_payment`, la misma clave que las condiciones de pago. **El catálogo de permisos es un
+ * conjunto cerrado de 255 claves migradas** (ver `access-control`), y separar «pactar» de «cobrar»
+ * significaría añadir una: eso amplía la superficie de autorización y es decisión de producto, no
+ * de implementación. Queda anotado.
+ */
+export const registerQuotePaymentRoute = defineRoute({
+  access: REQUIRES("warehouses.quotes.edit_payment"),
+  config: {
+    method: "post",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/quotes/{quoteId}/payments",
+    summary: "Registrar un pago cobrado",
+    tags: ["Cotizaciones"],
+    request: {
+      params: quoteParams,
+      body: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              amount: moneyField,
+              method: z.enum(PAYMENT_METHODS),
+              description: z.string().max(2000).optional(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "Registrado",
+        content: { "application/json": { schema: paymentSchema } },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const payment = await registerPayment(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.quoteId,
+      c.req.valid("json"),
+    )
+    return c.json(serializePayment(payment), 201)
+  },
+})
+
+export const deleteQuotePaymentRoute = defineRoute({
+  access: REQUIRES("warehouses.quotes.edit_payment"),
+  config: {
+    method: "delete",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/quotes/{quoteId}/payments/{paymentId}",
+    summary: "Dar de baja un pago mal registrado",
+    tags: ["Cotizaciones"],
+    request: { params: quoteParams.extend({ paymentId: z.string() }) },
+    responses: { 204: { description: "Dado de baja" } },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    await deletePayment(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.quoteId,
+      params.paymentId,
+    )
+    return c.body(null, 204)
+  },
+})
+
 export const listQuoteUnitsRoute = defineRoute({
   access: REQUIRES("warehouses.quotes.view"),
   config: {

@@ -1124,6 +1124,143 @@ describe("coherencia entre reservas e inventario", () => {
   })
 })
 
+describe("pagos cobrados contra la cotización", () => {
+  it("el saldo baja con lo que entra, y el total pactado no se mueve", async () => {
+    // El anticipo es lo pactado y mueve el documento; el pago es lo que entró y mueve el saldo.
+    await clearQuotes()
+    const { measurementId, priceId } = await pricedProduct("Foco", 4, { sale: "250.00" })
+    const quote = await newQuote({
+      type: "sale",
+      lines: [{ measurementId, quantity: 4, productPriceId: priceId }],
+    })
+    await request(
+      "PUT",
+      `${base}/quotes/${quote.id}/payment-terms`,
+      { version: 1, advance: { amount: "300.00" } },
+      cookie,
+    )
+
+    const before = await breakdownOf(quote.id)
+    expect(before.total).toBe("700.00")
+    expect(before.collected).toBe("0.00")
+    // Pactar no es cobrar: mientras nadie pague, falta la cotización entera.
+    expect(before.balance).toBe("1000.00")
+
+    const created = await request(
+      "POST",
+      `${base}/quotes/${quote.id}/payments`,
+      { amount: "300.00", method: "transfer", description: "Anticipo" },
+      cookie,
+    )
+    expect(created.status).toBe(201)
+
+    const after = await breakdownOf(quote.id)
+    expect(after.total).toBe("700.00")
+    expect(after.collected).toBe("300.00")
+    expect(after.balance).toBe("700.00")
+  })
+
+  it("una cotización cerrada sigue admitiendo cobro", async () => {
+    // Al revés que las líneas: una renta que terminó se sigue pagando, y un documento que no lo
+    // admita obliga a llevar la cuenta fuera del sistema.
+    await clearQuotes()
+    const { measurementId, priceId } = await pricedProduct("Foco", 2, { sale: "250.00" })
+    const quote = await newQuote({
+      type: "sale",
+      lines: [{ measurementId, quantity: 2, productPriceId: priceId }],
+    })
+    await moveTo(quote.id, "sold")
+
+    const created = await request(
+      "POST",
+      `${base}/quotes/${quote.id}/payments`,
+      { amount: "200.00", method: "cash" },
+      cookie,
+    )
+    expect(created.status).toBe(201)
+
+    // Los importes siguen congelados, y el saldo **no**: se recalcula sobre lo congelado.
+    const breakdown = await breakdownOf(quote.id)
+    expect(breakdown.total).toBe("500.00")
+    expect(breakdown.collected).toBe("200.00")
+    expect(breakdown.balance).toBe("300.00")
+  })
+
+  it("los pagos llegan del más reciente al más antiguo, con quién los registró", async () => {
+    await clearQuotes()
+    const quote = await newQuote({ type: "sale" })
+
+    for (const amount of ["100.00", "200.00"]) {
+      await request(
+        "POST",
+        `${base}/quotes/${quote.id}/payments`,
+        { amount, method: "cash" },
+        cookie,
+      )
+    }
+
+    const listed = await json<{ items: { amount: string; paidByName: string | null }[] }>(
+      await request("GET", `${base}/quotes/${quote.id}/payments`, undefined, cookie),
+    )
+
+    expect(listed.items.map((row) => row.amount)).toEqual(["200.00", "100.00"])
+    expect(listed.items[0]?.paidByName).not.toBeNull()
+  })
+
+  it("dar de baja un pago devuelve el saldo a donde estaba", async () => {
+    await clearQuotes()
+    const { measurementId, priceId } = await pricedProduct("Foco", 2, { sale: "250.00" })
+    const quote = await newQuote({
+      type: "sale",
+      lines: [{ measurementId, quantity: 2, productPriceId: priceId }],
+    })
+
+    const payment = await json<{ id: string }>(
+      await request(
+        "POST",
+        `${base}/quotes/${quote.id}/payments`,
+        { amount: "150.00", method: "card" },
+        cookie,
+      ),
+    )
+    expect((await breakdownOf(quote.id)).balance).toBe("350.00")
+
+    const removed = await request(
+      "DELETE",
+      `${base}/quotes/${quote.id}/payments/${payment.id}`,
+      undefined,
+      cookie,
+    )
+    expect(removed.status).toBe(204)
+    expect((await breakdownOf(quote.id)).balance).toBe("500.00")
+  })
+
+  it("no se da de baja un pago de otra cotización", async () => {
+    await clearQuotes()
+    const mine = await newQuote({ type: "sale" })
+    const other = await newQuote({ type: "sale" })
+
+    const payment = await json<{ id: string }>(
+      await request(
+        "POST",
+        `${base}/quotes/${other.id}/payments`,
+        { amount: "50.00", method: "cash" },
+        cookie,
+      ),
+    )
+
+    const response = await request(
+      "DELETE",
+      `${base}/quotes/${mine.id}/payments/${payment.id}`,
+      undefined,
+      cookie,
+    )
+
+    expect(response.status).toBe(404)
+    expect((await breakdownOf(other.id)).collected).toBe("50.00")
+  })
+})
+
 // ─── Importes ────────────────────────────────────────────────────────────────
 
 interface Breakdown {
@@ -1137,6 +1274,8 @@ interface Breakdown {
   fees: string
   gross: string
   total: string
+  collected: string
+  balance: string
   penalty: string
   deposit: string
   lines: {
