@@ -17,6 +17,7 @@ import { ConflictError, newId, UnprocessableError, ValidationError } from "@tfv/
 import { db, type Transaction } from "@tfv/db"
 import { loginAttempts, notificationDeliveries, oneTimeCredentials, users } from "@tfv/db/schema"
 import { and, count, desc, eq, gt, gte, isNull, sql } from "drizzle-orm"
+import { announceDevLink } from "./dev-links.ts"
 import { hashPassword, needsRehash, validatePassword, verifyPassword } from "./password.ts"
 import {
   type DeviceInfo,
@@ -254,6 +255,7 @@ export async function requestEmailChange(
       payload: { token, email: pendingEmail },
     })
 
+    announceDevLink("email_change_verification", token, pendingEmail)
     return { userId, token, pendingEmail }
   })
 }

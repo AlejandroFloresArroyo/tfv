@@ -69,6 +69,12 @@ Todo lo que difiere entre ellas difiere a propósito: las dos empresas tienen se
 —sin eso no se puede ver fallar la guarda de habilitación ni la equivalencia al cambiar de
 empresa—, y las cuatro cuentas cubren las cuatro vías por las que se concede o se niega.
 
+> **No hay envío de correo todavía.** El despachador es la rebanada 09, que no está empezada: el
+> enlace de verificación, el de recuperación y el de invitación se encolan y se quedan ahí. En
+> desarrollo se escriben además **en el registro del servicio**, con su dirección completa, así que
+> registrarse se completa pegando esa dirección en el navegador. Las cuentas sembradas ya vienen
+> verificadas y no necesitan nada de esto.
+
 > `pnpm test` corre contra **`tfv_test`**, una base aparte del mismo servidor local que se crea y se
 > migra sola la primera vez. Las suites truncan sus tablas, y ahora eso no toca los datos con los
 > que se está mirando la aplicación. `pnpm test:e2e` sí usa la de desarrollo —conduce la aplicación

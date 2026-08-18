@@ -32,6 +32,7 @@ import { db } from "@tfv/db"
 import { notificationDeliveries, prospects } from "@tfv/db/schema"
 import { and, count, desc, eq, isNull, sql } from "drizzle-orm"
 import { invite } from "./accounts.ts"
+import { announceDevLink } from "./dev-links.ts"
 
 export const prospectQuery: QuerySchema = {
   filters: { createdAt: { type: "date", range: true, label: "Recibido" } },
@@ -242,6 +243,8 @@ export async function acceptProspect(
       .returning()
 
     if (!updated) throw new Error("El prospecto no se actualizó")
+
+    announceDevLink("prospect_accepted", outcome.token, prospect.email)
     return { prospect: toRecord(updated), userId: outcome.userId, token: outcome.token }
   })
 }
