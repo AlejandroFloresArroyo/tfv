@@ -45,8 +45,11 @@ import {
   updateProduct,
 } from "../warehouses/catalog.ts"
 import {
+  categoryDeletionScope,
+  categoryPath,
   createWarehouseCategory,
   deleteWarehouseCategory,
+  getWarehouseCategory,
   listWarehouseCategories,
   updateWarehouseCategory,
 } from "../warehouses/categories.ts"
@@ -194,6 +197,92 @@ export const listWarehouseCategoriesRoute = defineRoute({
       ...(parentId === undefined ? {} : { parentId }),
     })
     return c.json({ items: items.map(serializeCategory) }, 200)
+  },
+})
+
+export const getWarehouseCategoryRoute = defineRoute({
+  access: REQUIRES("warehouses.categories.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/categories/{categoryId}",
+    summary: "Ver una categoría del almacén",
+    tags: ["Catálogo"],
+    request: { params: categoryParams },
+    responses: {
+      200: {
+        description: "La categoría",
+        content: { "application/json": { schema: categorySchema } },
+      },
+      404: { description: "No existe en este almacén" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const category = await getWarehouseCategory(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.categoryId,
+    )
+    return c.json(serializeCategory(category), 200)
+  },
+})
+
+export const warehouseCategoryPathRoute = defineRoute({
+  access: REQUIRES("warehouses.categories.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/categories/{categoryId}/path",
+    summary: "El camino desde la raíz hasta una categoría",
+    tags: ["Catálogo"],
+    request: { params: categoryParams },
+    responses: {
+      200: {
+        description: "De la raíz a la categoría, ambas incluidas",
+        content: { "application/json": { schema: z.object({ items: z.array(categorySchema) }) } },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const items = await categoryPath(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.categoryId,
+    )
+    return c.json({ items: items.map(serializeCategory) }, 200)
+  },
+})
+
+export const warehouseCategoryScopeRoute = defineRoute({
+  access: REQUIRES("warehouses.categories.delete"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/categories/{categoryId}/scope",
+    summary: "Qué se lleva por delante eliminar la categoría",
+    tags: ["Catálogo"],
+    request: { params: categoryParams },
+    responses: {
+      200: {
+        description: "Categorías del subárbol, y productos que quedarán sin categoría",
+        content: {
+          "application/json": {
+            schema: z.object({ categories: z.number().int(), products: z.number().int() }),
+          },
+        },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const scope = await categoryDeletionScope(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.categoryId,
+    )
+    return c.json(scope, 200)
   },
 })
 

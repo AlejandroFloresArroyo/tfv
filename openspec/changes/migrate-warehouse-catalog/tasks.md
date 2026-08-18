@@ -65,6 +65,9 @@ esperaban a la pantalla, ya están.
 - [x] Árbol propio por almacén, con identificador legible único **dentro de su almacén** y no del
       mundo: es como cada casa de renta organiza su nave
 - [x] Rechazo de ciclos, y eliminación recursiva que deja los productos sin clasificar
+- [x] Ficha, camino y alcance de una categoría, como los de una ubicación. Sin ellos, situar una
+      categoría cuesta una petición por rama bajando desde las raíces, y la confirmación destructiva
+      no puede decir cuántas entidades se lleva — que es lo que la spec exige (H-38)
 
 ## Medidas
 
@@ -91,6 +94,12 @@ esperaban a la pantalla, ya están.
       una cotización casi siempre es un producto sin tarifa, no un regalo
 - [x] El ajuste de la medida se suma **en centavos y con enteros**: `0.1 + 0.2` no es `0.3` en coma
       flotante, y mil productos convierten eso en una factura que no cuadra por unos pesos
+- [x] Ficha de una lista por su identificador, con el mismo recuento que su fila del listado (H-35)
+- [x] Las tarifas viajan con el nombre y el código de su producto. Sin eso, pintar doscientas
+      obliga a traerse el catálogo entero del almacén y cruzarlo en memoria (H-34)
+- [x] **Impedir la baja de una lista con cotizaciones en curso**, y enumerarlas antes en su alcance.
+      Es lo que la spec pide advertir, resuelto como en la baja de un almacén: enumerar al abrir el
+      diálogo y rechazar con `409` en la carrera (H-37)
 
 ## Unidades
 
@@ -111,5 +120,10 @@ esperaban a la pantalla, ya están.
       la medida: quien lee la etiqueta **no sabe** de qué producto es, para eso la lee
 - [x] Historial de cambio de estado con motivo y responsable, **incluida el alta**: sin el momento
       inicial el historial empieza en el segundo estado
+- [x] El responsable viaja **por su nombre**, no sólo por su identificador: traducirlo obligaba a
+      pedir el padrón de la empresa, que exige un permiso de otro dominio (H-33)
+- [x] La siembra escribe también el alta. Las unidades sembradas empezaban en su segundo estado
+      mientras las creadas por la API sí la llevaban, y la corrección repara las ya sembradas sin
+      duplicar nada al correrla otra vez (H-32)
 - [ ] Decidir si el historial se reconstruye en el corte — no se puede con fidelidad: de la pila
       anterior sólo se conoce el estado final

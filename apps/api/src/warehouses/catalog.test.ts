@@ -758,3 +758,77 @@ describe("taxonomía del almacén", () => {
     expect(response.status).toBe(422)
   })
 })
+
+describe("camino y alcance de una categoría", () => {
+  it("una categoría se pide suelta y trae su camino desde la raíz", async () => {
+    // H-38: situar una categoría obligaba a bajar desde las raíces con una petición por rama. Es
+    // lo mismo que las ubicaciones resuelven con `/path`, en el otro árbol del almacén.
+    await clearCatalog()
+
+    const raiz = await json<{ id: string }>(
+      await request("POST", `${base}/categories`, { name: "Cámara" }, cookie),
+    )
+    const media = await json<{ id: string }>(
+      await request("POST", `${base}/categories`, { name: "Ópticas", parentId: raiz.id }, cookie),
+    )
+    const hoja = await json<{ id: string }>(
+      await request("POST", `${base}/categories`, { name: "Zoom", parentId: media.id }, cookie),
+    )
+
+    const suelta = await request("GET", `${base}/categories/${hoja.id}`, undefined, cookie)
+    expect(suelta.status).toBe(200)
+    expect(await json<{ name: string; parentId: string }>(suelta)).toMatchObject({
+      name: "Zoom",
+      parentId: media.id,
+    })
+
+    const path = await json<{ items: { name: string }[] }>(
+      await request("GET", `${base}/categories/${hoja.id}/path`, undefined, cookie),
+    )
+    expect(path.items.map((row) => row.name)).toEqual(["Cámara", "Ópticas", "Zoom"])
+  })
+
+  it("el alcance dice cuántas categorías y cuántas entidades se lleva la baja", async () => {
+    // Escenario: «Se advierte del alcance antes de eliminar», de `category-trees`. Sin esta cifra
+    // la confirmación destructiva no puede decir qué se lleva por delante.
+    await clearCatalog()
+
+    const raiz = await json<{ id: string }>(
+      await request("POST", `${base}/categories`, { name: "Grip" }, cookie),
+    )
+    const hija = await json<{ id: string }>(
+      await request("POST", `${base}/categories`, { name: "Tripiés", parentId: raiz.id }, cookie),
+    )
+    await request("POST", `${base}/categories`, { name: "Bases", parentId: hija.id }, cookie)
+
+    // Un producto con variantes: las variantes heredan la categoría del padre y no se cuentan
+    // aparte, igual que en el alcance de una ubicación.
+    await newProduct({ name: "Tripié", categoryId: hija.id, variants: [{ name: "Alto" }] })
+    await newProduct({ name: "Base", categoryId: raiz.id })
+
+    const scope = await json<{ categories: number; products: number }>(
+      await request("GET", `${base}/categories/${raiz.id}/scope`, undefined, cookie),
+    )
+
+    expect(scope).toEqual({ categories: 3, products: 2 })
+  })
+
+  it("una categoría de otro almacén no existe para éste", async () => {
+    await clearCatalog()
+
+    const otro = await json<{ id: string }>(
+      await request("POST", `/companies/${companyId}/warehouses`, { name: "Otra nave" }, cookie),
+    )
+    const ajena = await json<{ id: string }>(
+      await request(
+        "POST",
+        `/companies/${companyId}/warehouses/${otro.id}/categories`,
+        { name: "Ajena" },
+        cookie,
+      ),
+    )
+
+    const response = await request("GET", `${base}/categories/${ajena.id}`, undefined, cookie)
+    expect(response.status).toBe(404)
+  })
+})
