@@ -110,9 +110,15 @@ export const notificationDeliveries = pgTable(
       onDelete: "cascade",
     }),
 
-    recipientId: reference("recipient_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    /**
+     * A quién va. **Nulo cuando el destinatario no tiene cuenta**: el acuse a quien deja sus datos
+     * en el formulario público es una notificación con destino y sin usuario, y crear una cuenta
+     * fantasma para poder enviarla sería crear una cuenta que alguien acaba pudiendo usar.
+     *
+     * En ese caso el destino viaja en `payload`, como ya hace el cambio de correo — donde el perfil
+     * todavía tiene la dirección anterior y el despachador necesita la nueva explícita.
+     */
+    recipientId: reference("recipient_id").references(() => users.id, { onDelete: "cascade" }),
     channel: deliveryChannel("channel").notNull(),
     /** Tipo de notificación, del catálogo de la spec: bienvenida, factura cobrada, actividad… */
     kind: varchar("kind", { length: 80 }).notNull(),

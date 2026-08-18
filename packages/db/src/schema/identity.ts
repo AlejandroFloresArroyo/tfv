@@ -170,6 +170,50 @@ export const companyMembers = pgTable(
   ],
 )
 
+// ─── Prospectos ──────────────────────────────────────────────────────────────
+
+/**
+ * Quien deja sus datos en el formulario público **sin crear cuenta**.
+ *
+ * Ver `openspec/specs/user-accounts/spec.md`, «Captura pública de prospectos». No es un usuario: no
+ * tiene contraseña, ni sesión, ni pertenece a nada. Es una intención de contacto, y por eso vive en
+ * su propia tabla en lugar de como una cuenta a medias — una cuenta a medias es una cuenta que
+ * alguien acaba pudiendo usar.
+ *
+ * **Aceptar no lo borra**: se marca con quién lo aceptó y qué cuenta salió de él. La implementación
+ * anterior no llegaba a retirarlo de la bandeja (`DEFECTS.md` L-02); aquí la bandeja de pendientes
+ * son los que no tienen `accepted_at`, así que sale por construcción y el rastro se conserva.
+ * Descartarlo sí es una baja lógica.
+ */
+export const prospects = pgTable(
+  "prospects",
+  {
+    id: primaryId(),
+
+    name: varchar("name", { length: 120 }).notNull(),
+    lastname: varchar("lastname", { length: 120 }).notNull().default(""),
+    email: varchar("email", { length: 320 }).notNull(),
+    phone: varchar("phone", { length: 40 }),
+    companyName: varchar("company_name", { length: 250 }).notNull().default(""),
+    message: text("message").notNull().default(""),
+
+    acceptedAt: timestamp("accepted_at", { withTimezone: true, mode: "date" }),
+    acceptedById: reference("accepted_by_id").references(() => users.id, { onDelete: "set null" }),
+    /** La cuenta que salió de este contacto. */
+    userId: reference("user_id").references(() => users.id, { onDelete: "set null" }),
+
+    ...timestamps,
+    ...softDelete,
+  },
+  (table) => [
+    // La bandeja: lo pendiente, lo más reciente primero.
+    index("prospects_pending_idx")
+      .on(table.createdAt)
+      .where(sql`accepted_at IS NULL AND deleted_at IS NULL`),
+    index("prospects_email_idx").on(table.email),
+  ],
+)
+
 // ─── Relaciones ──────────────────────────────────────────────────────────────
 
 export const usersRelations = relations(users, ({ many, one }) => ({

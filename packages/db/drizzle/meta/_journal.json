@@ -92,6 +92,20 @@
       "when": 1787043405761,
       "tag": "0012_extension_de_renta",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787045254817,
+      "tag": "0013_prospectos",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787045255817,
+      "tag": "0014_politica_de_prospectos",
+      "breakpoints": true
     }
   ]
 }
