@@ -30,6 +30,8 @@ import {
   users,
   warehouseCategories,
   warehouseMeasurements,
+  warehouseOrderLines,
+  warehouseOrders,
   warehousePriceLists,
   warehouseProductPrices,
   warehouseProducts,
@@ -41,7 +43,7 @@ import {
   warehouseStorages,
   warehouses,
 } from "@tfv/db/schema"
-import { and, count, eq, inArray, isNull } from "drizzle-orm"
+import { and, count, eq, inArray, isNull, sql } from "drizzle-orm"
 import { hashPassword } from "../auth/password.ts"
 import { env } from "../env.ts"
 
@@ -424,6 +426,7 @@ interface VolumeReport {
   readonly products: number
   readonly units: number
   readonly quotes: number
+  readonly orders: number
 }
 
 /**
@@ -463,6 +466,7 @@ async function seedVolume(
       products: 0,
       units: 0,
       quotes: 0,
+      orders: 0,
     }
   }
 
@@ -475,8 +479,9 @@ async function seedVolume(
   const addresses = await seedAddresses(primary)
   const catalog = await seedCatalogFor(primary)
   const quotes = await seedQuotes(primary)
+  const orders = await seedOrders(primary)
 
-  return { teammates, clients, providers, addresses, ...catalog, quotes }
+  return { teammates, clients, providers, addresses, ...catalog, quotes, orders }
 }
 
 // ─── Almacén con catálogo ────────────────────────────────────────────────────
@@ -636,10 +641,13 @@ async function seedQuotes(companyId: string): Promise<number> {
 
   if (!warehouse) return 0
 
+  // **Sin contar las dadas de baja.** Contarlas hace que una sola cotización borrada por las
+  // pruebas convenza a la siembra de que ya hizo su trabajo, y el almacén se queda sin nada que
+  // enseñar.
   const [already] = await db
     .select({ value: count() })
     .from(warehouseQuotes)
-    .where(eq(warehouseQuotes.warehouseId, warehouse.id))
+    .where(and(eq(warehouseQuotes.warehouseId, warehouse.id), isNull(warehouseQuotes.deletedAt)))
 
   if ((already?.value ?? 0) > 0) return already?.value ?? 0
 
@@ -684,6 +692,94 @@ async function seedQuotes(companyId: string): Promise<number> {
   }
 
   return QUOTES.length
+}
+
+/**
+ * Tres pedidos, para que la bandeja del operador tenga qué enseñar.
+ *
+ * Un pedido nace de una producción o de una compra en tienda, y ninguna de las dos existe todavía,
+ * así que **no hay pantalla que los cree**. Sin sembrarlos, la bandeja queda vacía y no se puede
+ * mirar lo que hace.
+ *
+ * El tercero pide **más de lo que hay** a propósito: es el caso interesante, el que hace que la
+ * ficha avise antes de aceptar en lugar de que la reserva falle después.
+ */
+const ORDERS = [
+  { name: "Rodaje Sierra · solicitud de cámara", asked: 2, status: "pending" },
+  { name: "Spot Cervecería · iluminación", asked: 1, status: "pending" },
+  { name: "Documental Norte · pide de más", asked: 99, status: "pending" },
+] as const
+
+async function seedOrders(companyId: string): Promise<number> {
+  const [warehouse] = await db
+    .select({ id: warehouses.id })
+    .from(warehouses)
+    .where(and(eq(warehouses.companyId, companyId), isNull(warehouses.deletedAt)))
+    .limit(1)
+
+  if (!warehouse) return 0
+
+  const [already] = await db
+    .select({ value: count() })
+    .from(warehouseOrders)
+    .where(and(eq(warehouseOrders.warehouseId, warehouse.id), isNull(warehouseOrders.deletedAt)))
+
+  if ((already?.value ?? 0) > 0) return already?.value ?? 0
+
+  // Medidas **con unidades libres**: las cotizaciones sembradas ya se llevaron las de las cámaras,
+  // y un pedido cuyo equipo entero está apartado no se puede aceptar — que no es el caso que la
+  // bandeja quiere enseñar.
+  const measurements = await db
+    .select({ id: warehouseMeasurements.id, free: count(warehouseStockUnits.id) })
+    .from(warehouseMeasurements)
+    .innerJoin(warehouseProducts, eq(warehouseProducts.id, warehouseMeasurements.productId))
+    .innerJoin(
+      warehouseStockUnits,
+      and(
+        eq(warehouseStockUnits.measurementId, warehouseMeasurements.id),
+        eq(warehouseStockUnits.status, "available"),
+        isNull(warehouseStockUnits.deletedAt),
+      ),
+    )
+    .where(eq(warehouseProducts.warehouseId, warehouse.id))
+    .groupBy(warehouseMeasurements.id)
+    .having(sql`count(${warehouseStockUnits.id}) >= 2`)
+    .limit(ORDERS.length)
+
+  if (measurements.length === 0) return 0
+
+  const clients = await db
+    .select({ id: counterparties.id })
+    .from(counterparties)
+    .where(and(eq(counterparties.companyId, companyId), eq(counterparties.role, "client")))
+    .limit(ORDERS.length)
+
+  for (const [index, spec] of ORDERS.entries()) {
+    const orderId = newId()
+    await db.insert(warehouseOrders).values({
+      id: orderId,
+      warehouseId: warehouse.id,
+      // Opaco, como el de las cotizaciones: su índice único **incluye las dadas de baja**, así que
+      // un código fijo no se puede volver a sembrar. Lo que identifica en la bandeja es el nombre.
+      code: labelCode(),
+      name: spec.name,
+      observations: "Sembrado para desarrollo.",
+      origin: "production",
+      type: "rent",
+      status: spec.status,
+      clientId: clients[index]?.id ?? null,
+    })
+
+    await db.insert(warehouseOrderLines).values({
+      id: newId(),
+      orderId,
+      measurementId: measurements[index % measurements.length]?.id as string,
+      quantity: spec.asked,
+      position: 0,
+    })
+  }
+
+  return ORDERS.length
 }
 
 /** Una lista de precios con tarifa para todo el catálogo: sin ella, los importes salen a cero. */
@@ -1121,6 +1217,7 @@ function report(companyIds: Map<string, string>, volume: VolumeReport): void {
     `    ${volume.teammates} personas · ${volume.clients} clientes · ${volume.providers} proveedores · ${volume.addresses} direcciones`,
     `    Nave Monterrey: ${volume.products} productos · ${volume.units} unidades · 12 cajas en dos pisos`,
     `    ${volume.quotes} cotizaciones en cuatro estados, con su equipo apartado`,
+    `    ${volume.orders} pedidos esperando decisión, uno pidiendo más de lo que hay`,
     "",
     `  Identificadores: ${[...companyIds.values()].join(", ")}`,
     "",
