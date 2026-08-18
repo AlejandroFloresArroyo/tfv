@@ -244,7 +244,7 @@ export function QuoteEditor({
         <div className="flex items-center gap-2">
           {saved && !dirty ? (
             <span className="inline-flex items-center gap-1 text-body3 text-content-muted">
-              <Check className="size-4 text-green-9 dark:text-green-2" aria-hidden="true" />
+              <Check className="size-4 text-success" aria-hidden="true" />
               {t("saved")}
             </span>
           ) : null}
@@ -437,7 +437,7 @@ export function QuoteEditor({
                       {t("notEnough", { count: ceiling })}
                     </p>
                   ) : amounts?.unpriced && packagePrice === null ? (
-                    <p className="mt-3 inline-flex items-center gap-1.5 text-body3 text-yellow-9 dark:text-yellow-2">
+                    <p className="mt-3 inline-flex items-center gap-1.5 text-body3 text-warning">
                       <TriangleAlert className="size-4" aria-hidden="true" />
                       {t("unpriced")}
                     </p>
@@ -627,7 +627,7 @@ function Picker({
                       {formatAmount(rate.amount, format)}
                     </span>
                     <span
-                      className={`block text-body3 ${rate.fallback ? "text-yellow-9 dark:text-yellow-2" : "text-content-faint"}`}
+                      className={`block text-body3 ${rate.fallback ? "text-warning" : "text-content-faint"}`}
                     >
                       {rate.fallback
                         ? t("noDailyRate")

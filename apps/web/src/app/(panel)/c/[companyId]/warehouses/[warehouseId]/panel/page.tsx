@@ -316,7 +316,7 @@ function Stat({
         <p
           className={
             alert
-              ? "text-h3 font-bold tabular-nums text-yellow-9 dark:text-yellow-2"
+              ? "text-h3 font-bold tabular-nums text-warning"
               : "text-h3 font-bold tabular-nums text-content"
           }
         >

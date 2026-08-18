@@ -267,7 +267,7 @@ function SideList({
             </div>
 
             {row.name.trim() === "" ? (
-              <p className="inline-flex items-center gap-1.5 text-body3 text-yellow-9 dark:text-yellow-2">
+              <p className="inline-flex items-center gap-1.5 text-body3 text-warning">
                 <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
                 {t("contactIncomplete")}
               </p>

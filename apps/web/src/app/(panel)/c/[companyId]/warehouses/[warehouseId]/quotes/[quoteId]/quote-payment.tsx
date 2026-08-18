@@ -250,10 +250,7 @@ export function QuotePaymentTermsPanel({
 
         {form.spreadFees && form.fixedPrice.trim() !== "" ? (
           <p className="inline-flex items-center gap-1.5 text-body3 text-content-muted">
-            <TriangleAlert
-              className="size-4 shrink-0 text-yellow-9 dark:text-yellow-2"
-              aria-hidden="true"
-            />
+            <TriangleAlert className="size-4 shrink-0 text-warning" aria-hidden="true" />
             {t("spreadFeesMoot")}
           </p>
         ) : null}
@@ -337,7 +334,7 @@ export function SaveState({
   if (saving) return <span className="text-body3 text-content-muted">{t("saving")}</span>
   if (incomplete)
     return (
-      <span className="inline-flex items-center gap-1 text-body3 text-yellow-9 dark:text-yellow-2">
+      <span className="inline-flex items-center gap-1 text-body3 text-warning">
         <TriangleAlert className="size-4" aria-hidden="true" />
         {incompleteLabel ?? t("incompleteField")}
       </span>
@@ -348,7 +345,7 @@ export function SaveState({
   if (!saved) return null
   return (
     <span className="inline-flex items-center gap-1 text-body3 text-content-muted">
-      <Check className="size-4 text-green-9 dark:text-green-2" aria-hidden="true" />
+      <Check className="size-4 text-success" aria-hidden="true" />
       {t("autosaved")}
     </span>
   )
@@ -547,7 +544,7 @@ function Additionals({
                 </div>
 
                 {incomplete ? (
-                  <p className="inline-flex items-center gap-1.5 text-body3 text-yellow-9 dark:text-yellow-2">
+                  <p className="inline-flex items-center gap-1.5 text-body3 text-warning">
                     <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
                     {t("additionalIncomplete")}
                   </p>

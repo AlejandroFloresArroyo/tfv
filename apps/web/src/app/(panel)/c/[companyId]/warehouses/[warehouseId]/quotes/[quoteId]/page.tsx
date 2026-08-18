@@ -266,7 +266,7 @@ export default async function QuotePage({
                               </dl>
 
                               {amounts.unpriced ? (
-                                <p className="mt-3 text-body3 text-yellow-9 dark:text-yellow-2">
+                                <p className="mt-3 text-body3 text-warning">
                                   {t("warehouses.quotes.unpricedLine")}
                                 </p>
                               ) : null}
