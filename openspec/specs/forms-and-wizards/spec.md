@@ -162,6 +162,11 @@ vista previa de lo seleccionado, y SHALL permitir quitar un archivo antes de env
 SHALL rechazar en el momento de la selección los archivos que excedan el tamaño admitido o cuyo
 tipo no esté permitido, explicando el motivo.
 
+Cuando el navegador no sepa descodificar el formato —`heic` y `heif` fuera de Apple, y los
+contenedores de video que no trae de casa—, el selector SHALL **decir que esa vista previa no se
+puede mostrar aquí** en lugar de dejar el hueco. Un recuadro gris se lee como «este archivo no se
+subió», que es lo contrario de lo que pasa: el archivo se admite y se sube igual (ver `H-51`).
+
 #### Scenario: Un tipo no admitido se rechaza al seleccionarlo
 
 - **WHEN** el usuario arrastra un archivo de tipo no permitido
@@ -174,10 +179,18 @@ tipo no esté permitido, explicando el motivo.
 - **THEN** ve una miniatura de cada una antes de enviar
 - **AND** puede quitar cualquiera
 
-#### Scenario: Los formatos de cámara de móvil se previsualizan
+#### Scenario: Un formato de cámara de móvil se previsualiza donde el navegador sabe
 
+- **GIVEN** un navegador que descodifica el formato —Safari con un `heic`, por ejemplo—
 - **WHEN** el usuario selecciona una imagen en un formato propio de cámaras de teléfono
 - **THEN** la vista previa se muestra correctamente
+
+#### Scenario: Y donde no sabe, se dice
+
+- **GIVEN** un navegador que no descodifica el formato
+- **WHEN** el usuario selecciona una imagen en un formato propio de cámaras de teléfono
+- **THEN** se indica que esa imagen no se puede previsualizar aquí
+- **AND** el archivo se admite y se sube igual
 
 ### Requirement: Captura de firma
 
