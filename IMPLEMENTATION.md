@@ -222,19 +222,28 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 En este orden, y con el motivo de que sea ése:
 
-1. **Pedidos de almacén** (rebanada 15). Es lo que da entrada a las cotizaciones desde fuera:
-   aceptar un pedido crea su cotización con las líneas y el inventario ya apartado, que es la
-   transición central del servicio. Se apoya entera en lo que acaba de quedar construido —la
-   reconciliación de líneas y la proyección de estado son las mismas—.
-2. **Los cuatro bloques que le faltan al constructor** (29b): identidad, contactos, condiciones de
-   pago e impuestos. Tienen su ruta y su permiso desde la 13; les falta el formulario. Los de pago e
-   impuestos son los que mueven dinero, así que son los que más importa que se editen bien.
-3. **Lo que queda de la 10**: los prospectos. Las comprobaciones de «en uso» siguen esperando a los
+1. **El modelo y el motor del precio** (hecho): precio negociado, la renta sin tarifa y la marca de
+   provisional.
+2. **El bloque de condiciones de pago entero** (29b): descuento, anticipo, conceptos adicionales,
+   comisiones, depósito, penalización y **precio por paquete**. Es lo siguiente acordado, y va
+   entero porque el precio por paquete forma parte de él y hace falta.
+3. **Congelar las líneas al salir el equipo, y el retorno anticipado.** Ahí se tapa además un
+   agujero: bajar una cantidad de una cotización en renta suelta el vínculo y deja la unidad
+   `rented` sin dueño, y la verificación de coherencia **no la ve** porque sólo busca huérfanas
+   entre las `in_quote`.
+4. **Pagos cobrados**, separados del anticipo pactado: el primero mueve el documento, el saldo se
+   calcula con el segundo. Entran sin comprobantes, con el escenario de la spec incumplido a
+   propósito hasta que exista almacenamiento de ficheros.
+5. **El alta provisional desde el constructor**, con su bandeja de productos por completar.
+6. **La extensión de renta**: cotización nueva enlazada, posiblemente parcial, que traspasa los
+   vínculos vivos sin que la unidad pase por disponible. Encadenable.
+7. **Pedidos de almacén** (rebanada 15).
+8. **Lo que queda de la 10**: los prospectos. Las comprobaciones de «en uso» siguen esperando a los
    documentos que aún no existen.
-4. **Base de pruebas separada de la de desarrollo.** Sigue estorbando, y ahora de dos maneras:
+9. **Base de pruebas separada de la de desarrollo.** Sigue estorbando, y ahora de dos maneras:
    `pnpm test` borra los datos con los que se está mirando la aplicación, y dos ejecuciones
    simultáneas se truncan las tablas la una a la otra.
-5. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
+10. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
    **recepción verificada de eventos de cobro** (07), que cierra el bloque crítico.
 
 Dos cosas que no van en esta lista porque no dependen de nosotros: la **medición previa al corte**
@@ -1854,3 +1863,53 @@ Y se miró de verdad, que es como aparecieron los dos defectos de arriba. En la 
 Dos notas de entorno. El proceso de la API volvía a estar arrancado sin vigilancia y servía un
 registro de rutas anterior — H-13, otra vez. Y **dos ejecuciones de `pnpm test` no pueden
 solaparse**: se truncan las tablas la una a la otra, y los fallos que salen no son de ningún cambio.
+
+### 2026-08-18 · Lo que cuesta de verdad una renta
+
+Primer punto de lo acordado tras interrogar el plan: el modelo y el motor.
+
+**Una renta sin tarifa cobraba el precio de venta por día**
+
+La spec lo decía —«recurriendo al precio base cuando la frecuencia no tenga tarifa»— y el precio
+base de un producto es el de **venta**. Catorce días de renta cobraban el equipo catorce veces. Lo
+que lo convierte en grave no es la regla sino su frecuencia: las listas de precios por día, semana y
+mes están sin llenar en la inmensa mayoría de los almacenes, así que ése era el camino **normal**.
+
+Ahora la línea queda **sin precio** y se señala. Spec corregida bajo la regla 4, con su escenario
+invertido, y la siembra pasa a llenar las tres periodicidades para que la situación se vea como lo
+que es —una lista a medias— y no como un defecto de la pantalla.
+
+**El precio negociado, que no estaba en ninguna spec**
+
+Es el total de una línea para el periodo completo: no se multiplica por los días ni por las
+unidades. Sustituye a toda tarifa sin borrarla, de modo que retirarlo devuelve el cálculo anterior.
+
+Trae consigo una consecuencia que conviene ver: **una línea así no tiene precio unitario**. Repartir
+3 500 entre tres cámaras da 1 166.67, 1 166.67 y 1 166.66 —tres cifras para tres cosas iguales— o
+una redondeada que multiplicada por tres no da 3 500. El tipo lo declara ausente, así que quien
+pinte esa columna tiene que decidir qué enseña; el documento pone un guion.
+
+**Y otra vez dos cifras a un palmo diciendo cosas distintas**
+
+El panel de importes enseñaba lo guardado mientras las líneas enseñaban lo que se estaba
+escribiendo. Es el mismo defecto que el motor compartido evita, sólo que en la otra dirección: aquí
+las dos cifras eran correctas por separado, y por eso ninguna prueba lo habría cazado. El editor
+publica ahora su previsualización y el panel la consume, avisando de que todavía no se ha guardado.
+
+**El producto provisional**
+
+`is_provisional` marca el alta hecha desde una cotización. Mientras esté puesta el producto no se
+publica, y retirarla exige la clave de catálogo: convertir un alta a medias en producto de catálogo
+es dar de alta catálogo, aunque la fila ya exista, porque es el momento en que alguien lo mira y
+responde por él. Sin la marca, «ya lo completaré luego» es una intención; con ella es una bandeja.
+
+**Comprobado**
+
+TypeScript en los seis paquetes, Biome, **490 pruebas** de vitest y las de extremo a extremo del
+almacén repetidas dos veces cada una. La cadena se miró en pantalla: 3 500.00 negociados más 107.34
+de la otra línea son los 3 607.34 de subtotal, y de ahí sale el total con sus impuestos y comisiones
+sin haber guardado nada.
+
+Tres pasadas de diagnóstico se fueron en dos trampas de las pruebas de extremo a extremo que no eran
+del producto —la siembra de la suite no borra, y «Guardado» no significa que el árbol de servidor se
+haya rehecho—. Quedan anotadas en el propio archivo de pruebas y como H-18.
