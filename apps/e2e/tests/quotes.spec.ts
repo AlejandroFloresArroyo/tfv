@@ -15,6 +15,83 @@ import { expect, test, WAREHOUSE_COMPANY } from "../setup/fixtures.ts"
 const QUOTES = (companyId: string, warehouseId: string) =>
   `/c/${companyId}/warehouses/${warehouseId}/quotes`
 
+/** Lo que una prueba creó y tiene que llevarse al terminar. */
+interface Created {
+  companyId: string
+  warehouseId: string
+  quoteId: string
+}
+
+/**
+ * Crea una cotización de renta **propia**, con equipo dentro si se le pide.
+ *
+ * Las pruebas que escriben no pueden compartir documento: el guardado de líneas y el de condiciones
+ * de pago mandan **el conjunto completo**, así que dos que corran a la vez sobre el mismo se borran
+ * lo que la otra acaba de escribir. Con `--repeat-each` la prueba compite además consigo misma.
+ *
+ * Toma la medida con **más unidades libres**, para no dejar seco al buscador que otra prueba está
+ * usando en ese mismo instante.
+ */
+async function ownQuote(
+  context: import("@playwright/test").BrowserContext,
+  companyId: string,
+  warehouseId: string,
+  name: string,
+  trash: Created[],
+  units = 0,
+): Promise<string> {
+  const lines: { measurementId: string; quantity: number }[] = []
+
+  if (units > 0) {
+    const rates = await context.request.get(
+      `/api/companies/${companyId}/warehouses/${warehouseId}/rates?availableForRent=true&limit=30`,
+    )
+    expect(rates.ok(), "no se pudieron leer las tarifas").toBe(true)
+    const { items } = (await rates.json()) as {
+      items: { measurementId: string; available: number }[]
+    }
+    // **Al azar entre las que dan de sí**, no la más abundante: quedarse siempre con la mejor hace
+    // que todas las pruebas que corren a la vez se peleen por la misma medida y la dejen seca.
+    const roomy = items.filter((item) => item.available >= units)
+    const measurementId = roomy[Math.floor(Math.random() * roomy.length)]?.measurementId
+    expect(measurementId, "el almacén no tiene equipo libre que rentar").toBeTruthy()
+    lines.push({ measurementId: measurementId as string, quantity: units })
+  }
+
+  const created = await context.request.post(
+    `/api/companies/${companyId}/warehouses/${warehouseId}/quotes`,
+    {
+      data: {
+        type: "rent",
+        name,
+        startsOn: "2026-09-03T00:00:00.000Z",
+        endsOn: "2026-09-10T00:00:00.000Z",
+        ...(lines.length > 0 ? { lines } : {}),
+      },
+    },
+  )
+  expect(created.ok(), `no se pudo crear ${name}: ${await created.text()}`).toBe(true)
+
+  const quote = (await created.json()) as { id: string }
+  trash.push({ companyId, warehouseId, quoteId: quote.id })
+  return quote.id
+}
+
+/**
+ * Se lleva lo que creó una prueba.
+ *
+ * **Sin navegar**: una limpieza que necesita abrir una página y pulsar un enlace se cae con la
+ * prueba que acaba de fallar, y entonces lo creado se queda para siempre. Cancelar antes de borrar,
+ * porque cancelar es lo que devuelve el equipo a la nave.
+ */
+async function sweep(context: import("@playwright/test").BrowserContext, trash: Created[]) {
+  for (const { companyId, warehouseId, quoteId } of trash.splice(0)) {
+    const base = `/api/companies/${companyId}/warehouses/${warehouseId}/quotes/${quoteId}`
+    await context.request.patch(`${base}/status`, { data: { status: "canceled" } })
+    await context.request.delete(base)
+  }
+}
+
 /** El primer almacén de la empresa, tal y como lo encuentra quien entra por la navegación. */
 async function firstWarehouse(page: import("@playwright/test").Page, companyId: string) {
   await page.goto(`/c/${companyId}/warehouses`)
@@ -32,12 +109,16 @@ test.describe("la bandeja de cotizaciones", () => {
 
     await page.goto(QUOTES(companyId, warehouseId))
 
+    // Lo que se comprueba es el **orden**, no el censo: otras pruebas crean las suyas en paralelo
+    // y contar todo lo que hay convertiría esta prueba en un contador de vecinos.
     const items = page.getByRole("list", { name: "Resultados" }).getByRole("listitem")
-    await expect(items).toHaveCount(4)
+    const names = await items.allTextContents()
 
     // La prioridad la deriva el servidor del estado: pre-cotización primero, en renta al final.
-    await expect(items.first()).toContainText("Documental Sierra")
-    await expect(items.last()).toContainText("Rodaje Serie Norte")
+    const sierra = names.findIndex((name) => name.includes("Documental Sierra"))
+    const norte = names.findIndex((name) => name.includes("Rodaje Serie Norte"))
+    expect(sierra, "no aparece la pre-cotización sembrada").toBeGreaterThanOrEqual(0)
+    expect(norte, "no aparece la renta sembrada").toBeGreaterThan(sierra)
   })
 
   test("un filtro por estado se comparte por enlace", async ({ as, companies }) => {
@@ -48,9 +129,11 @@ test.describe("la bandeja de cotizaciones", () => {
 
     await page.goto(`${QUOTES(companyId, warehouseId)}?status=in_rent`)
 
+    // Todo lo listado está en renta, y la sembrada figura. El número exacto depende de lo que
+    // estén haciendo las otras pruebas en este mismo instante.
     const items = page.getByRole("list", { name: "Resultados" }).getByRole("listitem")
-    await expect(items).toHaveCount(1)
-    await expect(items.first()).toContainText("Rodaje Serie Norte")
+    await expect(items.filter({ hasText: "Rodaje Serie Norte" })).toHaveCount(1)
+    for (const text of await items.allTextContents()) expect(text).toContain("En renta")
   })
 })
 
@@ -71,7 +154,7 @@ test.describe("la ficha de una cotización", () => {
 
     // Los importes vienen calculados del servidor, con su cadena entera visible.
     await expect(page.getByRole("heading", { name: "Importes" })).toBeVisible()
-    await expect(page.getByText("Total a pagar")).toBeVisible()
+    await expect(page.getByText("Total a pagar", { exact: true })).toBeVisible()
     await expect(page.getByText("Neto")).toBeVisible()
   })
 
@@ -126,8 +209,9 @@ test.describe("el constructor de cotizaciones", () => {
     const lines = page.getByRole("listitem").filter({ has: page.getByLabel("Cantidad") })
     await expect(lines.first()).toBeVisible()
 
-    const totals = await lines.getByText(/^[\d,]+\.\d\d$/).allTextContents()
-    const sum = totals.reduce((carry, value) => carry + Number(value.replace(/,/g, "")), 0)
+    // Un importe pintado, sea cual sea el idioma: dígitos con sus separadores y dos decimales.
+    const totals = await lines.getByText(/^[\d.,]+[.,]\d\d$/).allTextContents()
+    const sum = totals.reduce((carry, value) => carry + asNumber(value), 0)
 
     const subtotal = await page
       .getByRole("term")
@@ -135,7 +219,7 @@ test.describe("el constructor de cotizaciones", () => {
       .locator("xpath=following-sibling::dd[1]")
       .textContent()
 
-    expect(Number((subtotal ?? "").replace(/,/g, ""))).toBeCloseTo(sum, 2)
+    expect(asNumber(subtotal ?? "")).toBeCloseTo(sum, 2)
   })
 
   test("añadir equipo mueve los importes sin haber guardado nada", async ({ as, companies }) => {
@@ -222,22 +306,52 @@ test.describe("el cambio de estado", () => {
 })
 
 test.describe("el retorno del equipo", () => {
+  /**
+   * Saca equipo de la nave en una renta **propia**, y la deja abierta en su ficha.
+   *
+   * Antes esto usaba la renta sembrada, y registrar un retorno **consume** su equipo: la primera
+   * pasada verde dejaba a la siguiente sin nada que devolver, y la siembra no lo repone porque
+   * respeta lo que ya existe. La suite pasaba una vez y luego mentía.
+   */
+  const trash: Created[] = []
+  test.afterEach(async ({ as }) => await sweep(await as("owner"), trash))
+
+  async function rentedQuote(
+    context: import("@playwright/test").BrowserContext,
+    page: import("@playwright/test").Page,
+    companyId: string,
+    warehouseId: string,
+  ) {
+    const quoteId = await ownQuote(
+      context,
+      companyId,
+      warehouseId,
+      `Retorno ${Date.now()}`,
+      trash,
+      2,
+    )
+
+    const base = `/api/companies/${companyId}/warehouses/${warehouseId}/quotes/${quoteId}/status`
+    for (const status of ["in_progress", "in_rent"]) {
+      const moved = await context.request.patch(base, { data: { status } })
+      expect(moved.ok(), `no se pudo pasar a ${status}: ${await moved.text()}`).toBe(true)
+    }
+
+    await page.goto(`${QUOTES(companyId, warehouseId)}/${quoteId}`)
+    return page.getByRole("region", { name: "Retorno del equipo" })
+  }
+
   test("una renta en curso nombra el equipo que tiene fuera", async ({ as, companies }) => {
     const context = await as("owner")
     const page = await context.newPage()
     const companyId = companies[WAREHOUSE_COMPANY] as string
     const warehouseId = await firstWarehouse(page, companyId)
 
-    await page.goto(`${QUOTES(companyId, warehouseId)}?status=in_rent`)
-    await page.getByRole("link", { name: "Rodaje Serie Norte · bloque 1" }).click()
-    await page.waitForURL(/\/quotes\/[^/]+$/)
-
-    const returns = page.getByRole("region", { name: "Retorno del equipo" })
+    const returns = await rentedQuote(context, page, companyId, warehouseId)
     await expect(returns).toBeVisible()
 
     // Cada unidad por su código, que es lo que lleva escrito la etiqueta de la nave.
-    const units = returns.getByRole("listitem")
-    await expect(units.first()).toBeVisible()
+    await expect(returns.getByRole("listitem").first()).toBeVisible()
     await expect(page.getByRole("button", { name: /Registrar/ })).toBeDisabled()
   })
 
@@ -247,11 +361,7 @@ test.describe("el retorno del equipo", () => {
     const companyId = companies[WAREHOUSE_COMPANY] as string
     const warehouseId = await firstWarehouse(page, companyId)
 
-    await page.goto(`${QUOTES(companyId, warehouseId)}?status=in_rent`)
-    await page.getByRole("link", { name: "Rodaje Serie Norte · bloque 1" }).click()
-    await page.waitForURL(/\/quotes\/[^/]+$/)
-
-    const returns = page.getByRole("region", { name: "Retorno del equipo" })
+    const returns = await rentedQuote(context, page, companyId, warehouseId)
     const before = await returns.getByRole("listitem").count()
 
     await returns.getByRole("checkbox").first().check()
@@ -263,6 +373,9 @@ test.describe("el retorno del equipo", () => {
 })
 
 test.describe("el precio negociado", () => {
+  const trash: Created[] = []
+  test.afterEach(async ({ as }) => await sweep(await as("owner"), trash))
+
   test("sustituye a la tarifa y arrastra la cadena entera de importes", async ({
     as,
     companies,
@@ -286,7 +399,8 @@ test.describe("el precio negociado", () => {
 
     // La línea cobra lo escrito, sin multiplicarlo por los días ni por las unidades.
     const lines = page.getByRole("listitem").filter({ has: page.getByLabel("Cantidad") })
-    await expect(lines.first()).toContainText("3500.00")
+    // Pintado en español: el punto agrupa los miles y la coma separa los decimales.
+    await expect(lines.first()).toContainText("3500,00")
 
     // Y el panel de al lado se mueve con ella: dos cifras a un palmo no pueden decir cosas
     // distintas mientras se edita.
@@ -295,21 +409,25 @@ test.describe("el precio negociado", () => {
   })
 
   test("guardarlo lo conserva al recargar", async ({ as, companies }) => {
-    // La siembra de la suite **no borra**: respeta lo que ya existe, así que el valor de partida es
-    // el que dejó la pasada anterior. Se escribe **otro**: así la prueba comprueba que se guarda en
-    // vez de comprobar que ya estaba, y se puede repetir.
     const context = await as("owner")
     const page = await context.newPage()
     const companyId = companies[WAREHOUSE_COMPANY] as string
     const warehouseId = await firstWarehouse(page, companyId)
+    const quoteId = await ownQuote(
+      context,
+      companyId,
+      warehouseId,
+      `Negociado ${Date.now()}`,
+      trash,
+      2,
+    )
 
-    await page.goto(`${QUOTES(companyId, warehouseId)}?status=pre_quote`)
-    await page.getByRole("link", { name: "Documental Sierra" }).click()
-    await page.waitForURL(/\/quotes\/[^/]+$/)
+    await page.goto(`${QUOTES(companyId, warehouseId)}/${quoteId}`)
 
     const field = page.getByLabel("Precio negociado").first()
-    const next = (await field.inputValue()) === "1234.00" ? "4321.00" : "1234.00"
+    await expect(field).toHaveValue("")
 
+    const next = "1234.00"
     await field.fill(next)
     await page.getByRole("button", { name: "Guardar líneas" }).click()
     await expect(page.getByText("Guardado")).toBeVisible()
@@ -318,11 +436,157 @@ test.describe("el precio negociado", () => {
     // Recargar encima de esa revalidación en vuelo sirve el documento anterior.
     await page.waitForLoadState("networkidle")
     await page.reload()
-    await expect(page.getByLabel("Precio negociado").first()).toHaveValue(next)
+    await expect(page.getByLabel("Precio negociado").first()).toHaveValue(next, { timeout: 15_000 })
   })
 })
 
-/** El total a pagar que enseña el panel de importes. */
+test.describe("las condiciones de pago", () => {
+  const trash: Created[] = []
+  test.afterEach(async ({ as }) => await sweep(await as("owner"), trash))
+
+  /** Crea una cotización propia y abre su ficha con el bloque de pago a la vista. */
+  async function openPayment(
+    context: import("@playwright/test").BrowserContext,
+    page: import("@playwright/test").Page,
+    companyId: string,
+    warehouseId: string,
+    name: string,
+  ) {
+    const quoteId = await ownQuote(context, companyId, warehouseId, name, trash)
+    await page.goto(`${QUOTES(companyId, warehouseId)}/${quoteId}`)
+    await expect(page.getByRole("heading", { name: "Condiciones de pago" })).toBeVisible()
+    return page.getByRole("region", { name: "Condiciones de pago" })
+  }
+
+  test("un concepto adicional se guarda solo y suma al subtotal", async ({ as, companies }) => {
+    // Sin botón: el texto viaja al perder el foco. Y la fila no viaja hasta tener nombre e importe,
+    // porque un concepto a medio llenar acaba en el documento del cliente con el nombre en blanco.
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+    const payment = await openPayment(
+      context,
+      page,
+      companyId,
+      warehouseId,
+      `Adicionales ${Date.now()}`,
+    )
+
+    const amounts = page.getByRole("heading", { name: "Importes" }).locator("..")
+    const before = await total(amounts)
+
+    await payment.getByRole("button", { name: "Añadir concepto" }).click()
+    await expect(payment.getByText(/todavía no se guarda/i)).toBeVisible()
+
+    await payment.getByLabel("Concepto", { exact: true }).fill("Traslado")
+    await payment.getByLabel("Concepto", { exact: true }).blur()
+    await payment.locator("li").first().getByLabel("Importe").fill("1500.00")
+    await payment.locator("li").first().getByLabel("Importe").blur()
+
+    await expect(payment.getByText("Guardado")).toBeVisible()
+    await expect(amounts).toContainText("Conceptos adicionales")
+    await expect.poll(() => total(amounts)).not.toBe(before)
+
+    // Y sigue ahí después de recargar, que es lo que distingue guardar de parecer que se guardó.
+    await page.waitForLoadState("networkidle")
+    await page.reload()
+    const reopened = page.getByRole("region", { name: "Condiciones de pago" })
+    await expect(reopened.getByLabel("Concepto", { exact: true })).toHaveValue("Traslado", {
+      timeout: 15_000,
+    })
+
+    await reopened
+      .getByRole("button", { name: /Quitar/ })
+      .first()
+      .click()
+    await expect(reopened.getByText("Guardado")).toBeVisible()
+    await expect(amounts).not.toContainText("Conceptos adicionales")
+  })
+
+  test("el precio por paquete manda y esconde los importes de línea", async ({ as, companies }) => {
+    // Enseñar al lado las cifras que ya no rigen sólo invita a discutir sobre ellas.
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+    const payment = await openPayment(
+      context,
+      page,
+      companyId,
+      warehouseId,
+      `Paquete ${Date.now()}`,
+    )
+
+    const amounts = page.getByRole("heading", { name: "Importes" }).locator("..")
+    await expect(amounts).toContainText("Total de líneas")
+
+    await payment.getByLabel("Precio del paquete").fill("9000.00")
+    await payment.getByLabel("Precio del paquete").blur()
+
+    await expect(page.getByText(/El precio del paquete manda/)).toBeVisible()
+    await expect(amounts).toContainText("Precio del paquete")
+    await expect(amounts).not.toContainText("Total de líneas")
+
+    // Retirarlo devuelve la cuenta por líneas: el paquete sustituye, no borra.
+    await payment.getByLabel("Precio del paquete").fill("")
+    await payment.getByLabel("Precio del paquete").blur()
+    await expect(amounts).toContainText("Total de líneas")
+  })
+
+  test("el depósito se informa aparte y no toca el total", async ({ as, companies }) => {
+    // Es una garantía que se devuelve: meterla en el total a pagar hace que el documento mienta
+    // sobre lo que cuesta el servicio.
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+    const payment = await openPayment(
+      context,
+      page,
+      companyId,
+      warehouseId,
+      `Depósito ${Date.now()}`,
+    )
+
+    const amounts = page.getByRole("heading", { name: "Importes" }).locator("..")
+    const before = await total(amounts)
+
+    const deposit = payment.getByRole("group", { name: "Depósito en garantía" })
+    await deposit.getByLabel("Importe").fill("5000.00")
+    await deposit.getByLabel("Importe").blur()
+
+    await expect(amounts).toContainText("Importes contingentes")
+    await expect(amounts).toContainText("Depósito en garantía")
+    await expect.poll(() => total(amounts)).toBe(before)
+
+    await deposit.getByLabel("Importe").fill("")
+    await deposit.getByLabel("Importe").blur()
+    await expect(amounts).not.toContainText("Depósito en garantía")
+  })
+})
+
+/**
+ * El total a pagar que enseña el panel de importes.
+ *
+ * El rótulo va **exacto**: hay textos de ayuda en el formulario que mencionan el total a pagar de
+ * pasada, y una coincidencia por subcadena los recoge también.
+ */
 async function total(panel: import("@playwright/test").Locator): Promise<string> {
-  return (await panel.getByText("Total a pagar").locator("..").textContent()) ?? ""
+  return (await panel.getByText("Total a pagar", { exact: true }).locator("..").textContent()) ?? ""
+}
+
+/**
+ * Un importe de la pantalla, como número.
+ *
+ * La aplicación pinta en español: el punto agrupa los miles y la coma separa los decimales. Leerlo
+ * como si fuera inglés —quitar comas y ya— da `21.000.00`, que no es un número.
+ */
+function asNumber(text: string): number {
+  return Number(
+    text
+      .replace(/[^\d,.-]/g, "")
+      .replace(/\./g, "")
+      .replace(",", "."),
+  )
 }
