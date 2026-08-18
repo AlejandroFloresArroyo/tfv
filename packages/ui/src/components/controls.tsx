@@ -136,8 +136,16 @@ export function Checkbox({ label, hint, className, id: given, ...rest }: Checkbo
 
 // ─── Interruptor ─────────────────────────────────────────────────────────────
 
-export interface SwitchProps extends ComponentPropsWithoutRef<typeof SwitchPrimitive.Root> {
+export interface SwitchProps
+  extends Omit<ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>, "required"> {
   label?: string
+  /**
+   * El primitivo lo declara `boolean` a secas, y `Field` entrega `boolean | undefined`.
+   *
+   * Con `exactOptionalPropertyTypes` eso no compila, así que un interruptor dentro de un campo no
+   * se podía escribir — y escribirlo fuera es lo que deja la etiqueta sin atar al control.
+   */
+  required?: boolean | undefined
 }
 
 /**
@@ -147,7 +155,7 @@ export interface SwitchProps extends ComponentPropsWithoutRef<typeof SwitchPrimi
  * casilla espera al envío del formulario. Usar el aspecto equivocado hace que la gente pulse
  * «Guardar» buscando un botón que no existe, o que crea que no guardó cuando ya lo hizo.
  */
-export function Switch({ label, className, id: given, ...rest }: SwitchProps) {
+export function Switch({ label, className, id: given, required, ...rest }: SwitchProps) {
   // Como en la casilla: sin identificador la etiqueta no queda atada al control, y eso no se ve.
   const generated = useId()
   const id = given ?? generated
@@ -155,6 +163,7 @@ export function Switch({ label, className, id: given, ...rest }: SwitchProps) {
   const control = (
     <SwitchPrimitive.Root
       id={id}
+      {...(required === undefined ? {} : { required })}
       className={cn(
         "relative h-5.5 w-9.5 shrink-0 rounded-xl border border-transparent bg-line-strong",
         "transition-colors duration-150",
