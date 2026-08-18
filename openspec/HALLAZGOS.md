@@ -62,6 +62,12 @@ encontró, qué se hizo y dónde mirar.
 
 ## Abiertos
 
+> **Los huecos en la numeración no son hallazgos borrados.** Cuando varios árboles de trabajo
+> avanzan a la vez, cada uno recibe un rango de números reservado para que no choquen al integrar;
+> lo que no se usa queda vacío. Es más barato que renumerar filas a las que ya apuntan comentarios
+> del código y escenarios de las specs.
+
+
 | # | Dónde | Qué pasa | Por qué sigue abierto |
 |---|---|---|---|
 | H-09 | Permisos de almacén | **Un permiso de producto no descubre el almacén.** `warehouses.products.view` abre el catálogo cuando ya se conoce el identificador, pero la única ruta para descubrirlo exige `warehouses.warehouses.view`. Un papel con el primero y no el segundo recibe `403` antes de poder elegir almacén. | Hay tres salidas —componer los papeles, definir herencia entre permisos, o exponer una consulta de descubrimiento autorizada por los recursos hijos— y elegir es decisión de producto. No se amplió el papel en silencio. |
