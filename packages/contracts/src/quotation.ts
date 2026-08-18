@@ -28,10 +28,12 @@ import {
 } from "./money.ts"
 
 /** Periodicidad de cobro de una línea de renta. */
-export type RentFrequency = "daily" | "weekly" | "monthly"
+export const RENT_FREQUENCIES = ["daily", "weekly", "monthly"] as const
+export type RentFrequency = (typeof RENT_FREQUENCIES)[number]
 
 /** Dirección del redondeo de los días aplicados. */
-export type RoundDirection = "up" | "down"
+export const ROUND_DIRECTIONS = ["up", "down"] as const
+export type RoundDirection = (typeof ROUND_DIRECTIONS)[number]
 
 /** Días que cubre una unidad de cada frecuencia. */
 const FREQUENCY_DIVISOR: Record<RentFrequency, bigint> = {
@@ -99,6 +101,21 @@ export function appliedDays(converted: string, rounding: DayRounding): string {
  * Con `| undefined` explícito porque lo que llega de un esquema de ruta es «presente con valor
  * indefinido», no «ausente».
  */
+/**
+ * Contacto de una de las partes.
+ *
+ * Vive aquí y no en el esquema por lo mismo que el resto del documento: lo enseña el navegador y lo
+ * guarda el servidor, y dos copias de la misma estructura acaban divergiendo.
+ *
+ * Con `| undefined` explícito porque lo que llega de un esquema de ruta es «presente con valor
+ * indefinido», no «ausente».
+ */
+export interface QuoteContact {
+  readonly name: string
+  readonly phone?: string | undefined
+  readonly position?: string | undefined
+}
+
 export interface RateSchedule {
   readonly isFixed: boolean
   readonly fixed?: string | undefined
