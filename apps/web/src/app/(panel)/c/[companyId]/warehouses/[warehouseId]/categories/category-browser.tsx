@@ -38,9 +38,11 @@ export async function CategoryBrowser({
 }) {
   const t = await getTranslations()
   const selected = path.at(-1)
+  const parent = path.at(-2)
   const canAct = canEdit || canDelete
+  const base = `/c/${companyId}/warehouses/${warehouseId}/categories`
 
-  const actionsFor = (category: WarehouseCategoryRow) => (
+  const actionsFor = (category: WarehouseCategoryRow, after?: string) => (
     <CategoryActions
       companyId={companyId}
       warehouseId={warehouseId}
@@ -48,12 +50,13 @@ export async function CategoryBrowser({
       canEdit={canEdit}
       canDelete={canDelete}
       canCountProducts={canCountProducts}
+      after={after}
     />
   )
 
   return (
     <TreeBrowser<WarehouseCategoryRow>
-      base={`/c/${companyId}/warehouses/${warehouseId}/categories`}
+      base={base}
       icon={FolderTree}
       labels={{
         roots: t("warehouses.categories.roots"),
@@ -102,8 +105,13 @@ export async function CategoryBrowser({
           />
         ) : undefined
       }
-      actions={canAct && selected ? actionsFor(selected) : undefined}
-      nodeActions={canAct ? actionsFor : undefined}
+      // Borrar lo que se está mirando devuelve a su padre, o al nivel principal si era una raíz.
+      actions={
+        canAct && selected
+          ? actionsFor(selected, parent ? `${base}/${parent.id}` : base)
+          : undefined
+      }
+      nodeActions={canAct ? (node) => actionsFor(node) : undefined}
     />
   )
 }

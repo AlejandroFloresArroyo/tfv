@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { ConfirmDestructive } from "../confirm-destructive.tsx"
 
@@ -25,6 +26,7 @@ export function TreeDeleteDialog({
   countFailedLabel,
   load,
   remove,
+  after,
   open,
   onOpenChange,
 }: {
@@ -39,9 +41,18 @@ export function TreeDeleteDialog({
   /** Las líneas del alcance, ya redactadas por la pantalla. */
   load: () => Promise<readonly string[]>
   remove: () => Promise<unknown>
+  /**
+   * A dónde ir cuando lo borrado **es lo que se está mirando**.
+   *
+   * Sin esto, quien borra el nodo seleccionado se queda en la dirección de algo que ya no existe y
+   * ve un «algo salió mal» inmediatamente después de una operación que salió bien. Se pasa sólo
+   * desde la ficha del seleccionado: borrar una hija desde su tarjeta no mueve a nadie de sitio.
+   */
+  after?: string | undefined
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const router = useRouter()
   const [cascade, setCascade] = useState<readonly string[] | null>(null)
   const [failed, setFailed] = useState(false)
 
@@ -83,7 +94,13 @@ export function TreeDeleteDialog({
       confirmLabel={confirmLabel}
       open={open}
       onOpenChange={onOpenChange}
-      action={remove}
+      action={async () => {
+        const done = await remove()
+        // Antes de que el árbol de servidor se vuelva a resolver: si no, se pinta una vez la
+        // dirección muerta.
+        if (after) router.replace(after)
+        return done
+      }}
     />
   )
 }

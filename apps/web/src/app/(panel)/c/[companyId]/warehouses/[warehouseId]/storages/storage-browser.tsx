@@ -36,21 +36,24 @@ export async function StorageBrowser({
 }) {
   const t = await getTranslations()
   const selected = path.at(-1)
+  const parent = path.at(-2)
   const canAct = canEdit || canDelete
+  const base = `/c/${companyId}/warehouses/${warehouseId}/storages`
 
-  const actionsFor = (storage: StorageRow) => (
+  const actionsFor = (storage: StorageRow, after?: string) => (
     <StorageActions
       companyId={companyId}
       warehouseId={warehouseId}
       storage={storage}
       canEdit={canEdit}
       canDelete={canDelete}
+      after={after}
     />
   )
 
   return (
     <TreeBrowser<StorageRow>
-      base={`/c/${companyId}/warehouses/${warehouseId}/storages`}
+      base={base}
       icon={MapPinned}
       labels={{
         roots: t("warehouses.storages.roots"),
@@ -99,8 +102,13 @@ export async function StorageBrowser({
           />
         ) : undefined
       }
-      actions={canAct && selected ? actionsFor(selected) : undefined}
-      nodeActions={canAct ? actionsFor : undefined}
+      // Borrar lo que se está mirando devuelve a su padre, o al nivel principal si era una raíz.
+      actions={
+        canAct && selected
+          ? actionsFor(selected, parent ? `${base}/${parent.id}` : base)
+          : undefined
+      }
+      nodeActions={canAct ? (node) => actionsFor(node) : undefined}
     />
   )
 }

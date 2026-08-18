@@ -196,12 +196,14 @@ export function DeleteCategory({
   warehouseId,
   category,
   canCountProducts,
+  after,
   open,
   onOpenChange,
 }: {
   companyId: string
   warehouseId: string
   category: WarehouseCategoryRow
+  after?: string | undefined
   /**
    * Si se puede preguntar al catálogo cuántos productos se quedan sin clasificar.
    *
@@ -239,6 +241,7 @@ export function DeleteCategory({
         ]
       }}
       remove={() => api(`${basePath(companyId, warehouseId)}/${category.id}`, { method: "DELETE" })}
+      after={after}
       open={open}
       onOpenChange={onOpenChange}
     />
@@ -252,6 +255,7 @@ export function CategoryActions({
   canEdit,
   canDelete,
   canCountProducts,
+  after,
 }: {
   companyId: string
   warehouseId: string
@@ -259,6 +263,8 @@ export function CategoryActions({
   canEdit: boolean
   canDelete: boolean
   canCountProducts: boolean
+  /** A dónde ir tras borrar, cuando ésta es la categoría que la pantalla está enseñando. */
+  after?: string | undefined
 }) {
   const t = useTranslations()
   const actions: ItemAction[] = []
@@ -305,6 +311,7 @@ export function CategoryActions({
           warehouseId={warehouseId}
           category={category}
           canCountProducts={canCountProducts}
+          after={after}
           {...control}
         />
       ),

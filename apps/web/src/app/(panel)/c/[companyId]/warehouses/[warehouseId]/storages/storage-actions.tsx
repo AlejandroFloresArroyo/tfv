@@ -210,12 +210,14 @@ export function DeleteStorage({
   companyId,
   warehouseId,
   storage,
+  after,
   open,
   onOpenChange,
 }: {
   companyId: string
   warehouseId: string
   storage: StorageRow
+  after?: string | undefined
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -238,6 +240,7 @@ export function DeleteStorage({
         ]
       }}
       remove={() => api(`${base}/${storage.id}`, { method: "DELETE" })}
+      after={after}
       open={open}
       onOpenChange={onOpenChange}
     />
@@ -256,12 +259,15 @@ export function StorageActions({
   storage,
   canEdit,
   canDelete,
+  after,
 }: {
   companyId: string
   warehouseId: string
   storage: StorageRow
   canEdit: boolean
   canDelete: boolean
+  /** A dónde ir tras borrar, cuando ésta es la ubicación que la pantalla está enseñando. */
+  after?: string | undefined
 }) {
   const t = useTranslations()
   const actions: ItemAction[] = []
@@ -307,6 +313,7 @@ export function StorageActions({
           companyId={companyId}
           warehouseId={warehouseId}
           storage={storage}
+          after={after}
           {...control}
         />
       ),
