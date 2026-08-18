@@ -312,6 +312,9 @@ export interface ProductPriceRow {
   sale: string
   rent: RateSchedule
   penalty: RateSchedule
+  createdAt: string
+  updatedAt: string
+}
 
 // ─── Los dos árboles del almacén ─────────────────────────────────────────────
 
