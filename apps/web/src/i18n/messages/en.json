@@ -700,6 +700,23 @@
         "production": "From production",
         "storefront": "From the shop"
       }
+    },
+    "priceLists": {
+      "title": "Price lists",
+      "subtitle": "The rates {warehouse} quotes its equipment with.",
+      "searchPlaceholder": "Search a list by name or description…",
+      "empty": "This warehouse has no price lists yet.",
+      "emptyBody": "A list holds the sale, rental and penalty rates of the products assigned to it.",
+      "create": "New list",
+      "createTitle": "Create a price list",
+      "createBody": "It starts empty: products are assigned afterwards, and one product can appear in several lists with different rates.",
+      "editTitle": "Edit {name}",
+      "description": "Description",
+      "descriptionHint": "What this list is for: season, client or channel.",
+      "priced": "{count, plural, =0 {No product has a rate} one {# product with a rate} other {# products with a rate}}",
+      "deleteTitle": "Delete the price list",
+      "deleteCascade": "{count, plural, =0 {There is no rate to delete.} one {# product loses the price this list gave it.} other {# products lose the price this list gave them.}}",
+      "deleteKeepsProducts": "The products stay in the catalog: what disappears are their rates in this list."
     }
   }
 }

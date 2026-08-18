@@ -700,6 +700,23 @@
         "production": "De producción",
         "storefront": "De tienda"
       }
+    },
+    "priceLists": {
+      "title": "Listas de precios",
+      "subtitle": "Con qué tarifas se cotiza el equipo de {warehouse}.",
+      "searchPlaceholder": "Buscar lista por nombre o descripción…",
+      "empty": "Este almacén todavía no tiene listas de precios.",
+      "emptyBody": "Una lista reúne las tarifas de venta, renta y penalización de los productos que se le asignen.",
+      "create": "Crear lista",
+      "createTitle": "Crear una lista de precios",
+      "createBody": "Nace vacía: los productos se asignan después, y uno mismo puede figurar en varias listas con tarifas distintas.",
+      "editTitle": "Editar {name}",
+      "description": "Descripción",
+      "descriptionHint": "Para qué es esta lista: temporada, cliente o canal.",
+      "priced": "{count, plural, =0 {Ningún producto con tarifa} one {# producto con tarifa} other {# productos con tarifa}}",
+      "deleteTitle": "Eliminar la lista de precios",
+      "deleteCascade": "{count, plural, =0 {No hay ninguna tarifa que borrar.} one {# producto se queda sin el precio que esta lista le daba.} other {# productos se quedan sin el precio que esta lista les daba.}}",
+      "deleteKeepsProducts": "Los productos siguen en el catálogo: lo que desaparece son sus tarifas en esta lista."
     }
   }
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { Boxes, ClipboardList, FileText, MapPinned, Warehouse } from "lucide-react"
+import { Boxes, ClipboardList, FileText, MapPinned, Tags, Warehouse } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
@@ -13,6 +13,7 @@ export function WarehouseNav({
   canViewStorages,
   canViewQuotes,
   canViewOrders,
+  canViewPrices = false,
 }: {
   companyId: string
   warehouseId: string
@@ -22,6 +23,15 @@ export function WarehouseNav({
   /** Sin valor por omisión: una pantalla nueva que lo olvide no compila, en vez de perder la pestaña. */
   canViewQuotes: boolean
   canViewOrders: boolean
+  /**
+   * Las listas de precios.
+   *
+   * Con valor por omisión, al revés que sus vecinas: la pestaña llega después que las ocho
+   * pantallas que ya pintan esta navegación, y una que todavía no lo pase debe **perder la
+   * pestaña**, no dejar de compilar. Pintarla sin saber si hay permiso no es opción: ofrecería una
+   * pantalla que responde 403.
+   */
+  canViewPrices?: boolean
 }) {
   const t = useTranslations("warehouses")
   const pathname = usePathname()
@@ -64,6 +74,16 @@ export function WarehouseNav({
             label: t("orders.title"),
             icon: ClipboardList,
             active: pathname.startsWith(`${base}/orders`),
+          },
+        ]
+      : []),
+    ...(canViewPrices
+      ? [
+          {
+            href: `${base}/price-lists`,
+            label: t("priceLists.title"),
+            icon: Tags,
+            active: pathname.startsWith(`${base}/price-lists`),
           },
         ]
       : []),
