@@ -57,6 +57,14 @@ describe("superficie pública", () => {
      */
     "GET /categories",
     "GET /health",
+    /**
+     * Añadida el 2026-08-18, de forma deliberada.
+     *
+     * El formulario de contacto: quien deja sus datos no tiene cuenta, y exigirle una lo dejaría
+     * sin sentido. **No escribe sobre ninguna empresa**: un prospecto es una intención de contacto
+     * con la plataforma, y ni siquiera devuelve el identificador de lo que creó.
+     */
+    "POST /prospects",
   ]
 
   it("es exactamente la declarada", () => {
@@ -70,17 +78,22 @@ describe("superficie pública", () => {
     }
   })
 
-  it("las escrituras públicas se limitan a la superficie de acceso", () => {
+  it("ninguna escritura pública toca datos de una empresa", () => {
     /**
-     * La spec permite escrituras públicas —registrarse, iniciar sesión, canjear un enlace— pero
-     * **ninguna sobre datos de una empresa**. Que todas cuelguen de `/auth` es lo que hace esa
-     * frontera comprobable de forma mecánica.
+     * La spec permite escrituras públicas —registrarse, iniciar sesión, canjear un enlace, dejar
+     * los datos de contacto— pero **ninguna sobre datos de una empresa**.
+     *
+     * La comprobación era «todas cuelgan de `/auth`», que servía de sustituto mientras todas lo
+     * hacían. Al llegar el formulario de contacto dejó de servir: un prospecto no es autenticación
+     * y tampoco es de nadie. Lo que se comprueba ahora es la frontera de verdad — que el camino no
+     * se resuelva contra una empresa—, que es la misma que `assertScopedByCompany` aplica al
+     * cargar el módulo. La lista de arriba sigue fijando cuáles son, exactamente.
      */
     const escrituras = publicRoutes(routes).filter((route) => route.method !== "GET")
 
     expect(escrituras.length).toBeGreaterThan(0)
     for (const ruta of escrituras) {
-      expect(ruta.path, `${ruta.method} ${ruta.path}`).toMatch(/^\/auth\//)
+      expect(ruta.path, `${ruta.method} ${ruta.path}`).not.toMatch(/\{companyId\}|:companyId/)
     }
   })
 })

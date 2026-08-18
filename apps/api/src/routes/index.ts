@@ -91,6 +91,13 @@ import {
 } from "./orders.ts"
 import { permissionCatalogRoute } from "./permissions.ts"
 import {
+  acceptProspectRoute,
+  captureProspectRoute,
+  discardProspectRoute,
+  listProspectsRoute,
+  updateProspectRoute,
+} from "./prospects.ts"
+import {
   changeQuoteStatusRoute,
   createQuoteRoute,
   deleteQuotePaymentRoute,
@@ -164,6 +171,13 @@ export const routes: readonly RegisteredRoute[] = [
   acceptInvitationRoute,
   changeEmailRoute,
   changePasswordRoute,
+
+  // Prospectos: la captura es pública, el resto lo lleva la administración de plataforma.
+  captureProspectRoute,
+  listProspectsRoute,
+  updateProspectRoute,
+  acceptProspectRoute,
+  discardProspectRoute,
 
   // ─── Autorización ──────────────────────────────────────────────────────────
   permissionCatalogRoute,

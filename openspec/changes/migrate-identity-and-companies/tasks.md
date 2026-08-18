@@ -15,8 +15,11 @@ Casi todo esto ya existía desde la rebanada 04, que construyó el ciclo de vida
 - [x] Activación y desactivación, con invalidación de sesiones
 - [x] Baja con borrado lógico y liberación del correo
 - [ ] Impedir la baja del único propietario de una empresa activa
-- [ ] Prospectos: captura pública, gestión y aceptación
-- [ ] Corregir la retirada del prospecto aceptado
+- [x] Prospectos: captura pública, gestión y aceptación. **Sin pantalla todavía**: el formulario
+      pertenece al sitio público (29e) y la bandeja necesita un área de administración de
+      plataforma que aún no existe
+- [x] Corregir la retirada del prospecto aceptado. La bandeja son los que no tienen `accepted_at`,
+      así que sale de ella por construcción y el rastro se conserva
 - [ ] Corregir la escritura de la marca de última actividad
 
 ## Empresas
