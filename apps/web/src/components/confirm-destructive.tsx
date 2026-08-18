@@ -27,6 +27,19 @@ export function ConfirmDestructive({
   entity,
   /** Qué más se lleva por delante. Vacío significa que no se lleva nada. */
   cascade = [],
+  /**
+   * Qué decir mientras la cascada todavía se está contando.
+   *
+   * Hay bajas cuyo alcance sólo lo sabe el servidor —cuántas ubicaciones, cuántos productos— y hay
+   * que preguntárselo al abrir. Mientras la respuesta no llega, confirmar quedaría **por encima de
+   * la enumeración**, que es justo lo que este diálogo existe para impedir: se anuncia que se está
+   * contando y no se deja confirmar hasta que la cuenta esté delante.
+   *
+   * Es el texto y no una bandera porque el texto pertenece al espacio de nombres de quien llama,
+   * igual que el título y la etiqueta de confirmación. Ausente —lo normal— la cascada se conoce sin
+   * preguntar y no hay nada que esperar.
+   */
+  countingLabel,
   confirmLabel,
   action,
   open: controlledOpen,
@@ -37,6 +50,7 @@ export function ConfirmDestructive({
   title: string
   entity: string
   cascade?: readonly string[]
+  countingLabel?: string
   confirmLabel: string
   action: () => Promise<unknown>
   open?: boolean
@@ -74,7 +88,11 @@ export function ConfirmDestructive({
             })}
           </p>
 
-          {cascade.length > 0 ? (
+          {countingLabel ? (
+            <p className="text-body2 text-content-muted" aria-live="polite">
+              {countingLabel}
+            </p>
+          ) : cascade.length > 0 ? (
             <div>
               <p className="text-body2 font-semibold text-content">{t("common.alsoAffects")}</p>
               <ul className="mt-1.5 list-disc pl-5 text-body2 text-content-muted">
@@ -94,7 +112,12 @@ export function ConfirmDestructive({
               </Button>
             </DialogClose>
 
-            <Button type="submit" variant="danger" loading={form.pending}>
+            <Button
+              type="submit"
+              variant="danger"
+              loading={form.pending}
+              disabled={countingLabel !== undefined}
+            >
               {confirmLabel}
             </Button>
           </div>
