@@ -271,7 +271,7 @@ export async function createQuote(
     if (!row) throw new Error("La cotización no se insertó")
 
     if (withLines) {
-      await applyLines(tx, row.id, warehouseId, input.lines ?? [], {
+      await applyQuoteLines(tx, row.id, warehouseId, input.lines ?? [], {
         actorId: actor.userId,
         allowMinting: input.allowMinting ?? false,
       })
@@ -844,7 +844,7 @@ export async function setLines(
     const quote = await loadQuote(tx, warehouseId, quoteId)
     await assertLinesEditable(tx, quote, input)
 
-    await applyLines(tx, quoteId, warehouseId, input, { actorId: actor.userId, allowMinting })
+    await applyQuoteLines(tx, quoteId, warehouseId, input, { actorId: actor.userId, allowMinting })
     return readLines(tx, quoteId)
   })
 }
@@ -855,7 +855,7 @@ export async function setLines(
  * Vive aparte porque el alta de una cotización con líneas la necesita dentro de **su** transacción:
  * crear la cotización y apartar su equipo tienen que confirmarse juntos.
  */
-async function applyLines(
+export async function applyQuoteLines(
   tx: Transaction,
   quoteId: string,
   warehouseId: string,

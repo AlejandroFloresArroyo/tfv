@@ -79,6 +79,16 @@ import {
   updateUserAddressRoute,
 } from "./directory.ts"
 import { health } from "./health.ts"
+import {
+  acceptOrderRoute,
+  changeOrderStatusRoute,
+  createOrderRoute,
+  deleteOrderRoute,
+  getOrderRoute,
+  listOrderLinesRoute,
+  listOrdersRoute,
+  rejectOrderRoute,
+} from "./orders.ts"
 import { permissionCatalogRoute } from "./permissions.ts"
 import {
   changeQuoteStatusRoute,
@@ -270,6 +280,16 @@ export const routes: readonly RegisteredRoute[] = [
   extendQuoteRoute,
   reservationCoherenceRoute,
   deleteQuoteRoute,
+
+  // Pedidos de almacén: la bandeja del operador. Aceptar genera la cotización.
+  listOrdersRoute,
+  createOrderRoute,
+  getOrderRoute,
+  listOrderLinesRoute,
+  acceptOrderRoute,
+  rejectOrderRoute,
+  changeOrderStatusRoute,
+  deleteOrderRoute,
 
   // ─── Producciones ──────────────────────────────────────────────────────────
   // Pendiente: rebanada 20.
