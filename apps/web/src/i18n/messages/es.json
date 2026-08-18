@@ -630,7 +630,20 @@
       "paymentNote": "Nota",
       "collected": "Cobrado",
       "balance": "Saldo",
-      "balanceHint": "Lo que falta por cobrar, contado desde el bruto."
-    }
+      "balanceHint": "Lo que falta por cobrar, contado desde el bruto.",
+      "addProvisional": "Dar de alta provisional",
+      "provisionalTitle": "Equipo que no está en el catálogo",
+      "provisionalDescription": "Se da de alta marcado y sin publicar, para poder cotizarlo ahora y completarlo después.",
+      "provisionalName": "Nombre del equipo",
+      "provisionalMeasurement": "Medida",
+      "provisionalMeasurementHint": "Cómo se distingue esta versión del equipo. Si no hay varias, deja «Única».",
+      "provisionalDefaultMeasurement": "Única",
+      "provisionalNote": "Sin precio: se pone a mano en la línea. Aparecerá en la bandeja de productos por completar.",
+      "provisionalSubmit": "Dar de alta y añadir",
+      "provisionalFailed": "No se pudo dar de alta el equipo",
+      "provisional": "Por completar",
+      "provisionalFilter": "Sólo lo que falta por completar"
+    },
+    "completeOnly": "Sólo los completos"
   }
 }

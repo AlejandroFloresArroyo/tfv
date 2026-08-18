@@ -630,7 +630,20 @@
       "paymentNote": "Note",
       "collected": "Collected",
       "balance": "Balance",
-      "balanceHint": "What is left to collect, counted from the gross."
-    }
+      "balanceHint": "What is left to collect, counted from the gross.",
+      "addProvisional": "Add provisionally",
+      "provisionalTitle": "Equipment that is not in the catalogue",
+      "provisionalDescription": "Added marked and unpublished, so it can be quoted now and completed later.",
+      "provisionalName": "Equipment name",
+      "provisionalMeasurement": "Measurement",
+      "provisionalMeasurementHint": "How this version of the equipment is told apart. With only one, leave “Única”.",
+      "provisionalDefaultMeasurement": "Única",
+      "provisionalNote": "No price: it is typed on the line itself. It will show up in the tray of products to complete.",
+      "provisionalSubmit": "Add and put on the quote",
+      "provisionalFailed": "Could not add the equipment",
+      "provisional": "To complete",
+      "provisionalFilter": "Only what is left to complete"
+    },
+    "completeOnly": "Only complete ones"
   }
 }

@@ -11,6 +11,7 @@ import { formatAmount } from "~/lib/amount.ts"
 import { ApiError, api, SessionExpiredError } from "~/lib/api.client.ts"
 import type { QuoteLineRow, QuoteRow, RentFrequency } from "../../../warehouse.ts"
 import { usePreviewedQuote, usePublishPreview } from "./quote-preview.tsx"
+import { ProvisionalProduct } from "./quote-provisional.tsx"
 
 /**
  * El constructor de cotizaciones: el editor de líneas.
@@ -94,6 +95,7 @@ export function QuoteEditor({
   lines,
   priceLists,
   canMint,
+  canCreate,
 }: {
   companyId: string
   warehouseId: string
@@ -102,6 +104,8 @@ export function QuoteEditor({
   lines: readonly QuoteLineRow[]
   priceLists: readonly { id: string; name: string }[]
   canMint: boolean
+  /** Dar de alta un producto provisional desde aquí. Exige la clave de alta de catálogo. */
+  canCreate: boolean
 }) {
   const t = useTranslations("warehouses.quotes")
   const format = useFormatter()
@@ -292,6 +296,7 @@ export function QuoteEditor({
           priceLists={priceLists}
           onPriceList={setPriceListId}
           onAdd={add}
+          canCreate={canCreate}
           chosen={drafts.map((draft) => draft.measurementId)}
         />
       </Panel>
@@ -475,6 +480,7 @@ function Picker({
   priceLists,
   onPriceList,
   onAdd,
+  canCreate,
   chosen,
 }: {
   base: string
@@ -483,6 +489,7 @@ function Picker({
   priceLists: readonly { id: string; name: string }[]
   onPriceList: (value: string) => void
   onAdd: (candidate: RateCandidate) => void
+  canCreate: boolean
   chosen: readonly string[]
 }) {
   const t = useTranslations("warehouses.quotes")
@@ -611,7 +618,14 @@ function Picker({
           })}
         </ul>
       ) : (
-        <p className="text-body3 text-content-muted">{t("noCandidates")}</p>
+        <div className="grid gap-3">
+          <p className="text-body3 text-content-muted">{t("noCandidates")}</p>
+          {canCreate ? (
+            <div>
+              <ProvisionalProduct base={base} type={type} term={term} onCreated={onAdd} />
+            </div>
+          ) : null}
+        </div>
       )}
     </div>
   )

@@ -59,6 +59,8 @@ export interface ProductRow {
   responsibleId: string | null
   slug: string | null
   isPublished: boolean
+  /** Alta hecha a la carrera desde una cotización, pendiente de completarse. */
+  isProvisional: boolean
   createdAt: string
   updatedAt: string
 }

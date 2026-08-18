@@ -611,6 +611,73 @@ test.describe("las condiciones de pago", () => {
   })
 })
 
+test.describe("el alta provisional", () => {
+  const trash: Created[] = []
+  const products: { companyId: string; warehouseId: string; productId: string }[] = []
+
+  test.afterEach(async ({ as }) => {
+    const context = await as("owner")
+    await sweep(context, trash)
+    // Los productos van después: mientras una cotización los sujete, borrarlos deja unidades
+    // comprometidas sin dueño.
+    for (const { companyId, warehouseId, productId } of products.splice(0)) {
+      await context.request.delete(
+        `/api/companies/${companyId}/warehouses/${warehouseId}/products/${productId}`,
+      )
+    }
+  })
+
+  test("da de alta lo que no está en el catálogo y lo pone en la cotización", async ({
+    as,
+    companies,
+  }) => {
+    // El caso real: alguien cotiza con un cliente delante y el equipo existe en la nave pero no en
+    // el catálogo. Mandarle a la pantalla de catálogo a rellenar cinco pasos es lo que hace que la
+    // cotización termine a mano en otro sitio.
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+    const quoteId = await ownQuote(context, companyId, warehouseId, `Alta ${Date.now()}`, trash)
+
+    const name = `Dolly ${Date.now()}`
+    await page.goto(`${QUOTES(companyId, warehouseId)}/${quoteId}`)
+    await page.getByLabel("Añadir equipo").fill(name)
+    await expect(page.getByText("No hay equipo que coincida")).toBeVisible()
+
+    await page.getByRole("button", { name: "Dar de alta provisional" }).click()
+    // El nombre llega escrito: es lo que se estaba buscando.
+    await expect(page.getByLabel("Nombre del equipo")).toHaveValue(name)
+    await page.getByRole("dialog").getByLabel("Cantidad").fill("2")
+    await page.getByRole("button", { name: "Dar de alta y añadir" }).click()
+
+    // Queda en la cotización, con sus dos unidades y **sin precio**: para eso está el negociado.
+    const lines = page.getByRole("listitem").filter({ has: page.getByLabel("Cantidad") })
+    await expect(lines).toHaveCount(1)
+    await expect(lines.first()).toContainText(name)
+    await expect(lines.first()).toContainText("2 libres")
+    await expect(lines.first()).toContainText(/Nadie fijó tarifa/)
+
+    // Y aparece en la bandeja de lo que falta por completar, marcado y sin publicar.
+    const listed = await context.request.get(
+      `/api/companies/${companyId}/warehouses/${warehouseId}/products?isProvisional=true`,
+    )
+    const { items } = (await listed.json()) as { items: { id: string; name: string }[] }
+    const created = items.find((product) => product.name === name)
+    expect(created, "el alta no aparece en la bandeja").toBeTruthy()
+    products.push({ companyId, warehouseId, productId: created?.id as string })
+
+    await page.goto(`/c/${companyId}/warehouses/${warehouseId}?isProvisional=true`)
+    const card = page
+      .getByRole("list", { name: "Resultados" })
+      .getByRole("listitem")
+      .filter({ hasText: name })
+    await expect(card).toHaveCount(1)
+    await expect(card).toContainText("Por completar")
+    await expect(card).toContainText("No publicado")
+  })
+})
+
 test.describe("los cobros", () => {
   const trash: Created[] = []
   test.afterEach(async ({ as }) => await sweep(await as("owner"), trash))

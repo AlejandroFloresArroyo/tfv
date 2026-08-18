@@ -180,6 +180,7 @@ export default async function QuotePage({
                 lines={lines}
                 priceLists={priceListsResult?.ok ? priceListsResult.data.items : []}
                 canMint={can(company, "warehouses.products.stock_create")}
+                canCreate={can(company, "warehouses.products.create")}
               />
             ) : (
               <section aria-labelledby="lines-heading">

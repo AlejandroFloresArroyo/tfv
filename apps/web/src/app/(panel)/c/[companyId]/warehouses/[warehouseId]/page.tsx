@@ -60,6 +60,14 @@ export default async function WarehouseCatalogPage({
       falseLabel: t("warehouses.unpublished"),
     },
     {
+      // La bandeja: lo que se dio de alta cotizando y nadie ha vuelto a mirar.
+      kind: "boolean",
+      key: "isProvisional",
+      label: t("warehouses.quotes.provisional"),
+      trueLabel: t("warehouses.quotes.provisionalFilter"),
+      falseLabel: t("warehouses.completeOnly"),
+    },
+    {
       kind: "boolean",
       key: "availableForRent",
       label: t("warehouses.rent"),
@@ -161,6 +169,9 @@ export default async function WarehouseCatalogPage({
                   ) : null}
                   {product.availableForSale ? (
                     <Badge tone="success">{t("warehouses.sale")}</Badge>
+                  ) : null}
+                  {product.isProvisional ? (
+                    <Badge tone="warning">{t("warehouses.quotes.provisional")}</Badge>
                   ) : null}
                   {!product.isPublished ? <Badge>{t("warehouses.unpublished")}</Badge> : null}
                 </>
