@@ -315,12 +315,22 @@ export function SaveState({
   saved,
   editable,
   incomplete,
+  incompleteLabel,
 }: {
   saving: boolean
   pending: boolean
   saved: boolean
   editable: boolean
   incomplete: boolean
+  /**
+   * Qué está a medio escribir, cuando no es un importe.
+   *
+   * Los dos bloques de dinero sólo se quedan a medias por una cifra, y ése es el aviso por omisión.
+   * La identidad se queda a medias por **media ventana de fechas**, que es otra cosa y pide otro
+   * texto: decirle «hay un importe a medio escribir» a quien acaba de teclear una fecha le manda a
+   * buscar un campo que no existe.
+   */
+  incompleteLabel?: string
 }) {
   const t = useTranslations("warehouses.quotes")
   if (!editable) return <span className="text-body3 text-content-faint">{t("readOnly")}</span>
@@ -329,7 +339,7 @@ export function SaveState({
     return (
       <span className="inline-flex items-center gap-1 text-body3 text-yellow-9 dark:text-yellow-2">
         <TriangleAlert className="size-4" aria-hidden="true" />
-        {t("incompleteField")}
+        {incompleteLabel ?? t("incompleteField")}
       </span>
     )
   if (pending) return <span className="text-body3 text-content-muted">{t("unsaved")}</span>
