@@ -200,7 +200,8 @@ const lineBreakdownSchema = z.object({
   appliedDays: z.string(),
   /** Ausentes en una línea con precio negociado: su total no se reparte exacto entre sus unidades. */
   unitCost: z.string().optional(),
-  unitDiscount: z.string(),
+  /** Ausentes también cuando el descuento por producto es un importe fijo, por lo mismo. */
+  unitDiscount: z.string().optional(),
   unitTotal: z.string().optional(),
   cost: z.string(),
   discount: z.string(),
@@ -228,6 +229,8 @@ const breakdownSchema = z.object({
     )
     .readonly(),
   linesTotal: z.string(),
+  /** El precio pactado por el paquete. Ausente cuando no se pactó ninguno. */
+  packagePrice: z.string().optional(),
   additionals: z.string(),
   subtotal: z.string(),
   discount: z.string(),
@@ -250,7 +253,9 @@ const breakdownSchema = z.object({
   gross: z.string(),
   advance: z.string(),
   total: z.string(),
+  /** Los dos contingentes: no forman parte del total. */
   penalty: z.string(),
+  deposit: z.string(),
 })
 
 const companyParams = z.object({ companyId: z.string() })

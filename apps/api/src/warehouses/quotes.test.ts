@@ -974,6 +974,9 @@ describe("coherencia entre reservas e inventario", () => {
 // ─── Importes ────────────────────────────────────────────────────────────────
 
 interface Breakdown {
+  linesTotal: string
+  packagePrice?: string
+  additionals: string
   subtotal: string
   discount: string
   base: string
@@ -982,6 +985,7 @@ interface Breakdown {
   gross: string
   total: string
   penalty: string
+  deposit: string
   lines: {
     lineId: string
     unitCost?: string
@@ -1116,6 +1120,38 @@ describe("el cálculo es autoridad del servidor", () => {
     expect(breakdown.fees).toBe("34.80")
     expect(breakdown.gross).toBe("1194.80")
     expect(breakdown.total).toBe("694.80")
+  })
+
+  it("conserva el paquete, los adicionales y el depósito, y los recalcula", async () => {
+    // El bloque entero por la ruta: el paquete sustituye a las líneas, el concepto adicional suma
+    // encima, y el depósito se informa sin tocar el total.
+    await clearWarehouse()
+    const { measurementId, priceId } = await pricedProduct("Foco", 4, { sale: "250.00" })
+    const quote = await newQuote({
+      type: "sale",
+      lines: [{ measurementId, quantity: 4, productPriceId: priceId }],
+    })
+
+    await request(
+      "PUT",
+      `${base}/quotes/${quote.id}/payment-terms`,
+      {
+        version: 1,
+        fixedPrice: "800.00",
+        additionals: [{ name: "Traslado", amount: "150.00" }],
+        deposit: { amount: "5000.00", method: "transfer" },
+      },
+      cookie,
+    )
+
+    const breakdown = await breakdownOf(quote.id)
+
+    expect(breakdown.linesTotal).toBe("1000.00")
+    expect(breakdown.packagePrice).toBe("800.00")
+    expect(breakdown.additionals).toBe("150.00")
+    expect(breakdown.subtotal).toBe("950.00")
+    expect(breakdown.total).toBe("950.00")
+    expect(breakdown.deposit).toBe("5000.00")
   })
 
   it("agrupa las líneas por producto", async () => {
