@@ -4,12 +4,14 @@ import type { Metadata } from "next"
 import { headers } from "next/headers"
 import Link from "next/link"
 import { getFormatter, getTranslations } from "next-intl/server"
+import type { ReactNode } from "react"
 import { ApiFailure } from "~/components/api-failure.tsx"
 import { PageShell } from "~/components/page-shell.tsx"
 import { apiGet } from "~/lib/api.server.ts"
 import { can } from "~/lib/can.ts"
 import { requireCompany, requireProfile } from "~/lib/session.ts"
 import type {
+  CategorySummary,
   ItemsEnvelope,
   MeasurementRow,
   ProductDetail,
@@ -19,6 +21,7 @@ import type {
 } from "../../../warehouse.ts"
 import { STOCK_STATUSES } from "../../../warehouse.ts"
 import { WarehouseNav } from "../../warehouse-nav.tsx"
+import { AddMeasurement, MeasurementActions, ProductActions } from "./product-actions.tsx"
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations())("warehouses.products.detail") }
@@ -41,6 +44,8 @@ export default async function ProductPage({
   const canViewStorages = can(company, "warehouses.storages.view")
   const canViewCost = can(company, "warehouses.products.edit_payment")
   const canViewPriceLists = can(company, "warehouses.prices.view")
+  const canSelectCategory = can(company, "warehouses.products.select_category")
+  const canEditLocation = can(company, "warehouses.products.edit_location")
 
   const [warehouseResult, productResult] = await Promise.all([
     canViewWarehouses
@@ -73,6 +78,63 @@ export default async function ProductPage({
   }
 
   const product = productResult.data
+
+  const [categoriesResult, globalResult, storagesResult, membersResult] = await Promise.all([
+    canSelectCategory && can(company, "warehouses.categories.view")
+      ? apiGet<ItemsEnvelope<CategorySummary>>(
+          `/companies/${companyId}/warehouses/${warehouseId}/categories`,
+        )
+      : Promise.resolve(null),
+    canSelectCategory
+      ? apiGet<ItemsEnvelope<CategorySummary>>("/categories?service=warehouses")
+      : Promise.resolve(null),
+    canEditLocation && canViewStorages
+      ? apiGet<ItemsEnvelope<StorageRow>>(
+          `/companies/${companyId}/warehouses/${warehouseId}/storages`,
+        )
+      : Promise.resolve(null),
+    apiGet<{
+      items: { userId: string; name: string; lastname: string; email: string; isActive: boolean }[]
+    }>(`/companies/${companyId}/members?limit=100`),
+  ])
+
+  const options = {
+    categories: categoriesResult?.ok
+      ? categoriesResult.data.items.map((row) => ({ value: row.id, label: row.name }))
+      : [],
+    globalCategories: globalResult?.ok
+      ? globalResult.data.items.map((row) => ({ value: row.id, label: row.name }))
+      : [],
+    storages: storagesResult?.ok
+      ? storagesResult.data.items.map((row) => ({
+          value: row.id,
+          label: row.name,
+          ...(row.code ? { hint: row.code } : {}),
+        }))
+      : [],
+    members: membersResult.ok
+      ? membersResult.data.items
+          .filter((row) => row.isActive)
+          .map((row) => ({
+            value: row.userId,
+            label: `${row.name} ${row.lastname}`.trim() || row.email,
+            hint: row.email,
+          }))
+      : [],
+  }
+
+  const permissions = {
+    canEditInfo: can(company, "warehouses.products.edit_info"),
+    canSelectCategory,
+    canEditLocation,
+    canEditPayment: canViewCost,
+    canPublish: can(company, "warehouses.products.website"),
+    canCreate: can(company, "warehouses.products.create"),
+    canDelete: can(company, "warehouses.products.delete"),
+    canEditMeasurements: can(company, "warehouses.products.measurement_create"),
+    canDeleteMeasurements: can(company, "warehouses.products.measurement_delete"),
+  }
+
   const storagePath =
     canViewStorages && product.storageId
       ? await apiGet<ItemsEnvelope<StorageRow>>(
@@ -82,7 +144,19 @@ export default async function ProductPage({
   const location = storagePath?.ok ? storagePath.data.items.at(-1) : undefined
 
   return (
-    <PageShell title={product.name} subtitle={product.description || product.code}>
+    <PageShell
+      title={product.name}
+      subtitle={product.description || product.code}
+      actions={
+        <ProductActions
+          companyId={companyId}
+          warehouseId={warehouseId}
+          product={product}
+          options={options}
+          permissions={permissions}
+        />
+      }
+    >
       <WarehouseNav
         companyId={companyId}
         warehouseId={warehouseId}
@@ -152,6 +226,16 @@ export default async function ProductPage({
               <h2 id="measurements-heading" className="text-title2 font-bold text-content">
                 {t("warehouses.measurements.title")}
               </h2>
+
+              <span className="flex-1" />
+
+              {permissions.canEditMeasurements ? (
+                <AddMeasurement
+                  companyId={companyId}
+                  warehouseId={warehouseId}
+                  productId={productId}
+                />
+              ) : null}
             </div>
 
             {product.measurements.length > 0 ? (
@@ -161,6 +245,16 @@ export default async function ProductPage({
                     key={measurement.id}
                     measurement={measurement}
                     href={`/c/${companyId}/warehouses/${warehouseId}/products/${productId}/measurements/${measurement.id}`}
+                    actions={
+                      <MeasurementActions
+                        companyId={companyId}
+                        warehouseId={warehouseId}
+                        productId={productId}
+                        measurement={measurement}
+                        canEdit={permissions.canEditMeasurements}
+                        canDelete={permissions.canDeleteMeasurements}
+                      />
+                    }
                   />
                 ))}
               </div>
@@ -253,10 +347,12 @@ export default async function ProductPage({
 async function MeasurementCard({
   measurement,
   href,
+  actions,
 }: {
   measurement: MeasurementRow
   /** A sus unidades: la medida es el recuento, y las unidades son los objetos que lo componen. */
   href: string
+  actions: ReactNode
 }) {
   const t = await getTranslations()
   const format = await getFormatter()
@@ -306,9 +402,12 @@ async function MeasurementCard({
             {t(`warehouses.measurements.kind.${measurement.kind}`)}
           </p>
         </div>
-        <Badge tone={available > 0 ? "success" : "warning"}>
-          {t("warehouses.measurements.available", { count: available })}
-        </Badge>
+        <div className="flex shrink-0 items-center gap-1">
+          <Badge tone={available > 0 ? "success" : "warning"}>
+            {t("warehouses.measurements.available", { count: available })}
+          </Badge>
+          {actions}
+        </div>
       </div>
 
       {dimensions.length > 0 || measurement.clothing ? (
