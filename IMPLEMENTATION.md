@@ -232,8 +232,9 @@ En este orden, y con el motivo de que sea ése:
 4. **Pagos cobrados** (hecho), separados del anticipo pactado y sin comprobantes, con el escenario
    de la spec incumplido a propósito hasta que exista almacenamiento de ficheros.
 5. **El alta provisional desde el constructor** (hecho), con su bandeja. Quitar la marca espera al detalle de producto.
-6. **La extensión de renta**: cotización nueva enlazada, posiblemente parcial, que traspasa los
-   vínculos vivos sin que la unidad pase por disponible. Encadenable.
+6. **La extensión de renta** (hecho): cotización nueva enlazada, parcial y encadenable, que
+   traspasa los vínculos vivos sin que la unidad pase por disponible. **Nace en renta**, no en
+   borrador como esbozamos — el motivo está en la bitácora y merece una revisión.
 7. **Pedidos de almacén** (rebanada 15).
 8. **Lo que queda de la 10**: los prospectos. Las comprobaciones de «en uso» siguen esperando a los
    documentos que aún no existen.
@@ -2134,3 +2135,49 @@ lleva a dudar del cambio recién hecho.
 Los seis paquetes, Biome, y **59 pruebas de extremo a extremo** en dos pasadas. Se miró en pantalla:
 el diálogo con el nombre ya escrito, la línea con sus dos unidades y su aviso de sin precio, y la
 bandeja con sus tres marcados como «Por completar» y «No publicado».
+
+### 2026-08-18 · Alargar una renta sin soltarla
+
+Sexto punto, y el que más se resistió al esbozo. Se implementó como acordamos en lo esencial, con
+**una desviación** que conviene revisar cuando vuelvas.
+
+**Lo que no se sostuvo del esbozo**
+
+La extensión iba a nacer `in_progress` nombrando unidades, y a traspasar los vínculos al pasar a
+`in_rent`. No se sostiene, por una propiedad del modelo que da gusto tener y que aquí estorba: **la
+cantidad de una línea es cuántas unidades sujeta**, no una columna. Una extensión en borrador sin
+vínculos vale cero, y no se puede negociar un precio que no se ve. Y si se le traspasan los vínculos
+estando `in_progress`, proyecta «en cotización» mientras las unidades están `rented`, de modo que la
+verificación de coherencia la marcaría —con razón.
+
+Nace `in_rent`, en una sola transacción. Todos los invariantes se sostienen en cada instante, y el
+precio se ajusta después.
+
+**El traspaso**
+
+Es un `update` que cambia de dueño una fila que **sigue viva**: `released_at` no se toca y la unidad
+no cambia de estado. No hay fila nueva, así que el índice único parcial se respeta sin esfuerzo y
+—lo que importa— **no existe el instante en que la unidad está libre**. Si existiera, otra cotización
+podría llevársela mientras está en un rodaje.
+
+Puede ser parcial: lo que no siga se queda con la original esperando su retorno. Y es encadenable.
+
+Se copian la tarifa, la periodicidad y el bloque fiscal. **No** el precio negociado —que es «el
+total de la línea para el periodo completo», y arrastrar el de dos semanas a una extensión de un mes
+sería cobrar mal y parecer que alguien lo decidió— ni las condiciones de pago, que son de aquel
+trato.
+
+**Y una corrección de lo que hice en el punto 3**
+
+Para que la extensión pueda tener precio, hubo que corregir la congelación: yo había congelado las
+líneas **enteras**, y lo que se pidió fue congelar el **movimiento de inventario**. Cambiar lo que
+cuesta una línea no saca ni mete equipo de la nave. Ahora, con el equipo fuera, se admite el envío
+si describe exactamente las mismas líneas con las mismas medidas y cantidades; lo demás se rechaza.
+El editor se queda en modo precio: sin buscador, sin quitar líneas, con la cantidad apagada.
+
+**Comprobado**
+
+Los seis paquetes, Biome, **301 pruebas** de la API y **60 de extremo a extremo**, dos pasadas, sin
+dejar rastro y con la verificación de coherencia del almacén limpia. Se miró en pantalla: tres
+unidades fuera, dos que continúan, la extensión con su ventana nueva y su enlace hacia la original,
+y la original quedándose con la unidad que no siguió.
