@@ -67,8 +67,7 @@ test.describe("la ficha de una cotización", () => {
 
     // El estado proyectado sobre el inventario: en renta significa equipo fuera de la nave.
     await expect(page.getByText("En renta").first()).toBeVisible()
-    await expect(page.getByRole("heading", { name: "Líneas" })).toBeVisible()
-    await expect(page.getByText(/unidades apartadas|unidad apartada/).first()).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Equipo de la cotización" })).toBeVisible()
 
     // Los importes vienen calculados del servidor, con su cadena entera visible.
     await expect(page.getByRole("heading", { name: "Importes" })).toBeVisible()
@@ -104,5 +103,161 @@ test.describe("la compuerta alcanza a las cotizaciones", () => {
 
     await page.goto(`/c/${companyId}/warehouses`)
     await expect(page.getByRole("link", { name: "Cotizaciones" })).toHaveCount(0)
+  })
+})
+
+test.describe("el constructor de cotizaciones", () => {
+  test("los importes de la previsualización son los que calculó el servidor", async ({
+    as,
+    companies,
+  }) => {
+    // Es el requisito de `quotation-pricing`: la previsualización coincide, y coincide porque es la
+    // misma función. Aquí no se comprueba la aritmética —eso son cuarenta y ocho casos en
+    // `@tfv/contracts`—, sino que las dos cifras que la pantalla enseña a la vez son la misma.
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+
+    await page.goto(`${QUOTES(companyId, warehouseId)}?status=in_progress`)
+    await page.getByRole("link", { name: "Comercial Cervecería" }).click()
+    await page.waitForURL(/\/quotes\/[^/]+$/)
+
+    const lines = page.getByRole("listitem").filter({ has: page.getByLabel("Cantidad") })
+    await expect(lines.first()).toBeVisible()
+
+    const totals = await lines.getByText(/^[\d,]+\.\d\d$/).allTextContents()
+    const sum = totals.reduce((carry, value) => carry + Number(value.replace(/,/g, "")), 0)
+
+    const subtotal = await page
+      .getByRole("term")
+      .filter({ hasText: "Subtotal" })
+      .locator("xpath=following-sibling::dd[1]")
+      .textContent()
+
+    expect(Number((subtotal ?? "").replace(/,/g, ""))).toBeCloseTo(sum, 2)
+  })
+
+  test("añadir equipo mueve los importes sin haber guardado nada", async ({ as, companies }) => {
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+
+    await page.goto(`${QUOTES(companyId, warehouseId)}?status=in_progress`)
+    await page.getByRole("link", { name: "Comercial Cervecería" }).click()
+    await page.waitForURL(/\/quotes\/[^/]+$/)
+
+    const save = page.getByRole("button", { name: "Guardar líneas" })
+    await expect(save).toBeDisabled()
+
+    const lines = page.getByRole("listitem").filter({ has: page.getByLabel("Cantidad") })
+    const before = await lines.count()
+
+    await page.getByLabel("Añadir equipo").fill("bandera")
+    await page
+      .getByRole("button", { name: /Bandera 4x4/ })
+      .first()
+      .click()
+
+    await expect(lines).toHaveCount(before + 1)
+    // Hay algo que guardar: el botón deja de estar apagado, y nada ha viajado todavía.
+    await expect(save).toBeEnabled()
+  })
+
+  test("la disponibilidad está delante mientras se edita", async ({ as, companies }) => {
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+
+    await page.goto(`${QUOTES(companyId, warehouseId)}?status=in_progress`)
+    await page.getByRole("link", { name: "Comercial Cervecería" }).click()
+    await page.waitForURL(/\/quotes\/[^/]+$/)
+
+    await page.getByLabel("Añadir equipo").fill("camara")
+    await expect(page.getByText(/libres|Sin unidades libres/).first()).toBeVisible()
+  })
+
+  test("pedir más de lo que hay impide guardar antes de intentarlo", async ({ as, companies }) => {
+    // El servidor rechaza la reserva que no cabe y no aparta nada a medias. Pero enterarse al
+    // guardar es enterarse después de haberle prometido el equipo a alguien.
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+
+    await page.goto(`${QUOTES(companyId, warehouseId)}?status=in_progress`)
+    await page.getByRole("link", { name: "Comercial Cervecería" }).click()
+    await page.waitForURL(/\/quotes\/[^/]+$/)
+
+    await page.getByLabel("Cantidad").first().fill("999")
+
+    await expect(page.getByText(/más equipo del que hay libre/)).toBeVisible()
+    await expect(page.getByRole("button", { name: "Guardar líneas" })).toBeDisabled()
+  })
+})
+
+test.describe("el cambio de estado", () => {
+  test("sólo ofrece las transiciones previstas desde donde está", async ({ as, companies }) => {
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+
+    await page.goto(`${QUOTES(companyId, warehouseId)}?status=in_rent`)
+    await page.getByRole("link", { name: "Rodaje Serie Norte · bloque 1" }).click()
+    await page.waitForURL(/\/quotes\/[^/]+$/)
+
+    await page.getByRole("button", { name: "Cambiar de estado" }).click()
+
+    // Desde «en renta» la máquina sólo admite completar o cancelar. Volver atrás no está previsto.
+    const menu = page.getByRole("menu")
+    await expect(menu.getByRole("menuitem", { name: "Completada" })).toBeVisible()
+    await expect(menu.getByRole("menuitem", { name: "Cancelada" })).toBeVisible()
+    await expect(menu.getByRole("menuitem", { name: "En progreso" })).toHaveCount(0)
+    // Y una renta no se «vende».
+    await expect(menu.getByRole("menuitem", { name: "Vendida" })).toHaveCount(0)
+  })
+})
+
+test.describe("el retorno del equipo", () => {
+  test("una renta en curso nombra el equipo que tiene fuera", async ({ as, companies }) => {
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+
+    await page.goto(`${QUOTES(companyId, warehouseId)}?status=in_rent`)
+    await page.getByRole("link", { name: "Rodaje Serie Norte · bloque 1" }).click()
+    await page.waitForURL(/\/quotes\/[^/]+$/)
+
+    const returns = page.getByRole("region", { name: "Retorno del equipo" })
+    await expect(returns).toBeVisible()
+
+    // Cada unidad por su código, que es lo que lleva escrito la etiqueta de la nave.
+    const units = returns.getByRole("listitem")
+    await expect(units.first()).toBeVisible()
+    await expect(page.getByRole("button", { name: /Registrar/ })).toBeDisabled()
+  })
+
+  test("registrar el retorno devuelve el equipo al inventario", async ({ as, companies }) => {
+    const context = await as("owner")
+    const page = await context.newPage()
+    const companyId = companies[WAREHOUSE_COMPANY] as string
+    const warehouseId = await firstWarehouse(page, companyId)
+
+    await page.goto(`${QUOTES(companyId, warehouseId)}?status=in_rent`)
+    await page.getByRole("link", { name: "Rodaje Serie Norte · bloque 1" }).click()
+    await page.waitForURL(/\/quotes\/[^/]+$/)
+
+    const returns = page.getByRole("region", { name: "Retorno del equipo" })
+    const before = await returns.getByRole("listitem").count()
+
+    await returns.getByRole("checkbox").first().check()
+    await page.getByRole("button", { name: /Registrar 1 unidad/ }).click()
+
+    // Lo devuelto deja de figurar: el vínculo se liberó y la unidad volvió a la nave.
+    await expect(returns.getByRole("listitem")).toHaveCount(before - 1)
   })
 })
