@@ -504,6 +504,16 @@
         "daily": "Diaria",
         "weekly": "Semanal",
         "monthly": "Mensual"
+      },
+      "taxOf": {
+        "iva": "IVA",
+        "isr": "ISR",
+        "ivaRetention": "Retención de IVA",
+        "isrRetention": "Retención de ISR",
+        "ieps": "IEPS",
+        "isn": "ISN",
+        "hospitality": "Impuesto de hospedaje",
+        "frontier": "Impuesto fronterizo"
       }
     }
   }

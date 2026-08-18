@@ -242,7 +242,13 @@ export interface QuotationLineBreakdown {
  */
 export interface QuotationTaxBreakdown {
   readonly key: string
-  readonly concept: string
+  /**
+   * Lo que escribió quien registró el impuesto. **Ausente cuando no escribió nada.**
+   *
+   * No se rellena con la clave: `iva` es un identificador interno, y un documento que se lo enseña
+   * al cliente está enseñando el nombre de una columna. Ponerle nombre es trabajo de quien traduce.
+   */
+  readonly concept?: string
   readonly effect: TaxEffect
   readonly rate?: string
   readonly amount: string
@@ -566,7 +572,7 @@ function computeTaxes(base: Money, taxes: QuoteTaxes | undefined): QuotationTaxB
 
     applied.push({
       key,
-      concept: entry.concept ?? key,
+      ...(entry.concept === undefined ? {} : { concept: entry.concept }),
       effect,
       rate: entry.rate,
       amount: formatMoney(applyPercent(base, percent(entry.rate))),

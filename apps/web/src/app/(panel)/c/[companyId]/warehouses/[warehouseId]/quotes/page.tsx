@@ -128,7 +128,7 @@ export default async function QuotesPage({
               }
               subtitle={
                 quote.startsOn && quote.endsOn
-                  ? `${quote.folio} · ${format.dateTime(new Date(quote.startsOn), "short")} – ${format.dateTime(new Date(quote.endsOn), "short")}`
+                  ? `${quote.folio} · ${format.dateTime(new Date(quote.startsOn), { dateStyle: "medium" })} – ${format.dateTime(new Date(quote.endsOn), { dateStyle: "medium" })}`
                   : quote.folio
               }
               meta={

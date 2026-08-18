@@ -187,7 +187,7 @@ export interface QuoteBreakdown {
   base: string
   taxes: {
     key: string
-    concept: string
+    concept?: string
     effect: "increase" | "decrease"
     rate?: string
     amount: string

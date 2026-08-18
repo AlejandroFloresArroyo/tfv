@@ -113,8 +113,8 @@ export default async function QuotePage({
                   quote.startsOn && quote.endsOn ? (
                     <span className="inline-flex items-center gap-2">
                       <CalendarRange className="size-4 text-content-faint" aria-hidden="true" />
-                      {format.dateTime(new Date(quote.startsOn), "short")} –{" "}
-                      {format.dateTime(new Date(quote.endsOn), "short")}
+                      {format.dateTime(new Date(quote.startsOn), { dateStyle: "medium" })} –{" "}
+                      {format.dateTime(new Date(quote.endsOn), { dateStyle: "medium" })}
                       {breakdown ? (
                         <span className="text-content-faint">
                           · {t("warehouses.quotes.days", { count: breakdown.days })}
@@ -247,7 +247,7 @@ async function Amounts({ breakdown, closed }: { breakdown: QuoteBreakdown; close
         {breakdown.taxes.map((tax) => (
           <Row
             key={tax.key}
-            label={tax.concept}
+            label={taxLabel(tax, t)}
             value={`${tax.effect === "decrease" ? "−" : ""}${amount(tax.amount)}`}
           />
         ))}
@@ -329,6 +329,18 @@ async function ContactList({ title, contacts }: { title: string; contacts: Quote
       )}
     </Panel>
   )
+}
+
+/**
+ * El nombre de un impuesto.
+ *
+ * Manda lo que escribió quien lo registró; si no escribió nada, se traduce su clave. Lo que **no**
+ * se hace es enseñar la clave: `iva` es un identificador interno, y un documento con consecuencias
+ * contractuales no puede mostrar el nombre de una columna.
+ */
+function taxLabel(tax: QuoteBreakdown["taxes"][number], t: (key: string) => string): string {
+  if (tax.concept) return tax.concept
+  return tax.key.startsWith("additional:") ? tax.key : t(`taxOf.${tax.key}`)
 }
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {

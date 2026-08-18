@@ -504,6 +504,16 @@
         "daily": "Daily",
         "weekly": "Weekly",
         "monthly": "Monthly"
+      },
+      "taxOf": {
+        "iva": "VAT",
+        "isr": "Income tax",
+        "ivaRetention": "VAT withholding",
+        "isrRetention": "Income tax withholding",
+        "ieps": "Excise tax",
+        "isn": "Payroll tax",
+        "hospitality": "Lodging tax",
+        "frontier": "Border tax"
       }
     }
   }

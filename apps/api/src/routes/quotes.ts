@@ -214,7 +214,7 @@ const breakdownSchema = z.object({
     .array(
       z.object({
         key: z.string(),
-        concept: z.string(),
+        concept: z.string().optional(),
         effect: z.enum(["increase", "decrease"]),
         rate: z.string().optional(),
         amount: z.string(),

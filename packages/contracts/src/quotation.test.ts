@@ -312,6 +312,24 @@ describe("aplicación de los impuestos", () => {
     expect(result.net).toBe("1000.00")
   })
 
+  it("no rellena el concepto con la clave interna cuando nadie lo escribió", () => {
+    // Un documento con consecuencias contractuales no puede enseñar el nombre de una columna.
+    const named = computeQuotation(
+      thousand({
+        taxes: {
+          version: 1,
+          iva: { enabled: true, rate: "16", type: "trasladado", concept: "IVA 16 %" },
+        },
+      }),
+    )
+    const bare = computeQuotation(
+      thousand({ taxes: { version: 1, iva: { enabled: true, rate: "16", type: "trasladado" } } }),
+    )
+
+    expect(taxOf(named, "iva")?.concept).toBe("IVA 16 %")
+    expect(taxOf(bare, "iva")?.concept).toBeUndefined()
+  })
+
   it("aplica una contribución adicional con el signo que declara", () => {
     const result = computeQuotation(
       thousand({
