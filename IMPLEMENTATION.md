@@ -247,8 +247,10 @@ En este orden, y con el motivo de que sea ése:
    un área de administración de plataforma.
 9. **Base de pruebas separada de la de desarrollo** (hecho). Dos ejecuciones simultáneas siguen
    pisándose, que es la mitad barata de vivir con ella.
-10. **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04), y
-   **recepción verificada de eventos de cobro** (07), que cierra el bloque crítico.
+10. **Recepción verificada de eventos de cobro** (hecho en su parte crítica: firma, unicidad y
+   transaccionalidad; los manejadores esperan a las rebanadas 11 y 17). Queda **sustituir la
+   maquinaria de sesión propia por el servicio gestionado**, que cierra la 04: es una reescritura
+   del camino de autenticación, necesita configuración externa, y no debe hacerse sin supervisión.
 
 Dos cosas que no van en esta lista porque no dependen de nosotros: la **medición previa al corte**
 de la 05, que necesita tráfico real de la pila anterior, y la **medición de importes** de la 14
@@ -2325,3 +2327,60 @@ caso sea «se me olvidó que ya la tenía corriendo».
 **569 pruebas** de vitest —146 de contratos, 59 de base, 37 de web y 327 de API— contra la base
 nueva, y la sesión de desarrollo **seguía viva** al terminar, con sus cuatro cotizaciones sembradas.
 Que es el punto entero.
+
+### 2026-08-18 · La firma que no se fabrica
+
+Décimo punto, y sólo la mitad que me corresponde hacer solo.
+
+**Lo que no toqué, y por qué**
+
+Sustituir la maquinaria de sesión propia por el servicio gestionado es una reescritura del camino de
+autenticación: necesita configuración externa y, si sale mal, deja a todo el mundo fuera. No es algo
+que deba hacer sin ti. Sigue pendiente, y sigue siendo lo que cierra la rebanada 04.
+
+**S-01, el defecto más grave del levantamiento**
+
+El manejador anterior **generaba su propia firma y la verificaba**: tomaba el cuerpo recibido, lo
+firmaba con el secreto compartido, y comprobaba esa firma que acababa de fabricar. Pasaba siempre.
+Como el endpoint no requiere autenticación —correctamente, porque lo llama un tercero—, cualquiera
+podía publicar un evento falso y activar una suscripción, cambiar un plan o materializar un pedido
+que nadie pagó.
+
+Lo que entra es su contrario, punto por punto: la firma que se verifica es la que **trae** la
+petición; se verifica sobre el **cuerpo sin procesar**, y por eso la ruta no declara esquema de
+entrada —dejar que el validador lo interprete y volver a serializarlo produce un texto distinto del
+que se firmó—; la comparación es de **tiempo constante**, porque `===` sobre cadenas termina en el
+primer byte distinto y esa diferencia se puede medir; y hay **ventana temporal**, que es lo único
+que delata un evento legítimo capturado y reproducido, porque su firma sigue siendo válida.
+
+**Sin secreto se rechaza todo**
+
+No verificar no es aceptar. Es la lección de S-13, donde el secreto por defecto era la palabra
+`secret`: un secreto con valor por defecto es un secreto público. Aquí no hay valor por defecto, en
+producción es obligatorio y el servicio no arranca sin él, y fuera de producción su ausencia deja el
+endpoint **cerrado**.
+
+**Una sola vez**
+
+El procesador reintenta ante cualquier respuesta que no sea de éxito, así que sin unicidad un
+reintento duplica pedidos y pagos (M-03). El evento se reclama **insertando**: el índice único
+convierte la carrera en un conflicto, y el conflicto es la respuesta. Comprobar y luego insertar
+dejaría una ventana entre las dos cosas por la que caben las dos entregas simultáneas.
+
+Reclamación y efectos van en la misma transacción, de modo que un fallo revierte **también la
+reclamación** y el reintento puede volver a intentarlo.
+
+**Lo que no entra**
+
+Los manejadores por tipo —sesión completada, factura cobrada, suscripción modificada, reembolso,
+disputa— actúan sobre suscripciones (11) y sobre la compra en tienda (17), que no existen. La tabla
+de manejadores está vacía a propósito, y mientras lo esté todo tipo cae en «sin manejador»: éxito y
+constancia, que es lo que la spec pide y lo que evita que el procesador acabe desactivando el
+endpoint por reintentos indefinidos.
+
+Once tareas de la rebanada hechas; las veintisiete que quedan esperan a esas dos rebanadas.
+
+**Comprobado**
+
+**339 pruebas** de la API, doce de ellas nuevas. No comprueban una función: comprueban que un
+tercero no pueda activar suscripciones ni materializar pedidos.
