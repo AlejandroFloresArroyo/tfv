@@ -9,6 +9,7 @@ import { closeConnection, db, withElevated } from "@tfv/db"
 import {
   companies,
   companyMembers,
+  companyServices,
   counterparties,
   globalCategories,
   loginAttempts,
@@ -17,6 +18,8 @@ import {
   services,
   sessions,
   users,
+  warehouseQuotes,
+  warehouses,
 } from "@tfv/db/schema"
 import { eq, sql } from "drizzle-orm"
 import { afterAll, beforeEach, describe, expect, it } from "vitest"
@@ -29,7 +32,7 @@ const PASSWORD = "una-frase-larga-y-buena"
 
 async function reset() {
   await db.execute(
-    sql`truncate table ${notificationDeliveries}, ${sessions}, ${loginAttempts}, ${users}, ${companyMembers}, ${roles}, ${counterparties}, ${globalCategories}, ${services}, ${companies} cascade`,
+    sql`truncate table ${notificationDeliveries}, ${sessions}, ${loginAttempts}, ${users}, ${companyMembers}, ${roles}, ${warehouseQuotes}, ${warehouses}, ${companyServices}, ${counterparties}, ${globalCategories}, ${services}, ${companies} cascade`,
   )
 }
 
@@ -354,6 +357,84 @@ describe("contrapartes", () => {
     )
     expect(surviving).toHaveLength(1)
     expect(surviving[0]?.deletedAt).not.toBeNull()
+  })
+})
+
+describe("una contraparte con documentos vigentes no se da de baja", () => {
+  /** Un almacén con una cotización abierta a nombre del cliente. */
+  async function withOpenQuote() {
+    const founder = await signUp(`cartera-viva-${Date.now()}@ejemplo.mx`)
+    const company = await newCompany(founder)
+
+    const serviceId = newId()
+    await db.insert(services).values({ id: serviceId, keycode: "warehouses", name: "Almacenes" })
+    await db.insert(companyServices).values({ id: newId(), companyId: company.id, serviceId })
+
+    const client = await json<Counterparty>(
+      await request(
+        "POST",
+        `/companies/${company.id}/clients`,
+        { alias: "Producciones Sol" },
+        founder.cookie,
+      ),
+    )
+
+    const warehouse = await json<{ id: string }>(
+      await request(
+        "POST",
+        `/companies/${company.id}/warehouses`,
+        { name: "Nave" },
+        founder.cookie,
+      ),
+    )
+
+    const quote = await json<{ id: string }>(
+      await request(
+        "POST",
+        `/companies/${company.id}/warehouses/${warehouse.id}/quotes`,
+        { type: "sale", clientId: client.id },
+        founder.cookie,
+      ),
+    )
+
+    return { founder, company, client, warehouse, quote }
+  }
+
+  it("se rechaza nombrando lo que la retiene", async () => {
+    // La comprobación estuvo declarada pendiente desde la rebanada 10, cuando no había nada que
+    // consultar. Fingirla entonces habría sido peor que declararla.
+    const { founder, company, client } = await withOpenQuote()
+
+    const response = await request(
+      "DELETE",
+      `/companies/${company.id}/clients/${client.id}`,
+      undefined,
+      founder.cookie,
+    )
+
+    expect(response.status).toBe(422)
+    expect(await response.text()).toContain("cotización abierta")
+  })
+
+  it("los documentos cerrados no la retienen", async () => {
+    // Una venta de hace dos años no debe impedir limpiar la cartera: su copia de los datos del
+    // cliente vive en el propio documento.
+    const { founder, company, client, warehouse, quote } = await withOpenQuote()
+
+    await request(
+      "PATCH",
+      `/companies/${company.id}/warehouses/${warehouse.id}/quotes/${quote.id}/status`,
+      { status: "canceled" },
+      founder.cookie,
+    )
+
+    const response = await request(
+      "DELETE",
+      `/companies/${company.id}/clients/${client.id}`,
+      undefined,
+      founder.cookie,
+    )
+    expect(response.status).toBe(204)
   })
 })
 

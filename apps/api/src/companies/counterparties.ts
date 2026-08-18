@@ -27,10 +27,18 @@ import {
   type Page,
   type ParsedQuery,
   type QuerySchema,
+  UnprocessableError,
 } from "@tfv/contracts"
 import { db, type Transaction, withRequester, withSystem } from "@tfv/db"
-import { type CounterpartySnapshot, companies, counterparties, users } from "@tfv/db/schema"
-import { and, count, eq, isNull, sql } from "drizzle-orm"
+import {
+  type CounterpartySnapshot,
+  companies,
+  counterparties,
+  users,
+  warehouseOrders,
+  warehouseQuotes,
+} from "@tfv/db/schema"
+import { and, count, eq, isNull, notInArray, or, sql } from "drizzle-orm"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 import type { Actor } from "./companies.ts"
 
@@ -235,6 +243,19 @@ export async function updateCounterparty(
  * cotizaciones (14) y pedidos (15)—. Hasta entonces no hay nada que consultar, y fingir la
  * comprobación sería peor que declararla pendiente.
  */
+/**
+ * Da de baja una contraparte.
+ *
+ * **No se da de baja con documentos vigentes.** Una cotización abierta o un pedido en curso nombran
+ * a su cliente, y borrarlo deja documentos con consecuencias apuntando a una ficha que ya no está:
+ * quien los mire dentro de seis meses no sabrá con quién se comerció.
+ *
+ * Los documentos **cerrados no cuentan**: una venta de hace dos años no debe impedir limpiar la
+ * cartera, y su copia de los datos del cliente vive en el propio documento.
+ *
+ * Esta comprobación estuvo declarada como pendiente desde la rebanada 10, cuando no existía nada
+ * que consultar. Fingirla entonces habría sido peor que declararla.
+ */
 export async function deleteCounterparty(
   actor: Actor,
   companyId: string,
@@ -244,11 +265,65 @@ export async function deleteCounterparty(
     await assertCompany(tx, companyId)
     await loadCounterparty(tx, companyId, counterpartyId)
 
+    const live = await liveDocuments(tx, counterpartyId)
+    if (live.quotes + live.orders > 0) {
+      throw new UnprocessableError(
+        `Esta contraparte figura en ${describe(live)}. Ciérralos o reasígnalos antes de darla de baja.`,
+      )
+    }
+
     await tx
       .update(counterparties)
       .set({ deletedAt: new Date() })
       .where(eq(counterparties.id, counterpartyId))
   })
+}
+
+/** Cotizaciones y pedidos **abiertos** que nombran a la contraparte. */
+async function liveDocuments(
+  tx: Transaction,
+  counterpartyId: string,
+): Promise<{ quotes: number; orders: number }> {
+  const [quotes] = await tx
+    .select({ value: count() })
+    .from(warehouseQuotes)
+    .where(
+      and(
+        eq(warehouseQuotes.clientId, counterpartyId),
+        notInArray(warehouseQuotes.status, ["completed", "sold", "canceled"]),
+        isNull(warehouseQuotes.deletedAt),
+      ),
+    )
+
+  const [orders] = await tx
+    .select({ value: count() })
+    .from(warehouseOrders)
+    .where(
+      and(
+        or(
+          eq(warehouseOrders.clientId, counterpartyId),
+          eq(warehouseOrders.providerId, counterpartyId),
+        ),
+        notInArray(warehouseOrders.status, ["finished", "canceled"]),
+        isNull(warehouseOrders.deletedAt),
+      ),
+    )
+
+  return { quotes: quotes?.value ?? 0, orders: orders?.value ?? 0 }
+}
+
+/** «dos cotizaciones y un pedido abiertos», para que el mensaje diga qué mirar. */
+function describe(live: { quotes: number; orders: number }): string {
+  const parts: string[] = []
+  if (live.quotes > 0) {
+    parts.push(
+      live.quotes === 1 ? "una cotización abierta" : `${live.quotes} cotizaciones abiertas`,
+    )
+  }
+  if (live.orders > 0) {
+    parts.push(live.orders === 1 ? "un pedido en curso" : `${live.orders} pedidos en curso`)
+  }
+  return parts.join(" y ")
 }
 
 // ─── Aprovisionamiento automático ────────────────────────────────────────────

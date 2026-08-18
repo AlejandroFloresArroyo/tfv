@@ -69,9 +69,9 @@ Casi todo esto ya existía desde la rebanada 04, que construyó el ciclo de vida
       previa — comprobar y luego insertar deja una ventana, y dos compras simultáneas crearían dos
       parejas
 - [x] Alta del comprador como cliente tras una compra, también idempotente
-- [ ] Impedir eliminar una contraparte con documentos vigentes — necesita cotizaciones (14) y
-      pedidos (15). Hoy no hay nada que consultar, y fingir la comprobación sería peor que
-      declararla pendiente
+- [x] Impedir eliminar una contraparte con documentos vigentes. Cotizaciones **abiertas** y pedidos
+      **en curso** la retienen; los cerrados no, porque su copia de los datos del cliente vive en el
+      propio documento
 
 ## Taxonomías
 
