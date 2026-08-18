@@ -19,6 +19,7 @@ import {
   createPriceList,
   deletePriceList,
   FREQUENCIES,
+  getPriceList,
   listPriceLists,
   listPrices,
   priceListQuery,
@@ -162,6 +163,34 @@ export const listPriceListsRoute = defineRoute({
       queryOf(c, priceListQuery),
     )
     return c.json(serializePage(page, serializePriceList), 200)
+  },
+})
+
+export const getPriceListRoute = defineRoute({
+  access: REQUIRES("warehouses.prices.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/price-lists/{priceListId}",
+    summary: "Ver una lista de precios",
+    tags: ["Precios"],
+    request: { params: listParams },
+    responses: {
+      200: {
+        description: "La lista, con cuántos productos tienen tarifa en ella",
+        content: { "application/json": { schema: priceListSchema } },
+      },
+      404: { description: "No existe en este almacén, o está dada de baja" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const list = await getPriceList(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.priceListId,
+    )
+    return c.json(serializePriceList(list), 200)
   },
 })
 

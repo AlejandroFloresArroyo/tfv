@@ -115,6 +115,26 @@ export async function listPriceLists(
   })
 }
 
+/**
+ * Una lista suelta, por su identificador.
+ *
+ * Trae el mismo recuento de productos que el listado: la ficha enseña la misma cifra que la fila
+ * de la que se llegó a ella, y no dos que se parecen.
+ */
+export async function getPriceList(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  priceListId: string,
+): Promise<PriceListRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    const row = await loadPriceList(tx, warehouseId, priceListId)
+
+    return (await withProductCounts(tx, [row]))[0] as PriceListRecord
+  })
+}
+
 export interface PriceListInput {
   readonly name: string
   readonly description?: string | undefined

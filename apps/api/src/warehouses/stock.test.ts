@@ -541,6 +541,37 @@ async function newList(name: string): Promise<{ id: string }> {
 }
 
 describe("listas de precios", () => {
+  it("una lista se pide por su identificador, sin recorrer el listado", async () => {
+    // H-35: la ficha buscaba la suya dentro del listado paginado, que es un rodeo que ninguna otra
+    // ficha del sistema necesita.
+    await clearCatalog()
+    const product = await newStocked("Cámara", 0)
+    const list = await newList("Preferente")
+
+    await request(
+      "PUT",
+      `${base}/price-lists/${list.id}/prices/${product.id}`,
+      { sale: "900.00" },
+      cookie,
+    )
+
+    const response = await request("GET", `${base}/price-lists/${list.id}`, undefined, cookie)
+    expect(response.status).toBe(200)
+    expect(await json<{ name: string; productCount: number }>(response)).toMatchObject({
+      name: "Preferente",
+      productCount: 1,
+    })
+  })
+
+  it("una lista dada de baja deja de traerse", async () => {
+    await clearCatalog()
+    const list = await newList("Temporal")
+    await request("DELETE", `${base}/price-lists/${list.id}`, undefined, cookie)
+
+    const response = await request("GET", `${base}/price-lists/${list.id}`, undefined, cookie)
+    expect(response.status).toBe(404)
+  })
+
   it("un producto figura en dos listas con tarifas distintas", async () => {
     // Escenario: «Un producto figura en dos listas».
     await clearCatalog()

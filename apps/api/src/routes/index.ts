@@ -133,6 +133,7 @@ import {
   deletePriceListRoute,
   deleteUnitsRoute,
   findUnitByCodeRoute,
+  getPriceListRoute,
   listPriceListsRoute,
   listPricesRoute,
   listUnitsRoute,
@@ -271,6 +272,7 @@ export const routes: readonly RegisteredRoute[] = [
   deleteMeasurementRoute,
 
   listPriceListsRoute,
+  getPriceListRoute,
   createPriceListRoute,
   updatePriceListRoute,
   deletePriceListRoute,
