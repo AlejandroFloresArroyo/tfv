@@ -90,7 +90,8 @@ export interface FilePickerProps {
   /**
    * Se llama al quitar un archivo que ya tenía registro y no llegó a terminar, con su `uploadId`.
    *
-   * Es lo que deja el registro marcado como erróneo en vez de pendiente para siempre.
+   * Quien lo reciba lo confirma con `{ failed: true }`: es lo que deja el registro marcado como
+   * erróneo en vez de pendiente hasta que la recolección lo barra.
    */
   onAbandon?: ((uploadId: string) => void) | undefined
   disabled?: boolean | undefined

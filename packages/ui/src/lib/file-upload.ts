@@ -11,7 +11,7 @@
  *    derivados ya redimensionados—; un video, el video y cuatro portadas; lo demás, uno.
  * 2. Se **autoriza**: la API registra el archivo y devuelve una escritura temporal por objeto.
  * 3. Se **escribe** cada objeto directamente en el almacenamiento. Los bytes no pasan por la API.
- * 4. Se **confirma**, y el archivo pasa a subido.
+ * 4. Se **confirma** con las variantes que de verdad se escribieron, y el archivo pasa a subido.
  *
  * De ahí que el reintento sea por objeto y no por archivo: que falle la miniatura no puede obligar
  * a resubir el original de doce megas. `sent` es la lista de lo ya escrito y **sobrevive al
@@ -19,23 +19,34 @@
  *
  * Tres decisiones que no se ven en el contrato:
  *
- * - **Un fallo no se confirma.** La spec dice que confirmar el fallo marca el archivo erróneo, y
- *   un archivo erróneo «no se muestra como imagen válida en ninguna superficie»: hacerlo antes de
- *   que el usuario decida si reintenta es dar por perdido lo que está a un botón de arreglarse. El
- *   fallo se confirma cuando el usuario quita el archivo — para eso está `abandoned`.
- * - **Una autorización nueva descarta lo escrito con la anterior.** Un `uploadId` distinto es otro
- *   archivo registrado, y los objetos anteriores son suyos; contarlos dejaría un archivo con la
- *   mitad de sus objetos y nadie mirando. Es el precio de que el contrato no tenga forma de
- *   renovar las direcciones de un registro que ya existe.
+ * - **Un fallo no se confirma.** Confirmar el fallo marca el archivo erróneo, y un archivo erróneo
+ *   «no se muestra como imagen válida en ninguna superficie»: hacerlo antes de que el usuario
+ *   decida si reintenta es dar por perdido lo que está a un botón de arreglarse. El fallo se
+ *   confirma cuando el usuario quita el archivo — para eso está `abandoned`.
+ * - **Lo que no se pudo producir no se reintenta; lo que no se pudo escribir, sí.** Son fallos de
+ *   distinta naturaleza: que este navegador no descodifique un `heic` no cambia por insistir, y por
+ *   eso el archivo se confirma con las variantes que sí existen; que se caiga una escritura es
+ *   pasajero, y por eso deja el archivo reintentable en vez de confirmarlo incompleto.
+ * - **Caducar no cuesta la subida.** Cuando la firma vence se piden destinos nuevos **para el
+ *   mismo registro**, y lo ya escrito sigue siendo suyo. Sólo un `uploadId` distinto —que sería
+ *   otro archivo— descarta lo anterior, y eso no debería pasar nunca.
  * - **El servidor manda sobre cuántos objetos hay.** El plan local es una previsión hasta que
  *   llega la autorización; a partir de ahí, los objetos son los que ella trae.
+ * - **Sin el original no hay archivo.** Un registro que apunta a una miniatura cuyo original no
+ *   existe es peor que ninguno, así que el original que no se pudo producir corta la subida antes
+ *   de registrarla, y el que no se pudo escribir la deja fallida en vez de confirmarla.
  *
  * Nada de esto toca el DOM: los tres puertos —producir, autorizar, escribir— entran como
  * dependencias, así que el recorrido entero se prueba sin servidor y sin navegador.
  */
 
-import { plannedVariants, type UploadVariant } from "./file-derivatives.ts"
-import type { FileKind } from "./file-kinds.ts"
+import {
+  DERIVATIVE_CONTENT_TYPE,
+  type DerivativeContentType,
+  plannedVariants,
+  type UploadVariant,
+} from "./file-derivatives.ts"
+import { classify, contentTypeFor, type FileKind } from "./file-kinds.ts"
 
 /** Una autorización de escritura para **un** objeto. No sirve para otro ni para otro archivo. */
 export interface UploadTarget {
@@ -53,6 +64,45 @@ export interface UploadAuthorization {
   readonly expiresAt: string
   /** Cinco para imagen y video; sólo el original para lo demás. */
   readonly targets: readonly UploadTarget[]
+}
+
+/** El cuerpo de `POST /companies/{companyId}/uploads`. */
+export interface UploadRequest {
+  readonly fileName: string
+  /** Deducido de la extensión, **no** de lo que declare el navegador. Ver `file-kinds.ts`. */
+  readonly contentType: string
+  /** El del original: los otros cuatro objetos todavía no existen cuando se pide. */
+  readonly byteSize: number
+  readonly kind: FileKind
+  /** Sólo cuando hay derivados. El servidor firma sus escrituras con este tipo. */
+  readonly derivativeContentType?: DerivativeContentType | undefined
+}
+
+/**
+ * Lo que se le pide a la API por un archivo elegido.
+ *
+ * Declara el tipo de los derivados **porque es el cliente quien los dibuja**: sin este campo, el
+ * servidor firmaba las cuatro escrituras con un tipo supuesto y el objeto acababa guardado con uno
+ * que no era el suyo. Un documento no lo declara, porque no tiene derivados.
+ */
+export function requestFor(
+  file: {
+    readonly fileName: string
+    readonly byteSize: number
+    readonly contentType?: string | undefined
+  },
+  derivativeContentType: DerivativeContentType = DERIVATIVE_CONTENT_TYPE,
+): UploadRequest {
+  const kind = classify(file.fileName)
+  const base = {
+    fileName: file.fileName,
+    contentType: contentTypeFor(file.fileName, file.contentType),
+    byteSize: file.byteSize,
+    kind,
+  }
+
+  const derived = plannedVariants(kind).length > 1
+  return derived ? { ...base, derivativeContentType } : base
 }
 
 /** Los cuatro pasos de una subida. El fallo dice en cuál se quedó. */
@@ -130,7 +180,8 @@ export function needsAuthorization(file: FileUpload, now: number): boolean {
  * El registro que hay que dar por fallido si se quita un archivo a medias.
  *
  * Sin esto, quitar un archivo que falló deja el registro pendiente hasta que la recolección lo
- * barra. Con esto queda marcado como erróneo, que es lo que la spec pide del cliente.
+ * barra. Con esto queda marcado como erróneo —`confirm` con `{ failed: true }`—, que es lo que la
+ * spec pide del cliente.
  */
 export function abandoned(state: UploadState, id: string): string | undefined {
   const file = fileOf(state, id)
@@ -225,6 +276,8 @@ export function reduce(state: UploadState, event: UploadEvent): UploadState {
 
     case "authorized":
       return patch(state, event.id, (file) => {
+        // Una reemisión trae el mismo `uploadId` y conserva lo escrito. Un identificador distinto
+        // sería otro archivo registrado, y sus objetos no son los de éste.
         const fresh = file.uploadId !== undefined && file.uploadId !== event.authorization.uploadId
         return {
           ...file,
@@ -257,7 +310,21 @@ export function reduce(state: UploadState, event: UploadEvent): UploadState {
 }
 
 /**
- * Las tres operaciones del contrato, más la que produce los bytes.
+ * Lo que se confirma.
+ *
+ * `written` son las variantes que **de verdad** se escribieron, y no un `ok` para el archivo
+ * entero: una subida puede terminar a medias con razón —un `heic` que un Chrome de escritorio no
+ * descodifica sube su original y ningún derivado—, y las que falten quedan nulas.
+ *
+ * **Sin el original no hay archivo**: un registro que apunta a una miniatura cuyo original no
+ * existe es peor que ninguno. Por eso el recorrido no llega a confirmar `written` sin él.
+ */
+export type UploadResult =
+  | { readonly written: readonly UploadVariant[] }
+  | { readonly failed: true; readonly reason?: string | undefined }
+
+/**
+ * Las cuatro operaciones del contrato, más la que produce los bytes.
  *
  * Entran como dependencias en vez de llamarse desde dentro: es lo que permite probar el recorrido
  * entero sin servidor y sin red, y lo que deja al sistema de diseño sin saber de `fetch`, de
@@ -276,10 +343,17 @@ export interface UploadPorts {
   prepare(id: string): Promise<ReadonlyMap<UploadVariant, Blob>>
   /** `POST /companies/{companyId}/uploads`. Registra el archivo y autoriza sus objetos. */
   authorize(id: string): Promise<UploadAuthorization>
+  /**
+   * `POST /companies/{companyId}/uploads/{uploadId}/targets` — firmas nuevas, **mismo registro**.
+   *
+   * Es lo que hace que caducar a mitad de una subida larga no cueste repetirla entera: los objetos
+   * ya escritos siguen siendo de este archivo. Responde `409` sobre uno ya subido.
+   */
+  reissue(uploadId: string): Promise<UploadAuthorization>
   /** La escritura directa en el almacenamiento, con el método y las cabeceras de la autorización. */
   send(target: UploadTarget, body: Blob): Promise<void>
   /** `POST /companies/{companyId}/uploads/{uploadId}/confirm`. */
-  confirm(uploadId: string, ok: boolean): Promise<void>
+  confirm(uploadId: string, result: UploadResult): Promise<void>
 }
 
 export interface RunOptions {
@@ -325,13 +399,23 @@ export async function runUploads(
       emit({ type: "failed", id, at: "prepare" })
       continue
     }
+    // Sin original no se sigue, y se sabe **antes** de registrar nada: lo que no se pudo producir
+    // no se va a escribir, y un registro sin original es un archivo que no existe.
+    if (!bodies.has("original")) {
+      emit({ type: "failed", id, at: "prepare" })
+      continue
+    }
     let file = emit({ type: "prepared", id, produced: [...bodies.keys()] })
     if (file === undefined) continue
 
     if (needsAuthorization(file, clock())) {
       emit({ type: "begin", id, stage: "authorize" })
+      const known = file.uploadId
       try {
-        const authorization = await ports.authorize(id)
+        // Con registro, se piden firmas nuevas para él; sin registro, se crea. La diferencia es
+        // todo lo ya escrito, que en el primer caso se conserva y en el segundo no existiría.
+        const authorization =
+          known === undefined ? await ports.authorize(id) : await ports.reissue(known)
         file = emit({ type: "authorized", id, authorization })
       } catch {
         emit({ type: "failed", id, at: "authorize" })
@@ -360,6 +444,14 @@ export async function runUploads(
     }
     if (broke) continue
 
+    const written = fileOf(current, id)?.sent ?? []
+    // El servidor puede no haber autorizado un original, o su escritura puede haberse saltado: en
+    // cualquier caso esto es un fallo, no un archivo subido a medias.
+    if (!written.includes("original")) {
+      emit({ type: "failed", id, at: "send" })
+      continue
+    }
+
     const uploadId = file.uploadId
     if (uploadId === undefined) {
       emit({ type: "failed", id, at: "authorize" })
@@ -368,7 +460,7 @@ export async function runUploads(
 
     emit({ type: "begin", id, stage: "confirm" })
     try {
-      await ports.confirm(uploadId, true)
+      await ports.confirm(uploadId, { written })
     } catch {
       emit({ type: "failed", id, at: "confirm" })
       continue

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
 import type { UploadVariant } from "./file-derivatives.ts"
-import type { FileUpload, UploadAuthorization, UploadPorts, UploadState } from "./file-upload.ts"
+import type {
+  FileUpload,
+  UploadAuthorization,
+  UploadPorts,
+  UploadResult,
+  UploadState,
+} from "./file-upload.ts"
 import {
   abandoned,
   enqueue,
@@ -10,6 +16,7 @@ import {
   needsAuthorization,
   pending,
   reduce,
+  requestFor,
   runUploads,
   summarize,
 } from "./file-upload.ts"
@@ -24,6 +31,8 @@ function authorization(
   uploadId: string,
   variants: readonly UploadVariant[] = FIVE,
   expiresAt = FUTURE,
+  /** Distingue una firma de otra sobre el mismo registro: es lo que reemite `reissue`. */
+  mark = "",
 ): UploadAuthorization {
   return {
     uploadId,
@@ -32,7 +41,7 @@ function authorization(
     targets: variants.map((variant) => ({
       variant,
       method: "PUT",
-      url: `https://almacen.example/${uploadId}/${variant}`,
+      url: `https://almacen.example/${uploadId}/${variant}${mark}`,
       headers: { "content-type": "image/jpeg" },
     })),
   }
@@ -238,8 +247,9 @@ interface Recorder {
   readonly ports: UploadPorts
   readonly prepared: string[]
   readonly authorized: string[]
+  readonly reissued: string[]
   readonly written: string[]
-  readonly confirmed: { uploadId: string; ok: boolean }[]
+  readonly confirmed: { uploadId: string; result: UploadResult }[]
 }
 
 function recorder(
@@ -247,8 +257,9 @@ function recorder(
 ): Recorder {
   const prepared: string[] = []
   const authorized: string[] = []
+  const reissued: string[] = []
   const written: string[] = []
-  const confirmed: { uploadId: string; ok: boolean }[] = []
+  const confirmed: { uploadId: string; result: UploadResult }[] = []
   const fails = options.fail ?? (() => false)
 
   const ports: UploadPorts = {
@@ -263,18 +274,23 @@ function recorder(
       if (fails(`authorize:${id}`)) throw new Error("no autorizado")
       return authorization(`u-${id}`)
     },
+    async reissue(uploadId) {
+      reissued.push(uploadId)
+      if (fails(`reissue:${uploadId}`)) throw new Error("no se pudo reemitir")
+      return authorization(uploadId, FIVE, FUTURE, "#2")
+    },
     async send(target) {
       const step = `${target.url}`
       if (fails(step)) throw new Error("no se pudo escribir")
       written.push(step)
     },
-    async confirm(uploadId, ok) {
+    async confirm(uploadId, result) {
       if (fails(`confirm:${uploadId}`)) throw new Error("no se pudo confirmar")
-      confirmed.push({ uploadId, ok })
+      confirmed.push({ uploadId, result })
     },
   }
 
-  return { ports, prepared, authorized, written, confirmed }
+  return { ports, prepared, authorized, reissued, written, confirmed }
 }
 
 describe("el recorrido", () => {
@@ -286,7 +302,7 @@ describe("el recorrido", () => {
     expect(prepared).toEqual(["f1"])
     expect(authorized).toEqual(["f1"])
     expect(written).toEqual(FIVE.map((variant) => `https://almacen.example/u-f1/${variant}`))
-    expect(confirmed).toEqual([{ uploadId: "u-f1", ok: true }])
+    expect(confirmed).toEqual([{ uploadId: "u-f1", result: { written: FIVE } }])
     expect(at(final, "f1").phase).toBe("done")
     expect(at(final, "f1").sent).toEqual(FIVE)
   })
@@ -333,7 +349,7 @@ describe("el recorrido", () => {
     ])
     expect(before).toBe(6 * 5 + 2)
     expect(at(retried, "f4").phase).toBe("done")
-    expect(sano.confirmed).toEqual([{ uploadId: "u-f4", ok: true }])
+    expect(sano.confirmed).toEqual([{ uploadId: "u-f4", result: { written: FIVE } }])
   })
 
   it("no vuelve a tocar lo que ya terminó", async () => {
@@ -377,31 +393,90 @@ describe("el recorrido", () => {
     const final = await runUploads(reduce(failed, { type: "retry", id: "f1" }), again.ports)
 
     expect(again.written).toEqual([])
-    expect(again.confirmed).toEqual([{ uploadId: "u-f1", ok: true }])
+    expect(again.confirmed).toEqual([{ uploadId: "u-f1", result: { written: FIVE } }])
     expect(at(final, "f1").phase).toBe("done")
   })
 
-  it("una autorización caducada se renueva, y lo escrito con la anterior no cuenta", async () => {
+  it("una firma caducada se reemite sobre el mismo registro, y lo escrito sigue contando", async () => {
+    // Que caduque la firma no puede costar volver a subir doce megas: se piden destinos nuevos
+    // para el `uploadId` que ya existe, y sólo se escribe lo que faltaba.
     let state = enqueue(idle, photos(1))
     state = reduce(state, { type: "prepared", id: "f1", produced: FIVE })
     state = reduce(state, {
       type: "authorized",
       id: "f1",
-      authorization: authorization("viejo", FIVE, PAST),
+      authorization: authorization("u1", FIVE, PAST),
     })
     state = reduce(state, { type: "sent", id: "f1", variant: "original" })
+    state = reduce(state, { type: "sent", id: "f1", variant: "large" })
     state = reduce(state, { type: "failed", id: "f1", at: "send" })
 
-    const { ports, authorized, written } = recorder()
+    const { ports, authorized, reissued, written, confirmed } = recorder()
     const final = await runUploads(reduce(state, { type: "retry", id: "f1" }), ports, {
       now: () => NOW,
     })
 
-    expect(authorized).toEqual(["f1"])
-    expect(at(final, "f1").uploadId).toBe("u-f1")
-    // El original se vuelve a escribir: los objetos de la autorización anterior son de otro
-    // archivo registrado, y ése lo recogerá la limpieza de pendientes.
-    expect(written).toEqual(FIVE.map((variant) => `https://almacen.example/u-f1/${variant}`))
+    expect(authorized).toEqual([]) // no se registra otro archivo
+    expect(reissued).toEqual(["u1"])
+    expect(written).toEqual([
+      "https://almacen.example/u1/medium#2",
+      "https://almacen.example/u1/small#2",
+      "https://almacen.example/u1/thumbnail#2",
+    ])
+    expect(at(final, "f1").uploadId).toBe("u1")
+    expect(confirmed).toEqual([{ uploadId: "u1", result: { written: FIVE } }])
+  })
+
+  it("un fallo al reemitir no pierde lo escrito", async () => {
+    let state = enqueue(idle, photos(1))
+    state = reduce(state, { type: "prepared", id: "f1", produced: FIVE })
+    state = reduce(state, {
+      type: "authorized",
+      id: "f1",
+      authorization: authorization("u1", FIVE, PAST),
+    })
+    state = reduce(state, { type: "sent", id: "f1", variant: "original" })
+    state = reduce(state, { type: "failed", id: "f1", at: "send" })
+
+    const { ports, written } = recorder({ fail: (what) => what === "reissue:u1" })
+    const final = await runUploads(reduce(state, { type: "retry", id: "f1" }), ports, {
+      now: () => NOW,
+    })
+
+    expect(written).toEqual([])
+    expect(at(final, "f1").failure).toBe("authorize")
+    expect(at(final, "f1").sent).toEqual(["original"])
+  })
+
+  it("sin el original no se registra siquiera el archivo", async () => {
+    // Un registro que apunta a una miniatura cuyo original no existe es peor que ninguno, y esto
+    // se sabe antes de pedir la autorización: lo que no se pudo producir no se va a escribir.
+    const { ports, authorized, confirmed } = recorder({
+      produce: () => ["large", "medium", "small", "thumbnail"],
+    })
+
+    const final = await runUploads(enqueue(idle, photos(1)), ports)
+
+    expect(authorized).toEqual([])
+    expect(confirmed).toEqual([])
+    expect(at(final, "f1").phase).toBe("failed")
+    expect(at(final, "f1").failure).toBe("prepare")
+  })
+
+  it("sin el original escrito no se confirma como subido", async () => {
+    const { ports } = recorder()
+    const sinOriginal: UploadPorts = {
+      ...ports,
+      async authorize() {
+        return authorization("u1", ["large", "medium"])
+      },
+    }
+
+    const final = await runUploads(enqueue(idle, photos(1)), sinOriginal)
+
+    expect(at(final, "f1").sent).toEqual(["large", "medium"])
+    expect(at(final, "f1").phase).toBe("failed")
+    expect(at(final, "f1").failure).toBe("send")
   })
 
   it("sube lo que pudo producir y termina, sin inventar las portadas que faltan", async () => {
@@ -410,7 +485,9 @@ describe("el recorrido", () => {
     const final = await runUploads(enqueue(idle, [{ id: "v", kind: "video" }]), ports)
 
     expect(written).toEqual(["https://almacen.example/u-v/original"])
-    expect(confirmed).toEqual([{ uploadId: "u-v", ok: true }])
+    // Con el original dentro y derivados de menos, el archivo queda subido: las variantes que
+    // faltan quedan nulas, que es lo que ese navegador podía hacer.
+    expect(confirmed).toEqual([{ uploadId: "u-v", result: { written: ["original"] } }])
     expect(at(final, "v").phase).toBe("done")
     expect(missing(at(final, "v"))).toEqual(["large", "medium", "small", "thumbnail"])
   })
@@ -425,5 +502,40 @@ describe("el recorrido", () => {
     const phases = seen.map((state) => at(state, "f1").phase)
     expect(phases.slice(0, 4)).toEqual(["prepare", "prepare", "authorize", "authorize"])
     expect(phases.at(-1)).toBe("done")
+  })
+})
+
+describe("lo que se le pide a la API", () => {
+  it("declara el tipo por la extensión y el de los derivados que va a producir", () => {
+    // El tipo del original sale de la extensión y no de lo que declare el navegador; el de los
+    // derivados lo decide el cliente, porque es el cliente quien los dibuja.
+    expect(requestFor({ fileName: "IMG_0042.HEIC", byteSize: 4_000_000 })).toEqual({
+      fileName: "IMG_0042.HEIC",
+      contentType: "image/heic",
+      byteSize: 4_000_000,
+      kind: "image",
+      derivativeContentType: "image/jpeg",
+    })
+  })
+
+  it("un video lo declara también: sus portadas son imágenes", () => {
+    expect(requestFor({ fileName: "clip.mov", byteSize: 10 }).derivativeContentType).toBe(
+      "image/jpeg",
+    )
+  })
+
+  it("un documento no lo declara, porque no tiene derivados", () => {
+    expect(requestFor({ fileName: "manual.pdf", byteSize: 10 })).toEqual({
+      fileName: "manual.pdf",
+      contentType: "application/pdf",
+      byteSize: 10,
+      kind: "document",
+    })
+  })
+
+  it("admite otro formato para quien produzca otra cosa", () => {
+    expect(
+      requestFor({ fileName: "foto.png", byteSize: 10 }, "image/webp").derivativeContentType,
+    ).toBe("image/webp")
   })
 })

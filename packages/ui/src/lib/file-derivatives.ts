@@ -36,6 +36,21 @@ export const DERIVATIVE_EDGE: Readonly<Record<Derivative, number>> = {
   thumbnail: 160,
 }
 
+/**
+ * El formato de los derivados, que **lo decide el cliente porque es el cliente quien los dibuja**.
+ *
+ * Va en la petición de autorización (`derivativeContentType`) para que el servidor firme las
+ * escrituras de las cuatro con el tipo que de verdad va a recibir. Cuando esto era un supuesto
+ * —el servidor daba por hecho `image/jpeg` y el navegador escribía lo que quisiera—, el objeto
+ * quedaba guardado con un tipo que no era el suyo y el navegador que lo leyera se lo descargaría
+ * en vez de pintarlo. Ver `H-53`.
+ *
+ * JPEG por defecto: es lo que todo navegador sabe escribir con `toBlob`.
+ */
+export type DerivativeContentType = "image/jpeg" | "image/webp" | "image/png"
+
+export const DERIVATIVE_CONTENT_TYPE: DerivativeContentType = "image/jpeg"
+
 const IMAGE_VARIANTS: readonly UploadVariant[] = [
   "original",
   "large",

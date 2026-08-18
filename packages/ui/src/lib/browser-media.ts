@@ -20,18 +20,21 @@
  *   es la razón de que la máquina admita que falten derivados. Ver `H-52`.
  */
 
-import { derivativeSizes, type Size, type UploadVariant } from "./file-derivatives.ts"
+import {
+  DERIVATIVE_CONTENT_TYPE,
+  type DerivativeContentType,
+  derivativeSizes,
+  type Size,
+  type UploadVariant,
+} from "./file-derivatives.ts"
 import type { FileKind } from "./file-kinds.ts"
 
 /**
- * El formato de los derivados.
- *
- * JPEG para los cuatro, sobre fondo blanco: es lo que todo navegador sabe escribir con `toBlob`, y
- * lo que un servidor que emite una autorización sin saber qué vamos a producir puede dar por hecho.
  * Lo transparente se compone sobre blanco en lugar de quedar en negro, que es lo que hace un lienzo
- * vacío al aplanarse.
+ * vacío al aplanarse. El formato de salida es política y vive en `file-derivatives.ts`: **es el
+ * mismo que se declara en la petición de autorización**, y por eso se pasa entero desde arriba en
+ * vez de fijarse aquí.
  */
-const DERIVATIVE_TYPE = "image/jpeg"
 const DERIVATIVE_QUALITY = 0.82
 
 /** Más de esto esperando un fotograma es un formato que este navegador no va a descodificar. */
@@ -44,13 +47,17 @@ function canvasOf(size: Size): HTMLCanvasElement {
   return canvas
 }
 
-function toBlob(canvas: HTMLCanvasElement): Promise<Blob | undefined> {
+function toBlob(canvas: HTMLCanvasElement, type: DerivativeContentType): Promise<Blob | undefined> {
   return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob ?? undefined), DERIVATIVE_TYPE, DERIVATIVE_QUALITY)
+    canvas.toBlob((blob) => resolve(blob ?? undefined), type, DERIVATIVE_QUALITY)
   })
 }
 
-async function paint(source: CanvasImageSource, size: Size): Promise<Blob | undefined> {
+async function paint(
+  source: CanvasImageSource,
+  size: Size,
+  type: DerivativeContentType,
+): Promise<Blob | undefined> {
   if (size.width <= 0 || size.height <= 0) return undefined
 
   const canvas = canvasOf(size)
@@ -63,7 +70,7 @@ async function paint(source: CanvasImageSource, size: Size): Promise<Blob | unde
   context.fillRect(0, 0, size.width, size.height)
   context.drawImage(source, 0, 0, size.width, size.height)
 
-  return await toBlob(canvas)
+  return await toBlob(canvas, type)
 }
 
 /**
@@ -83,6 +90,7 @@ async function decode(file: Blob): Promise<ImageBitmap | undefined> {
 async function derivativesOf(
   source: ImageBitmap,
   variants: readonly UploadVariant[],
+  type: DerivativeContentType,
 ): Promise<Map<UploadVariant, Blob>> {
   const sizes = derivativeSizes({ width: source.width, height: source.height })
   const produced = new Map<UploadVariant, Blob>()
@@ -90,7 +98,7 @@ async function derivativesOf(
   for (const variant of variants) {
     if (variant === "original") continue
     const size = sizes[variant]
-    const blob = await paint(source, size)
+    const blob = await paint(source, size, type)
     if (blob !== undefined) produced.set(variant, blob)
   }
 
@@ -106,10 +114,13 @@ async function derivativesOf(
 export async function imageObjects(
   file: File,
   variants: readonly UploadVariant[],
+  type: DerivativeContentType = DERIVATIVE_CONTENT_TYPE,
 ): Promise<ReadonlyMap<UploadVariant, Blob>> {
   const source = await decode(file)
   const produced =
-    source === undefined ? new Map<UploadVariant, Blob>() : await derivativesOf(source, variants)
+    source === undefined
+      ? new Map<UploadVariant, Blob>()
+      : await derivativesOf(source, variants, type)
   source?.close()
 
   if (variants.includes("original")) produced.set("original", file)
@@ -123,7 +134,11 @@ export async function imageObjects(
  * teléfono suele ser el suelo o un borrón de movimiento. Y hay un plazo, porque un formato que este
  * navegador no descodifica —`avi`, `mkv`, `wmv`— no falla: se queda callado para siempre.
  */
-export function coverFrame(file: File, timeout = FRAME_TIMEOUT): Promise<Blob | undefined> {
+export function coverFrame(
+  file: File,
+  type: DerivativeContentType = DERIVATIVE_CONTENT_TYPE,
+  timeout = FRAME_TIMEOUT,
+): Promise<Blob | undefined> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file)
     const video = document.createElement("video")
@@ -152,7 +167,7 @@ export function coverFrame(file: File, timeout = FRAME_TIMEOUT): Promise<Blob | 
     })
 
     video.addEventListener("seeked", () => {
-      void paint(video, { width: video.videoWidth, height: video.videoHeight }).then(finish)
+      void paint(video, { width: video.videoWidth, height: video.videoHeight }, type).then(finish)
     })
 
     video.src = url
@@ -168,12 +183,15 @@ export function coverFrame(file: File, timeout = FRAME_TIMEOUT): Promise<Blob | 
 export async function videoObjects(
   file: File,
   variants: readonly UploadVariant[],
+  type: DerivativeContentType = DERIVATIVE_CONTENT_TYPE,
 ): Promise<ReadonlyMap<UploadVariant, Blob>> {
-  const frame = await coverFrame(file)
+  const frame = await coverFrame(file, type)
   const source = frame === undefined ? undefined : await decode(frame)
 
   const produced =
-    source === undefined ? new Map<UploadVariant, Blob>() : await derivativesOf(source, variants)
+    source === undefined
+      ? new Map<UploadVariant, Blob>()
+      : await derivativesOf(source, variants, type)
   source?.close()
 
   if (variants.includes("original")) produced.set("original", file)
@@ -189,8 +207,10 @@ export function prepareObjects(
   file: File,
   kind: FileKind,
   variants: readonly UploadVariant[],
+  /** El mismo que se declaró en la petición de autorización: ahí es donde se firma. */
+  type: DerivativeContentType = DERIVATIVE_CONTENT_TYPE,
 ): Promise<ReadonlyMap<UploadVariant, Blob>> {
-  if (kind === "image") return imageObjects(file, variants)
-  if (kind === "video") return videoObjects(file, variants)
+  if (kind === "image") return imageObjects(file, variants, type)
+  if (kind === "video") return videoObjects(file, variants, type)
   return Promise.resolve(new Map<UploadVariant, Blob>([["original", file]]))
 }

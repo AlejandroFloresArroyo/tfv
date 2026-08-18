@@ -106,7 +106,11 @@ export {
  */
 export * as browserMedia from "./lib/browser-media.ts"
 export { cn } from "./lib/cn.ts"
-export type { Derivative, UploadVariant } from "./lib/file-derivatives.ts"
+export type {
+  Derivative,
+  DerivativeContentType,
+  UploadVariant,
+} from "./lib/file-derivatives.ts"
 export * as fileDerivatives from "./lib/file-derivatives.ts"
 export type {
   AcceptedFile,
@@ -122,6 +126,8 @@ export type {
   UploadAuthorization,
   UploadPhase,
   UploadPorts,
+  UploadRequest,
+  UploadResult,
   UploadStage,
   UploadState,
   UploadSummary,
