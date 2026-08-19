@@ -145,6 +145,28 @@ import {
   platformUsersRoute,
 } from "./platform.ts"
 import {
+  createProductionCategoryRoute,
+  createProductionRoute,
+  createWorkflowRoute,
+  deleteProductionCategoryRoute,
+  deleteProductionRoute,
+  deleteWorkflowRoute,
+  getProductionCategoryRoute,
+  getProductionRoute,
+  getWorkflowRoute,
+  listProductionCategoriesRoute,
+  listProductionsRoute,
+  listWorkflowsRoute,
+  productionCategoryPathRoute,
+  productionCategoryScopeRoute,
+  productionPanelRoute,
+  productionScopeRoute,
+  updateProductionCategoryRoute,
+  updateProductionRoute,
+  updateWorkflowRoute,
+  workflowScopeRoute,
+} from "./productions.ts"
+import {
   acceptProspectRoute,
   captureProspectRoute,
   discardProspectRoute,
@@ -491,7 +513,35 @@ export const routes: readonly RegisteredRoute[] = [
   changeShipmentStatusRoute,
 
   // ─── Producciones ──────────────────────────────────────────────────────────
-  // Pendiente: rebanada 20.
+  // La producción como entidad, su taxonomía —que dirige el trabajo a un equipo— y sus planes de
+  // trabajo. El panel va **antes** que la ficha con parámetro por el mismo motivo que el perfil
+  // operativo de facturación: nada garantiza que un identificador no se parezca a «panel».
+
+  listProductionsRoute,
+  createProductionRoute,
+  productionPanelRoute,
+  getProductionRoute,
+  updateProductionRoute,
+  productionScopeRoute,
+  deleteProductionRoute,
+
+  listProductionCategoriesRoute,
+  getProductionCategoryRoute,
+  productionCategoryPathRoute,
+  createProductionCategoryRoute,
+  updateProductionCategoryRoute,
+  productionCategoryScopeRoute,
+  deleteProductionCategoryRoute,
+
+  listWorkflowsRoute,
+  createWorkflowRoute,
+  getWorkflowRoute,
+  updateWorkflowRoute,
+  workflowScopeRoute,
+  deleteWorkflowRoute,
+
+  // Pendiente: guion, capítulos y escenas (21); inventario, entregas y presupuesto (22); compras
+  // a almacenes (23). Las tablas existen desde la `0002` y el panel ya las cuenta.
 
   // ─── Pixit ─────────────────────────────────────────────────────────────────
   // Pendiente: rebanada 24.

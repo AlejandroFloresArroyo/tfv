@@ -149,6 +149,13 @@
       "breakpoints": true
     },
     {
+      "idx": 22,
+      "version": "7",
+      "when": 1787180400000,
+      "tag": "0022_producciones",
+      "breakpoints": true
+    },
+    {
       "idx": 24,
       "version": "7",
       "when": 1787180600000,
