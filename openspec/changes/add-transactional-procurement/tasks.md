@@ -2,10 +2,20 @@
 
 ## Diseño previo
 
-- [ ] Definir el contexto de sistema y su alcance
-- [ ] Enumerar las tablas que admiten escritura bajo él, lo más corta posible
+- [x] Definir el contexto de sistema y su alcance — lo resolvió la rebanada 06 y está construido:
+      `withSystem(operacion, alcance)` en `packages/db/src/index.ts:96-108`. El alcance es una
+      lista explícita de empresas que **se suma** a las membresías en vez de sustituirlas, así que
+      las políticas siguen aplicándose. Pruebas `db/tenant-context.test.ts:201`, `:211` y `:220`
+- [ ] Enumerar las tablas que admiten escritura bajo él, lo más corta posible — **la premisa
+      cambió**: el alcance que se construyó no es una lista de tablas sino de **empresas**, y las
+      políticas de cada tabla siguen decidiendo. La lista corta que esta tarea pedía habría que
+      reescribirla como «qué operaciones declaran alcance», que es lo que hoy dice el nombre del
+      primer argumento en cada una de las quince llamadas
 - [ ] Definir el registro auditable en la empresa receptora
-- [ ] Verificar que no abre acceso más allá de lo necesario
+- [x] Verificar que no abre acceso más allá de lo necesario — `db/tenant-context.test.ts:211`
+      («no alcanza las que no declara») y `:220` («con alcance vacío no ve nada»). El modo de
+      fallo es cerrado: olvidar declarar el alcance deja la operación sin ver nada, no viéndolo
+      todo
 
 ## Orden de compra
 
