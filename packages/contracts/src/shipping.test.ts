@@ -231,6 +231,21 @@ describe("recargo por número de artículos", () => {
 
     expect(quote.surcharges.filter((surcharge) => surcharge.kind === "item_count")).toHaveLength(0)
   })
+
+  it("cuenta las cantidades de las líneas, no las líneas", () => {
+    // Dos líneas de dos piezas son cuatro bultos, y cuatro superan el umbral de tres.
+    const quote = computeShipping(input({ items: items(2, { quantity: 2 }) }))
+
+    expect(quote.itemCount).toBe(4)
+    expect(quote.surcharges.filter((surcharge) => surcharge.kind === "item_count")).toHaveLength(1)
+  })
+
+  it("la recolección no lleva recargo por cantidad", () => {
+    const quote = computeShipping(input({ mode: "pickup", items: items(15) }))
+
+    expect(quote.total).toBe("0.00")
+    expect(quote.surcharges).toEqual([])
+  })
 })
 
 // ─── Distancia entre origen y destino ────────────────────────────────────────
