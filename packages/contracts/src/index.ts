@@ -10,6 +10,7 @@
 export * from "./errors.ts"
 export * from "./ids.ts"
 export * from "./money.ts"
+export * from "./order-chat.ts"
 export * from "./order-status.ts"
 export * from "./pagination.ts"
 export * from "./permissions.ts"
