@@ -183,6 +183,14 @@ import {
   updateWarehouseRoute,
   warehouseScopeRoute,
 } from "./warehouses.ts"
+import {
+  createWebsiteRoute,
+  deleteWebsiteRoute,
+  getWebsiteRoute,
+  listWebsitesRoute,
+  updateWebsiteRoute,
+  websiteSlugAvailableRoute,
+} from "./websites.ts"
 
 export const routes: readonly RegisteredRoute[] = [
   // ─── Sistema ───────────────────────────────────────────────────────────────
@@ -393,5 +401,13 @@ export const routes: readonly RegisteredRoute[] = [
   // Pendiente: rebanada 24.
 
   // ─── Sitios ────────────────────────────────────────────────────────────────
-  // Pendiente: rebanada 19.
+  // La gestión, con permiso. La tienda pública que cuelga de ellos va más abajo, aparte, porque es
+  // la única superficie de este servicio que atiende a quien no tiene cuenta.
+
+  listWebsitesRoute,
+  websiteSlugAvailableRoute,
+  createWebsiteRoute,
+  getWebsiteRoute,
+  updateWebsiteRoute,
+  deleteWebsiteRoute,
 ]
