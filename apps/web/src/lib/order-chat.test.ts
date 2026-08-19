@@ -145,6 +145,38 @@ describe("envío optimista", () => {
     expect(state().timeline[0]?.id).toBe("m-1")
   })
 
+  it("si la consulta trae mi mensaje antes que su confirmación, no se ve dos veces", async () => {
+    // La carrera fina: el servidor ya lo guardó, la consulta periódica lo trae, y la respuesta al
+    // envío todavía no ha vuelto. Sin esto el mensaje se ve dos veces —el borrador y el
+    // confirmado— hasta que la respuesta llega.
+    const puerta: { resolve: ((value: SentMessage) => void) | null } = { resolve: null }
+    const { transport } = fakeTransport({
+      send: () =>
+        new Promise<SentMessage>((resolve) => {
+          puerta.resolve = resolve
+        }),
+      updates: async (since) => ({
+        items: [message("m-9", "Ya salió el equipo")],
+        side: "provider",
+        hasMore: false,
+        olderCursor: null,
+        syncCursor: since,
+        unread: 0,
+      }),
+    })
+
+    const { chat, state } = store(transport)
+    const enviando = chat.send("Ya salió el equipo")
+    await chat.poll()
+
+    expect(state().timeline.map((entry) => entry.id)).toEqual(["m-9"])
+
+    puerta.resolve?.({ message: message("m-9", "Ya salió el equipo"), clientRef: "borrador" })
+    await enviando
+
+    expect(state().timeline.map((entry) => entry.id)).toEqual(["m-9"])
+  })
+
   it("si el envío falla, lo escrito no se pierde", async () => {
     // Revertir tiraría lo que la persona acaba de teclear, que es la peor manera de contarle que
     // hubo un problema.

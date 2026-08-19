@@ -258,6 +258,32 @@ export function createChatStore(options: {
     messages = mergeMessages(messages, page.items)
     side = page.side
     unread = page.unread
+    settle(page.items)
+  }
+
+  /**
+   * Retira los borradores que la consulta ya trajo confirmados.
+   *
+   * Es la carrera fina del envío optimista: el servidor guardó el mensaje, la consulta periódica lo
+   * trae, y la respuesta al envío todavía no ha vuelto. Sin esto se ve dos veces —el borrador y el
+   * confirmado— hasta que llega. Se emparejan por autor y texto, que es lo único que hay: la
+   * referencia temporal es de quien envía y el servidor no la guarda.
+   */
+  function settle(incoming: readonly ChatMessage[]): void {
+    if (pending.length === 0) return
+
+    const mios = incoming.filter((message) => message.authorId === viewerId && !message.deletedAt)
+    if (mios.length === 0) return
+
+    // Uno por uno: quien manda dos veces el mismo texto tiene dos borradores, y sólo se cierra el
+    // que la consulta trajo.
+    const disponibles = mios.map((message) => message.body)
+    pending = pending.filter((draft) => {
+      const encaja = disponibles.indexOf(draft.body)
+      if (encaja === -1 || draft.failed) return true
+      disponibles.splice(encaja, 1)
+      return false
+    })
   }
 
   const store: ChatStore = {
@@ -483,36 +509,52 @@ export function useOrderChat(options: {
     error: null,
   }))
 
-  const store = useRef<ChatStore | null>(null)
+  /**
+   * El almacén, atado a **su** conversación.
+   *
+   * Pasar de un pedido a otro reutiliza este componente —el enrutador no lo desmonta si ocupa el
+   * mismo sitio del árbol—, y un almacén que sobreviviera a ese salto enseñaría los mensajes del
+   * pedido anterior hasta que la primera carga los sustituyera. Se compara la dirección y se
+   * empieza de cero cuando cambia.
+   */
+  const store = useRef<{ base: string; chat: ChatStore } | null>(null)
   const transport = options.transport
-  if (!store.current) {
-    store.current = createChatStore({
-      transport: transport ?? createPollingTransport(base),
-      viewerId,
-      notify: setSnapshot,
-    })
+  if (!store.current || store.current.base !== base) {
+    store.current = {
+      base,
+      chat: createChatStore({
+        transport: transport ?? createPollingTransport(base),
+        viewerId,
+        notify: setSnapshot,
+      }),
+    }
   }
 
   useEffect(() => {
+    // El almacén de **esta** conversación, tomado una vez: así un compás que quedara en marcha no
+    // puede acabar preguntando por el pedido anterior.
+    const chat = store.current?.base === base ? store.current.chat : null
+    if (!chat) return
+
     let alive = true
     let timer: ReturnType<typeof setTimeout> | null = null
 
     const tick = async () => {
       if (!alive) return
-      await store.current?.poll()
+      await chat.poll()
       if (!alive) return
       // El espaciado sale del propio estado: mientras la red no conteste, se pregunta menos.
-      const next = store.current?.snapshot()
-      timer = setTimeout(tick, next?.status === "retrying" ? backoffDelay(next.attempt) : interval)
+      const next = chat.snapshot()
+      timer = setTimeout(tick, next.status === "retrying" ? backoffDelay(next.attempt) : interval)
     }
 
-    void store.current?.open().then(() => {
+    void chat.open().then(() => {
       if (alive) timer = setTimeout(tick, interval)
     })
 
     // Volver a la pestaña es el momento en que alguien quiere ver lo que se perdió.
     const onVisible = () => {
-      if (document.visibilityState === "visible") void store.current?.poll()
+      if (document.visibilityState === "visible") void chat.poll()
     }
     document.addEventListener("visibilitychange", onVisible)
 
@@ -521,18 +563,18 @@ export function useOrderChat(options: {
       if (timer) clearTimeout(timer)
       document.removeEventListener("visibilitychange", onVisible)
     }
-    // Sólo al montar y al cambiar de conversación: el compás no depende del estado.
-  }, [interval])
+    // Al montar y al cambiar de conversación: el compás no depende del estado.
+  }, [base, interval])
 
-  const send = useCallback((body: string) => void store.current?.send(body), [])
-  const retry = useCallback((ref: string) => void store.current?.retry(ref), [])
+  const send = useCallback((body: string) => void store.current?.chat.send(body), [])
+  const retry = useCallback((ref: string) => void store.current?.chat.retry(ref), [])
   const edit = useCallback(
-    (messageId: string, body: string) => void store.current?.edit(messageId, body),
+    (messageId: string, body: string) => void store.current?.chat.edit(messageId, body),
     [],
   )
-  const remove = useCallback((messageId: string) => void store.current?.remove(messageId), [])
-  const markRead = useCallback(() => void store.current?.markRead(), [])
-  const older = useCallback(() => void store.current?.older(), [])
+  const remove = useCallback((messageId: string) => void store.current?.chat.remove(messageId), [])
+  const markRead = useCallback(() => void store.current?.chat.markRead(), [])
+  const older = useCallback(() => void store.current?.chat.older(), [])
 
   return { ...snapshot, send, retry, edit, remove, markRead, older }
 }
