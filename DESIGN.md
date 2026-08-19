@@ -223,6 +223,11 @@ utilizable por quien no, y por quien no distingue esos dos tonos.
 **La regla de la rúbrica.** El oro marca dónde estás, y nada más. No decora, no enfatiza, no
 celebra.
 
+**La regla del único color escrito dos veces.** El lienzo aparece a mano en `viewport.themeColor`
+de `apps/web/src/app/layout.tsx`, porque el navegador lo lee antes de que exista ninguna hoja de
+estilos y ahí no se puede referenciar una variable. Es el único sitio del sistema donde un color se
+duplica; si `--canvas` cambia, ese par cambia con él.
+
 **La regla del relleno medido aparte.** Una marca se mide contra el lienzo que la rodea; un relleno
 contra el texto que lleva encima. Son dos preguntas distintas y dan dos valores distintos, por eso
 `danger-fill` existe separado de `marca-alto`.

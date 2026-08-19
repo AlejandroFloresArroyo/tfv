@@ -47,10 +47,17 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  // Los dos, para que el navegador pinte sus barras del color correcto en cada tema.
+  /*
+   * Los dos, para que el navegador pinte sus barras del color correcto en cada tema.
+   *
+   * Son los valores exactos de `--canvas` en `packages/ui/src/styles/tokens.css`, y van a mano
+   * porque esto lo lee el navegador antes de que exista ninguna hoja de estilos: aquí no se puede
+   * referenciar una variable. Si el lienzo cambia, este par cambia con él — es el único sitio del
+   * sistema donde un color se escribe dos veces, y por eso se anota.
+   */
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f0f0f0" },
-    { media: "(prefers-color-scheme: dark)", color: "#1e1e1e" },
+    { media: "(prefers-color-scheme: light)", color: "#ededeb" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d0e10" },
   ],
 }
 
