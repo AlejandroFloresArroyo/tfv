@@ -1,7 +1,7 @@
 # Delta · 09 · Bitácora y notificaciones
 
-Lo que esta rebanada **retira** del alcance. Ver `project.md` D-09 y el índice de
-[`../../../README.md`](../../README.md), que asigna esta retirada a la rebanada 09.
+Lo que esta rebanada **retira** del alcance. Ver [`project.md`](../../../../project.md) D-09 y el
+índice de [`changes/README.md`](../../../README.md), que asigna esta retirada a la rebanada 09.
 
 `specs/activity-and-notifications/spec.md` describe el destino y por eso **no** contiene el
 requisito de abajo: nunca fue algo que se pretendiera. Este delta existe para que quede constancia
