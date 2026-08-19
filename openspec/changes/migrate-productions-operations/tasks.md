@@ -2,13 +2,13 @@
 
 ## Inventario
 
-- [ ] Artículos con sus ocho estados y su código único
-- [ ] Etiqueta legible por máquina y localización por código
-- [ ] Cambio de estado atribuido
-- [ ] Consulta de dónde se usa: notas, sets y jornadas
-- [ ] Eliminar retira de sets y continuidades, sin eliminarlos
-- [ ] Impedir eliminar un artículo en una nota sin cerrar
-- [ ] Búsqueda y filtrado
+- [x] Artículos con sus ocho estados y su código único
+- [x] Etiqueta legible por máquina y localización por código — el símbolo lo dibuja la pantalla (29); el servidor garantiza el viaje de ida y vuelta
+- [ ] Cambio de estado atribuido — **el cambio está hecho y probado contra su tabla de transiciones; la atribución no tiene dónde escribirse**: `production_items` no lleva columna de autor y no hay tabla de eventos del artículo. Cerrarlo es una migración y este árbol no tiene número. Ver `HALLAZGOS.md` H-171
+- [ ] Consulta de dónde se usa: notas, sets y jornadas — **sets y jornadas hechas**, con la continuidad concreta; las **notas** esperan a que existan las notas de entrega, en esta misma rebanada
+- [x] Eliminar retira de sets y continuidades, sin eliminarlos
+- [ ] Impedir eliminar un artículo en una nota sin cerrar — **bloqueada**: las notas de entrega no existen todavía, así que no hay contra qué comprobarlo ni cómo probarlo. Y la red que parecía estar puesta no sujeta: el `ON DELETE restrict` de `production_delivery_lines` no se dispara nunca porque la baja del artículo es lógica (`HALLAZGOS.md` H-172)
+- [x] Búsqueda y filtrado
 
 ## Notas de entrega
 
