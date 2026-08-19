@@ -78,6 +78,7 @@ import {
   updateProviderRoute,
   updateUserAddressRoute,
 } from "./directory.ts"
+import { publicDocumentRoute, quoteDocumentRoute } from "./documents.ts"
 import { health } from "./health.ts"
 import {
   acceptOrderRoute,
@@ -298,6 +299,10 @@ export const routes: readonly RegisteredRoute[] = [
   extendQuoteRoute,
   reservationCoherenceRoute,
   deleteQuoteRoute,
+
+  // El documento comercial y su enlace público. Ver `pdf-documents`.
+  quoteDocumentRoute,
+  publicDocumentRoute,
 
   // Pedidos de almacén: la bandeja del operador. Aceptar genera la cotización.
   listOrdersRoute,
