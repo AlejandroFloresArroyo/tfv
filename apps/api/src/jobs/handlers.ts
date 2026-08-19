@@ -13,12 +13,14 @@
  * | `archivos.recoger-abandonados` | Rebanada 08 | Una subida interrumpida deja un registro huérfano para siempre (`DEFECTS.md` O-05) |
  * | `almacenes.verificar-coherencia` | Rebanada 13 (`HALLAZGOS.md` H-11) | Un descuadre de inventario puede vivir meses sin que nadie mire |
  * | `avisos.entregar` | Ésta | Las entregas se quedan encoladas |
+ * | `suscripciones.vencer-gracia` | Rebanada 11 | Una empresa opera indefinidamente sin pagar |
  */
 
 import { withElevated, withSystem } from "@tfv/db"
 import { uploads, warehouses } from "@tfv/db/schema"
 import { and, eq, isNull, lt } from "drizzle-orm"
 import { audienceFor, deliverQueued, enqueueInbox, requeueFailed } from "../activity/delivery.ts"
+import { sweepExpiredGrace } from "../billing/subscriptions.ts"
 import { env } from "../env.ts"
 import { collectAbandoned } from "../media/uploads.ts"
 import { checkCoherence } from "../warehouses/reservations.ts"
@@ -27,6 +29,7 @@ import { registerJob, scheduleJob } from "./dispatcher.ts"
 export const COLLECT_ABANDONED = "archivos.recoger-abandonados"
 export const STOCK_COHERENCE = "almacenes.verificar-coherencia"
 export const DELIVER_NOTIFICATIONS = "avisos.entregar"
+export const EXPIRE_GRACE = "suscripciones.vencer-gracia"
 
 /**
  * Con quién corre el recolector de archivos.
@@ -160,6 +163,18 @@ async function deliverNotifications(): Promise<string> {
 }
 
 /**
+ * Cierra las suscripciones que agotaron su periodo de gracia.
+ *
+ * Es la otra mitad de la corrección M-08. Conceder gracia ante un fallo de cobro sin barrerla
+ * después dejaría a una empresa operando indefinidamente sin pagar, que es el defecto contrario del
+ * que se venía corrigiendo — y el que nadie reclama, así que puede vivir años.
+ */
+async function expireSubscriptionGrace(): Promise<string> {
+  const cerradas = await sweepExpiredGrace()
+  return `${cerradas} suscripciones pasaron a impagada`
+}
+
+/**
  * Deja el registro listo. Se llama una vez, al arrancar.
  *
  * Las pruebas del despachador **no** llaman aquí: registran sus propios trabajos, para poder
@@ -169,8 +184,10 @@ export function registerBuiltinJobs(): void {
   registerJob(COLLECT_ABANDONED, collectAbandonedUploads)
   registerJob(STOCK_COHERENCE, verifyStockCoherence)
   registerJob(DELIVER_NOTIFICATIONS, deliverNotifications)
+  registerJob(EXPIRE_GRACE, expireSubscriptionGrace)
 
   scheduleJob({ kind: COLLECT_ABANDONED, everyMs: env.UPLOADS_COLLECT_EVERY_MS })
   scheduleJob({ kind: STOCK_COHERENCE, everyMs: env.STOCK_COHERENCE_EVERY_MS })
   scheduleJob({ kind: DELIVER_NOTIFICATIONS, everyMs: env.NOTIFICATIONS_DELIVER_EVERY_MS })
+  scheduleJob({ kind: EXPIRE_GRACE, everyMs: env.BILLING_GRACE_SWEEP_EVERY_MS })
 }

@@ -36,7 +36,9 @@ import { db, type Transaction, withRequester, withSystem } from "@tfv/db"
 import { companies, companyMembers, roles, users } from "@tfv/db/schema"
 import { and, count, eq, isNull, ne } from "drizzle-orm"
 import { recordActivity } from "../activity/activity.ts"
+import { syncSeats } from "../billing/subscriptions.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
+import { rootLogger } from "../runtime/logger.ts"
 
 /** Quién realiza la operación. Lo mismo que el motor necesita para resolver la identidad. */
 export interface Actor {
@@ -382,7 +384,7 @@ export async function addMember(
     throw new UnprocessableError("No existe ninguna cuenta con ese correo")
   }
 
-  return withRequester(actor, async (tx) => {
+  const added = await withRequester(actor, async (tx) => {
     await loadCompany(tx, companyId)
     await assertRoleBelongs(tx, companyId, input.roleId ?? null)
 
@@ -416,6 +418,29 @@ export async function addMember(
 
     return member
   })
+
+  await followSeats(companyId)
+  return added
+}
+
+/**
+ * Los asientos siguen a los miembros activos.
+ *
+ * Ocurre **después de confirmar**, no dentro de la transacción: ampliar habla con el procesador de
+ * pagos, y una llamada de red dentro de una transacción la alarga y puede tumbarla por algo que no
+ * tiene que ver con los datos.
+ *
+ * Si la sincronización falla, la membresía **se queda**: quién pertenece a la empresa lo decide
+ * esta operación, y el número de asientos es una consecuencia que se vuelve a calcular sola en el
+ * siguiente cambio de plantilla o en la renovación. Al revés —deshacer la incorporación porque el
+ * procesador no contestó— se perdería la decisión de una persona por un fallo ajeno.
+ */
+async function followSeats(companyId: string): Promise<void> {
+  try {
+    await syncSeats(companyId)
+  } catch (error) {
+    rootLogger.error("no se pudieron sincronizar los asientos", { companyId, error })
+  }
 }
 
 export interface UpdateMemberInput {
@@ -441,7 +466,7 @@ export async function updateMember(
   memberId: string,
   input: UpdateMemberInput,
 ): Promise<MemberRecord> {
-  return withRequester(actor, async (tx) => {
+  const changed = await withRequester(actor, async (tx) => {
     await loadCompany(tx, companyId)
 
     const member = await loadMember(tx, companyId, memberId)
@@ -477,6 +502,10 @@ export async function updateMember(
 
     return updated
   })
+
+  // Activar o desactivar una membresía cambia cuántos asientos están ocupados.
+  if (input.isActive !== undefined) await followSeats(companyId)
+  return changed
 }
 
 /** Retira a alguien de la empresa. No puede dejarla sin propietaria. */
@@ -505,6 +534,10 @@ export async function removeMember(
       permissions: ["companies.users.uninvite"],
     })
   })
+
+  // Retirar libera el asiento, que es lo que la spec pide. No se reduce el contrato por su cuenta:
+  // el asiento queda libre para el siguiente.
+  await followSeats(companyId)
 }
 
 // ─── Bitácora ────────────────────────────────────────────────────────────────

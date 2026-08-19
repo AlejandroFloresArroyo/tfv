@@ -31,7 +31,7 @@ import type { BillingInterval, SubscriptionStatus } from "@tfv/contracts/billing
 import { SUBSCRIPTION_STATUSES } from "@tfv/contracts/billing"
 import type { Transaction } from "@tfv/db"
 import { companySubscriptions, merchantProfiles, subscriptionPayments } from "@tfv/db/schema"
-import { and, eq, ne } from "drizzle-orm"
+import { and, eq, isNotNull, ne } from "drizzle-orm"
 import { rootLogger } from "../runtime/logger.ts"
 import { graceEndsAt, upsertSubscription } from "./subscriptions.ts"
 
@@ -57,7 +57,11 @@ function readString(source: Record<string, unknown>, key: string): string | unde
 
 function readNumber(source: Record<string, unknown>, key: string): number | undefined {
   const value = source[key]
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  // Los metadatos del procesador son **siempre cadenas**: es la única forma que admite. Un número
+  // que llega escrito y se lee como ausente deja los asientos en uno, y nadie mira por qué.
+  if (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value)) return Number(value)
+  return undefined
 }
 
 function readBoolean(source: Record<string, unknown>, key: string): boolean | undefined {
@@ -216,7 +220,13 @@ const onInvoicePaid: Handler = async (tx, event) => {
     })
     // El identificador de factura es único: un reintento del procesador con el mismo cobro no
     // duplica el asiento. Es la misma defensa que la unicidad del evento, una capa más abajo.
-    .onConflictDoNothing({ target: subscriptionPayments.externalInvoiceId })
+    //
+    // El predicado va explícito porque **el índice es parcial**: sin él, el motor no encuentra
+    // ninguna restricción que case con el conflicto declarado y la inserción falla entera.
+    .onConflictDoNothing({
+      target: subscriptionPayments.externalInvoiceId,
+      where: isNotNull(subscriptionPayments.externalInvoiceId),
+    })
 
   if (!subscription) return
 
@@ -273,7 +283,10 @@ const onInvoiceFailed: Handler = async (tx, event) => {
         ? {}
         : { externalInvoiceId: readString(invoice, "id") }),
     })
-    .onConflictDoNothing({ target: subscriptionPayments.externalInvoiceId })
+    .onConflictDoNothing({
+      target: subscriptionPayments.externalInvoiceId,
+      where: isNotNull(subscriptionPayments.externalInvoiceId),
+    })
 
   if (!subscription) return
 

@@ -118,6 +118,8 @@ const schema = z
      * que el cliente arregle su tarjeta, y cuánto vale ese tiempo lo decide el negocio.
      */
     BILLING_GRACE_DAYS: z.coerce.number().int().positive().default(7),
+    /** Cada cuánto se barren las suscripciones cuya gracia venció. Por defecto, cada hora. */
+    BILLING_GRACE_SWEEP_EVERY_MS: z.coerce.number().int().positive().default(3_600_000),
 
     /** A dónde vuelve el navegador desde la sesión de pago y desde el formulario del procesador. */
     BILLING_RETURN_ORIGIN: z.string().url().default("http://localhost:3000"),
