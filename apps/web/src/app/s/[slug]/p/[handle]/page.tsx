@@ -1,8 +1,10 @@
 import { Badge } from "@tfv/ui"
+import { ImageOff } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { getFormatter, getTranslations } from "next-intl/server"
 import { Photo } from "~/components/photo.tsx"
+import { formatAmount } from "~/lib/amount.ts"
 import { fetchProduct, type ProductCard, productPath, resolveSite } from "../../storefront.ts"
 
 /**
@@ -74,8 +76,9 @@ export default async function StorefrontProductPage({
   }
 
   const format = await getFormatter()
-  const money = (amount: string) =>
-    format.number(Number(amount), { style: "currency", currency: "MXN" })
+  // El mismo formateador que el resto de la aplicación, y por el mismo motivo: el precio que se
+  // enseña no puede pasar por un flotante. Ver `~/lib/amount.ts`.
+  const money = (amount: string) => formatAmount(amount, format)
 
   // La portada primero, y luego el resto por su posición: es el orden en el que la galería se
   // enseña, y la portada es una marca y no la primera posición.
@@ -94,10 +97,12 @@ export default async function StorefrontProductPage({
 
       <div className="mt-4 grid gap-6 desktop:grid-cols-2">
         <div className="flex flex-col gap-3">
-          <div className="aspect-square w-full overflow-hidden rounded-xl border border-line bg-surface">
+          <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl border border-line bg-surface">
             {gallery[0] ? (
               <Photo src={gallery[0].url} alt={product.name} className="size-full object-cover" />
-            ) : null}
+            ) : (
+              <ImageOff className="size-10 text-content-faint" aria-hidden />
+            )}
           </div>
 
           {gallery.length > 1 ? (
@@ -201,10 +206,12 @@ function Related({
               href={productPath(slug, product)}
               className="flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface"
             >
-              <span className="block aspect-square w-full overflow-hidden bg-canvas">
+              <span className="flex aspect-square w-full items-center justify-center overflow-hidden bg-canvas">
                 {product.coverUrl ? (
                   <Photo src={product.coverUrl} alt="" className="size-full object-cover" />
-                ) : null}
+                ) : (
+                  <ImageOff className="size-7 text-content-faint" aria-hidden />
+                )}
               </span>
               <span className="flex flex-1 flex-col gap-1 p-3">
                 <span className="line-clamp-2 text-body2 font-semibold text-content">

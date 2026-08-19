@@ -1,7 +1,9 @@
 import { cn } from "@tfv/ui"
+import { ImageOff } from "lucide-react"
 import Link from "next/link"
 import { getFormatter, getTranslations } from "next-intl/server"
 import { Photo } from "~/components/photo.tsx"
+import { formatAmount } from "~/lib/amount.ts"
 import {
   catalogParams,
   fetchProducts,
@@ -47,16 +49,25 @@ export default async function StorefrontCatalogPage({
   const page = await fetchProducts(slug, params_)
 
   const format = await getFormatter()
-  // Los importes se pintan en la moneda del negocio, que es México aunque la interfaz esté en
-  // inglés: el idioma cambia las palabras, no dónde ocurre el negocio. Ver `i18n/request.ts`.
-  const money = (amount: string) =>
-    format.number(Number(amount), { style: "currency", currency: "MXN" })
+  /**
+   * El importe, con el mismo formateador que el resto de la aplicación.
+   *
+   * `formatAmount` **no pasa por `Number`** en ningún punto: agrupa la parte entera y vuelve a
+   * pegar la fracción. Convertir para pintar parece inofensivo y es el hábito que hace que un día
+   * el precio del escaparate no coincida con el que se cobra. Ver `~/lib/amount.ts`.
+   */
+  const money = (amount: string) => formatAmount(amount, format)
 
   const search = params_.get("search") ?? ""
   const categoryId = params_.get("categoryId")
 
   return (
     <main className="mx-auto w-full max-w-(--breakpoint-desktop) flex-1 px-4 py-6 tablet:px-6 tablet:py-8">
+      {/* Una página pública necesita su encabezado: es lo primero que lee un lector de pantalla y
+          lo que un buscador toma como asunto de la página. El nombre de la tienda queda arriba, en
+          la navegación, así que repetirlo aquí lo diría dos veces. */}
+      <h1 className="mb-4 text-h4 font-bold tracking-tight text-content">{t("catalog")}</h1>
+
       <form method="get" className="mb-5 flex flex-wrap items-center gap-2">
         {/* La categoría elegida sobrevive a una búsqueda nueva; la página, no: buscar empieza por
             el principio, y conservar la séptima página daría un catálogo vacío. */}
@@ -185,10 +196,14 @@ function Card({
       href={productPath(slug, product)}
       className="group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface"
     >
-      <span className="block aspect-square w-full overflow-hidden bg-canvas">
+      <span className="flex aspect-square w-full items-center justify-center overflow-hidden bg-canvas">
         {product.coverUrl ? (
           <Photo src={product.coverUrl} alt="" className="size-full object-cover" />
-        ) : null}
+        ) : (
+          // Un hueco vacío del tamaño de una foto parece una imagen que no cargó. Una marca
+          // discreta dice lo que pasa: este producto todavía no tiene fotos.
+          <ImageOff className="size-8 text-content-faint" aria-hidden />
+        )}
       </span>
       <span className="flex flex-1 flex-col gap-1 p-3">
         <span className="line-clamp-2 text-body1 font-semibold text-content">{product.name}</span>
