@@ -23,11 +23,15 @@ async function sesion(cuenta, esquema) {
   await p.getByRole("textbox", { name: /correo/i }).fill(cuenta)
   await p.locator('input[type="password"]').first().fill("Desarrollo.2026")
   await p.getByRole("button", { name: /entrar|iniciar|acceder/i }).click()
-  await p.waitForURL((u) => !u.pathname.includes("/login") && !u.pathname.includes("/dashboard"), {
-    timeout: 30_000,
-  })
+  await p.waitForURL((u) => !u.pathname.includes("/login") && !u.pathname.includes("/dashboard"), { timeout: 30_000 })
   await p.waitForLoadState("networkidle")
-  return { ctx, p, empresa: new URL(p.url()).pathname.match(/\/c\/([^/]+)/)?.[1] ?? "" }
+  // La base es viva y las membresías cambian: si la cuenta cae en el selector, se entra a la
+  // primera empresa en vez de suponer el aterrizaje directo de la siembra original.
+  if (!new URL(p.url()).pathname.startsWith("/c/")) {
+    await p.locator("main a[href^='/c/']").first().click()
+    await p.waitForLoadState("networkidle")
+  }
+  return { ctx, p }
 }
 
 async function foto(p, nombre) {
