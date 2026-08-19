@@ -27,6 +27,28 @@ async function limpiarBandeja(context: import("@playwright/test").BrowserContext
   }
 }
 
+/**
+ * Deja al menos un asiento de tipo «Cambio» en la bitácora, guardándolo desde la pantalla.
+ *
+ * Las pruebas que **leen** la bitácora no pueden dar por hecho que haya algo: sobre una base recién
+ * sembrada está vacía, y una prueba que se apoya en lo que dejaron las anteriores pasa la segunda
+ * vuelta y falla la primera. Cada una se hace su asiento, que además es la única forma honesta de
+ * mirar la bitácora — comprobando lo que uno mismo acaba de escribir.
+ */
+async function dejarAsiento(
+  page: import("@playwright/test").Page,
+  companyId: string,
+): Promise<void> {
+  await page.goto(`/c/${companyId}/settings/company`)
+  await page.getByRole("button", { name: "Acciones" }).first().click()
+  await page.getByRole("menuitem", { name: "Editar" }).click()
+
+  const dialogo = page.getByRole("dialog")
+  await dialogo.getByLabel("Descripción").fill(`Bitácora e2e ${Date.now().toString(36)}`)
+  await dialogo.getByRole("button", { name: "Guardar" }).click()
+  await expect(dialogo).toBeHidden()
+}
+
 test("lo que uno guarda aparece en la bitácora y en la bandeja del otro", async ({
   as,
   companies,
@@ -55,28 +77,32 @@ test("lo que uno guarda aparece en la bitácora y en la bandeja del otro", async
   await dialogo.getByRole("button", { name: "Guardar" }).click()
   await expect(dialogo).toBeHidden()
 
-  // Lo guardado se ve en la ficha, que es lo que hace creíble el resto del recorrido.
-  await expect(actuando.getByText(marca)).toBeVisible()
+  // No se relee la descripción de la ficha: es un campo compartido, y las otras dos pruebas de este
+  // archivo escriben en él para hacerse su asiento. Lo que este recorrido tiene que demostrar no es
+  // que el campo se guarde —eso lo dice el diálogo al cerrarse— sino a dónde llega el hecho.
 
   // ─── La bitácora: el asiento, con quién y con qué tipo ──────────────────────
   await actuando.goto(`/c/${companyId}/settings/activity`)
 
   /**
-   * Se busca antes de mirar, y no se mira el primero de todos.
+   * Se busca antes de mirar, y se busca **el asiento de quien actuó**, no el más reciente.
    *
-   * La bitácora de esta empresa la escriben también las otras pruebas que corren a la vez —editar
-   * una membresía desde la paginación deja su asiento—, así que «el más reciente de la bitácora»
-   * es el de quien haya guardado un instante antes. Acotando por el título quedan sólo los de esta
-   * prueba, y ahí sí el primero es el que acaba de hacerse: la bitácora ordena por cuándo,
-   * descendente. Es la misma lección de H-23 —comprobar el orden, no el censo— aplicada al revés.
+   * La bitácora de esta empresa la escriben también las otras pruebas que corren a la vez, y con el
+   * mismo título: «el más reciente» sería el de quien haya guardado un instante antes. Es la
+   * lección de H-23 —comprobar lo propio, no el censo— llevada a una bitácora que, por definición,
+   * es de todos.
+   *
+   * Que el asiento sea **de esta pasada** lo demuestra la bandeja de abajo, que se vació al
+   * empezar y que sólo esta prueba puede llenar: las demás actúan como la propietaria, y el autor
+   * no recibe el suyo.
    */
   await actuando.getByRole("searchbox").fill("Editó los datos de la empresa")
 
   const asientos = actuando.getByRole("list", { name: "Resultados" }).getByRole("listitem")
-  await expect(asientos.first()).toContainText("Editó los datos de la empresa")
-  await expect(asientos.first()).toContainText("Cambio")
-  // Y con el nombre de quien lo hizo, que es la mitad del «quién hizo qué» que la spec pide.
-  await expect(asientos.first()).toContainText("Ale Plataforma")
+  // El nombre de quien lo hizo es la mitad del «quién hizo qué» que la spec pide.
+  const mio = asientos.filter({ hasText: "Ale Plataforma" }).first()
+  await expect(mio).toContainText("Editó los datos de la empresa")
+  await expect(mio).toContainText("Cambio")
 
   // ─── La bandeja de la otra: el aviso, y el contador de la campana ───────────
   const mirando = await propietaria.newPage()
@@ -93,12 +119,25 @@ test("lo que uno guarda aparece en la bitácora y en la bandeja del otro", async
   await expect(avisos.first()).toContainText(/editó los datos de la empresa/i)
 
   // ─── Marcarla leída baja el contador, sin recargar a mano ──────────────────
+  const sinLeer = async () => {
+    const etiqueta = await mirando
+      .getByRole("link", { name: /Notificaciones/ })
+      .getAttribute("aria-label")
+    return Number(/(\d+)/.exec(etiqueta ?? "")?.[1] ?? 0)
+  }
+
+  await mirando.goto(`/c/${companyId}`)
+  const antes = await sinLeer()
+  expect(antes, "la campana no cuenta el aviso recién llegado").toBeGreaterThan(0)
+
+  await mirando.goto("/account/notifications")
   await mirando.getByRole("button", { name: "Marcar como leída" }).first().click()
   await expect(mirando.getByRole("button", { name: "Marcar como no leída" }).first()).toBeVisible()
 
-  // Y la campana, en la pantalla siguiente, ya no la cuenta.
+  // Y la campana, en la pantalla siguiente, cuenta una menos. Se compara con lo que había y no con
+  // cero: la bandeja es de una persona, no de una prueba, y otra puede haberle dejado algo.
   await mirando.goto(`/c/${companyId}`)
-  await expect(mirando.getByRole("link", { name: "Notificaciones", exact: true })).toBeVisible()
+  expect(await sinLeer()).toBeLessThan(antes)
 })
 
 test("la bitácora se filtra por tipo de acción, y el filtro se comparte por enlace", async ({
@@ -111,6 +150,7 @@ test("la bitácora se filtra por tipo de acción, y el filtro se comparte por en
   const page = await context.newPage()
   const companyId = companies[WAREHOUSE_COMPANY] as string
 
+  await dejarAsiento(page, companyId)
   await page.goto(`/c/${companyId}/settings/activity?action=update`)
 
   const asientos = page.getByRole("list", { name: "Resultados" }).getByRole("listitem")
@@ -128,6 +168,7 @@ test("los asientos no se pueden tocar: la bitácora no ofrece editar ni borrar",
   const page = await context.newPage()
   const companyId = companies[WAREHOUSE_COMPANY] as string
 
+  await dejarAsiento(page, companyId)
   await page.goto(`/c/${companyId}/settings/activity`)
 
   const asientos = page.getByRole("list", { name: "Resultados" }).getByRole("listitem")
