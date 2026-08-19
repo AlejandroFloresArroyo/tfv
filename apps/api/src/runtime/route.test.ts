@@ -74,6 +74,15 @@ describe("superficie pública", () => {
      * con la plataforma, y ni siquiera devuelve el identificador de lo que creó.
      */
     "POST /prospects",
+    /**
+     * Añadida el 2026-08-18, de forma deliberada.
+     *
+     * El documento que se comparte con quien no tiene cuenta —el cliente que recibe la cotización—.
+     * **Lo que la protege es la firma de la referencia**, verificada antes de tocar la base: el
+     * camino no lleva empresa, así que no hay identificador que sustituir para asomarse a otra, y
+     * alterar la referencia responde `404` sin decir por qué. Es de lectura y de un solo documento.
+     */
+    "GET /public/documents/{reference}",
   ]
 
   it("es exactamente la declarada", () => {

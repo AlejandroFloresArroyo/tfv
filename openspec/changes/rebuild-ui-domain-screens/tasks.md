@@ -69,7 +69,7 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
       de estado, el registro del retorno, y **los cuatro bloques que se guardan solos** —identidad,
       contactos, condiciones de pago e impuestos—. La ventana de fechas entra en el punto de
       composición, así que mover el fin rehace los días que cobra cada línea antes de guardar
-- [ ] Documento de cotización y su enlace público
+- [x] **Documento de cotización y su enlace público**
 - [x] Pedidos con aceptación y rechazo
 - [ ] **Conversación en tiempo real del pedido**
 

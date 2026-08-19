@@ -48,10 +48,11 @@
 
 ## Documento
 
-- [ ] Documento comercial con líneas que cuadran con el total
-- [ ] Ventana de fechas y frecuencia en las cotizaciones de renta
-- [ ] Espacio de firma, vacío si no está firmada
-- [ ] Enlace público de sólo lectura
+- [x] Documento comercial con líneas que cuadran con el total
+- [x] Ventana de fechas y frecuencia en las cotizaciones de renta
+- [~] Espacio de firma, vacío si no está firmada. **El espacio se imprime**; capturar la
+      firma en pantalla espera al control de firma (28e) y al almacenamiento de ficheros (08)
+- [x] Enlace público de sólo lectura
 
 ## Verificación
 

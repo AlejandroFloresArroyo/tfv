@@ -1131,5 +1131,33 @@
       "noDecisions": "Ningún pedido esperando decisión.",
       "seeAll": "Ver todo"
     }
+  },
+  "documents": {
+    "quote": "Cotización",
+    "quoteDocument": "Documento de cotización",
+    "issuedOn": "Emitida el",
+    "issuer": "Emisor",
+    "client": "Cliente",
+    "noContacts": "Sin contactos registrados",
+    "measurement": "Medida",
+    "groupSubtotal": "Subtotal del producto",
+    "packageGoverns": "El precio pactado es el del paquete completo, así que las líneas no llevan importe.",
+    "message": "Mensaje",
+    "terms": "Términos",
+    "observations": "Observaciones",
+    "clientSignature": "Firma del cliente",
+    "sellerSignature": "Firma de quien entrega",
+    "generatedBy": "Documento generado por {system}",
+    "generatedAt": "Generado el",
+    "print": "Imprimir",
+    "download": "Descargar PDF",
+    "copyLink": "Copiar enlace",
+    "copied": "Enlace copiado",
+    "backToQuote": "Volver a la ficha",
+    "downloadHint": "Para guardarlo como PDF, elige «Guardar como PDF» en el destino del diálogo de impresión.",
+    "shareHint": "Enlace público de sólo lectura, para quien no tiene cuenta:",
+    "doesNotReconcile": "Los importes por línea no suman el total de líneas. Revisa la cotización antes de mandar este documento.",
+    "linkGone": "Este enlace no lleva a ningún documento",
+    "linkGoneBody": "Puede que el documento se haya dado de baja, o que el enlace esté incompleto. Pídele uno nuevo a quien te lo mandó."
   }
 }

@@ -57,7 +57,7 @@ import { collectionQuery, pageSchema, queryOf, serializePage } from "./paginatio
 const moneyField = z.string().regex(/^-?\d+(\.\d{1,2})?$/)
 const rateField = z.string().regex(/^-?\d+(\.\d{1,4})?$/)
 
-const contactSchema = z.object({
+export const contactSchema = z.object({
   name: z.string().trim().min(1).max(200),
   phone: z.string().trim().max(40).optional(),
   position: z.string().trim().max(120).optional(),
@@ -81,7 +81,7 @@ const payerSchema = z.object({
   date: z.string().optional(),
 })
 
-const paymentTermsSchema = z.object({
+export const paymentTermsSchema = z.object({
   version: z.literal(1),
   additionals: z.array(additionalSchema).max(50).readonly().optional(),
   transferFeeRate: rateField.optional(),
@@ -102,7 +102,7 @@ const taxEntrySchema = z.object({
   concept: z.string().max(200).optional(),
 })
 
-const taxesSchema = z.object({
+export const taxesSchema = z.object({
   version: z.literal(1),
   iva: taxEntrySchema.extend({ type: z.enum(["trasladado", "acreditable", "exento"]) }).optional(),
   isr: taxEntrySchema.extend({ type: z.enum(["retenido", "directo"]) }).optional(),
@@ -224,8 +224,13 @@ const lineBreakdownSchema = z.object({
   unpriced: z.boolean(),
 })
 
-/** Todos los importes son cadenas decimales: `1234.56` no sobrevive a un viaje como número JSON. */
-const breakdownSchema = z.object({
+/**
+ * Todos los importes son cadenas decimales: `1234.56` no sobrevive a un viaje como número JSON.
+ *
+ * Se exporta —como el bloque de contactos, el de condiciones de pago y el fiscal— porque **el
+ * documento imprime exactamente esto**. Declararlo dos veces es lo que H-08 ya corrigió una vez.
+ */
+export const breakdownSchema = z.object({
   version: z.literal(1),
   days: z.number().int(),
   lines: z.array(lineBreakdownSchema).readonly(),
@@ -263,6 +268,9 @@ const breakdownSchema = z.object({
   gross: z.string(),
   advance: z.string(),
   total: z.string(),
+  /** Lo que entró y lo que falta. No se congelan: un documento cerrado se sigue cobrando. */
+  collected: z.string(),
+  balance: z.string(),
   /** Los dos contingentes: no forman parte del total. */
   penalty: z.string(),
   deposit: z.string(),
