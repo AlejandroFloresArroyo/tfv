@@ -101,7 +101,11 @@ hablan el lenguaje de `query-and-pagination`, con la gramática cerrada y el sob
       perder el foco**, que exige duplicar reglas en el cliente
 - [x] Errores del servidor situados en su campo
 - [x] Protección contra el envío doble
-- [ ] Asistente por pasos con validación por paso e indicación de error
+- [x] Asistente por pasos con validación por paso e indicación de error —
+      `packages/ui/src/components/wizard.tsx` sobre la máquina de `lib/wizard.ts`. Probado en
+      `lib/wizard.test.ts:18-84`: no avanza con el paso actual incompleto, **enseña el error sólo
+      después de intentar avanzar**, no delata los pasos posteriores, recuerda hasta dónde se
+      llegó al volver atrás y al enviar señala todos los que fallan, no sólo el que se mira
 - [ ] Confirmación al cancelar con cambios
 - [x] **Confirmación destructiva que muestra la entidad y enumera la cascada**, con el recuento real
       del servidor y no una frase genérica
@@ -116,7 +120,10 @@ hablan el lenguaje de `query-and-pagination`, con la gramática cerrada y el sob
 - [ ] Editor de texto enriquecido con saneado
 - [ ] Captura de firma
 - [ ] Selector de ubicación en mapa
-- [ ] Entradas con formato de importe y de teléfono
+- [ ] Entradas con formato de importe y de teléfono — **falta la de teléfono**. La de importe está
+      y bien probada: `packages/ui/src/lib/amount-input.ts` con diecisiete pruebas, incluida la
+      que importa —devuelve la cadena decimal sin pasar por coma flotante—. De teléfono no hay
+      nada en el paquete
 
 ## 28f · Transporte y sesión
 

@@ -3656,6 +3656,99 @@ partida— sin limpiar nada entre medias**. `pnpm test --force` en verde con **1
 `pnpm lint` limpios. Y al terminar, la sesión de desarrollo del `3000` seguía viva, que es el punto
 entero.
 
+### 2026-08-19 · Contar lo que hay, no lo que se recuerda
+
+No entró una línea de producto. Lo que entró es una **auditoría de las treinta listas de tareas**
+contra el código, con una regla sola: una tarea se marca cuando se puede señalar el archivo que la
+implementa **y** la prueba que lo demuestra. Sin prueba no se marca. Media tarea tampoco se marca:
+el camino feliz cubierto y el borde no es una tarea abierta.
+
+**El número era falso por los dos lados, y el error grande estaba en la 07**
+
+La rebanada de eventos de cobro figuraba en **11/38** y está en **25/38**. Sus diez manejadores por
+tipo decían «espera a suscripciones (11) y a la compra (17)», y las dos llegaron hace días: ocho de
+los diez existen en `billing/events.ts`, y las seis pruebas de verificación de firma estaban
+escritas enteras en `payments/webhooks.test.ts`. Es exactamente lo que pasó con la 11: código
+fusionado, lista sin tocar. Los dos manejadores que **no** existen —`checkout.session.expired` e
+`invoice.upcoming`— quedan abiertos diciéndolo, y otros dos quedan abiertos por la mitad que les
+falta: registran el reembolso y la disputa, y **no avisan a nadie**.
+
+Con esas catorce y veinte marcas más repartidas por otras trece rebanadas, el recuento pasa de
+**691/1250 (55,3%)** a **725/1250 (58,0%)**. Sobre lo que se puede cerrar de verdad —descontando
+las 32 no aplicables— es **59,5%**.
+
+**Dos rebanadas se cierran, y una tercera queda sólo con lo inaplicable**
+
+- La **13** llega a 31/31: faltaba la ejecución programada de la verificación de coherencia, y corre
+  desde que la 09 trajo el despachador (`jobs/handlers.ts:227`, probada en `handlers.test.ts:153`).
+- La **17** se queda sin nada aplicable abierto: sus dos últimas tareas piden borrar copias que
+  viven en `tfv-frontend/`, y ese árbol no está aquí.
+- La **11** ya estaba en 40/40, y la **03** en 26/26.
+
+**Siete tareas se marcan `[~]` no aplicables, con el motivo en la línea**
+
+Piden retirar código de `tfv-frontend/` y `tfv-backend/`, que la regla 1 deja intactos y que no
+están en este árbol: las dos copias del cálculo de envío (17), la orquestación del mostrador (25),
+los enlaces rotos al presupuesto compartido (19), y el modelo, las rutas y las pantallas de reservas
+(27). **No se borran.** Perder por qué existieron es perder la historia de la migración, y la única
+forma honesta de cerrarlas es la rebanada 30, al retirar la pila anterior.
+
+**Lo que queda, reventado por tipo**
+
+De las **493 tareas realmente abiertas**:
+
+| | Tipo | Cuántas |
+|---|---|---|
+| **a** | Trabajo que podemos hacer ya | **334** |
+| **b** | Espera a otra rebanada | **76** |
+| **c** | Decisión de negocio o de producto | **17** |
+| **d** | Infraestructura o configuración externa | **66** |
+
+Dos tercios son trabajo sin excusa, y están concentrados: producciones (20 y 22) suman 76, Pixit
+(24, 25 y 26) suma 114, y locaciones (27) 27. Lo que espera a otra rebanada casi todo espera a esas
+mismas: la 23 con 39 y la 29 con 22. Y de las 66 de infraestructura, **40 son la propia rebanada
+30**, que no puede empezar sin acceso a la pila anterior.
+
+**Las cuatro decisiones que se tomaron, aplicadas**
+
+- **M-04** ya estaba marcada, con la acuñación como prestación y su confirmación de llegada.
+- **M-05** se cierra por su mitad decidida: el bloque fiscal **sólo calcula**, no aspira a
+  cumplimiento formal, y el código ya lo cumple —una tabla de tratamiento y ni una línea de
+  timbrado—. La convención de signo del ISR directo sigue sin decidir.
+- **Rebanada 10**: la propiedad la mueve sólo quien la tiene y **no se añade clave al catálogo**. No
+  mueve código: confirma el que hay, y su nota deja de decir «pendiente de decisión».
+- **Rebanada 30**: las cuentas verificadas de la pila anterior **se creen**. Marcada por los dos
+  lados, en la 04 y en la 30.
+
+**Lo más valioso que salió: nueve implementadas sin prueba y ocho a medias**
+
+El patrón se repite en la interfaz (`HALLAZGOS.md` H-151): la pantalla de planes
+implementa contratar, cambiar, cancelar y reactivar, y su única prueba afirma que **sin plan** no
+hay nada que pulsar; el constructor de sitios entero no tiene ninguna prueba que lo conduzca; la
+tienda pública está escrita y **no se puede recorrer** porque no hay plan contratable (H-141). En el
+servidor: `onSubscriptionDeleted` sin ninguna prueba que envíe su evento, la rama de **renta** de la
+liquidación de reservas sin cubrir mientras la de venta sí, y la correlación del registro probada
+sólo por el lado de la respuesta.
+
+**Y un defecto que no se arregla aquí**
+
+`HALLAZGOS.md` **H-147**: la spec exige `404` ante datos de una empresa ajena, para que no se pueda
+inferir que existe, y la compuerta responde `403`. Lo que lo hace caro no es el código: es que
+**cuatro suites lo dan por bueno**, y una de ellas se llama «una empresa ajena responde 404, no
+403» mientras afirma `403`. No se toca porque el arreglo cruza la compuerta de permisos y cuatro
+archivos de prueba que otros dos encargos están usando ahora mismo (regla 5).
+
+**Comprobado**
+
+`pnpm test --force` en verde con **1461** —393 contratos, 87 datos, 761 API, 101 web, 119 interfaz—,
+que es exactamente el número de partida: no se tocó una línea de producto, y el número lo demuestra.
+`pnpm check` limpio.
+
+**`pnpm lint` no está limpio, y no lo estaba antes de esta rama.** Seis avisos en siete archivos,
+todos de estilo, todos presentes tal cual en `b67f309` —comprobado con los cambios guardados
+aparte—. No se arreglan aquí: viven en archivos de otros dos encargos (regla 5), y la entrada
+anterior de esta bitácora los daba por limpios. Es la primera factura de no tener integración
+continua, y queda anotada en `HALLAZGOS.md` H-150.
 ### 2026-08-19 · El depósito que nadie creaba, y la mudanza lista para ejecutar
 
 Lo que le quedaba a la rebanada **08 · `migrate-media-storage`** eran tres cosas con el mismo aire:

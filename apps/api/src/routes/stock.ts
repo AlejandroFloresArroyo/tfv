@@ -33,16 +33,16 @@ import {
 } from "../warehouses/prices.ts"
 import {
   changeStatus,
+  confirmArrival,
   createUnits,
   deleteUnits,
   findByCode,
+  listPendingArrivals,
   listUnits,
   STOCK_REASONS,
   STOCK_STATUSES,
   stockQuery,
   unitHistory,
-  confirmArrival,
-  listPendingArrivals,
 } from "../warehouses/stock.ts"
 import { collectionQuery, pageSchema, queryOf, serializePage } from "./pagination.ts"
 
@@ -172,7 +172,8 @@ export const listPendingArrivalsRoute = defineRoute({
     request: { params: warehouseParams },
     responses: {
       200: {
-        description: "Unidades nacidas de un compromiso sin respaldo físico, de la más vieja a la más nueva",
+        description:
+          "Unidades nacidas de un compromiso sin respaldo físico, de la más vieja a la más nueva",
         content: { "application/json": { schema: z.object({ items: z.array(unitSchema) }) } },
       },
     },
@@ -214,12 +215,7 @@ export const confirmArrivalRoute = defineRoute({
   handler: async (c) => {
     const params = c.req.valid("param")
     const { unitIds } = c.req.valid("json")
-    const items = await confirmArrival(
-      actorOf(c),
-      params.companyId,
-      params.warehouseId,
-      unitIds,
-    )
+    const items = await confirmArrival(actorOf(c), params.companyId, params.warehouseId, unitIds)
     return c.json({ items: items.map(serializeUnit) }, 200)
   },
 })

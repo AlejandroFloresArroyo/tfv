@@ -30,10 +30,22 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
       de ella. **Falta** el selector en mapa y las sugerencias al escribir (28e)
 - [x] Clientes y proveedores, **con permisos separados**: son dos colecciones distintas y no la
       misma con un parámetro, porque un parámetro no se puede autorizar por separado
-- [ ] Perfiles de facturación, con su asistente
-- [ ] Planes: selección, cambio, cancelación, reactivación
-- [ ] Historial de cobros
-- [ ] Bitácora personal y de empresa
+- [x] Perfiles de facturación, con su asistente — la pantalla en `settings/billing/` y el
+      asistente de alta en `settings/billing/new/profile-wizard.tsx`. La prueba de extremo a
+      extremo lo recorre entero y comprueba que resume lo escrito
+      (`apps/e2e/tests/suscripcion.spec.ts:70`), que es lo que la distingue de las otras tres de
+      este bloque: en ellas la prueba sólo llega a la pantalla. Ver H-151
+- [ ] Planes: selección, cambio, cancelación, reactivación — **escrita entera y sin recorrer**:
+      las cuatro acciones están en `settings/plan/plan-actions.tsx`, y la única prueba afirma que
+      **sin plan contratado** no hay nada que pulsar (`apps/e2e/tests/suscripcion.spec.ts:47`),
+      porque la siembra no deja ningún plan (H-141). Ver H-151
+- [ ] Historial de cobros — **escrita y comprobada sólo por su encabezado**:
+      `settings/payments/page.tsx` sobre la colección paginada, y de ella
+      `apps/e2e/tests/suscripcion.spec.ts:26` afirma que se llega y que el título está. Que liste
+      un cobro no lo comprueba nadie, y con H-141 tampoco habría cobro que listar. Ver H-151
+- [ ] Bitácora personal y de empresa — **falta la personal**. La de empresa está y bien probada:
+      `settings/activity/page.tsx`, con `apps/e2e/tests/avisos.spec.ts:52`, `:143` y `:161`. La
+      personal no tiene pantalla: `GET /me/activity` existe en el servicio y no la consume nadie
 - [~] Consola de administración de plataforma. **Existe desde el 2026-08-19** bajo `/platform`, con
       su propia navegación, la guarda de `app-shell` en el armazón —sin la marca se va al panel— y
       cuatro pantallas: la bandeja de prospectos con su flujo de aprobación, el padrón de empresas,
@@ -77,7 +89,12 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
       composición, así que mover el fin rehace los días que cobra cada línea antes de guardar
 - [x] **Documento de cotización y su enlace público**
 - [x] Pedidos con aceptación y rechazo
-- [ ] **Conversación en tiempo real del pedido**
+- [ ] **Conversación en tiempo real del pedido** — la pantalla está y está probada de verdad
+      (`warehouses/[warehouseId]/orders/[orderId]/conversation.tsx`, con
+      `apps/e2e/tests/conversacion.spec.ts:29`, `:63` y `:96`: se escribe, aparece sin recargar,
+      sobrevive a la recarga, se corrige y se retira). Lo que falta es el **tiempo real**: detrás
+      hay una consulta periódica y no una conexión persistente, que es la 16 y espera
+      configuración externa (H-66)
 
 ## 29c · Producciones
 
@@ -106,10 +123,21 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 
 ## 29e · Sitios y portada
 
-- [ ] Sitios por empresa
-- [ ] **Constructor con reordenación por arrastre y vista previa**
-- [ ] Editores de campo por tipo de sección
-- [ ] Tienda pública de almacén
+- [ ] Sitios por empresa — **escrita y comprobada sólo por su encabezado**:
+      `c/[companyId]/websites/page.tsx` con sus acciones, y `apps/e2e/tests/tienda.spec.ts:95`
+      afirma a propósito «que se llega, que la pantalla se identifica», no qué hay dentro.
+      Ver H-151
+- [ ] **Constructor con reordenación por arrastre y vista previa** — **escrito entero y sin
+      recorrer**: `c/[companyId]/websites/[websiteId]/builder.tsx`, con `ReorderList` y la vista
+      previa que monta el mismo componente que sirve la tienda. Probados por debajo están la
+      reordenación (`packages/ui/src/lib/reorder.test.ts`) y la equivalencia de la previsualización
+      (`api/websites/customizations.test.ts:531`); la pantalla, no. Ver H-151
+- [ ] Editores de campo por tipo de sección — escritos, en el `SectionEditor` del mismo
+      constructor (`builder.tsx:383`), y sin prueba que los conduzca. Ver H-151
+- [ ] Tienda pública de almacén — **escrita entera y no recorrible**: catálogo, ficha, carrito y
+      página de compra están en `apps/web/src/app/s/[slug]/`, y servir una tienda exige
+      suscripción vigente, que hoy no se puede contratar porque no hay ningún plan (H-141, H-140).
+      Su prueba de extremo a extremo recorre a propósito las dos salidas que sí se alcanzan
 - [ ] Tienda pública de mosaicos
 - [ ] **Configurador público de mosaicos**
 - [ ] Cuenta del comprador y carrito

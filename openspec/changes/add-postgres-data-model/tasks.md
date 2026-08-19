@@ -49,5 +49,8 @@
 ## Herramientas
 
 - [x] Migraciones versionadas, reversibles donde tenga sentido
-- [ ] Datos de siembra para desarrollo
+- [x] Datos de siembra para desarrollo — `apps/api/src/scripts/seed.ts`, con las cuatro cuentas
+      que cubren las cuatro vías de concesión. Probada en `scripts/seed.test.ts:55-130`:
+      sembrar deja el historial completo, sembrar dos veces no duplica y repara lo que sembró
+      una versión anterior
 - [ ] Comprobación en integración continua de que el esquema y las migraciones no divergen

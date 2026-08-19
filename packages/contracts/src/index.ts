@@ -7,8 +7,8 @@
  * Ver `openspec/specs/api-conventions`, `query-and-pagination` y `computed-fields`.
  */
 
-export * from "./checkout.ts"
 export * from "./api-client.ts"
+export * from "./checkout.ts"
 export * from "./computed.ts"
 export * from "./document.ts"
 export * from "./errors.ts"
