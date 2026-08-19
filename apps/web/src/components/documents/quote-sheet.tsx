@@ -80,7 +80,7 @@ export async function QuoteSheet({
         ) : null}
 
         {/* ─── Las dos partes ─────────────────────────────────────────────── */}
-        <section className="documento-bloque mt-6 grid gap-6 tablet:grid-cols-2">
+        <section className="documento-bloque documento-columnas mt-6 grid gap-6 tablet:grid-cols-2">
           <Block title={t("issuer")}>
             <p className="font-semibold">{document.issuer.name}</p>
             <PartyDetails party={document.issuer} />
@@ -212,7 +212,12 @@ export async function QuoteSheet({
 
         {/* ─── Importes ───────────────────────────────────────────────────── */}
         <section className="documento-bloque mt-6 flex justify-end">
-          <dl className="w-full max-w-sm text-body1">
+          {/*
+            Ancho explícito y no `max-w-sm`: el tema declara un espaciado llamado `sm` de 0.75rem,
+            que gana al contenedor del mismo nombre y deja la columna de importes en doce píxeles.
+            Se ve en pantalla como una cifra por línea y en el papel como una columna partida.
+          */}
+          <dl className="w-full max-w-[22rem] text-body1">
             <Amount
               label={breakdown.packagePrice === undefined ? q("linesTotal") : q("packagePrice")}
               value={amount(breakdown.packagePrice ?? breakdown.linesTotal)}
@@ -280,26 +285,32 @@ export async function QuoteSheet({
           <Prose title={t("observations")} body={document.observations} />
         ) : null}
 
-        {/* ─── Firmas ─────────────────────────────────────────────────────── */}
         {/*
+          ─── Cierre del documento ────────────────────────────────────────────
+          Las firmas y el pie van en el mismo bloque indivisible: si no caben en la hoja, pasan las
+          dos cosas juntas a la siguiente. Sueltos, el pie se quedaba solo en una hoja en blanco.
+        */}
+        <div className="documento-bloque">
+          {/*
           El espacio se imprime **vacío**, que es lo que la spec pide para un documento sin firmar.
           La captura de firma en pantalla es de otra rebanada —necesita el control de firma (28e) y
           almacenamiento de ficheros (08)—, así que hoy se firma a mano sobre el papel.
         */}
-        <section className="documento-bloque mt-10 grid gap-8 tablet:grid-cols-2">
-          <Signature label={t("clientSignature")} />
-          <Signature label={t("sellerSignature")} />
-        </section>
+          <section className="documento-columnas mt-6 grid gap-8 tablet:grid-cols-2">
+            <Signature label={t("clientSignature")} />
+            <Signature label={t("sellerSignature")} />
+          </section>
 
-        {/* ─── Pie de identificación ──────────────────────────────────────── */}
-        <footer className="documento-bloque mt-8 border-gray-3 border-t pt-3 text-body3 text-gray-6">
-          <p>
-            {t("generatedBy", { system: stamp.system })} · {stamp.address}
-          </p>
-          <p>
-            {t("generatedAt")}: {instant(stamp.generatedAt)} · {document.identity.folio}
-          </p>
-        </footer>
+          {/* El pie de identificación: quién lo produjo y desde qué dirección se generó. */}
+          <footer className="documento-pie mt-4 border-gray-3 border-t pt-2 text-body3 text-gray-6">
+            <p>
+              {t("generatedBy", { system: stamp.system })} · {stamp.address}
+            </p>
+            <p>
+              {t("generatedAt")}: {instant(stamp.generatedAt)} · {document.identity.folio}
+            </p>
+          </footer>
+        </div>
       </article>
     </>
   )
@@ -322,22 +333,48 @@ function PrintRules() {
         /* Lo que no es el documento: botones, avisos, enlaces. */
         .documento-fuera-de-la-hoja { display: none !important; }
 
-        /* La cáscara del panel —barra superior, menús— no se marca una por una: se apaga entera y
-           se vuelve a encender la hoja. Marcarlas obligaría a acordarse de hacerlo cada vez que
+        /* La cáscara del panel —barra superior, menús— no se marca una por una: desaparece todo lo
+           que no es la hoja ni la contiene. Marcarlas obligaría a acordarse de hacerlo cada vez que
            alguien añade algo al armazón, y olvidarse significa imprimir el menú de usuario. */
-        body { visibility: hidden; }
-        .documento-hoja, .documento-hoja * { visibility: visible; }
+        body *:not(:has(.documento-hoja)):not(.documento-hoja):not(.documento-hoja *) {
+          display: none !important;
+        }
 
-        /* La hoja deja de ser una tarjeta sobre un lienzo y pasa a ser la página. */
+        /* Lo que la contiene deja de maquetar: sus anchos y sus rellenos son de la pantalla, y en
+           el papel empujarían el documento fuera del área imprimible. */
+        body :has(.documento-hoja) {
+          display: block !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          width: auto !important;
+          max-width: none !important;
+          background: transparent !important;
+        }
+
+        /* La hoja deja de ser una tarjeta sobre un lienzo y pasa a ser la página. Sin posición
+           absoluta: sacarla del flujo hace que sólo la primera página se componga, y lo que sobra
+           se pierde en lugar de pasar a la siguiente. */
         .documento-hoja {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
           box-shadow: none !important;
           margin: 0 !important;
           padding: 0 !important;
+          width: auto !important;
           max-width: none !important;
+        }
+
+        /* El pie **no** se saca del flujo para repetirlo en cada página. Se probó, y el navegador
+           lo repite con la posición de la primera: en la segunda hoja aparecía encima de las firmas.
+           Un pie al final del documento es lo que hace cualquier papel, y es lo que se lee igual en
+           cualquier navegador. */
+        .documento-pie { break-inside: avoid; }
+
+        /* Las dos columnas del documento —las partes y las firmas— son dos también en el papel.
+           La hoja impresa mide unos 690 píxeles de ancho, por debajo del punto de ruptura de
+           tableta, así que sin esto el documento sale maquetado como en un teléfono: cada bloque
+           debajo del anterior y una hoja de más. */
+        .documento-columnas {
+          display: grid !important;
+          grid-template-columns: 1fr 1fr !important;
         }
 
         /* Un bloque partido entre dos páginas es la forma más fácil de imprimir un documento que
@@ -408,7 +445,7 @@ function Prose({ title, body }: { title: string; body: string }) {
 function Signature({ label }: { label: string }) {
   return (
     <div>
-      <div className="h-16 border-gray-4 border-b" />
+      <div className="h-10 border-gray-4 border-b" />
       <p className="mt-1 text-body3 text-gray-6">{label}</p>
     </div>
   )
