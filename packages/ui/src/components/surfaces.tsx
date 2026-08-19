@@ -53,6 +53,16 @@ export interface PanelProps extends HTMLAttributes<HTMLDivElement> {
    * a desconfiar de la señal, que es peor que no tenerla.
    */
   live?: boolean | undefined
+  /** El encendido: el teñido sube desde cero al aparecer. El contenido ya está visible. */
+  boot?: boolean | undefined
+  /**
+   * La respiración continua.
+   *
+   * **Sólo para lo que de verdad está ocurriendo ahora mismo**: una extracción corriendo en
+   * segundo plano, una reserva a punto de expirar. De adorno, en dos días nadie mira la señal — que
+   * es exactamente lo contrario de que el sistema se sienta vivo.
+   */
+  alive?: boolean | undefined
 }
 
 /**
@@ -62,10 +72,24 @@ export interface PanelProps extends HTMLAttributes<HTMLDivElement> {
  * suben el degradado y el borde, **y nada se mueve**: en una rejilla densa una tarjeta que se
  * levanta obliga al ojo a recolocar todo lo que tiene al lado.
  */
-export function Panel({ tint, live = false, className, ...rest }: PanelProps) {
+export function Panel({
+  tint,
+  live = false,
+  boot = false,
+  alive = false,
+  className,
+  ...rest
+}: PanelProps) {
   return (
     <div
-      className={cn("card", tint && TINTS[tint].tint, live && "card-live", className)}
+      className={cn(
+        "card",
+        tint && TINTS[tint].tint,
+        live && "card-live",
+        // La respiración gana al encendido: una tarjeta que respira ya está encendida.
+        alive ? "card-vivo" : boot && "card-boot",
+        className,
+      )}
       {...rest}
     />
   )
@@ -203,6 +227,8 @@ export interface StatCardProps extends Omit<HTMLAttributes<HTMLDivElement>, "chi
   trend?: string | undefined
   tint?: Tint | undefined
   live?: boolean | undefined
+  boot?: boolean | undefined
+  alive?: boolean | undefined
 }
 
 /**
@@ -217,11 +243,20 @@ export function StatCard({
   trend,
   tint = "reposo",
   live = false,
+  boot = false,
+  alive = false,
   className,
   ...rest
 }: StatCardProps) {
   return (
-    <Panel tint={tint} live={live} className={cn("flex flex-col gap-2 p-5", className)} {...rest}>
+    <Panel
+      tint={tint}
+      live={live}
+      boot={boot}
+      alive={alive}
+      className={cn("flex flex-col gap-2 p-5", className)}
+      {...rest}
+    >
       <span className="legend text-content-faint">{label}</span>
       <span className="display text-h1 text-content tnum">{value}</span>
       {trend ? <span className={cn("text-body3", TINTS[tint].ink)}>{trend}</span> : null}

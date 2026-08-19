@@ -35,6 +35,7 @@ export {
   Switch,
   type SwitchProps,
 } from "./components/controls.tsx"
+export { Counter, type CounterProps } from "./components/counter.tsx"
 export {
   Dialog,
   DialogClose,

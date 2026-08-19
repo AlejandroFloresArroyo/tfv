@@ -6,6 +6,7 @@ import {
   Button,
   Callout,
   Checkbox,
+  Counter,
   Dialog,
   DialogContent,
   DialogTrigger,
@@ -104,6 +105,10 @@ const LINEAS: {
   },
 ]
 
+/** Agrupación de miles en español. Fija, no del navegador: si servidor y cliente formatearan
+ *  distinto, la hidratación pintaría dos números diferentes para el mismo dato. */
+const miles = (valor: number) => new Intl.NumberFormat("es-MX").format(valor)
+
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section className="border-edge border-t px-5 py-10 tablet:px-8 laptop:px-12">
@@ -141,32 +146,50 @@ export default function SistemaPage() {
       {/* ─── Tablero: las tarjetas con degradado ─────────────────────────────── */}
       <section className="px-5 pb-10 tablet:px-8 laptop:px-12">
         <div className="grid gap-4 tablet:grid-cols-2 laptop:grid-cols-4">
+          {/* El encendido va escalonado: un panel de control alimentándose, no cuatro tarjetas
+              apareciendo a la vez. El retardo es lo único que hace falta para que se lea como
+              secuencia y no como parpadeo. */}
           <StatCard
             tint="firme"
             live
+            boot
             label="Unidades disponibles"
-            value="1,284"
+            value={<Counter value={1284} format={miles} />}
             trend="+38 esta semana"
           />
-          <StatCard tint="aparta" live label="Apartadas" value="207" trend="14 se liberan hoy" />
+          <StatCard
+            tint="aparta"
+            live
+            boot
+            style={{ animationDelay: "90ms" }}
+            label="Apartadas"
+            value={<Counter value={207} format={miles} durationMs={950} />}
+            trend="14 se liberan hoy"
+          />
           <StatCard
             tint="curso"
             live
+            boot
+            style={{ animationDelay: "180ms" }}
             label="Cotizaciones por responder"
-            value="9"
+            value={<Counter value={9} durationMs={700} />}
             trend="3 vencen mañana"
           />
+          {/* La única que respira, y se lo gana: la extracción del guion está corriendo de verdad
+              en segundo plano. Si esto fuera adorno, en dos días nadie miraría la señal. */}
           <StatCard
             tint="leido"
             live
+            alive
             label="Escenas extraídas"
-            value="47"
-            trend="de 6 capítulos, sin revisar"
+            value={<Counter value={47} durationMs={1100} />}
+            trend="extrayendo del guion ahora"
           />
         </div>
-        <p className="mt-4 text-body3 text-content-faint">
-          Pasa el ratón por una tarjeta: sube el degradado y se tiñe el borde. Nada se mueve de
-          sitio.
+        <p className="mt-4 max-w-[68ch] text-body3 text-content-faint">
+          Pasa el ratón por una tarjeta: sube el degradado y se tiñe el borde, sin que nada se mueva
+          de sitio. La cuarta respira porque su trabajo está corriendo de verdad en segundo plano —
+          es la única señal continua del sistema, y sólo se pone donde es cierta.
         </p>
       </section>
 

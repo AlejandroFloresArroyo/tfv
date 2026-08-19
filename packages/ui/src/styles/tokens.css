@@ -636,23 +636,38 @@
  * degradado solo se lee como una mancha.
  */
 
+/*
+ * El teñido es una propiedad registrada, y eso no es un detalle de implementación.
+ *
+ * Un navegador **no sabe interpolar un `linear-gradient`**: poner `transition: background` sobre un
+ * degradado no lo funde, lo salta. Registrando el porcentaje como propiedad con tipo, lo que se
+ * anima es un número —que sí se interpola— y el degradado se recalcula en cada fotograma. Es la
+ * diferencia entre una tarjeta que se enciende y una que parpadea de un estado al otro.
+ */
+@property --tint-now {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
 @utility card {
   position: relative;
   isolation: isolate;
+  --tint-now: var(--tint-rest);
   border-radius: var(--radius-lg);
   border: 1px solid var(--edge);
   background: linear-gradient(
     158deg,
-    color-mix(in oklab, var(--luz, transparent) var(--tint-rest), var(--panel)) 0%,
+    color-mix(in oklab, var(--luz, transparent) var(--tint-now), var(--panel)) 0%,
     var(--panel) 58%
   );
   box-shadow:
     0 1px 2px rgb(0 0 0 / 0.08),
     0 8px 24px -12px rgb(0 0 0 / 0.28);
   transition:
-    background 220ms var(--ease-out-soft),
-    border-color 220ms var(--ease-out-soft),
-    box-shadow 220ms var(--ease-out-soft);
+    --tint-now 260ms var(--ease-out-soft),
+    border-color 260ms var(--ease-out-soft),
+    box-shadow 260ms var(--ease-out-soft);
 
   &::before {
     content: "";
@@ -680,17 +695,57 @@
 
   &:hover,
   &:focus-visible {
-    background: linear-gradient(
-      158deg,
-      color-mix(in oklab, var(--luz, transparent) var(--tint-hot), var(--panel)) 0%,
-      var(--panel) 66%
-    );
+    --tint-now: var(--tint-hot);
     border-color: color-mix(in oklab, var(--luz, var(--edge)) 45%, var(--edge));
     box-shadow:
       0 1px 2px rgb(0 0 0 / 0.1),
       0 10px 28px -12px rgb(0 0 0 / 0.34),
       0 0 0 1px color-mix(in oklab, var(--luz, transparent) 22%, transparent);
   }
+}
+
+/* ═══ El único momento animado del sistema ════════════════════════════════════
+ *
+ * El encendido. Al cargar la superficie, el teñido de cada tarjeta sube desde cero hasta su valor
+ * de reposo, escalonado por columnas. Es un panel de control alimentándose, y es **un solo
+ * momento**: no hay una entrada distinta por sección ni un efecto suelto en cada componente.
+ *
+ * El contenido está visible desde el primer fotograma. Lo que entra es la luz, no el dato: si la
+ * animación no corre —sin JavaScript, con movimiento reducido— la tarjeta ya está ahí, completa y
+ * con su color. Una entrada que esconde información no es una entrada, es un fallo con estilo.
+ */
+@keyframes encendido {
+  from {
+    --tint-now: 0%;
+  }
+  to {
+    --tint-now: var(--tint-rest);
+  }
+}
+
+@utility card-boot {
+  animation: encendido 620ms var(--ease-out-soft) backwards;
+}
+
+/*
+ * La respiración: el único movimiento continuo, y sólo se gana diciendo la verdad.
+ *
+ * Se pone **exclusivamente** en lo que de verdad está ocurriendo ahora mismo en el sistema —una
+ * extracción de guion corriendo en segundo plano, una reserva a punto de expirar—. Si se usara de
+ * adorno, en dos días nadie miraría la señal, que es lo contrario de que el sistema se sienta vivo.
+ */
+@keyframes respira {
+  0%,
+  100% {
+    --tint-now: var(--tint-rest);
+  }
+  50% {
+    --tint-now: var(--tint-hot);
+  }
+}
+
+@utility card-vivo {
+  animation: respira 3.6s var(--ease-in-out-soft) infinite;
 }
 
 /* Las temperaturas, como clase. Fijan `--luz` y de ahí cuelga todo lo demás. */

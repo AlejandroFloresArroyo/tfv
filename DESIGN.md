@@ -239,6 +239,46 @@ lo convierte en superficie.
 - **Menú**: `0 12px 32px -8px rgb(0 0 0 / 0.28)` (0.7 en oscuro)
 - **Diálogo**: `0 24px 64px -16px rgb(0 0 0 / 0.4)` (0.8 en oscuro)
 
+## Motion
+
+Con moderación, y con una regla que lo gobierna todo: **sólo se anima lo que de verdad está
+ocurriendo**. Hay exactamente dos movimientos autorales y una transición.
+
+**El encendido.** Al cargar una superficie, el teñido de cada tarjeta sube desde cero hasta su
+reposo, escalonado por columnas: un panel de control alimentándose. Es **un solo momento**, no una
+entrada distinta por sección. El contenido está visible desde el primer fotograma; lo que entra es
+la luz, no el dato.
+
+**La respiración.** El único movimiento continuo, y se gana diciendo la verdad: va exclusivamente
+en tarjetas cuyo trabajo está corriendo ahora mismo —una extracción de guion en segundo plano, una
+reserva a punto de expirar—. De adorno, en dos días nadie miraría la señal, que es lo contrario de
+que el sistema se sienta vivo.
+
+**El hover.** Cambia el degradado y el borde. **Nada se mueve de sitio**: en una rejilla densa, una
+tarjeta que se levanta obliga al ojo a recolocar todo lo que tiene al lado.
+
+### El teñido es una propiedad registrada
+
+Un navegador **no sabe interpolar un `linear-gradient`**: `transition: background` sobre un
+degradado no lo funde, lo salta. Registrando el porcentaje con `@property` y tipo `<percentage>`,
+lo que se anima es un número —que sí interpola— y el degradado se recalcula por fotograma. Sin
+esto, el hover de color parpadea en vez de encenderse.
+
+### Named Rules
+
+**La regla del dato que no espera.** Una cifra animada se pinta completa en el servidor. La cuenta
+es un añadido del cliente y sólo corre con movimiento permitido: sin JavaScript, con
+`prefers-reduced-motion` o antes de hidratar, el número está ahí y es correcto. Una cifra que hay
+que esperar para leer no es una animación, es un dato escondido.
+
+**La regla del último fotograma.** Toda cuenta se fija al valor exacto al terminar, nunca al que
+calcule la curva. Una salida exponencial no llega a uno —vale 0.999— y sobre 1284 redondea a 1283.
+Aquí las cifras son existencias y dinero.
+
+**La regla del peor caso.** El descenso al origen ocurre dentro del primer fotograma, no antes de
+pedirlo. Si el navegador nunca lo entrega —pestaña en segundo plano, batería baja— el peor caso es
+que la cifra real se quede quieta, no que se quede un cero en pantalla.
+
 ## Shapes
 
 Radios generosos: 6 px en marcas pequeñas, 12–16 en tarjetas y controles, 24 en diálogos. Una
@@ -273,6 +313,7 @@ como marca.
 - Reaccionar al ratón sólo con color.
 
 **Don't**
+- No animar nada que no esté ocurriendo de verdad en el sistema.
 - No mover, escalar ni levantar nada al pasar el ratón. En una rejilla densa obliga al ojo a
   recolocar todo lo que hay al lado.
 - No usar `luz-*` como color de texto: son tonos de degradado y no están medidos para eso.

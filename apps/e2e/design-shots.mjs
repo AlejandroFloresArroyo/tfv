@@ -45,7 +45,10 @@ for (const tema of ["dark", "light"]) {
     // Las tipografías variables tienen que haber cargado antes de medir o capturar: una captura
     // con la reserva del sistema mide otra cosa distinta de la que se va a servir.
     await pagina.evaluate(() => document.fonts.ready)
-    await pagina.waitForTimeout(250)
+    // Se deja asentar el movimiento de entrada antes de disparar. Capturar a mitad del encendido
+    // fotografía un estado que nadie ve más de medio segundo, y un defecto imaginario nacido de una
+    // captura inválida cuesta una ronda entera de correcciones.
+    await pagina.waitForTimeout(1800)
 
     const archivo = `${OUT}${t.nombre}-${tema}.png`
     await pagina.screenshot({ path: archivo, fullPage: true })
