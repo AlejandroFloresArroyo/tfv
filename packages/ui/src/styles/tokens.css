@@ -801,6 +801,74 @@
   font-feature-settings: "tnum" 1;
 }
 
+/* ═══ Atmósfera ══════════════════════════════════════════════════════════════
+ *
+ * **En evaluación, no decidido.** Dos capas de fondo para probar si el tablero gana con ellas.
+ *
+ * Ninguna lleva imagen ni vídeo: son CSS puro, pesan cero y se adaptan al tema. Si al final se
+ * elige una fotografía, esto es la referencia contra la que hay que compararla — porque una imagen
+ * tiene que ganarse su peso frente a algo que no cuesta nada.
+ *
+ * Las dos van **detrás de todo** y nunca bajo un bloque de texto a más del 8%: en Operate la
+ * expresión no puede tapar la tarea, y un tablero que se lee peor con fondo es un tablero peor.
+ */
+
+/* El derrame: luz de set entrando por la esquina, en las temperaturas del sistema. Tungsteno
+   cálido arriba a la izquierda, HMI frío al fondo. No hay foco visible ni destello: es el spill,
+   no la fuente. */
+@utility atmos-derrame {
+  position: relative;
+
+  &::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        70rem 46rem at 8% -6%,
+        color-mix(in oklab, var(--color-tungsteno) 26%, transparent) 0%,
+        transparent 62%
+      ),
+      radial-gradient(
+        58rem 40rem at 96% 4%,
+        color-mix(in oklab, var(--color-hmi) 18%, transparent) 0%,
+        transparent 58%
+      ),
+      radial-gradient(
+        44rem 34rem at 62% 108%,
+        color-mix(in oklab, var(--color-magic) 14%, transparent) 0%,
+        transparent 60%
+      );
+    opacity: 0.5;
+  }
+}
+
+/* Sobre lienzo claro el derrame se rebaja: lo que sobre casi negro es atmósfera, sobre blanco es
+   una mancha de color encima del contenido. */
+:root:not(.dark) .atmos-derrame::before {
+  opacity: 0.24;
+}
+
+/* El grano. Turbulencia SVG, no una imagen: se genera en el navegador, no viaja por la red, y no
+   se repite de forma visible. Es lo que da cuerpo a una superficie oscura sin costar nada. */
+@utility atmos-grano {
+  &::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.16;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='160' height='160' filter='url(%23g)'/></svg>");
+  }
+}
+
+:root:not(.dark) .atmos-grano::after {
+  opacity: 0.07;
+}
+
 /* ═══ Base ════════════════════════════════════════════════════════════════════ */
 
 @layer base {

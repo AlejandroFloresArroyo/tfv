@@ -7,6 +7,7 @@ import {
   Callout,
   Checkbox,
   Counter,
+  cn,
   Dialog,
   DialogContent,
   DialogTrigger,
@@ -118,13 +119,43 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
   )
 }
 
+/** Las cuatro combinaciones de fondo que hay sobre la mesa. Ninguna está decidida. */
+const FONDOS = [
+  { id: "nada", nombre: "Sin fondo", clase: "" },
+  { id: "derrame", nombre: "Derrame de luz", clase: "atmos-derrame" },
+  { id: "grano", nombre: "Grano", clase: "atmos-grano" },
+  { id: "ambos", nombre: "Los dos", clase: "atmos-derrame atmos-grano" },
+] as const
+
 export default function SistemaPage() {
+  const [fondo, setFondo] = useState<(typeof FONDOS)[number]["id"]>("nada")
   const [importe, setImporte] = useState("1850.00")
   const [idioma, setIdioma] = useState("es")
   const [envio, setEnvio] = useState(true)
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-[120rem] bg-canvas text-content">
+    <main
+      className={cn(
+        "mx-auto min-h-dvh w-full max-w-[120rem] bg-canvas text-content",
+        FONDOS.find((f) => f.id === fondo)?.clase,
+      )}
+    >
+      {/* Andamio de decisión: el fondo todavía no está elegido, así que se puede ver cada opción
+          sobre el tablero real en vez de sobre una muestra. No forma parte del sistema. */}
+      <div className="flex flex-wrap items-center gap-2 border-edge border-b px-5 py-3 tablet:px-8 laptop:px-12">
+        <span className="legend mr-1 text-content-faint">Fondo en evaluación</span>
+        {FONDOS.map((f) => (
+          <Button
+            key={f.id}
+            size="sm"
+            variant={fondo === f.id ? "primary" : "secondary"}
+            onClick={() => setFondo(f.id)}
+          >
+            {f.nombre}
+          </Button>
+        ))}
+      </div>
+
       {/* ─── La cabecera de un llamado: los hechos duros del día ─────────────── */}
       <header className="px-5 pt-10 pb-8 tablet:px-8 laptop:px-12">
         <span className="legend text-content-faint">Renta Fílmica del Norte · Almacén Centro</span>
