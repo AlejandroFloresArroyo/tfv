@@ -1382,6 +1382,39 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/characters/{characterId}/continuity": {
+    /** Ver cómo apareció un personaje a lo largo del rodaje */
+    params: {
+      companyId: string
+      productionId: string
+      characterId: string
+    }
+    response: {
+      characterId: string
+      characterName: string
+      recordings: Array<{
+        recordingId: string
+        recordingName: string
+        kind: "record" | "re_record"
+        status: "draft" | "ongoing" | "completed"
+        sceneId: string | null
+        sceneName: string | null
+        chapterName: string | null
+        continuityId: string
+        props: Array<{
+          id: string
+          continuityId: string
+          kind: "item" | "video"
+          itemId: string | null
+          videoId: string | null
+          name: string
+          code: string | null
+          createdAt: string
+        }>
+      }>
+    }
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/panel": {
     /** Resumen de la producción: desglose y presupuesto */
     params: {
@@ -1408,6 +1441,527 @@ export interface ApiEndpoints {
         spent: string
         difference: string
       }
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/recordings": {
+    /** Listar las jornadas de rodaje de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      status?: string | Array<string>
+      kind?: string | Array<string>
+      sceneId?: string | Array<string>
+      responsibleId?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        sceneId: string | null
+        name: string
+        kind: "record" | "re_record"
+        status: "draft" | "ongoing" | "completed"
+        responsibleId: string | null
+        responsibleName: string | null
+        continuityCount: number
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/recordings": {
+    /** Programar una jornada de rodaje */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      sceneId?: string | null
+      kind?: "record" | "re_record"
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      sceneId: string | null
+      name: string
+      kind: "record" | "re_record"
+      status: "draft" | "ongoing" | "completed"
+      responsibleId: string | null
+      responsibleName: string | null
+      continuityCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/recordings/{recordingId}": {
+    /** Ver una jornada de rodaje */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      sceneId: string | null
+      name: string
+      kind: "record" | "re_record"
+      status: "draft" | "ongoing" | "completed"
+      responsibleId: string | null
+      responsibleName: string | null
+      continuityCount: number
+      createdAt: string
+      updatedAt: string
+      scene: {
+        id: string
+        name: string
+        index: number
+        chapter: {
+          id: string
+          name: string
+          index: number
+        }
+      } | null
+      continuities: Array<{
+        id: string
+        recordingId: string
+        characterId: string | null
+        characterName: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        props: Array<{
+          id: string
+          continuityId: string
+          kind: "item" | "video"
+          itemId: string | null
+          videoId: string | null
+          name: string
+          code: string | null
+          createdAt: string
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+      notes: Array<{
+        id: string
+        recordingId: string
+        body: string
+        authorId: string | null
+        authorName: string | null
+        createdAt: string
+        updatedAt: string
+      }>
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/recordings/{recordingId}": {
+    /** Editar una jornada de rodaje */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+    }
+    body: {
+      name?: string
+      sceneId?: string | null
+      kind?: "record" | "re_record"
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      sceneId: string | null
+      name: string
+      kind: "record" | "re_record"
+      status: "draft" | "ongoing" | "completed"
+      responsibleId: string | null
+      responsibleName: string | null
+      continuityCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/recordings/{recordingId}": {
+    /** Dar de baja una jornada de rodaje */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+    }
+    response: undefined
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/recordings/{recordingId}/characters": {
+    /** Asignar personajes a una jornada de rodaje */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+    }
+    body: {
+      characterIds: Array<string>
+    }
+    response: {
+      id: string
+      productionId: string
+      sceneId: string | null
+      name: string
+      kind: "record" | "re_record"
+      status: "draft" | "ongoing" | "completed"
+      responsibleId: string | null
+      responsibleName: string | null
+      continuityCount: number
+      createdAt: string
+      updatedAt: string
+      scene: {
+        id: string
+        name: string
+        index: number
+        chapter: {
+          id: string
+          name: string
+          index: number
+        }
+      } | null
+      continuities: Array<{
+        id: string
+        recordingId: string
+        characterId: string | null
+        characterName: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        props: Array<{
+          id: string
+          continuityId: string
+          kind: "item" | "video"
+          itemId: string | null
+          videoId: string | null
+          name: string
+          code: string | null
+          createdAt: string
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+      notes: Array<{
+        id: string
+        recordingId: string
+        body: string
+        authorId: string | null
+        authorName: string | null
+        createdAt: string
+        updatedAt: string
+      }>
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/recordings/{recordingId}/close": {
+    /** Cerrar una jornada de rodaje */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      sceneId: string | null
+      name: string
+      kind: "record" | "re_record"
+      status: "draft" | "ongoing" | "completed"
+      responsibleId: string | null
+      responsibleName: string | null
+      continuityCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities": {
+    /** Abrir una continuidad en una jornada */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+    }
+    body: {
+      characterId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      recordingId: string
+      characterId: string | null
+      characterName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      props: Array<{
+        id: string
+        continuityId: string
+        kind: "item" | "video"
+        itemId: string | null
+        videoId: string | null
+        name: string
+        code: string | null
+        createdAt: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities/{continuityId}": {
+    /** Eliminar una continuidad */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+      continuityId: string
+    }
+    response: undefined
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities/{continuityId}/character": {
+    /** Poner o retirar el personaje de una continuidad */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+      continuityId: string
+    }
+    body: {
+      characterId: string | null
+    }
+    response: {
+      id: string
+      recordingId: string
+      characterId: string | null
+      characterName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      props: Array<{
+        id: string
+        continuityId: string
+        kind: "item" | "video"
+        itemId: string | null
+        videoId: string | null
+        name: string
+        code: string | null
+        createdAt: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities/{continuityId}/items": {
+    /** Colgar un artículo de una continuidad */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+      continuityId: string
+    }
+    body: {
+      itemId: string
+    }
+    response: {
+      id: string
+      continuityId: string
+      kind: "item" | "video"
+      itemId: string | null
+      videoId: string | null
+      name: string
+      code: string | null
+      createdAt: string
+    }
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities/{continuityId}/items": {
+    /** Establecer el conjunto de artículos de una continuidad */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+      continuityId: string
+    }
+    body: {
+      itemIds: Array<string>
+    }
+    response: {
+      id: string
+      recordingId: string
+      characterId: string | null
+      characterName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      props: Array<{
+        id: string
+        continuityId: string
+        kind: "item" | "video"
+        itemId: string | null
+        videoId: string | null
+        name: string
+        code: string | null
+        createdAt: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities/{continuityId}/videos": {
+    /** Colgar un video de referencia de una continuidad */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+      continuityId: string
+    }
+    body: {
+      videoId: string
+    }
+    response: {
+      id: string
+      continuityId: string
+      kind: "item" | "video"
+      itemId: string | null
+      videoId: string | null
+      name: string
+      code: string | null
+      createdAt: string
+    }
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities/{continuityId}/videos": {
+    /** Establecer el conjunto de videos de una continuidad */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+      continuityId: string
+    }
+    body: {
+      videoIds: Array<string>
+    }
+    response: {
+      id: string
+      recordingId: string
+      characterId: string | null
+      characterName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      props: Array<{
+        id: string
+        continuityId: string
+        kind: "item" | "video"
+        itemId: string | null
+        videoId: string | null
+        name: string
+        code: string | null
+        createdAt: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/recordings/{recordingId}/notes": {
+    /** Anotar una jornada de rodaje */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+    }
+    body: {
+      body: string
+    }
+    response: {
+      id: string
+      recordingId: string
+      body: string
+      authorId: string | null
+      authorName: string | null
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/recordings/{recordingId}/notes/{noteId}": {
+    /** Corregir una nota de la jornada */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+      noteId: string
+    }
+    body: {
+      body: string
+    }
+    response: {
+      id: string
+      recordingId: string
+      body: string
+      authorId: string | null
+      authorName: string | null
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/recordings/{recordingId}/notes/{noteId}": {
+    /** Eliminar una nota de la jornada */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+      noteId: string
+    }
+    response: undefined
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/recordings/{recordingId}/open": {
+    /** Volver a abrir una jornada de rodaje */
+    params: {
+      companyId: string
+      productionId: string
+      recordingId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      sceneId: string | null
+      name: string
+      kind: "record" | "re_record"
+      status: "draft" | "ongoing" | "completed"
+      responsibleId: string | null
+      responsibleName: string | null
+      continuityCount: number
+      createdAt: string
+      updatedAt: string
     }
   }
 

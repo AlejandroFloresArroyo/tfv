@@ -4104,3 +4104,101 @@ periodo terminó**. Deja de operar por la fecha —que es lo que las compuertas 
 sigue ahí y sigue siendo «la vigente», así que volver a contratar responde que ya hay una y el camino
 es cambiar de plan, que funciona. No rompe ningún escenario de la spec; sí deja un estado que nadie
 barre, al lado de la gracia, que sí se barre.
+
+### 2026-08-19 · Continuidad de rodaje
+
+**Cerrado**
+
+Doce de las trece tareas de la sección **Continuidad** de `migrate-productions-core`. Es el registro
+de cómo aparece cada personaje en cada jornada: lo que permite que una escena grabada en marzo
+enlace visualmente con otra grabada en julio.
+
+- **Jornadas de rodaje** con su escena, su tipo —grabación o regrabación—, su responsable y sus tres
+  estados. Nacen en borrador, se cierran, se vuelven a abrir y se dan de baja.
+- **Asignar el reparto** crea una continuidad por personaje y pone la jornada en curso, «porque
+  asignar el reparto es el acto con el que empieza el trabajo». Volver a asignar a alguien que ya
+  está **no** crea una segunda continuidad.
+- **Continuidad por personaje**, y también sin personaje: la spec pide poder registrar lo que no
+  corresponde a nadie en concreto. Retirar el personaje conserva la continuidad y su utilería.
+- **Utilería excluyente**: artículo o video, nunca ambos ni ninguno.
+- **Reconciliación por tipo**, atómica, sin que un tipo toque al otro.
+- **Notas de la jornada** —el cuaderno del script—, con su autor y su instante.
+- **Consulta de la continuidad de un personaje** y **vista completa de la jornada**, con su escena,
+  su capítulo, sus personajes, la utilería resuelta de cada uno y las notas del día.
+
+Diecinueve rutas nuevas en `routes/continuity.ts`, sobre `productions/continuity.ts`. Las dos
+familias de claves del catálogo cerrado quedan ejercidas —`productions.recordings.*` y
+`productions.continuities.*`—, cada una en su sitio y sin colapsar ninguna.
+
+**Dos decisiones escritas donde alguien iría a cambiarlas**
+
+**Cerrar una jornada no exige tener la continuidad completa.** La spec le pone candado a la nota de
+entrega —«cerrar una nota exige verificarlo todo»— y deliberadamente no se lo pone a la jornada. No
+es un olvido: el día de rodaje se acaba cuando se acaba, y una aplicación que se negara obligaría a
+inventar datos para poder seguir. El motivo vive en la cabecera del módulo, que es el sitio donde
+alguien añadiría la validación «obvia», y hay prueba de que una jornada sin ninguna continuidad se
+cierra (H-186).
+
+**La utilería es excluyente de verdad, en tres capas y ninguna es una comprobación en el manejador.**
+Abajo del todo la restricción `production_props_item_xor_video` del motor, que ya existía y hasta hoy
+nadie había ejercido. En medio el tipo `PropRef` del módulo, que no puede expresar «las dos» ni
+«ninguna», con un único constructor de fila por el que pasa toda inserción. Arriba, un camino de
+transporte por tipo con su propia clave, así que por la API el caso ni siquiera se puede pedir.
+Probado por los cuatro lados: los dos y ninguno **contra el motor** —que es donde el caso existe—,
+afirmando el nombre de la restricción y con su control de que una pieza de un solo lado sí entra; y
+cada uno solo por la API.
+
+**Verificado, no supuesto**
+
+- Asignar cuatro personajes y volver a asignar uno de los cuatro deja **cuatro** continuidades.
+- Reconciliar los artículos a `{A, D}` sobre `{A, B, C}` más un video deja `{A, D}` **y el video**.
+- Eliminar una continuidad con cuatro artículos borra sus cuatro piezas y deja **los cuatro
+  artículos** en el inventario de la producción.
+- Dar de baja una jornada la retira de todas las vías por las que se llega a ella, y los artículos y
+  videos siguen existiendo.
+- Una jornada dada de baja **deja de figurar en el historial del personaje**. No sale gratis: la baja
+  de la jornada es lógica y la continuidad no tiene columna de baja, así que esa consulta filtra
+  explícitamente (H-187).
+- La escena, el personaje, el artículo y el video de **otra producción** responden `404` por los
+  cuatro caminos. El modelo no ata ninguna de esas cuatro referencias a la producción (H-188).
+
+**El recorrido entero, contra un socket**
+
+Una prueba conduce el día completo por HTTP contra un servidor de verdad en un puerto efímero, no
+llamando a manejadores: nace en borrador → reparto de cuatro → en curso → se reasigna uno y no
+aparece una quinta → utilería de los dos tipos → se reconcilian los artículos y los videos no se
+mueven → se anota → la vista completa lo enseña todo → el historial del personaje lo ve desde el
+otro lado → se cierra con tres de los cuatro personajes sin registrar.
+
+Pasó a la primera, que no demuestra nada, así que se comprobó que muerde: quitando el filtro por tipo
+de la reconciliación cae por los videos borrados, y quitando la resta de la asignación cae por la
+quinta continuidad. Las dos roturas se deshicieron después.
+
+**Verificación**
+
+`pnpm test --force` sobre una base recién creada, en verde con **1580** pruebas, **46 más** que las
+1534 de partida — las 46 son las de continuidad, y ninguna otra suite se movió. `pnpm check` limpio.
+`pnpm lint` con las **mismas seis** incidencias de H-150, ninguna en los archivos de esta tanda.
+
+Se regeneró `packages/contracts/src/api.generated.ts` con `pnpm --filter @tfv/api contract`: el
+candado de desfase lo exige, y pasó de 228 a **247** endpoints. Es un archivo generado y hay dos
+árboles de trabajo más añadiendo rutas ahora mismo, así que al integrar hay que volver a emitirlo una
+vez, no fusionarlo a mano.
+
+**Lo que queda fuera, y por qué**
+
+- **«Consulta de dónde se ha usado un artículo»**, la decimotercera tarea. Es un requisito de esta
+  misma spec pero de otro dueño: la entidad es el artículo del inventario de la producción, y quien
+  la posee la escribe con el resto de su superficie. Queda con su aviso: ese camino sube por
+  `production_props → production_continuities → production_recordings` **sin pasar por ningún filtro
+  de este módulo**, así que necesita su propio `deleted_at is null` en el último salto o informará de
+  jornadas dadas de baja (H-187).
+- **`productions.continuities.all_selectable`**, una clave del catálogo sin ningún requisito de la
+  spec detrás. No se le inventa ruta: adivinar qué autoriza una clave y construirle superficie es
+  fijar producto desde la implementación (H-185).
+- **El resquicio de concurrencia de la no duplicación**. La sostiene una resta y no el motor, porque
+  `production_continuities` no tiene único parcial sobre `(recording_id, character_id)` y no puede
+  tenerlo a secas —la columna admite nulo a propósito—. Cerrarlo pide migración, y esta rebanada no
+  abre ninguna: hay un solo número libre y tres árboles avanzando (H-184).
+
+**Hallazgos**: H-184, H-185, H-186, H-187 y H-188.

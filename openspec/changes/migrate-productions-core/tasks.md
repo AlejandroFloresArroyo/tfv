@@ -35,18 +35,18 @@
 
 ## Continuidad
 
-- [ ] Jornadas con tipo y estado
-- [ ] Asignación de reparto que crea continuidades y pone en curso
-- [ ] Sin duplicar personajes ya asignados
-- [ ] Continuidad por personaje, con posibilidad de quedar sin personaje
-- [ ] Utilería excluyente: artículo o video, nunca ambos ni ninguno
-- [ ] Reconciliación de artículos, sin afectar a los videos
-- [ ] Reconciliación de videos, sin afectar a los artículos
-- [ ] Eliminar continuidad elimina su utilería, no lo referenciado
-- [ ] Eliminar jornada arrastra sus continuidades
-- [ ] Notas de jornada
-- [ ] Consulta de la continuidad de un personaje
-- [ ] Vista completa de una jornada
+- [x] Jornadas con tipo y estado
+- [x] Asignación de reparto que crea continuidades y pone en curso
+- [x] Sin duplicar personajes ya asignados
+- [x] Continuidad por personaje, con posibilidad de quedar sin personaje
+- [x] Utilería excluyente: artículo o video, nunca ambos ni ninguno
+- [x] Reconciliación de artículos, sin afectar a los videos
+- [x] Reconciliación de videos, sin afectar a los artículos
+- [x] Eliminar continuidad elimina su utilería, no lo referenciado
+- [x] Eliminar jornada arrastra sus continuidades
+- [x] Notas de jornada
+- [x] Consulta de la continuidad de un personaje
+- [x] Vista completa de una jornada
 - [ ] Consulta de dónde se ha usado un artículo
 
 ## Referencias
