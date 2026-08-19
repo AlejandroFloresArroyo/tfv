@@ -104,6 +104,27 @@ import {
   updateRoleRoute,
 } from "./companies.ts"
 import {
+  addContinuityItemRoute,
+  addContinuityVideoRoute,
+  addRecordingNoteRoute,
+  assignCharactersRoute,
+  characterContinuityRoute,
+  closeRecordingRoute,
+  createContinuityRoute,
+  createRecordingRoute,
+  deleteContinuityRoute,
+  deleteRecordingNoteRoute,
+  deleteRecordingRoute,
+  getRecordingRoute,
+  listRecordingsRoute,
+  openRecordingRoute,
+  setContinuityCharacterRoute,
+  setContinuityItemsRoute,
+  setContinuityVideosRoute,
+  updateRecordingNoteRoute,
+  updateRecordingRoute,
+} from "./continuity.ts"
+import {
   categoryScopeRoute,
   createCategoryRoute,
   createClientRoute,
@@ -677,9 +698,36 @@ export const routes: readonly RegisteredRoute[] = [
   sceneScopeRoute,
   deleteSceneRoute,
 
-  // Pendiente: la continuidad de rodaje —jornadas, continuidades y utilería— y la extracción
-  // asistida del guion (21); notas de entrega, calendario y presupuesto (22); compras a almacenes
-  // (23). Las tablas existen desde la `0002` y el panel ya las cuenta.
+  // Continuidad de rodaje: la jornada, su reparto, su continuidad por personaje y la utilería de
+  // cada una. Ver `routes/continuity.ts`.
+  listRecordingsRoute,
+  createRecordingRoute,
+  getRecordingRoute,
+  updateRecordingRoute,
+  assignCharactersRoute,
+  closeRecordingRoute,
+  openRecordingRoute,
+  deleteRecordingRoute,
+
+  addRecordingNoteRoute,
+  updateRecordingNoteRoute,
+  deleteRecordingNoteRoute,
+
+  createContinuityRoute,
+  setContinuityCharacterRoute,
+  addContinuityItemRoute,
+  setContinuityItemsRoute,
+  addContinuityVideoRoute,
+  setContinuityVideosRoute,
+  deleteContinuityRoute,
+
+  // Cómo apareció un personaje a lo largo del rodaje. Cuelga del personaje porque la pregunta es
+  // suya, pero lo que devuelve es continuidad, y ésa es la clave que exige.
+  characterContinuityRoute,
+
+  // Pendiente: la extracción asistida del guion (21); notas de entrega, calendario, presupuesto y
+  // el detalle de los planes de trabajo (22); compras a almacenes (23). Las tablas existen desde la
+  // `0002` y el panel ya las cuenta.
 
   // ─── Pixit ─────────────────────────────────────────────────────────────────
   // Pendiente: rebanada 24.
