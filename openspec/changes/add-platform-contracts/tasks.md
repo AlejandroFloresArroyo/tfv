@@ -74,4 +74,4 @@
 
 - [x] Generación de la descripción legible por máquina a partir de los esquemas de ejecución — `/openapi.json`, desde la rebanada 03
 - [x] Generación del cliente tipado a partir de esa descripción — `pnpm --filter @tfv/api contract` emite `packages/contracts/src/api.generated.ts`, 186 endpoints
-- [x] Comprobación de que no hay desfase — `apps/api/src/runtime/contract.test.ts` regenera y compara. **No hay pipeline de integración continua en este repositorio**: la comprobación corre donde corre todo, en `pnpm test`
+- [x] Comprobación de que no hay desfase — `apps/api/src/runtime/contract.test.ts` regenera y compara. Desde el 2026-08-19 corre además en integración continua, en el trabajo `pruebas` de `.github/workflows/ci.yml` (H-150)

@@ -14,7 +14,7 @@
  * Es idempotente: se puede correr sobre una base ya sembrada sin duplicar nada.
  *
  * **Sólo para desarrollo.** Las contraseñas son públicas y están escritas aquí abajo; el guion se
- * niega a correr con `NODE_ENV=production`.
+ * niega a correr con `NODE_ENV=production` salvo permiso explícito — ver `PERMISO` más abajo.
  */
 
 import { newId, PERMISSION_KEYS, type PermissionKey } from "@tfv/contracts"
@@ -49,8 +49,92 @@ import { hashPassword } from "../auth/password.ts"
 import { env } from "../env.ts"
 import { type EnsureReport, ensurePlaceholders } from "../media/placeholders.ts"
 
+/**
+ * El permiso para sembrar un entorno que corre en modo producción.
+ *
+ * ## Por qué existe el candado, y por qué existe la llave
+ *
+ * El candado es de fondo: **las contraseñas de esta siembra son públicas** —están escritas aquí
+ * abajo, y en el `README`—, así que sembrar una base que sirve a gente de verdad le regala a
+ * cualquiera cuatro cuentas, una de ellas con administración de plataforma. Por eso no basta con
+ * tener cuidado: tiene que ser difícil.
+ *
+ * La llave existe porque un entorno de ensayo **tiene que correr en modo producción o no ensaya
+ * nada**: hay comprobaciones que sólo viven ahí —`PAYMENTS_WEBHOOK_SECRET` y
+ * `DOCUMENTS_LINK_SECRET` son obligatorios; ver `env.ts`— y descubrir que faltan en producción de
+ * verdad es exactamente lo que el ensayo viene a evitar. Y un entorno de ensayo sin datos tampoco
+ * ensaya: no se puede entrar, ni mirar una colección, ni recorrer una cotización.
+ *
+ * ## Por qué esta forma y no un `--force`
+ *
+ * Un indicador de línea de órdenes se copia de un historial sin leerlo, y una variable booleana
+ * —`SEED=true`, `FORCE=1`— es de las que alguien deja puestas «para probar» y se quedan. Aquí hacen
+ * falta **dos** cosas que nadie escribe por accidente: una variable cuyo nombre dice lo que hace, y
+ * un valor literal exacto que hay que copiar a conciencia. Con la variable puesta y el valor mal, no
+ * siembra: dice que el valor no coincide.
+ *
+ * Y cuando siembra, **lo dice**: escribe en su registro a qué servidor y a qué base, con qué
+ * contraseña quedan las cuentas, y que eso es público. Un despliegue que sembró tiene que poder
+ * demostrarlo leyendo su bitácora, sin ir a mirar la base.
+ */
+const PERMISO = "TFV_SIEMBRA_EN_PRODUCCION"
+const PERMISO_VALOR = "acepto-que-las-contrasenas-son-publicas"
+
 if (env.NODE_ENV === "production") {
-  throw new Error("La siembra no se ejecuta en producción: sus contraseñas son públicas.")
+  const concedido = process.env[PERMISO]
+
+  if (concedido === undefined) {
+    throw new Error(
+      "La siembra no se ejecuta en producción: sus contraseñas son públicas y están escritas en " +
+        "el repositorio.\n\n" +
+        "Si esto es un entorno de ensayo —que corre en modo producción a propósito, para que las " +
+        "comprobaciones que sólo existen ahí se ejerzan— concede el permiso a mano:\n\n" +
+        `    ${PERMISO}=${PERMISO_VALOR}\n\n` +
+        "No lo pongas en un entorno con gente de verdad dentro: regala cuatro cuentas, una con " +
+        "administración de plataforma.",
+    )
+  }
+
+  if (concedido !== PERMISO_VALOR) {
+    throw new Error(
+      `${PERMISO} está puesta, pero su valor no coincide. Tiene que ser exactamente:\n\n` +
+        `    ${PERMISO_VALOR}\n\n` +
+        "El valor es literal a propósito: es lo que impide que este permiso se conceda copiando un " +
+        "«true» de otro sitio.",
+    )
+  }
+
+  anunciarSiembraEnProduccion()
+}
+
+/**
+ * El aviso, antes de escribir nada.
+ *
+ * Nombra el servidor y la base porque es el dato con el que alguien descubre que se equivocó de
+ * entorno, y es el único momento en que todavía se puede parar.
+ */
+function anunciarSiembraEnProduccion(): void {
+  const destino = new URL(env.DATABASE_URL)
+
+  console.warn(
+    [
+      "",
+      "  ┌──────────────────────────────────────────────────────────────────────────┐",
+      "  │  SEMBRANDO UNA BASE EN MODO PRODUCCIÓN                                   │",
+      "  └──────────────────────────────────────────────────────────────────────────┘",
+      "",
+      `  Servidor: ${destino.host}`,
+      `  Base:     ${destino.pathname.slice(1)}`,
+      "",
+      `  Permiso concedido con ${PERMISO}.`,
+      "",
+      "  Las cuatro cuentas quedan con una contraseña **pública**, escrita en el repositorio.",
+      "  Una de ellas —admin@tfv.dev— tiene administración de plataforma.",
+      "",
+      "  Si esta base sirve a gente de verdad, corta ahora.",
+      "",
+    ].join("\n"),
+  )
 }
 
 /** Contraseña única para todas las cuentas de prueba. No es un secreto y no pretende serlo. */
@@ -1389,7 +1473,7 @@ function report(
     "  ─────────────────────  ────────────────────────────────────────────",
     "  admin@tfv.dev          Administración de plataforma · las dos empresas",
     "  duena@tfv.dev          Propietaria · sólo Renta Fílmica del Norte",
-    `  almacenista@tfv.dev    Rol acotado · ${ROLES["Almacén"]?.length ?? 0} de ${PERMISSION_KEYS.length} permisos`,
+    `  almacenista@tfv.dev    Rol acotado · ${ROLES.Almacén?.length ?? 0} de ${PERMISSION_KEYS.length} permisos`,
     "  compradora@tfv.dev     Sin membresías · padrón único",
     "",
     `  Planes contratables: ${PLANS.length} (${planes} sembrados ahora; el nivel cero es el gratuito)`,

@@ -9,16 +9,9 @@
 
 import type { APIResponse, BrowserContext, Page } from "@playwright/test"
 import { expect } from "./fixtures.ts"
-
-/**
- * Reintentos de transporte para las peticiones de preparación.
- *
- * No es tapar un fallo: `maxRetries` sólo reintenta `ECONNRESET`, nunca un código de respuesta. La
- * primera ráfaga de peticiones contra una API recién arrancada se lleva alguna conexión por delante
- * —«socket hang up»— y eso tumba una prueba por algo que no tiene nada que ver con lo que viene a
- * comprobar. Lo que la prueba afirma sigue sin reintentarse.
- */
-const TRANSPORTE = { maxRetries: 3 } as const
+// La política vive en `transporte.ts` desde H-146: estaba aquí en privado y por eso las peticiones
+// de los demás archivos —y las recogidas de éste— iban sin ella.
+import { TRANSPORTE } from "./transporte.ts"
 
 export const QUOTES = (companyId: string, warehouseId: string) =>
   `/c/${companyId}/warehouses/${warehouseId}/quotes`
@@ -119,19 +112,20 @@ export async function sweep(context: BrowserContext, trash: Created[]): Promise<
     // Primero el retorno de lo que esté fuera: cancelar proyecta el inventario a disponible, y con
     // el equipo en la calle el servidor lo rechaza —con razón, porque escribiría que hay cámaras
     // en el estante que no están.
-    const out = await context.request.get(`${base}/units`)
+    const out = await context.request.get(`${base}/units`, TRANSPORTE)
     if (out.ok()) {
       const { items } = (await out.json()) as { items: { id: string; status: string }[] }
       const rented = items.filter((unit) => unit.status === "rented")
       if (rented.length > 0) {
         await context.request.post(`${base}/returns`, {
+          ...TRANSPORTE,
           data: { units: rented.map((unit) => ({ unitId: unit.id, status: "available" })) },
         })
       }
     }
 
-    await context.request.patch(`${base}/status`, { data: { status: "canceled" } })
-    await context.request.delete(base)
+    await context.request.patch(`${base}/status`, { ...TRANSPORTE, data: { status: "canceled" } })
+    await context.request.delete(base, TRANSPORTE)
   }
 }
 
@@ -191,10 +185,10 @@ export async function sweepOrders(
   for (const { companyId, warehouseId, orderId } of trash.splice(0)) {
     const warehouse = `/api/companies/${companyId}/warehouses/${warehouseId}`
 
-    const read = await context.request.get(`${warehouse}/orders/${orderId}`)
+    const read = await context.request.get(`${warehouse}/orders/${orderId}`, TRANSPORTE)
     const quoteId = read.ok() ? ((await read.json()) as { quoteId: string | null }).quoteId : null
 
-    await context.request.delete(`${warehouse}/orders/${orderId}`)
-    if (quoteId) await context.request.delete(`${warehouse}/quotes/${quoteId}`)
+    await context.request.delete(`${warehouse}/orders/${orderId}`, TRANSPORTE)
+    if (quoteId) await context.request.delete(`${warehouse}/quotes/${quoteId}`, TRANSPORTE)
   }
 }

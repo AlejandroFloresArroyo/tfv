@@ -365,7 +365,7 @@ describe("leer no implica escribir", () => {
     )
 
     const fila = await readElevated(`select username from users where id = '${seed.cliente}'`)
-    expect(fila?.["username"]).toBe("cliente")
+    expect(fila?.username).toBe("cliente")
   })
 
   it("el comprador lee su pedido", async () => {
@@ -415,7 +415,7 @@ describe("la contraparte de un documento", () => {
     )
 
     const fila = await readElevated(`select code from warehouse_orders where id = '${seed.orderA}'`)
-    expect(fila?.["code"]).toBe("PED-1")
+    expect(fila?.code).toBe("PED-1")
   })
 
   it("sí escribe en el chat, que es la única superficie donde puede", async () => {

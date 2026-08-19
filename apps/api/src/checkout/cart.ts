@@ -218,7 +218,7 @@ export async function priceCart(
     if (!measurement) throw new NotFoundError("Uno de los artículos ya no está a la venta")
 
     const detail = details.get(measurement.productId)
-    if (!detail || !detail.measurements.some((row) => row.id === measurement.id)) {
+    if (!detail?.measurements.some((row) => row.id === measurement.id)) {
       throw new NotFoundError("Uno de los artículos ya no está a la venta")
     }
 
