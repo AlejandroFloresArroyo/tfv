@@ -23,12 +23,21 @@ import {
   sessions,
   users,
 } from "@tfv/db/schema"
-import { eq, sql } from "drizzle-orm"
+import { desc, eq, sql } from "drizzle-orm"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { routes } from "../routes/index.ts"
 import { createApp } from "../runtime/app.ts"
+import { describeRoutes } from "../runtime/route.ts"
 import { recordActivity } from "./activity.ts"
-import { deliverQueued, registerTransport, requeueFailed, resetTransports } from "./delivery.ts"
+import {
+  deliverQueued,
+  RECIPIENT_SYNC,
+  type Recipient,
+  registerTransport,
+  requeueFailed,
+  resetTransports,
+  syncRecipientEverywhere,
+} from "./delivery.ts"
 
 const app = createApp(routes)
 const PASSWORD = "una-frase-larga-y-buena"
@@ -103,7 +112,8 @@ interface Asiento {
   entity: string
   entityId: string | null
   entityLabel: string
-  title: string
+  messageKey: string
+  messageParams: Record<string, string | number>
   url: string
   performedById: string | null
   performedBy: string
@@ -115,7 +125,8 @@ interface Aviso {
   id: string
   kind: string
   title: string
-  body: string
+  bodyKey: string
+  bodyParams: Record<string, string | number>
   url: string
   readAt: string | null
   archivedAt: string | null
@@ -216,8 +227,24 @@ describe("toda mutación deja un asiento", () => {
     expect(asiento?.entityId).toBe(companyId)
     expect(asiento?.performedById).toBe(duena.userId)
     expect(asiento?.performedBy).toContain("duena")
-    expect(asiento?.url).toBe(`/${companyId}`)
+    // Lo que se guarda es la clave, no la frase: no hay una sola palabra en español en el asiento.
+    expect(asiento?.messageKey).toBe("company.updated")
+    // Y la referencia lleva a una pantalla que existe, con el prefijo del panel (H-154).
+    expect(asiento?.url).toBe(`/c/${companyId}`)
     expect(new Date(asiento?.createdAt ?? 0).getTime()).toBeGreaterThanOrEqual(antes - 1000)
+  })
+
+  it("el asiento no guarda ninguna frase redactada", async () => {
+    // La comprobación de fondo de H-153: mientras hubo un campo de texto libre, lo que se guardó
+    // fue español. Ahora la única forma de decir qué pasó es una clave del catálogo.
+    const columnas = await db.execute<{ column_name: string }>(
+      sql`select column_name from information_schema.columns
+          where table_name = 'company_activities'`,
+    )
+
+    const nombres = [...columnas].map((fila) => fila.column_name)
+    expect(nombres).toContain("message_key")
+    expect(nombres).not.toContain("title")
   })
 
   it("una mutación revertida no deja rastro", async () => {
@@ -234,7 +261,7 @@ describe("toda mutación deja un asiento", () => {
           entity: "companies",
           entityId: companyId,
           entityLabel: "Casa de Renta",
-          title: "Algo que va a fallar",
+          message: { key: "company.updated", params: {} },
           performedById: duena.userId,
         })
         throw new Error("la mutación falla después de escribir")
@@ -313,7 +340,7 @@ describe("la audiencia sale del permiso", () => {
         entity: "companies",
         entityId: companyId,
         entityLabel: "Casa de Renta",
-        title: "Algo que exige dos claves",
+        message: { key: "company.updated", params: {} },
         permissions: ["companies.companies.edit", "companies.roles.edit"],
         performedById: duena.userId,
       }),
@@ -327,6 +354,14 @@ describe("la audiencia sale del permiso", () => {
 
 async function limpiarEntregas() {
   await db.execute(sql`truncate table ${notificationDeliveries} cascade`)
+}
+
+/** Los trabajos de sincronización de destinatario que hay encolados ahora mismo. */
+async function trabajosDeSincronizacion() {
+  return db
+    .select({ payload: backgroundJobs.payload })
+    .from(backgroundJobs)
+    .where(eq(backgroundJobs.kind, RECIPIENT_SYNC))
 }
 
 // ─── Bandeja ─────────────────────────────────────────────────────────────────
@@ -348,7 +383,7 @@ describe("la bandeja", () => {
 
     expect(page.totalItems).toBe(3)
     expect(page.items[0]?.kind).toBe("activity")
-    expect(page.items[0]?.url).toBe(`/${companyId}`)
+    expect(page.items[0]?.url).toBe(`/c/${companyId}`)
 
     const counts = await json<{ unread: number; news: number }>(
       await request("GET", "/me/notifications/counts", undefined, conPermiso.cookie),
@@ -594,6 +629,135 @@ describe("la entrega", () => {
   })
 })
 
+// ─── El destinatario, ante el proveedor ──────────────────────────────────────
+
+describe("el destinatario se da de alta y se mantiene al día", () => {
+  it("el primer envío lo crea, y no hace falta darlo de alta antes", async () => {
+    // Escenario: «El primer envío crea al destinatario». Lo que se comprueba es el **orden**: el
+    // alta va antes del envío, porque un proveedor que no conoce al destinatario no puede
+    // entregarle nada.
+    await limpiarEntregas()
+    resetTransports()
+
+    const orden: string[] = []
+    const altas: Recipient[] = []
+
+    registerTransport("push", {
+      send: async () => void orden.push("envío"),
+      syncRecipient: async (recipient) => {
+        orden.push("alta")
+        altas.push(recipient)
+      },
+    })
+
+    await request("PATCH", `/companies/${companyId}`, { description: "Primer envío" }, duena.cookie)
+    await deliverQueued()
+    const report = await deliverQueued()
+
+    expect(orden[0]).toBe("alta")
+    expect(orden).toContain("envío")
+    expect(report.introduced).toBeGreaterThan(0)
+    expect(altas[0]?.email).toBeTruthy()
+
+    resetTransports()
+  })
+
+  it("y no se le da de alta una vez por aviso", async () => {
+    // Tres avisos a la misma persona son un alta, no tres: repetirla por fila convertiría una tanda
+    // en una ráfaga de llamadas idénticas al proveedor.
+    await limpiarEntregas()
+    resetTransports()
+
+    const altas: string[] = []
+    registerTransport("push", {
+      send: async () => {},
+      syncRecipient: async (recipient) => void altas.push(recipient.userId),
+    })
+
+    for (const texto of ["Uno", "Dos", "Tres"]) {
+      await request("PATCH", `/companies/${companyId}`, { description: texto }, duena.cookie)
+    }
+
+    await deliverQueued()
+    await deliverQueued()
+
+    expect(altas.filter((userId) => userId === conPermiso.userId)).toHaveLength(1)
+
+    resetTransports()
+  })
+
+  it("un canal sin alta que ofrecer entrega igual", async () => {
+    // `syncRecipient` es opcional: la bandeja escribe en una fila nuestra y no tiene a quién
+    // presentar. Exigirlo obligaría a todo transporte a escribir un método vacío.
+    await limpiarEntregas()
+    resetTransports()
+
+    const enviadas: string[] = []
+    registerTransport("push", { send: async (d) => void enviadas.push(d.id) })
+
+    await request("PATCH", `/companies/${companyId}`, { description: "Sin alta" }, duena.cookie)
+    await deliverQueued()
+    const report = await deliverQueued()
+
+    expect(enviadas.length).toBeGreaterThan(0)
+    expect(report.introduced).toBe(0)
+
+    resetTransports()
+  })
+
+  it("cambiar el correo del perfil se propaga a los proveedores", async () => {
+    // Escenario: «Cambiar el nombre se propaga». Hoy el único dato del perfil que la API deja
+    // cambiar es el correo, y llega por su enlace de verificación: es el cambio de perfil que
+    // existe, y es el que se comprueba.
+    resetTransports()
+
+    const sincronizados: Recipient[] = []
+    registerTransport("email", {
+      send: async () => {},
+      syncRecipient: async (recipient) => void sincronizados.push(recipient),
+    })
+
+    const nuevo = `nueva-${newId().slice(-8)}@ejemplo.mx`
+    const solicitud = await request(
+      "POST",
+      "/auth/change-email",
+      { newEmail: nuevo },
+      sinPermiso.cookie,
+    )
+    expect(solicitud.status).toBe(200)
+
+    // Pedirlo **no** cambia nada todavía, así que tampoco hay nada que sincronizar.
+    expect(await trabajosDeSincronizacion()).toHaveLength(0)
+
+    const [enlace] = await db
+      .select({ payload: notificationDeliveries.payload })
+      .from(notificationDeliveries)
+      .where(eq(notificationDeliveries.kind, "email_change_verification"))
+      .orderBy(desc(notificationDeliveries.createdAt))
+      .limit(1)
+
+    const token = (enlace?.payload as { token?: string } | undefined)?.token
+    expect(token).toBeTruthy()
+
+    const confirmacion = await request("POST", "/auth/verify-email", { token }, sinPermiso.cookie)
+    expect(confirmacion.status).toBe(200)
+
+    // Confirmarlo sí: el trabajo queda encolado por el hecho de cambiar el perfil, no por un
+    // temporizador que pregunte de vez en cuando si alguien cambió algo.
+    const encolados = await trabajosDeSincronizacion()
+    expect(encolados).toHaveLength(1)
+    expect((encolados[0]?.payload as { userId?: string } | undefined)?.userId).toBe(
+      sinPermiso.userId,
+    )
+
+    // Y al correrlo, el proveedor recibe la dirección nueva.
+    await syncRecipientEverywhere(sinPermiso.userId)
+    expect(sincronizados.at(-1)?.email).toBe(nuevo)
+
+    resetTransports()
+  })
+})
+
 // ─── Sin credenciales ────────────────────────────────────────────────────────
 
 describe("ninguna carga útil lleva una contraseña", () => {
@@ -743,7 +907,8 @@ describe("los dispositivos de empuje", () => {
 
 describe("el texto del aviso", () => {
   it("no arrastra marcado", async () => {
-    // Escenario: «El texto no arrastra marcado».
+    // Escenario: «El texto no arrastra marcado». Con el cuerpo hecho de clave y huecos, el marcado
+    // sólo puede entrar **por los huecos**, así que es cada parámetro el que se sanea.
     await limpiarEntregas()
 
     await withRequester(duena, (tx) =>
@@ -753,7 +918,7 @@ describe("el texto del aviso", () => {
         entity: "companies",
         entityId: companyId,
         entityLabel: "<b>Casa</b> de Renta",
-        title: "Editó <script>alert(1)</script>la ficha",
+        message: { key: "member.invited", params: { email: "<b>quien@ejemplo.mx</b>" } },
         permissions: ["companies.companies.edit"],
         performedById: duena.userId,
       }),
@@ -764,7 +929,93 @@ describe("el texto del aviso", () => {
     )
 
     expect(page.items[0]?.title).toBe("Casa de Renta")
-    // El cuerpo dice quién hizo qué, y lo dice sin marcado.
-    expect(page.items[0]?.body).toBe("duena editó alert(1) la ficha")
+    expect(page.items[0]?.bodyParams.email).toBe("quien@ejemplo.mx")
+  })
+})
+
+// ─── Título, cuerpo y referencia ─────────────────────────────────────────────
+
+describe("el aviso lleva título, cuerpo y referencia", () => {
+  it("el nombre de la entidad, quién hizo qué, y a dónde ir", async () => {
+    // Requisito «El aviso resume la actividad»: «un título con el nombre de la entidad afectada, un
+    // cuerpo que indique quién hizo qué, y una referencia que lleve a la entidad al pulsarla».
+    await limpiarEntregas()
+
+    await request("PATCH", `/companies/${companyId}`, { description: "Con sobre" }, duena.cookie)
+
+    const page = await json<Page<Aviso>>(
+      await request("GET", "/me/notifications", undefined, conPermiso.cookie),
+    )
+
+    const aviso = page.items[0]
+    expect(aviso?.title).toBe("Casa de Renta")
+    expect(aviso?.bodyKey).toBe("company.updated")
+    // «Quién»: el nombre viaja **en el sobre** porque el sobre acaba lejos de la fila que lo diría.
+    expect(aviso?.bodyParams.actor).toContain("duena")
+    expect(aviso?.url).toBe(`/c/${companyId}`)
+  })
+
+  it("y la referencia de una membresía lleva a la pantalla de miembros", async () => {
+    // La que se guardaba era `/{companyId}/miembros`, que no existe en ninguna parte (H-154).
+    await limpiarEntregas()
+
+    const invitada = await signUp("invitada")
+    await request(
+      "POST",
+      `/companies/${companyId}/members`,
+      { email: invitada.email },
+      duena.cookie,
+    )
+
+    const page = await json<Page<Aviso>>(
+      await request("GET", "/me/notifications", undefined, otraDuena.cookie),
+    )
+
+    const aviso = page.items.find((item) => item.bodyKey === "member.invited")
+    expect(aviso?.url).toBe(`/c/${companyId}/settings/members`)
+    expect(aviso?.bodyParams.email).toBe(invitada.email)
+  })
+
+  it("ninguna referencia de la bitácora apunta fuera del panel", async () => {
+    // El defecto no era una dirección concreta: era que nadie comprobaba a dónde llevaban. Esto lo
+    // comprueba de todas a la vez, y seguirá comprobándolo de las que vengan.
+    const page = await json<Page<Asiento>>(
+      await request("GET", `/companies/${companyId}/activity?limit=100`, undefined, duena.cookie),
+    )
+
+    expect(page.items.length).toBeGreaterThan(0)
+    for (const asiento of page.items) {
+      expect(asiento.url, asiento.messageKey).toMatch(new RegExp(`^/c/${companyId}(/|$)`))
+      expect(asiento.url).not.toContain("undefined")
+    }
+  })
+})
+
+// ─── Retirada de alcance ─────────────────────────────────────────────────────
+
+describe("la administración de plantillas de notificación no existe", () => {
+  it("ninguna ruta la expone", () => {
+    // `project.md` D-09: era una herramienta de administración **expuesta sin autenticación** que
+    // operaba sobre la cuenta real del proveedor. No se reimplementa, y el delta `REMOVED` de esta
+    // rebanada lo deja escrito.
+    //
+    // Comprobarlo con una prueba y no con una frase es la diferencia entre retirar algo y decir que
+    // se retiró: la pila nueva nunca lo tuvo, así que lo único que puede fallar es que **vuelva**.
+    const rutas = describeRoutes()
+
+    expect(rutas.length).toBeGreaterThan(0)
+    for (const ruta of rutas) {
+      expect(ruta.path, ruta.summary).not.toMatch(/template|plantilla/i)
+    }
+  })
+
+  it("y ninguna superficie de avisos queda abierta sin credencial", () => {
+    // Lo que hacía peligrosa a aquella herramienta no era administrar plantillas: era hacerlo sin
+    // pedir nada. Esto vigila la propiedad, no el nombre.
+    const abiertas = describeRoutes()
+      .filter((ruta) => /notification|push-devices/.test(ruta.path))
+      .filter((ruta) => ruta.access.startsWith("público"))
+
+    expect(abiertas).toEqual([])
   })
 })

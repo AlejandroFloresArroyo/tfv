@@ -539,10 +539,7 @@ describe("lo acuñado que todavía no ha llegado", () => {
       code: `ACU-${id.slice(-6)}`,
       createdByReservation: true,
     })
-    const [row] = await db
-      .select()
-      .from(warehouseStockUnits)
-      .where(eq(warehouseStockUnits.id, id))
+    const [row] = await db.select().from(warehouseStockUnits).where(eq(warehouseStockUnits.id, id))
     return row as unknown as Unit
   }
 

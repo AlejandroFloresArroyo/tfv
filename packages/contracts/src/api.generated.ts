@@ -312,7 +312,8 @@ export interface ApiEndpoints {
         entity: string
         entityId: string | null
         entityLabel: string
-        title: string
+        messageKey: string
+        messageParams: Record<string, string | number>
         description: string
         url: string
         origin: string
@@ -7005,7 +7006,8 @@ export interface ApiEndpoints {
         entity: string
         entityId: string | null
         entityLabel: string
-        title: string
+        messageKey: string
+        messageParams: Record<string, string | number>
         description: string
         url: string
         origin: string
@@ -7278,7 +7280,8 @@ export interface ApiEndpoints {
         id: string
         kind: string
         title: string
-        body: string
+        bodyKey: string
+        bodyParams: Record<string, string | number>
         url: string
         readAt: string | null
         archivedAt: string | null
@@ -7323,7 +7326,8 @@ export interface ApiEndpoints {
       id: string
       kind: string
       title: string
-      body: string
+      bodyKey: string
+      bodyParams: Record<string, string | number>
       url: string
       readAt: string | null
       archivedAt: string | null
@@ -7343,7 +7347,8 @@ export interface ApiEndpoints {
       id: string
       kind: string
       title: string
-      body: string
+      bodyKey: string
+      bodyParams: Record<string, string | number>
       url: string
       readAt: string | null
       archivedAt: string | null

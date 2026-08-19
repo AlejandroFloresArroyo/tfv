@@ -188,7 +188,11 @@ describe("la verificación de coherencia de existencias", () => {
 
     expect(avisos).toHaveLength(1)
     expect(avisos[0]?.kind).toBe("stock_coherence")
-    expect(avisos[0]?.payload.body).toContain("1 unidad descuadrada")
+    // Clave y parámetros, no una frase: el plural y el idioma los pone quien lo lee (H-153).
+    expect(avisos[0]?.payload.bodyKey).toBe("stock.incoherent")
+    expect(avisos[0]?.payload.bodyParams).toEqual({ count: 1 })
+    // Y la dirección lleva a una pantalla del panel, no a `/{companyId}/…` (H-154).
+    expect(avisos[0]?.payload.url).toMatch(/^\/c\/[^/]+\/warehouses\/[^/]+$/)
   })
 
   it("con el inventario cuadrado no avisa a nadie", async () => {

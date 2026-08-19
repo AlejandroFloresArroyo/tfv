@@ -74,7 +74,9 @@ const activitySchema = z.object({
   entity: z.string(),
   entityId: z.string().nullable(),
   entityLabel: z.string(),
-  title: z.string(),
+  /** Qué se hizo, como clave del catálogo. La frase la arma quien la enseña (H-153). */
+  messageKey: z.string(),
+  messageParams: z.record(z.string(), z.union([z.string(), z.number()])),
   description: z.string(),
   url: z.string(),
   origin: z.string(),
@@ -94,7 +96,8 @@ function serializeActivity(activity: ActivityRecord) {
     entity: activity.entity,
     entityId: activity.entityId,
     entityLabel: activity.entityLabel,
-    title: activity.title,
+    messageKey: activity.messageKey,
+    messageParams: activity.messageParams,
     description: activity.description,
     url: activity.url,
     origin: activity.origin,
@@ -109,8 +112,11 @@ function serializeActivity(activity: ActivityRecord) {
 const notificationSchema = z.object({
   id: z.string(),
   kind: z.string(),
+  /** El nombre de la entidad afectada. */
   title: z.string(),
-  body: z.string(),
+  /** Quién hizo qué, como clave y parámetros: el idioma lo pone quien lo lee. */
+  bodyKey: z.string(),
+  bodyParams: z.record(z.string(), z.union([z.string(), z.number()])),
   url: z.string(),
   readAt: z.string().nullable(),
   archivedAt: z.string().nullable(),
@@ -122,7 +128,8 @@ function serializeNotification(item: InboxItem) {
     id: item.id,
     kind: item.kind,
     title: item.title,
-    body: item.body,
+    bodyKey: item.bodyKey,
+    bodyParams: item.bodyParams,
     url: item.url,
     readAt: toNullableInstant(item.readAt),
     archivedAt: toNullableInstant(item.archivedAt),
