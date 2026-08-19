@@ -25,11 +25,37 @@ test.describe("tema", () => {
 
     expect(html, "el servidor tiene que mandar ya la clase del tema").toContain('class="dark"')
 
-    // Y el fondo pintado corresponde al tema oscuro, no al claro.
-    const background = await page
-      .locator("body")
-      .evaluate((el) => getComputedStyle(el).backgroundColor)
-    expect(background).toBe("rgb(30, 30, 30)")
+    /**
+     * Y el fondo pintado es el del tema oscuro, no el del claro.
+     *
+     * **Sin nombrar el color.** Antes esta línea afirmaba un `rgb()` literal, y con eso la prueba
+     * quedaba de rehén de la paleta: el rediseño del 2026-08-19 cambió el fondo oscuro y la tumbó
+     * sin que nada del comportamiento se hubiera roto. El nombre de la prueba dice «sin destello»,
+     * así que lo que tiene que afirmar es **cuál de los dos temas se pintó**, no de qué color es.
+     *
+     * Se compara consigo misma: el fondo con la clase puesta contra el fondo sin ella. Si el tema
+     * oscuro está en efecto son distintos, y además el oscuro es más oscuro — que es lo que impide
+     * que dos tonos claros cualesquiera satisfagan la comparación.
+     */
+    const luminancia = (color: string): number => {
+      const [r, g, b] = color.match(/\d+/g)?.map(Number) ?? [0, 0, 0]
+      return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0)
+    }
+
+    const fondos = await page.evaluate(() => {
+      const raiz = document.documentElement
+      const leer = () => getComputedStyle(document.body).backgroundColor
+      const oscuro = leer()
+      raiz.classList.remove("dark")
+      const claro = leer()
+      raiz.classList.add("dark")
+      return { oscuro, claro }
+    })
+
+    expect(fondos.oscuro, "el tema oscuro tiene que pintar distinto del claro").not.toBe(
+      fondos.claro,
+    )
+    expect(luminancia(fondos.oscuro)).toBeLessThan(luminancia(fondos.claro))
 
     await context.close()
   })
