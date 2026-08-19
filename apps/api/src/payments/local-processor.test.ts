@@ -115,9 +115,11 @@ async function newCompany(cookie: string, name = "Casa de Renta"): Promise<strin
  * Reutilizarlo importa: el producto externo es único por nivel —es de donde el suplente saca el
  * precio— y dos empresas contratando el mismo plan es el caso normal, no una excepción.
  */
-async function newPlan(tier: number, title: string): Promise<string> {
-  const externalProductId = `local_plan_${tier}`
-
+async function newPlan(
+  tier: number,
+  title: string,
+  externalProductId = `local_plan_${tier}`,
+): Promise<string> {
   const [existing] = await db
     .select({ id: subscriptionPlans.id })
     .from(subscriptionPlans)
@@ -211,6 +213,45 @@ describe("la sesión de pago del suplente", () => {
   it("una sesión que no existe responde 404", async () => {
     const response = await app.request("/payments/local/checkouts/local_cs_inventada")
     expect(response.status).toBe(404)
+  })
+})
+
+// ─── El precio del suplente ──────────────────────────────────────────────────
+
+describe("el precio que pone el suplente", () => {
+  it("sale del nivel del plan, no de cómo esté escrita la referencia del producto", async () => {
+    // Los planes que siembra la instalación se llaman `local_plan_casa` y `local_plan_productora`:
+    // su referencia **no lleva el nivel escrito**. Deduciéndolo de la referencia, los tres planes
+    // salían a cero y la pantalla ofrecía de balde el catálogo entero.
+    const cookie = await signUp("suplente-precio@ejemplo.mx")
+    await newPlan(1, "Casa de renta", "local_plan_casa")
+
+    const body = await json<{ items: { title: string; prices: { unitAmount: string }[] }[] }>(
+      await request("GET", "/plans", undefined, cookie),
+    )
+
+    const mensual = body.items[0]?.prices.find((price) => price.unitAmount !== undefined)
+    expect(mensual?.unitAmount).toBe("349.00")
+  })
+
+  it("y con él se cobra el primer periodo", async () => {
+    const cookie = await signUp("suplente-precio-cobro@ejemplo.mx")
+    const companyId = await newCompany(cookie)
+    const planId = await newPlan(1, "Casa de renta", "local_plan_casa")
+
+    const result = await json<{ url: string }>(
+      await request(
+        "POST",
+        `/companies/${companyId}/subscription`,
+        { planId, interval: "month", seats: 3 },
+        cookie,
+      ),
+    )
+
+    await app.request(`/payments/local/checkouts/${sessionOf(result.url)}/pay`, { method: "POST" })
+
+    const [cobro] = await db.select().from(subscriptionPayments)
+    expect(cobro?.amount).toBe("1047.00")
   })
 })
 

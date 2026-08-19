@@ -73,6 +73,52 @@ export function localUnitAmount(tier: number, interval: BillingInterval): Money 
   return interval === "year" ? ((perMonth * 10n) as Money) : perMonth
 }
 
+/**
+ * El nivel del plan al que corresponde un producto del suplente.
+ *
+ * **Se lee del catálogo, no de cómo esté escrita la referencia.** Deducirlo del nombre —los dígitos
+ * del final— parecía suficiente hasta que se miró qué siembra la instalación: `local_plan_casa` y
+ * `local_plan_productora` no llevan ningún número, así que los tres planes salían a cero y la
+ * pantalla ofrecía de balde el catálogo entero. Ver `HALLAZGOS.md` H-165.
+ *
+ * Que el suplente sepa cuánto vale su producto no es hacer trampa: el procesador de verdad lo sabe
+ * porque el producto está dado de alta en su lado con su precio. Aquí el catálogo es lo más
+ * parecido a eso que hay.
+ *
+ * Los dígitos finales quedan como recurso último, para un producto que no esté en el catálogo.
+ */
+async function tierOfProduct(externalProductId: string): Promise<number> {
+  const [plan] = await db
+    .select({ tier: subscriptionPlans.tier })
+    .from(subscriptionPlans)
+    .where(eq(subscriptionPlans.externalProductId, externalProductId))
+    .limit(1)
+
+  if (plan) return plan.tier
+  return Number(externalProductId.replace(/^\D+/, "")) || 0
+}
+
+/** Los precios que el suplente publica de un producto: una periodicidad, un precio. */
+export async function localPrices(externalProductId: string): Promise<
+  readonly {
+    id: string
+    interval: BillingInterval
+    intervalCount: number
+    unitAmount: string
+    currency: string
+  }[]
+> {
+  const tier = await tierOfProduct(externalProductId)
+
+  return (["month", "year"] as const).map((interval) => ({
+    id: `local_price_${tier}_${interval}`,
+    interval,
+    intervalCount: 1,
+    unitAmount: formatMoney(localUnitAmount(tier, interval)),
+    currency: "MXN",
+  }))
+}
+
 /** El nivel y la periodicidad que lleva dentro una referencia de precio del suplente. */
 function readPrice(priceId: string): { tier: number; interval: BillingInterval } {
   const [, , tier, interval] = priceId.split("_")

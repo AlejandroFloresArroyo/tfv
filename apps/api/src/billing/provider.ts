@@ -28,9 +28,9 @@
  * producción y no está haciendo nada.
  */
 
-import { DomainError, formatMoney } from "@tfv/contracts"
+import { DomainError } from "@tfv/contracts"
 import type { BillingInterval } from "@tfv/contracts/billing"
-import { localSnapshot, localUnitAmount, openLocalCheckout } from "../payments/local-processor.ts"
+import { localPrices, localSnapshot, openLocalCheckout } from "../payments/local-processor.ts"
 
 // ─── Lo que el dominio necesita saber ────────────────────────────────────────
 
@@ -213,16 +213,7 @@ export function localProvider(now: () => Date = () => new Date()): PaymentProvid
   return {
     name: "local",
 
-    listPrices: async (externalProductId) => {
-      const tier = Number(externalProductId.replace(/^\D+/, "")) || 0
-      return (["month", "year"] as const).map((interval) => ({
-        id: `local_price_${tier}_${interval}`,
-        interval,
-        intervalCount: 1,
-        unitAmount: formatMoney(localUnitAmount(tier, interval)),
-        currency: "MXN",
-      }))
-    },
+    listPrices: async (externalProductId) => localPrices(externalProductId),
 
     /**
      * Abre la sesión y devuelve **la página del suplente**, no la de vuelta.
