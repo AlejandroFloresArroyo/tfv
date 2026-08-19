@@ -1430,3 +1430,110 @@ describe("la estructura de una producción", () => {
     expect(await response.text()).toContain("productions.scenes.view")
   })
 })
+
+// ─── Las dos referencias heredadas ───────────────────────────────────────────
+
+/** Las claves foráneas reales, leídas del catálogo del motor y no del código que las declara. */
+async function foreignKeys(table: string) {
+  const rows = await db.execute(sql`
+    select
+      con.conname            as name,
+      src.relname            as source_table,
+      tgt.relname            as target_table,
+      (
+        select string_agg(att.attname, ',' order by att.attnum)
+        from unnest(con.conkey) as k(attnum)
+        join pg_attribute att on att.attrelid = con.conrelid and att.attnum = k.attnum
+      )                      as source_columns
+    from pg_constraint con
+    join pg_class src on src.oid = con.conrelid
+    join pg_class tgt on tgt.oid = con.confrelid
+    where con.contype = 'f' and (src.relname = ${table} or tgt.relname = ${table})
+    order by con.conname
+  `)
+
+  return rows as unknown as {
+    name: string
+    source_table: string
+    target_table: string
+    source_columns: string
+  }[]
+}
+
+/** Las columnas de una tabla, del catálogo. */
+async function columnsOf(table: string): Promise<string[]> {
+  const rows = await db.execute(sql`
+    select column_name from information_schema.columns
+    where table_schema = 'public' and table_name = ${table}
+    order by column_name
+  `)
+
+  return (rows as unknown as { column_name: string }[]).map((row) => row.column_name)
+}
+
+describe("las dos referencias heredadas del desglose", () => {
+  it("R-08 · la única referencia hacia un capítulo es la de sus escenas", async () => {
+    // `DEFECTS.md` R-08: «`productions_..._chapter.warehouseOrders` → apunta a la colección
+    // equivocada», y debía apuntar a las escenas. Se comprueba contra el **catálogo del motor**,
+    // que es donde vive la verdad sobre a qué apunta una referencia: el código que la declara es
+    // justamente lo que R-08 dice que estaba mal. Ver `HALLAZGOS.md` H-177.
+    const links = await foreignKeys("production_chapters")
+
+    const incoming = links.filter((row) => row.target_table === "production_chapters")
+    expect(incoming).toHaveLength(1)
+    expect(incoming[0]?.source_table).toBe("production_scenes")
+    expect(incoming[0]?.source_columns).toBe("chapter_id")
+
+    // Y ninguna referencia del capítulo lleva a órdenes de almacén, que es a donde apuntaba.
+    const outgoing = links.filter((row) => row.source_table === "production_chapters")
+    expect(outgoing.map((row) => row.target_table).sort()).toEqual([
+      "production_scripts",
+      "productions",
+      "users",
+    ])
+    expect(outgoing.some((row) => row.target_table.startsWith("warehouse"))).toBe(false)
+
+    // Y el capítulo no conserva ninguna columna con ese nombre.
+    const columns = await columnsOf("production_chapters")
+    expect(columns.some((name) => name.includes("warehouse") || name.includes("order"))).toBe(false)
+  })
+
+  it("R-09 · las notas y los comentarios son tablas con clave foránea, no campos derivados", async () => {
+    // `DEFECTS.md` R-09: «`..._recording_notes.notes`, `..._workflow_coments.coments` → campos
+    // derivados hacia colecciones inexistentes». En el modelo nuevo lo derivado es una tabla: las
+    // notas cuelgan de la jornada y los comentarios del plan, con su clave foránea de verdad.
+    // Ver `HALLAZGOS.md` H-178.
+    const noteColumns = await columnsOf("production_recording_notes")
+    expect(noteColumns).toContain("recording_id")
+    expect(noteColumns).toContain("body")
+    // El campo derivado que apuntaba a ninguna parte ya no existe.
+    expect(noteColumns).not.toContain("notes")
+
+    const noteLinks = await foreignKeys("production_recording_notes")
+    expect(
+      noteLinks.some(
+        (row) =>
+          row.source_table === "production_recording_notes" &&
+          row.target_table === "production_recordings" &&
+          row.source_columns === "recording_id",
+      ),
+    ).toBe(true)
+
+    // La tabla mal nombrada no existe; los comentarios de plan y de tarea son una sola, con las
+    // dos claves foráneas reales.
+    const misspelled = await columnsOf("production_workflow_coments")
+    expect(misspelled).toEqual([])
+
+    const commentColumns = await columnsOf("production_comments")
+    expect(commentColumns).toContain("workflow_id")
+    expect(commentColumns).toContain("task_id")
+    expect(commentColumns).not.toContain("coments")
+
+    const commentLinks = await foreignKeys("production_comments")
+    const targets = commentLinks
+      .filter((row) => row.source_table === "production_comments")
+      .map((row) => row.target_table)
+      .sort()
+    expect(targets).toEqual(["production_tasks", "production_workflows", "users"])
+  })
+})
