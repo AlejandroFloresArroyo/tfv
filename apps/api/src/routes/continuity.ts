@@ -28,14 +28,18 @@ import { toInstant } from "@tfv/contracts"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import {
+  assignCharacters,
   closeRecording,
+  createContinuity,
   createRecording,
+  deleteContinuity,
   getRecording,
   listRecordings,
   openRecording,
   RECORDING_KINDS,
   RECORDING_STATUSES,
   recordingQuery,
+  setContinuityCharacter,
   updateRecording,
 } from "../productions/continuity.ts"
 import { defineRoute, REQUIRES } from "../runtime/route.ts"
@@ -46,6 +50,7 @@ import { collectionQuery, pageSchema, queryOf, serializePage } from "./paginatio
 const companyParams = z.object({ companyId: z.string() })
 const productionParams = companyParams.extend({ productionId: z.string() })
 const recordingParams = productionParams.extend({ recordingId: z.string() })
+const continuityParams = recordingParams.extend({ continuityId: z.string() })
 
 const nameField = z.string().trim().min(1, "El nombre es obligatorio").max(250)
 
@@ -63,13 +68,39 @@ const recordingSchema = z.object({
   updatedAt: z.string(),
 })
 
+const continuitySchema = z.object({
+  id: z.string(),
+  recordingId: z.string(),
+  characterId: z.string().nullable(),
+  characterName: z.string().nullable(),
+  responsibleId: z.string().nullable(),
+  responsibleName: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+const recordingDetailSchema = recordingSchema.extend({
+  continuities: z.array(continuitySchema),
+})
+
 function actorOf(c: Parameters<Parameters<typeof defineRoute>[0]["handler"]>[0]): Actor {
   const session = requireSession(c)
   return { userId: session.userId, sessionId: session.sessionId }
 }
 
-function serializeRecording(row: Awaited<ReturnType<typeof getRecording>>) {
+function serializeRecording(row: Awaited<ReturnType<typeof createRecording>>) {
   return { ...row, createdAt: toInstant(row.createdAt), updatedAt: toInstant(row.updatedAt) }
+}
+
+function serializeContinuity(row: Awaited<ReturnType<typeof createContinuity>>) {
+  return { ...row, createdAt: toInstant(row.createdAt), updatedAt: toInstant(row.updatedAt) }
+}
+
+function serializeDetail(row: Awaited<ReturnType<typeof getRecording>>) {
+  return {
+    ...serializeRecording(row),
+    continuities: row.continuities.map(serializeContinuity),
+  }
 }
 
 // ─── Jornadas de rodaje ──────────────────────────────────────────────────────
@@ -153,8 +184,8 @@ export const getRecordingRoute = defineRoute({
     request: { params: recordingParams },
     responses: {
       200: {
-        description: "La jornada",
-        content: { "application/json": { schema: recordingSchema } },
+        description: "La jornada, con sus continuidades",
+        content: { "application/json": { schema: recordingDetailSchema } },
       },
       404: { description: "No existe, o está fuera del alcance del solicitante" },
     },
@@ -167,7 +198,7 @@ export const getRecordingRoute = defineRoute({
       params.productionId,
       params.recordingId,
     )
-    return c.json(serializeRecording(recording), 200)
+    return c.json(serializeDetail(recording), 200)
   },
 })
 
@@ -273,5 +304,157 @@ export const openRecordingRoute = defineRoute({
       params.recordingId,
     )
     return c.json(serializeRecording(recording), 200)
+  },
+})
+
+// ─── El reparto de la jornada ────────────────────────────────────────────────
+
+export const assignCharactersRoute = defineRoute({
+  access: REQUIRES("productions.recordings.characters"),
+  config: {
+    method: "post",
+    path: "/companies/{companyId}/productions/{productionId}/recordings/{recordingId}/characters",
+    summary: "Asignar personajes a una jornada de rodaje",
+    tags: ["Continuidad"],
+    request: {
+      params: recordingParams,
+      body: {
+        content: {
+          "application/json": {
+            schema: z.object({ characterIds: z.array(z.string()).max(500) }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "La jornada en curso, con una continuidad por personaje",
+        content: { "application/json": { schema: recordingDetailSchema } },
+      },
+      404: { description: "La jornada no existe, o alguno de los personajes no es suyo" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const recording = await assignCharacters(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.recordingId,
+      c.req.valid("json").characterIds,
+    )
+    return c.json(serializeDetail(recording), 200)
+  },
+})
+
+// ─── Continuidades ───────────────────────────────────────────────────────────
+
+export const createContinuityRoute = defineRoute({
+  access: REQUIRES("productions.continuities.create"),
+  config: {
+    method: "post",
+    path: "/companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities",
+    summary: "Abrir una continuidad en una jornada",
+    tags: ["Continuidad"],
+    request: {
+      params: recordingParams,
+      body: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              characterId: z.string().nullable().optional(),
+              responsibleId: z.string().nullable().optional(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "Continuidad abierta. Sin personaje si no se indicó ninguno",
+        content: { "application/json": { schema: continuitySchema } },
+      },
+      404: { description: "La jornada no existe, o el personaje no es de esta producción" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const continuity = await createContinuity(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.recordingId,
+      c.req.valid("json"),
+    )
+    return c.json(serializeContinuity(continuity), 201)
+  },
+})
+
+/**
+ * Poner o retirar el personaje.
+ *
+ * Clave propia —`productions.continuities.character`— porque decidir a quién pertenece lo que se
+ * registró es una decisión distinta de registrarlo.
+ */
+export const setContinuityCharacterRoute = defineRoute({
+  access: REQUIRES("productions.continuities.character"),
+  config: {
+    method: "put",
+    path: "/companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities/{continuityId}/character",
+    summary: "Poner o retirar el personaje de una continuidad",
+    tags: ["Continuidad"],
+    request: {
+      params: continuityParams,
+      body: {
+        content: {
+          "application/json": { schema: z.object({ characterId: z.string().nullable() }) },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "La continuidad. Sigue existiendo aunque se le retire el personaje",
+        content: { "application/json": { schema: continuitySchema } },
+      },
+      404: { description: "No existe, o el personaje no es de esta producción" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const continuity = await setContinuityCharacter(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.recordingId,
+      params.continuityId,
+      c.req.valid("json").characterId,
+    )
+    return c.json(serializeContinuity(continuity), 200)
+  },
+})
+
+export const deleteContinuityRoute = defineRoute({
+  access: REQUIRES("productions.continuities.delete"),
+  config: {
+    method: "delete",
+    path: "/companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities/{continuityId}",
+    summary: "Eliminar una continuidad",
+    tags: ["Continuidad"],
+    request: { params: continuityParams },
+    responses: {
+      204: { description: "Eliminada, con su utilería. Los artículos y los videos siguen ahí" },
+      404: { description: "No existe, o está fuera del alcance del solicitante" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    await deleteContinuity(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.recordingId,
+      params.continuityId,
+    )
+    return c.body(null, 204)
   },
 })

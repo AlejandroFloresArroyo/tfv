@@ -104,11 +104,15 @@ import {
   updateRoleRoute,
 } from "./companies.ts"
 import {
+  assignCharactersRoute,
   closeRecordingRoute,
+  createContinuityRoute,
   createRecordingRoute,
+  deleteContinuityRoute,
   getRecordingRoute,
   listRecordingsRoute,
   openRecordingRoute,
+  setContinuityCharacterRoute,
   updateRecordingRoute,
 } from "./continuity.ts"
 import {
@@ -572,8 +576,13 @@ export const routes: readonly RegisteredRoute[] = [
   createRecordingRoute,
   getRecordingRoute,
   updateRecordingRoute,
+  assignCharactersRoute,
   closeRecordingRoute,
   openRecordingRoute,
+
+  createContinuityRoute,
+  setContinuityCharacterRoute,
+  deleteContinuityRoute,
 
   // Pendiente: guion, capítulos y escenas (21); inventario, entregas y presupuesto (22); compras
   // a almacenes (23). Las tablas existen desde la `0002` y el panel ya las cuenta.

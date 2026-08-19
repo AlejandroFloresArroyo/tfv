@@ -57,6 +57,7 @@ import {
 import { type Transaction, withRequester } from "@tfv/db"
 import {
   productionChapters,
+  productionCharacters,
   productionContinuities,
   productionRecordings,
   productionScenes,
@@ -88,6 +89,23 @@ export interface RecordingRecord {
   readonly continuityCount: number
   readonly createdAt: Date
   readonly updatedAt: Date
+}
+
+/** Cómo aparece un personaje en una jornada. Puede quedarse sin personaje. */
+export interface ContinuityRecord {
+  readonly id: string
+  readonly recordingId: string
+  readonly characterId: string | null
+  readonly characterName: string | null
+  readonly responsibleId: string | null
+  readonly responsibleName: string | null
+  readonly createdAt: Date
+  readonly updatedAt: Date
+}
+
+/** La jornada con todo lo que cuelga de ella. Es lo que devuelve abrir una jornada. */
+export interface RecordingDetail extends RecordingRecord {
+  readonly continuities: readonly ContinuityRecord[]
 }
 
 /**
@@ -159,17 +177,24 @@ export async function listRecordings(
   })
 }
 
+/**
+ * La jornada entera, de una sola vez.
+ *
+ * «La consulta de una jornada SHALL devolver su escena con su capítulo, y sus continuidades con su
+ * personaje y su utilería resuelta.» Es una consulta y no cinco porque quien abre una jornada las
+ * quiere todas: sin esto la pantalla de continuidad pediría una por personaje.
+ */
 export async function getRecording(
   actor: Actor,
   companyId: string,
   productionId: string,
   recordingId: string,
-): Promise<RecordingRecord> {
+): Promise<RecordingDetail> {
   return withRequester(actor, async (tx) => {
     await loadProduction(tx, companyId, productionId)
     const row = await loadRecording(tx, productionId, recordingId)
 
-    return (await decorateRecordings(tx, [row]))[0] as RecordingRecord
+    return detailOf(tx, row)
   })
 }
 
@@ -302,7 +327,267 @@ async function setRecordingStatus(
   })
 }
 
+// ─── Asignar el reparto ──────────────────────────────────────────────────────
+
+/**
+ * Asigna varios personajes de una vez, creando una continuidad por cada uno.
+ *
+ * Dos cosas que la spec pide juntas y que se hacen en la misma transacción:
+ *
+ * 1. **No se duplica un personaje ya asignado.** Se resta lo que ya está antes de insertar. El
+ *    motor no ayuda aquí —`production_continuities` no tiene único parcial sobre
+ *    `(recording_id, character_id)`, y no puede tenerlo a secas porque la columna admite nulo a
+ *    propósito—, así que el candado es esta resta y sólo esta resta (`HALLAZGOS.md` H-184).
+ * 2. **La jornada pasa a en curso**, «porque asignar el reparto es el acto con el que empieza el
+ *    trabajo». Sin condición sobre el estado de partida: la spec lo declara de la acción, no de
+ *    una transición concreta.
+ *
+ * Asignar cero personajes es una petición legítima que no cambia nada, y aun así abre la jornada:
+ * es la misma acción.
+ */
+export async function assignCharacters(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+  characterIds: readonly string[],
+): Promise<RecordingDetail> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadRecording(tx, productionId, recordingId)
+
+    const wanted = [...new Set(characterIds)]
+    await requireCharacters(tx, productionId, wanted)
+
+    const existing = await tx
+      .select({ characterId: productionContinuities.characterId })
+      .from(productionContinuities)
+      .where(eq(productionContinuities.recordingId, recordingId))
+
+    const already = new Set(existing.map((row) => row.characterId).filter((id) => id !== null))
+    const missing = wanted.filter((id) => !already.has(id))
+
+    if (missing.length > 0) {
+      await tx
+        .insert(productionContinuities)
+        .values(missing.map((characterId) => ({ id: newId(), recordingId, characterId })))
+    }
+
+    const [updated] = await tx
+      .update(productionRecordings)
+      .set({ status: "ongoing" })
+      .where(eq(productionRecordings.id, recordingId))
+      .returning()
+
+    if (!updated) throw new NotFoundError("La jornada de rodaje no existe")
+    return detailOf(tx, updated)
+  })
+}
+
+// ─── Continuidades ───────────────────────────────────────────────────────────
+
+export interface CreateContinuityInput {
+  readonly characterId?: string | null | undefined
+  readonly responsibleId?: string | null | undefined
+}
+
+/**
+ * Abre una continuidad suelta.
+ *
+ * Sirve para lo que la spec llama «elementos que no corresponden a ningún personaje en concreto»:
+ * sin personaje, que es un caso legítimo y no un dato que falte. Por eso **no** pone la jornada en
+ * curso: eso lo hace asignar el reparto, que es otro acto.
+ */
+export async function createContinuity(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+  input: CreateContinuityInput,
+): Promise<ContinuityRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadRecording(tx, productionId, recordingId)
+
+    const characterId = input.characterId ?? null
+    if (characterId !== null) await requireCharacters(tx, productionId, [characterId])
+
+    const [created] = await tx
+      .insert(productionContinuities)
+      .values({
+        id: newId(),
+        recordingId,
+        characterId,
+        responsibleId: input.responsibleId ?? null,
+      })
+      .returning()
+
+    if (!created) throw new Error("la inserción de la continuidad no devolvió fila")
+    return (await decorateContinuities(tx, [created]))[0] as ContinuityRecord
+  })
+}
+
+/**
+ * Pone o retira el personaje de una continuidad.
+ *
+ * Retirarlo **no la elimina y no toca su utilería**: la continuidad sigue existiendo, ahora sin
+ * dueño. Es exactamente el escenario «Se retira el personaje de una continuidad», y el motivo por
+ * el que esta operación tiene clave propia en el catálogo (`productions.continuities.character`).
+ */
+export async function setContinuityCharacter(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+  continuityId: string,
+  characterId: string | null,
+): Promise<ContinuityRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadRecording(tx, productionId, recordingId)
+    await loadContinuity(tx, recordingId, continuityId)
+
+    if (characterId !== null) await requireCharacters(tx, productionId, [characterId])
+
+    const [updated] = await tx
+      .update(productionContinuities)
+      .set({ characterId })
+      .where(eq(productionContinuities.id, continuityId))
+      .returning()
+
+    if (!updated) throw new NotFoundError("La continuidad no existe")
+    return (await decorateContinuities(tx, [updated]))[0] as ContinuityRecord
+  })
+}
+
+/**
+ * Elimina una continuidad.
+ *
+ * «Eliminar una continuidad SHALL eliminar sus piezas de utilería y desvincularla de su jornada,
+ * sin eliminar los artículos ni los videos referenciados.»
+ *
+ * Es una sola fila, y ninguna más. La utilería se va por la clave foránea —`production_props`
+ * cascadea desde la continuidad— y los artículos y los videos ni se enteran, porque la referencia
+ * va de la pieza al artículo y no al revés. Recorrer la cascada a mano es lo que produjo el C-08.
+ *
+ * El borrado es **físico** y no lógico porque el modelo no le da columna de baja a la continuidad,
+ * al contrario que a la jornada. La asimetría está anotada en `HALLAZGOS.md` H-187.
+ */
+export async function deleteContinuity(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+  continuityId: string,
+): Promise<void> {
+  await withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadRecording(tx, productionId, recordingId)
+    await loadContinuity(tx, recordingId, continuityId)
+
+    await tx.delete(productionContinuities).where(eq(productionContinuities.id, continuityId))
+  })
+}
+
 // ─── Ayuda ───────────────────────────────────────────────────────────────────
+
+/** La jornada con sus continuidades, dentro de la transacción que ya está abierta. */
+async function detailOf(
+  tx: Transaction,
+  row: typeof productionRecordings.$inferSelect,
+): Promise<RecordingDetail> {
+  const [recording] = await decorateRecordings(tx, [row])
+  if (!recording) throw new NotFoundError("La jornada de rodaje no existe")
+
+  const rows = await tx
+    .select()
+    .from(productionContinuities)
+    .where(eq(productionContinuities.recordingId, row.id))
+    .orderBy(productionContinuities.createdAt, productionContinuities.id)
+
+  return { ...recording, continuities: await decorateContinuities(tx, rows) }
+}
+
+async function decorateContinuities(
+  tx: Transaction,
+  rows: readonly (typeof productionContinuities.$inferSelect)[],
+): Promise<ContinuityRecord[]> {
+  if (rows.length === 0) return []
+
+  const characterIds = [
+    ...new Set(rows.map((row) => row.characterId).filter((id): id is string => id !== null)),
+  ]
+  const characters =
+    characterIds.length === 0
+      ? []
+      : await tx
+          .select({ id: productionCharacters.id, name: productionCharacters.name })
+          .from(productionCharacters)
+          .where(inArray(productionCharacters.id, characterIds))
+
+  const names = new Map(characters.map((row) => [row.id, row.name]))
+  const responsibles = await responsibleNames(
+    tx,
+    rows.map((row) => row.responsibleId),
+  )
+
+  return rows.map((row) => ({
+    id: row.id,
+    recordingId: row.recordingId,
+    characterId: row.characterId,
+    characterName: row.characterId === null ? null : (names.get(row.characterId) ?? null),
+    responsibleId: row.responsibleId,
+    responsibleName:
+      row.responsibleId === null ? null : (responsibles.get(row.responsibleId) ?? null),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }))
+}
+
+/**
+ * Los personajes, **resueltos contra la producción**.
+ *
+ * Falla en cuanto uno no sea de esta producción, y no se queda con los que sí: asignar el reparto
+ * es una sola acción, y media asignación es peor que ninguna. Ver `HALLAZGOS.md` H-188.
+ */
+async function requireCharacters(
+  tx: Transaction,
+  productionId: string,
+  characterIds: readonly string[],
+): Promise<void> {
+  if (characterIds.length === 0) return
+
+  const rows = await tx
+    .select({ id: productionCharacters.id })
+    .from(productionCharacters)
+    .where(
+      and(
+        inArray(productionCharacters.id, [...characterIds]),
+        eq(productionCharacters.productionId, productionId),
+        isNull(productionCharacters.deletedAt),
+      ),
+    )
+
+  if (rows.length !== new Set(characterIds).size) {
+    throw new NotFoundError("Alguno de los personajes no existe en esta producción")
+  }
+}
+
+export async function loadContinuity(tx: Transaction, recordingId: string, continuityId: string) {
+  const [row] = await tx
+    .select()
+    .from(productionContinuities)
+    .where(
+      and(
+        eq(productionContinuities.id, continuityId),
+        eq(productionContinuities.recordingId, recordingId),
+      ),
+    )
+    .limit(1)
+
+  if (!row) throw new NotFoundError("La continuidad no existe")
+  return row
+}
 
 async function decorateRecordings(
   tx: Transaction,
