@@ -5,6 +5,10 @@
  * y prestarle las tres operaciones al resto del sistema: firmar la escritura de un objeto, componer
  * su dirección de lectura y retirar objetos. Los bytes no pasan por aquí.
  *
+ * La cuarta operación del proveedor —dejar puesto el depósito— no se presta desde aquí: no está en
+ * el camino de datos, corre al montar y quien la usa es `bucket.ts`, que además comprueba que el
+ * depósito sirve para lo que se usa.
+ *
  * ## Por qué hay una costura y no una implementación
  *
  * Porque el destino cambia y el resto del sistema no debería enterarse. `uploads.ts` y

@@ -39,8 +39,14 @@ import { and, eq, isNull, lt } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { authorizeWrite, publicUrl, removeObjects, type WriteAuthorization } from "./storage.ts"
 
-/** Lo que admite el almacenamiento por objeto. Más allá, el navegador recibiría un error opaco. */
-const MAX_BYTES = 50 * 1024 * 1024
+/**
+ * Lo que admite el almacenamiento por objeto. Más allá, el navegador recibiría un error opaco.
+ *
+ * Aquí se valida el tamaño **declarado** en la solicitud, que no es el que se escribe: quien escribe
+ * es el navegador con una autorización que no ata el tamaño. Quien lo hace cumplir de verdad es el
+ * depósito, y por eso `bucket.ts` lo declara al crearlo (`HALLAZGOS.md` H-161).
+ */
+export const MAX_BYTES = 50 * 1024 * 1024
 
 /** Los derivados los produce el navegador, y salen en este formato salvo que declare otro. */
 const DEFAULT_DERIVATIVE = "image/jpeg"
