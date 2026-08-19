@@ -30,12 +30,14 @@ import type { Actor } from "../companies/companies.ts"
 import {
   addContinuityItem,
   addContinuityVideo,
+  addRecordingNote,
   assignCharacters,
   closeRecording,
   createContinuity,
   createRecording,
   deleteContinuity,
   deleteRecording,
+  deleteRecordingNote,
   getRecording,
   listRecordings,
   openRecording,
@@ -46,6 +48,7 @@ import {
   setContinuityItems,
   setContinuityVideos,
   updateRecording,
+  updateRecordingNote,
 } from "../productions/continuity.ts"
 import { defineRoute, REQUIRES } from "../runtime/route.ts"
 import { collectionQuery, pageSchema, queryOf, serializePage } from "./pagination.ts"
@@ -96,9 +99,25 @@ const continuitySchema = z.object({
   updatedAt: z.string(),
 })
 
+const noteSchema = z.object({
+  id: z.string(),
+  recordingId: z.string(),
+  body: z.string(),
+  authorId: z.string().nullable(),
+  authorName: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
 const recordingDetailSchema = recordingSchema.extend({
   continuities: z.array(continuitySchema),
+  notes: z.array(noteSchema),
 })
+
+const noteParams = recordingParams.extend({ noteId: z.string() })
+
+/** El cuaderno del script: texto libre, y hay que poder escribir rápido. */
+const noteBody = z.object({ body: z.string().trim().min(1, "La nota está vacía").max(10_000) })
 
 function actorOf(c: Parameters<Parameters<typeof defineRoute>[0]["handler"]>[0]): Actor {
   const session = requireSession(c)
@@ -122,10 +141,15 @@ function serializeContinuity(row: Awaited<ReturnType<typeof createContinuity>>) 
   }
 }
 
+function serializeNote(row: Awaited<ReturnType<typeof addRecordingNote>>) {
+  return { ...row, createdAt: toInstant(row.createdAt), updatedAt: toInstant(row.updatedAt) }
+}
+
 function serializeDetail(row: Awaited<ReturnType<typeof getRecording>>) {
   return {
     ...serializeRecording(row),
     continuities: row.continuities.map(serializeContinuity),
+    notes: row.notes.map(serializeNote),
   }
 }
 
@@ -503,6 +527,107 @@ export const deleteRecordingRoute = defineRoute({
   handler: async (c) => {
     const params = c.req.valid("param")
     await deleteRecording(actorOf(c), params.companyId, params.productionId, params.recordingId)
+    return c.body(null, 204)
+  },
+})
+
+// ─── Notas de la jornada ─────────────────────────────────────────────────────
+
+/**
+ * Las tres notas comparten clave —`productions.recordings.notes`—, y es correcto.
+ *
+ * El catálogo trae una sola para las tres operaciones, y no se reparte por verbo lo que el catálogo
+ * dio junto: quien puede anotar puede corregir lo que anotó. Lo que **no** se hace es colapsarla
+ * con `edit`, que gobierna la jornada: anotar durante el rodaje es lo que hace el script, y mover
+ * la jornada de escena o de responsable es de quien la programa.
+ */
+export const addRecordingNoteRoute = defineRoute({
+  access: REQUIRES("productions.recordings.notes"),
+  config: {
+    method: "post",
+    path: "/companies/{companyId}/productions/{productionId}/recordings/{recordingId}/notes",
+    summary: "Anotar una jornada de rodaje",
+    tags: ["Continuidad"],
+    request: {
+      params: recordingParams,
+      body: { content: { "application/json": { schema: noteBody } } },
+    },
+    responses: {
+      201: {
+        description: "La nota, con su autor y su instante",
+        content: { "application/json": { schema: noteSchema } },
+      },
+      404: { description: "La jornada no existe, o está fuera del alcance del solicitante" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const note = await addRecordingNote(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.recordingId,
+      c.req.valid("json").body,
+    )
+    return c.json(serializeNote(note), 201)
+  },
+})
+
+export const updateRecordingNoteRoute = defineRoute({
+  access: REQUIRES("productions.recordings.notes"),
+  config: {
+    method: "patch",
+    path: "/companies/{companyId}/productions/{productionId}/recordings/{recordingId}/notes/{noteId}",
+    summary: "Corregir una nota de la jornada",
+    tags: ["Continuidad"],
+    request: {
+      params: noteParams,
+      body: { content: { "application/json": { schema: noteBody } } },
+    },
+    responses: {
+      200: {
+        description: "La nota corregida",
+        content: { "application/json": { schema: noteSchema } },
+      },
+      404: { description: "No existe, o no es de esta jornada" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const note = await updateRecordingNote(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.recordingId,
+      params.noteId,
+      c.req.valid("json").body,
+    )
+    return c.json(serializeNote(note), 200)
+  },
+})
+
+export const deleteRecordingNoteRoute = defineRoute({
+  access: REQUIRES("productions.recordings.notes"),
+  config: {
+    method: "delete",
+    path: "/companies/{companyId}/productions/{productionId}/recordings/{recordingId}/notes/{noteId}",
+    summary: "Eliminar una nota de la jornada",
+    tags: ["Continuidad"],
+    request: { params: noteParams },
+    responses: {
+      204: { description: "Eliminada" },
+      404: { description: "No existe, o no es de esta jornada" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    await deleteRecordingNote(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.recordingId,
+      params.noteId,
+    )
     return c.body(null, 204)
   },
 })

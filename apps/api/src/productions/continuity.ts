@@ -61,6 +61,7 @@ import {
   productionContinuities,
   productionItems,
   productionProps,
+  productionRecordingNotes,
   productionRecordings,
   productionScenes,
   productionVideos,
@@ -141,9 +142,34 @@ export interface ContinuityRecord {
   readonly updatedAt: Date
 }
 
+/**
+ * Una nota de la jornada: el cuaderno del script.
+ *
+ * «Observaciones que no encajan en ninguna estructura y que hay que poder escribir rápido», dice la
+ * spec. Por eso es texto libre y no un formulario: lo que se apunta en el set a las once de la
+ * noche no cabe en campos.
+ */
+export interface RecordingNoteRecord {
+  readonly id: string
+  readonly recordingId: string
+  readonly body: string
+  readonly authorId: string | null
+  readonly authorName: string | null
+  readonly createdAt: Date
+  readonly updatedAt: Date
+}
+
 /** La jornada con todo lo que cuelga de ella. Es lo que devuelve abrir una jornada. */
 export interface RecordingDetail extends RecordingRecord {
   readonly continuities: readonly ContinuityRecord[]
+  /**
+   * Las notas, en el orden en que se escribieron.
+   *
+   * La spec las declara en su propio requisito y no las nombra en la vista completa, pero **no hay
+   * otra forma de leerlas**: una nota sin sitio donde aparecer es una nota que no existe. Van
+   * aquí, con la jornada, que es donde se escribieron.
+   */
+  readonly notes: readonly RecordingNoteRecord[]
 }
 
 /**
@@ -560,6 +586,84 @@ export async function deleteContinuity(
   })
 }
 
+// ─── Notas de la jornada ─────────────────────────────────────────────────────
+
+/**
+ * Anota la jornada.
+ *
+ * El autor es **quien escribe**, no un dato de entrada: una nota firmada por otro no es una nota,
+ * es una atribución falsa. La marca de tiempo la pone la base.
+ */
+export async function addRecordingNote(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+  body: string,
+): Promise<RecordingNoteRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadRecording(tx, productionId, recordingId)
+
+    const [created] = await tx
+      .insert(productionRecordingNotes)
+      .values({ id: newId(), recordingId, body: body.trim(), authorId: actor.userId })
+      .returning()
+
+    if (!created) throw new Error("la inserción de la nota no devolvió fila")
+    return (await decorateNotes(tx, [created]))[0] as RecordingNoteRecord
+  })
+}
+
+export async function updateRecordingNote(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+  noteId: string,
+  body: string,
+): Promise<RecordingNoteRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadRecording(tx, productionId, recordingId)
+    await loadNote(tx, recordingId, noteId)
+
+    const [updated] = await tx
+      .update(productionRecordingNotes)
+      .set({ body: body.trim() })
+      .where(eq(productionRecordingNotes.id, noteId))
+      .returning()
+
+    if (!updated) throw new NotFoundError("La nota no existe")
+    return (await decorateNotes(tx, [updated]))[0] as RecordingNoteRecord
+  })
+}
+
+/**
+ * Da de baja una nota.
+ *
+ * Lógica, porque el modelo le da columna: lo que se escribió en el set durante un rodaje no se
+ * destruye porque alguien se arrepienta de la redacción.
+ */
+export async function deleteRecordingNote(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+  noteId: string,
+): Promise<void> {
+  await withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadRecording(tx, productionId, recordingId)
+    await loadNote(tx, recordingId, noteId)
+
+    await tx
+      .update(productionRecordingNotes)
+      .set({ deletedAt: new Date() })
+      .where(eq(productionRecordingNotes.id, noteId))
+  })
+}
+
 // ─── Utilería ────────────────────────────────────────────────────────────────
 
 /**
@@ -748,7 +852,61 @@ async function detailOf(
     .where(eq(productionContinuities.recordingId, row.id))
     .orderBy(productionContinuities.createdAt, productionContinuities.id)
 
-  return { ...recording, continuities: await decorateContinuities(tx, rows) }
+  const notes = await tx
+    .select()
+    .from(productionRecordingNotes)
+    .where(
+      and(
+        eq(productionRecordingNotes.recordingId, row.id),
+        isNull(productionRecordingNotes.deletedAt),
+      ),
+    )
+    .orderBy(productionRecordingNotes.createdAt, productionRecordingNotes.id)
+
+  return {
+    ...recording,
+    continuities: await decorateContinuities(tx, rows),
+    notes: await decorateNotes(tx, notes),
+  }
+}
+
+async function decorateNotes(
+  tx: Transaction,
+  rows: readonly (typeof productionRecordingNotes.$inferSelect)[],
+): Promise<RecordingNoteRecord[]> {
+  if (rows.length === 0) return []
+
+  const authors = await responsibleNames(
+    tx,
+    rows.map((row) => row.authorId),
+  )
+
+  return rows.map((row) => ({
+    id: row.id,
+    recordingId: row.recordingId,
+    body: row.body,
+    authorId: row.authorId,
+    authorName: row.authorId === null ? null : (authors.get(row.authorId) ?? null),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }))
+}
+
+async function loadNote(tx: Transaction, recordingId: string, noteId: string) {
+  const [row] = await tx
+    .select()
+    .from(productionRecordingNotes)
+    .where(
+      and(
+        eq(productionRecordingNotes.id, noteId),
+        eq(productionRecordingNotes.recordingId, recordingId),
+        isNull(productionRecordingNotes.deletedAt),
+      ),
+    )
+    .limit(1)
+
+  if (!row) throw new NotFoundError("La nota no existe")
+  return row
 }
 
 async function decorateContinuities(

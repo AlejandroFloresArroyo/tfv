@@ -106,11 +106,13 @@ import {
 import {
   addContinuityItemRoute,
   addContinuityVideoRoute,
+  addRecordingNoteRoute,
   assignCharactersRoute,
   closeRecordingRoute,
   createContinuityRoute,
   createRecordingRoute,
   deleteContinuityRoute,
+  deleteRecordingNoteRoute,
   deleteRecordingRoute,
   getRecordingRoute,
   listRecordingsRoute,
@@ -118,6 +120,7 @@ import {
   setContinuityCharacterRoute,
   setContinuityItemsRoute,
   setContinuityVideosRoute,
+  updateRecordingNoteRoute,
   updateRecordingRoute,
 } from "./continuity.ts"
 import {
@@ -585,6 +588,10 @@ export const routes: readonly RegisteredRoute[] = [
   closeRecordingRoute,
   openRecordingRoute,
   deleteRecordingRoute,
+
+  addRecordingNoteRoute,
+  updateRecordingNoteRoute,
+  deleteRecordingNoteRoute,
 
   createContinuityRoute,
   setContinuityCharacterRoute,

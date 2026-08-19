@@ -26,6 +26,7 @@ import {
   productionCharacters,
   productionItems,
   productionProps,
+  productionRecordingNotes,
   productionScenes,
   productions,
   productionVideos,
@@ -97,8 +98,19 @@ interface Continuity {
   updatedAt: string
 }
 
+interface Note {
+  id: string
+  recordingId: string
+  body: string
+  authorId: string | null
+  authorName: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 interface RecordingDetail extends Recording {
   continuities: Continuity[]
+  notes: Note[]
 }
 
 function request(method: string, path: string, body?: unknown, cookie?: string) {
@@ -335,6 +347,17 @@ async function setVideos(
   )
   expect(response.status).toBe(200)
   return (await json<Continuity>(response)).props
+}
+
+async function newNote(s: Stage, recordingId: string, body: string) {
+  const response = await request(
+    "POST",
+    `${recordingsPath(s)}/${recordingId}/notes`,
+    { body },
+    s.session.cookie,
+  )
+  expect(response.status).toBe(201)
+  return json<Note>(response)
 }
 
 /**
@@ -1090,5 +1113,111 @@ describe("eliminar no se lleva lo referenciado", () => {
 
     expect(await countItems(s.productionId)).toBe(1)
     expect(await countVideos(s.productionId)).toBe(1)
+  })
+})
+
+// ─── El cuaderno del script ──────────────────────────────────────────────────
+
+describe("notas de la jornada", () => {
+  it("una observación queda registrada con su autor y su instante", async () => {
+    // Escenario: «Se registra una observación durante el rodaje».
+    const s = await stage()
+    const recording = await newRecording(s)
+
+    const note = await newNote(s, recording.id, "La taza estaba a la izquierda del plato")
+
+    expect(note.body).toBe("La taza estaba a la izquierda del plato")
+    expect(note.authorId).toBe(s.session.userId)
+    expect(note.authorName).not.toBeNull()
+    expect(Number.isNaN(Date.parse(note.createdAt))).toBe(false)
+  })
+
+  it("las notas se leen desde la jornada, en el orden en que se escribieron", async () => {
+    const s = await stage()
+    const recording = await newRecording(s)
+    await newNote(s, recording.id, "Primera")
+    await newNote(s, recording.id, "Segunda")
+
+    const detail = await recordingOf(s, recording.id)
+
+    expect(detail.notes.map((row) => row.body)).toEqual(["Primera", "Segunda"])
+  })
+
+  it("se edita, y la marca de edición avanza sobre la de alta", async () => {
+    const s = await stage()
+    const recording = await newRecording(s)
+    const note = await newNote(s, recording.id, "Sin revisar")
+
+    // Se retrocede la fila a mano en vez de confiar en que el reloj avance: alta y edición pueden
+    // caer en el mismo milisegundo, y entonces la comparación pasaría por la razón equivocada.
+    const before = new Date(Date.now() - 60_000)
+    await db
+      .update(productionRecordingNotes)
+      .set({ createdAt: before, updatedAt: before })
+      .where(eq(productionRecordingNotes.id, note.id))
+
+    const edited = await json<Note>(
+      await request(
+        "PATCH",
+        `${recordingsPath(s)}/${recording.id}/notes/${note.id}`,
+        { body: "Revisada: la taza cambió de sitio entre tomas" },
+        s.session.cookie,
+      ),
+    )
+
+    expect(edited.body).toBe("Revisada: la taza cambió de sitio entre tomas")
+    expect(Date.parse(edited.updatedAt)).toBeGreaterThan(Date.parse(edited.createdAt))
+  })
+
+  it("se elimina y deja de leerse", async () => {
+    const s = await stage()
+    const recording = await newRecording(s)
+    const uno = await newNote(s, recording.id, "Se queda")
+    const dos = await newNote(s, recording.id, "Se va")
+
+    const response = await request(
+      "DELETE",
+      `${recordingsPath(s)}/${recording.id}/notes/${dos.id}`,
+      undefined,
+      s.session.cookie,
+    )
+    expect(response.status).toBe(204)
+
+    const detail = await recordingOf(s, recording.id)
+    expect(detail.notes.map((row) => row.id)).toEqual([uno.id])
+  })
+
+  it("la nota de otra jornada no se alcanza desde ésta", async () => {
+    const s = await stage()
+    const mine = await newRecording(s, { name: "La mía" })
+    const other = await newRecording(s, { name: "La otra" })
+    const note = await newNote(s, other.id, "De la otra")
+
+    const response = await request(
+      "PATCH",
+      `${recordingsPath(s)}/${mine.id}/notes/${note.id}`,
+      { body: "Intrusa" },
+      s.session.cookie,
+    )
+
+    expect(response.status).toBe(404)
+  })
+
+  it("una cuenta que puede ver la jornada no puede anotarla", async () => {
+    const s = await stage()
+    const recording = await newRecording(s)
+    const cookie = await memberWith(s.companyId, [
+      "productions.productions.view",
+      "productions.recordings.view",
+    ])
+
+    const response = await request(
+      "POST",
+      `${recordingsPath(s)}/${recording.id}/notes`,
+      { body: "No debería entrar" },
+      cookie,
+    )
+
+    expect(response.status).toBe(403)
   })
 })
