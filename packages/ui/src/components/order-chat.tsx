@@ -108,7 +108,8 @@ export function OrderChat({
   // quitarle lo que estaba mirando.
   useEffect(() => {
     const node = list.current
-    if (node && atBottom.current) node.scrollTop = node.scrollHeight
+    if (!node || count === 0 || !atBottom.current) return
+    node.scrollTop = node.scrollHeight
   }, [count])
 
   function submit() {
