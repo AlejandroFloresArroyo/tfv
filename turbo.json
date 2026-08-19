@@ -5,7 +5,11 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
-      "//": "`env` y no `passThroughEnv`: estas tres se **hornean** en el build de la web —el reenvío de `/api/*` se resuelve al compilar y se escribe en el manifiesto—, así que además de llegar tienen que entrar en la huella. Declaradas como `passThroughEnv` no contarían para la caché y un cambio de `API_ORIGIN` reutilizaría el build anterior: el despliegue saldría mudo apuntando al origen viejo, que es el fallo que nadie ve hasta abrirlo a mano.",
+      // `env` y no `passThroughEnv`: estas tres se **hornean** en el build de la web —el reenvío
+      // de `/api/*` se resuelve al compilar y se escribe en el manifiesto—, así que además de
+      // llegar tienen que entrar en la huella. Declaradas como `passThroughEnv` no contarían para
+      // la caché, y un cambio de `API_ORIGIN` reutilizaría el build anterior: el despliegue saldría
+      // mudo apuntando al origen viejo, que es el fallo que nadie ve hasta abrirlo a mano.
       "env": ["NODE_ENV", "API_ORIGIN", "NEXT_PUBLIC_SITES_DOMAIN"]
     },
     "check": {
