@@ -9,8 +9,12 @@
  *
  * Porque el destino cambia y el resto del sistema no debería enterarse. `uploads.ts` y
  * `collections.ts` llaman a estas tres funciones y no saben —ni deben— si detrás hay una API HTTP o
- * una firma calculada a mano. La interfaz está en `provider.ts` y las implementaciones en
- * `providers/`, y elegir entre ellas es cosa de este módulo y de nadie más.
+ * una firma SigV4. La interfaz está en `provider.ts` y las implementaciones en `providers/`; lo que
+ * elige es `STORAGE_PROVIDER`.
+ *
+ * **Lo que se despliega hoy no cambia.** La variable llega valiendo `supabase`, que es el de
+ * siempre. Que exista otro no es lo mismo que ponerlo — y ponerlo tampoco basta: las direcciones de
+ * lectura están persistidas, y mudarse exige reescribirlas con `scripts/rewrite-media-urls.ts`.
  *
  * ## Se elige una vez
  *
@@ -22,6 +26,7 @@
 
 import { env } from "../env.ts"
 import type { StorageProvider, WriteAuthorization } from "./provider.ts"
+import { createS3Provider } from "./providers/s3.ts"
 import { createSupabaseProvider } from "./providers/supabase.ts"
 
 export type { StorageProvider, WriteAuthorization } from "./provider.ts"
@@ -29,6 +34,18 @@ export type { StorageProvider, WriteAuthorization } from "./provider.ts"
 let current: StorageProvider | undefined
 
 function build(): StorageProvider {
+  if (env.STORAGE_PROVIDER === "s3") {
+    return createS3Provider({
+      bucket: env.STORAGE_BUCKET,
+      region: env.STORAGE_S3_REGION,
+      accessKeyId: env.STORAGE_S3_ACCESS_KEY_ID,
+      secretAccessKey: env.STORAGE_S3_SECRET_ACCESS_KEY,
+      endpoint: env.STORAGE_S3_ENDPOINT,
+      publicUrl: env.STORAGE_S3_PUBLIC_URL,
+      expiresInSeconds: env.STORAGE_S3_EXPIRES_SECONDS,
+    })
+  }
+
   return createSupabaseProvider({
     url: env.STORAGE_URL,
     bucket: env.STORAGE_BUCKET,

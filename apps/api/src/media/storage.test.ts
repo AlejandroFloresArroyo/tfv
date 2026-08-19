@@ -17,6 +17,9 @@
  */
 
 import { describe, expect, it } from "vitest"
+import { env } from "../env.ts"
+import type { StorageProvider } from "./provider.ts"
+import { createS3Provider } from "./providers/s3.ts"
 import { storageProvider } from "./storage.ts"
 
 const BYTES = new Uint8Array([9, 8, 7, 6, 5, 4, 3, 2, 1])
@@ -26,7 +29,45 @@ function freshPrefix(): string {
   return `pruebas/contrato-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
 }
 
-const providers = [storageProvider()]
+/**
+ * El proveedor de S3, apuntando a **la pila local**.
+ *
+ * No hace falta cuenta de AWS: la pila que ya se levanta con `pnpm db:up` expone su punto S3, y
+ * ejercerlo contra él comprueba lo mismo —la firma, el acotamiento, el listado y el borrado— con un
+ * servidor de verdad al otro lado. Ejercerlo contra un doble comprobaría nuestra idea de S3.
+ *
+ * Se construye aquí y no se pone como proveedor del servicio: lo que se despliega sigue siendo el
+ * de siempre, y esta prueba no cambia eso.
+ */
+function s3Provider(): StorageProvider {
+  if (!env.STORAGE_S3_ACCESS_KEY_ID || !env.STORAGE_S3_SECRET_ACCESS_KEY) {
+    throw new Error(
+      "Faltan STORAGE_S3_ACCESS_KEY_ID y STORAGE_S3_SECRET_ACCESS_KEY en `.env`. Las imprime " +
+        "`pnpm db:status` como S3_PROTOCOL_ACCESS_KEY_ID y S3_PROTOCOL_ACCESS_KEY_SECRET. Sin " +
+        "ellas el segundo proveedor no se puede ejercer, y una prueba que se saltara sería una " +
+        "prueba que dice que sí sin haber mirado.",
+    )
+  }
+
+  return createS3Provider({
+    bucket: env.STORAGE_BUCKET,
+    region: env.STORAGE_S3_REGION,
+    accessKeyId: env.STORAGE_S3_ACCESS_KEY_ID,
+    secretAccessKey: env.STORAGE_S3_SECRET_ACCESS_KEY,
+    endpoint: env.STORAGE_S3_ENDPOINT ?? `${env.STORAGE_URL}/s3`,
+    publicUrl:
+      env.STORAGE_S3_PUBLIC_URL ?? `${env.STORAGE_URL}/object/public/${env.STORAGE_BUCKET}`,
+    expiresInSeconds: env.STORAGE_S3_EXPIRES_SECONDS,
+  })
+}
+
+/**
+ * Los dos, con la misma vara.
+ *
+ * Que la lista tenga dos elementos y no uno es lo que hace que «cambiar de proveedor es una
+ * variable de entorno» sea una afirmación comprobada.
+ */
+const providers = [storageProvider(), s3Provider()]
 
 describe.each(providers.map((provider) => [provider.name, provider] as const))(
   "el proveedor «%s»",
