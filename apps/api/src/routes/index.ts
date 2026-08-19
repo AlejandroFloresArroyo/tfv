@@ -80,6 +80,13 @@ import {
 } from "./directory.ts"
 import { health } from "./health.ts"
 import {
+  deleteMessageRoute,
+  editMessageRoute,
+  markConversationReadRoute,
+  readConversationRoute,
+  sendMessageRoute,
+} from "./order-chat.ts"
+import {
   acceptOrderRoute,
   changeOrderStatusRoute,
   createOrderRoute,
@@ -308,6 +315,13 @@ export const routes: readonly RegisteredRoute[] = [
   rejectOrderRoute,
   changeOrderStatusRoute,
   deleteOrderRoute,
+
+  // La conversación del pedido: los dos lados del mostrador, dentro del pedido.
+  readConversationRoute,
+  sendMessageRoute,
+  markConversationReadRoute,
+  editMessageRoute,
+  deleteMessageRoute,
 
   // ─── Producciones ──────────────────────────────────────────────────────────
   // Pendiente: rebanada 20.
