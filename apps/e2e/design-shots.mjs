@@ -14,7 +14,7 @@ import { chromium } from "@playwright/test"
 /** La salida se escribe directo: `console.log` está limitado a `error` y `warn` en este repo. */
 const log = (linea) => process.stdout.write(`${linea}\n`)
 
-const DIRECCION = process.env.SHOT_URL ?? "http://127.0.0.1:3210/sistema"
+const DIRECCION = process.env.SHOT_URL ?? "http://127.0.0.1:3300/sistema"
 const OUT = new URL("../../.impeccable/review/", import.meta.url).pathname
 mkdirSync(OUT, { recursive: true })
 
@@ -28,7 +28,7 @@ const TAMANOS = [
 const navegador = await chromium.launch()
 let fallos = 0
 
-for (const tema of ["light", "dark"]) {
+for (const tema of ["dark", "light"]) {
   for (const t of TAMANOS) {
     const contexto = await navegador.newContext({
       viewport: { width: t.width, height: t.height },

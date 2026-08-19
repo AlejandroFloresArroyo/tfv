@@ -13,9 +13,12 @@ const log = (linea) => process.stdout.write(`${linea}\n`)
 const OUT = new URL("../../.impeccable/review/", import.meta.url).pathname
 mkdirSync(OUT, { recursive: true })
 
+// El tema por defecto de la aplicación es `system`, así que el esquema del navegador decide. Se
+// declara por app para poder ver el mundo nuevo en el oscuro para el que está diseñado.
 const APPS = [
-  { nombre: "viejo", base: "http://localhost:3000" },
-  { nombre: "nuevo", base: "http://localhost:3300" },
+  { nombre: "viejo", base: "http://localhost:3000", esquema: "light" },
+  { nombre: "nuevo-claro", base: "http://localhost:3300", esquema: "light" },
+  { nombre: "nuevo", base: "http://localhost:3300", esquema: "dark" },
 ]
 
 const CUENTA = { correo: "duena@tfv.dev", clave: "Desarrollo.2026" }
@@ -26,7 +29,11 @@ const VIEWPORT = { width: 834, height: 1194 }
 const navegador = await chromium.launch()
 
 for (const app of APPS) {
-  const contexto = await navegador.newContext({ viewport: VIEWPORT, deviceScaleFactor: 2 })
+  const contexto = await navegador.newContext({
+    viewport: VIEWPORT,
+    deviceScaleFactor: 2,
+    colorScheme: app.esquema,
+  })
   const pagina = await contexto.newPage()
 
   await pagina.goto(`${app.base}/login`, { waitUntil: "networkidle" })
