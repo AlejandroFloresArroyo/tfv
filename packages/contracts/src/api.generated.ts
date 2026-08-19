@@ -1076,6 +1076,36 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /companies/{companyId}/production-items/by-code/{code}": {
+    /** Localizar un artículo por el código de su etiqueta */
+    params: {
+      companyId: string
+      code: string
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      shoppingId: string | null
+      name: string
+      description: string
+      code: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      isInventoriable: boolean
+      allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+      images: Array<{
+        uploadId: string
+        url: string
+        thumbnailUrl: string | null
+        position: number
+      }>
+      createdAt: string
+      updatedAt: string
+      productionName: string
+    }
+  }
+
   "GET /companies/{companyId}/productions": {
     /** Listar las producciones de una empresa */
     params: {
@@ -1214,6 +1244,43 @@ export interface ApiEndpoints {
       productionId: string
     }
     response: undefined
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/breakdown": {
+    /** La estructura completa de la producción, como índice navegable */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    response: {
+      chapters: Array<{
+        id: string
+        productionId: string
+        scriptId: string | null
+        name: string
+        synopsis: string
+        index: number
+        responsibleId: string | null
+        responsibleName: string | null
+        sceneCount: number
+        createdAt: string
+        updatedAt: string
+        scenes: Array<{
+          id: string
+          chapterId: string
+          chapterIndex: number
+          name: string
+          synopsis: string
+          index: number
+          label: string
+          workflowCount: number
+          synopsisEditedAt: string | null
+          missingFromLastSync: boolean
+          createdAt: string
+          updatedAt: string
+        }>
+      }>
+    }
   }
 
   "GET /companies/{companyId}/productions/{productionId}/categories": {
@@ -1382,6 +1449,465 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/chapters": {
+    /** Listar los capítulos de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_index?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      scriptId?: string | Array<string>
+      responsibleId?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        scriptId: string | null
+        name: string
+        synopsis: string
+        index: number
+        responsibleId: string | null
+        responsibleName: string | null
+        sceneCount: number
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/chapters": {
+    /** Crear un capítulo */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      index: number
+      synopsis?: string
+      scriptId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      scriptId: string | null
+      name: string
+      synopsis: string
+      index: number
+      responsibleId: string | null
+      responsibleName: string | null
+      sceneCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/chapters/indices": {
+    /** Último índice de capítulo usado, y si uno concreto está libre */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      index?: string
+    }
+    response: {
+      lastIndex: number | null
+      nextIndex: number
+      available: boolean | null
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}": {
+    /** Ver un capítulo */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      scriptId: string | null
+      name: string
+      synopsis: string
+      index: number
+      responsibleId: string | null
+      responsibleName: string | null
+      sceneCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/chapters/{chapterId}": {
+    /** Editar un capítulo */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    body: {
+      name?: string
+      index?: number
+      synopsis?: string
+      scriptId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      scriptId: string | null
+      name: string
+      synopsis: string
+      index: number
+      responsibleId: string | null
+      responsibleName: string | null
+      sceneCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/chapters/{chapterId}": {
+    /** Dar de baja un capítulo y sus escenas */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    response: undefined
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes": {
+    /** Listar las escenas de un capítulo */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_index?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      missingFromLastSync?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        chapterId: string
+        chapterIndex: number
+        name: string
+        synopsis: string
+        index: number
+        label: string
+        workflowCount: number
+        synopsisEditedAt: string | null
+        missingFromLastSync: boolean
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes": {
+    /** Crear una escena en un capítulo */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    body: {
+      name: string
+      index: number
+      synopsis?: string
+    }
+    response: {
+      id: string
+      chapterId: string
+      chapterIndex: number
+      name: string
+      synopsis: string
+      index: number
+      label: string
+      workflowCount: number
+      synopsisEditedAt: string | null
+      missingFromLastSync: boolean
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes/indices": {
+    /** Último índice de escena usado en el capítulo, y si uno concreto está libre */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    query?: {
+      index?: string
+    }
+    response: {
+      lastIndex: number | null
+      nextIndex: number
+      available: boolean | null
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes/{sceneId}": {
+    /** Ver una escena */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+      sceneId: string
+    }
+    response: {
+      id: string
+      chapterId: string
+      chapterIndex: number
+      name: string
+      synopsis: string
+      index: number
+      label: string
+      workflowCount: number
+      synopsisEditedAt: string | null
+      missingFromLastSync: boolean
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes/{sceneId}": {
+    /** Editar una escena */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+      sceneId: string
+    }
+    body: {
+      name?: string
+      index?: number
+      synopsis?: string
+    }
+    response: {
+      id: string
+      chapterId: string
+      chapterIndex: number
+      name: string
+      synopsis: string
+      index: number
+      label: string
+      workflowCount: number
+      synopsisEditedAt: string | null
+      missingFromLastSync: boolean
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes/{sceneId}": {
+    /** Dar de baja una escena */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+      sceneId: string
+    }
+    response: undefined
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes/{sceneId}/scope": {
+    /** Qué se queda sin escena al dar de baja ésta */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+      sceneId: string
+    }
+    response: {
+      recordings: number
+      workflows: number
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scope": {
+    /** Qué se lleva por delante dar de baja el capítulo */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    response: {
+      scenes: number
+      recordings: number
+      workflows: number
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/characters": {
+    /** Listar los personajes de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      responsibleId?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        name: string
+        description: string
+        imageUploadId: string | null
+        imageUrl: string | null
+        imageThumbnailUrl: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        continuityCount: number
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/characters": {
+    /** Registrar un personaje */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      description?: string
+      imageUploadId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      continuityCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/characters/{characterId}": {
+    /** Ver un personaje */
+    params: {
+      companyId: string
+      productionId: string
+      characterId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      continuityCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/characters/{characterId}": {
+    /** Editar un personaje */
+    params: {
+      companyId: string
+      productionId: string
+      characterId: string
+    }
+    body: {
+      name?: string
+      description?: string
+      imageUploadId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      continuityCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/characters/{characterId}": {
+    /** Dar de baja un personaje */
+    params: {
+      companyId: string
+      productionId: string
+      characterId: string
+    }
+    response: undefined
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/characters/{characterId}/continuity": {
     /** Ver cómo apareció un personaje a lo largo del rodaje */
     params: {
@@ -1411,6 +1937,276 @@ export interface ApiEndpoints {
           code: string | null
           createdAt: string
         }>
+      }>
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/items": {
+    /** Listar el inventario de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_code?: string | Array<string>
+      sort_status?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      status?: string | Array<string>
+      categoryId?: string | Array<string>
+      shoppingId?: string | Array<string>
+      isInventoriable?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        categoryId: string | null
+        categoryName: string | null
+        shoppingId: string | null
+        name: string
+        description: string
+        code: string
+        status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+        isInventoriable: boolean
+        allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+        images: Array<{
+          uploadId: string
+          url: string
+          thumbnailUrl: string | null
+          position: number
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/items": {
+    /** Dar de alta un artículo */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      description?: string
+      categoryId?: string | null
+      shoppingId?: string | null
+      isInventoriable?: boolean
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      shoppingId: string | null
+      name: string
+      description: string
+      code: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      isInventoriable: boolean
+      allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+      images: Array<{
+        uploadId: string
+        url: string
+        thumbnailUrl: string | null
+        position: number
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/items/{itemId}": {
+    /** Ver un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      shoppingId: string | null
+      name: string
+      description: string
+      code: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      isInventoriable: boolean
+      allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+      images: Array<{
+        uploadId: string
+        url: string
+        thumbnailUrl: string | null
+        position: number
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/items/{itemId}": {
+    /** Editar un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    body: {
+      name?: string
+      description?: string
+      categoryId?: string | null
+      shoppingId?: string | null
+      isInventoriable?: boolean
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      shoppingId: string | null
+      name: string
+      description: string
+      code: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      isInventoriable: boolean
+      allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+      images: Array<{
+        uploadId: string
+        url: string
+        thumbnailUrl: string | null
+        position: number
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/items/{itemId}": {
+    /** Dar de baja un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    response: undefined
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/items/{itemId}/images": {
+    /** Sustituir la galería de un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    body: {
+      uploadIds: Array<string>
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      shoppingId: string | null
+      name: string
+      description: string
+      code: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      isInventoriable: boolean
+      allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+      images: Array<{
+        uploadId: string
+        url: string
+        thumbnailUrl: string | null
+        position: number
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/items/{itemId}/label": {
+    /** La etiqueta imprimible de un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    response: {
+      itemId: string
+      code: string
+      payload: string
+      name: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      productionId: string
+    }
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/items/{itemId}/status": {
+    /** Cambiar el estado de un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    body: {
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      shoppingId: string | null
+      name: string
+      description: string
+      code: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      isInventoriable: boolean
+      allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+      images: Array<{
+        uploadId: string
+        url: string
+        thumbnailUrl: string | null
+        position: number
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/items/{itemId}/usage": {
+    /** Dónde se está usando un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    response: {
+      sets: Array<{
+        id: string
+        name: string
+      }>
+      recordings: Array<{
+        id: string
+        name: string
+        continuityId: string
       }>
     }
   }
@@ -1965,6 +2761,48 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/scenes": {
+    /** Listar todas las escenas de una producción, atravesando sus capítulos */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_index?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      missingFromLastSync?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        chapterId: string
+        chapterIndex: number
+        name: string
+        synopsis: string
+        index: number
+        label: string
+        workflowCount: number
+        synopsisEditedAt: string | null
+        missingFromLastSync: boolean
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/scope": {
     /** Qué se lleva por delante dar de baja la producción */
     params: {
@@ -1985,6 +2823,488 @@ export interface ApiEndpoints {
       openPurchaseOrders: number
       unreturnedOrders: number
     }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/scripts": {
+    /** Listar los guiones de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_index?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      syncStatus?: string | Array<string>
+      responsibleId?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        name: string
+        index: number
+        documentUploadId: string | null
+        documentUrl: string | null
+        documentFileName: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        syncStatus: "not_extracted" | "queued" | "running" | "completed" | "failed"
+        syncError: string | null
+        syncedAt: string | null
+        scenesWithoutBody: number
+        chapterCount: number
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/scripts": {
+    /** Registrar un guion */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      index?: number
+      documentUploadId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      index: number
+      documentUploadId: string | null
+      documentUrl: string | null
+      documentFileName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      syncStatus: "not_extracted" | "queued" | "running" | "completed" | "failed"
+      syncError: string | null
+      syncedAt: string | null
+      scenesWithoutBody: number
+      chapterCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/scripts/{scriptId}": {
+    /** Ver un guion */
+    params: {
+      companyId: string
+      productionId: string
+      scriptId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      index: number
+      documentUploadId: string | null
+      documentUrl: string | null
+      documentFileName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      syncStatus: "not_extracted" | "queued" | "running" | "completed" | "failed"
+      syncError: string | null
+      syncedAt: string | null
+      scenesWithoutBody: number
+      chapterCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/scripts/{scriptId}": {
+    /** Editar un guion, o sustituir su archivo */
+    params: {
+      companyId: string
+      productionId: string
+      scriptId: string
+    }
+    body: {
+      name?: string
+      index?: number
+      documentUploadId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      index: number
+      documentUploadId: string | null
+      documentUrl: string | null
+      documentFileName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      syncStatus: "not_extracted" | "queued" | "running" | "completed" | "failed"
+      syncError: string | null
+      syncedAt: string | null
+      scenesWithoutBody: number
+      chapterCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/scripts/{scriptId}": {
+    /** Dar de baja un guion */
+    params: {
+      companyId: string
+      productionId: string
+      scriptId: string
+    }
+    response: undefined
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/scripts/{scriptId}/scope": {
+    /** Qué se desvincula al dar de baja el guion */
+    params: {
+      companyId: string
+      productionId: string
+      scriptId: string
+    }
+    response: {
+      chapters: number
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/sets": {
+    /** Listar los sets de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      responsibleId?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        name: string
+        description: string
+        imageUploadId: string | null
+        imageUrl: string | null
+        imageThumbnailUrl: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        itemCount: number
+        items?: Array<{
+          itemId: string
+          name: string
+          code: string
+          status: string
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/sets": {
+    /** Registrar un set */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      description?: string
+      imageUploadId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      itemCount: number
+      items?: Array<{
+        itemId: string
+        name: string
+        code: string
+        status: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/sets/{setId}": {
+    /** Ver un set con su composición */
+    params: {
+      companyId: string
+      productionId: string
+      setId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      itemCount: number
+      items?: Array<{
+        itemId: string
+        name: string
+        code: string
+        status: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/sets/{setId}": {
+    /** Editar un set */
+    params: {
+      companyId: string
+      productionId: string
+      setId: string
+    }
+    body: {
+      name?: string
+      description?: string
+      imageUploadId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      itemCount: number
+      items?: Array<{
+        itemId: string
+        name: string
+        code: string
+        status: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/sets/{setId}": {
+    /** Dar de baja un set */
+    params: {
+      companyId: string
+      productionId: string
+      setId: string
+    }
+    response: undefined
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/sets/{setId}/items": {
+    /** Componer un set: establecer de una vez sus artículos */
+    params: {
+      companyId: string
+      productionId: string
+      setId: string
+    }
+    body: {
+      itemIds: Array<string>
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      itemCount: number
+      items?: Array<{
+        itemId: string
+        name: string
+        code: string
+        status: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/videos": {
+    /** Listar la biblioteca de videos de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      categoryId?: string | Array<string>
+      responsibleId?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        categoryId: string | null
+        categoryName: string | null
+        name: string
+        videoUploadId: string | null
+        videoUrl: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        propCount: number
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/videos": {
+    /** Registrar un video en la biblioteca */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      videoUploadId?: string | null
+      categoryId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      name: string
+      videoUploadId: string | null
+      videoUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      propCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/videos/{videoId}": {
+    /** Ver un video y obtener su dirección de reproducción */
+    params: {
+      companyId: string
+      productionId: string
+      videoId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      name: string
+      videoUploadId: string | null
+      videoUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      propCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/videos/{videoId}": {
+    /** Editar un video */
+    params: {
+      companyId: string
+      productionId: string
+      videoId: string
+    }
+    body: {
+      name?: string
+      videoUploadId?: string | null
+      categoryId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      name: string
+      videoUploadId: string | null
+      videoUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      propCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/videos/{videoId}": {
+    /** Dar de baja un video */
+    params: {
+      companyId: string
+      productionId: string
+      videoId: string
+    }
+    response: undefined
   }
 
   "GET /companies/{companyId}/productions/{productionId}/workflows": {

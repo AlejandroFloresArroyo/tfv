@@ -175,6 +175,34 @@ import {
   platformUsersRoute,
 } from "./platform.ts"
 import {
+  changeItemStatusRoute,
+  createCharacterRoute,
+  createItemRoute,
+  createSetRoute,
+  createVideoRoute,
+  deleteCharacterRoute,
+  deleteItemRoute,
+  deleteSetRoute,
+  deleteVideoRoute,
+  findItemByCodeRoute,
+  getCharacterRoute,
+  getItemRoute,
+  getSetRoute,
+  getVideoRoute,
+  itemLabelRoute,
+  itemUsageRoute,
+  listCharactersRoute,
+  listItemsRoute,
+  listSetsRoute,
+  listVideosRoute,
+  setItemImagesRoute,
+  setSetItemsRoute,
+  updateCharacterRoute,
+  updateItemRoute,
+  updateSetRoute,
+  updateVideoRoute,
+} from "./production-catalog.ts"
+import {
   createProductionCategoryRoute,
   createProductionRoute,
   createWorkflowRoute,
@@ -226,6 +254,30 @@ import {
   setQuoteTaxesRoute,
   updateQuoteRoute,
 } from "./quotes.ts"
+import {
+  chapterIndicesRoute,
+  chapterScopeRoute,
+  createChapterRoute,
+  createSceneRoute,
+  createScriptRoute,
+  deleteChapterRoute,
+  deleteSceneRoute,
+  deleteScriptRoute,
+  getChapterRoute,
+  getSceneRoute,
+  getScriptRoute,
+  listChaptersRoute,
+  listProductionScenesRoute,
+  listScenesRoute,
+  listScriptsRoute,
+  productionBreakdownRoute,
+  sceneIndicesRoute,
+  sceneScopeRoute,
+  scriptScopeRoute,
+  updateChapterRoute,
+  updateSceneRoute,
+  updateScriptRoute,
+} from "./script.ts"
 import {
   changeShipmentStatusRoute,
   estimateShippingRoute,
@@ -579,6 +631,73 @@ export const routes: readonly RegisteredRoute[] = [
   workflowScopeRoute,
   deleteWorkflowRoute,
 
+  // Los catálogos del rodaje: quién aparece, con qué se viste un decorado y cómo debía verse algo.
+  listCharactersRoute,
+  createCharacterRoute,
+  getCharacterRoute,
+  updateCharacterRoute,
+  deleteCharacterRoute,
+
+  listSetsRoute,
+  createSetRoute,
+  getSetRoute,
+  updateSetRoute,
+  setSetItemsRoute,
+  deleteSetRoute,
+
+  listVideosRoute,
+  createVideoRoute,
+  getVideoRoute,
+  updateVideoRoute,
+  deleteVideoRoute,
+
+  // El inventario. La localización por código va **antes** que la ficha con parámetro y cuelga de la
+  // empresa, no de la producción: quien lee una etiqueta no sabe de qué rodaje es.
+  findItemByCodeRoute,
+
+  listItemsRoute,
+  createItemRoute,
+  itemLabelRoute,
+  itemUsageRoute,
+  getItemRoute,
+  updateItemRoute,
+  changeItemStatusRoute,
+  setItemImagesRoute,
+  deleteItemRoute,
+
+  // El desglose del guion: guiones, capítulos y escenas.
+  //
+  // Las dos consultas de índice y la estructura completa van **antes** que las fichas con
+  // parámetro, por el mismo motivo que el panel: nada garantiza que un identificador no se parezca
+  // a «indices» o a «breakdown».
+  productionBreakdownRoute,
+  chapterIndicesRoute,
+  sceneIndicesRoute,
+
+  listScriptsRoute,
+  createScriptRoute,
+  getScriptRoute,
+  updateScriptRoute,
+  scriptScopeRoute,
+  deleteScriptRoute,
+
+  listChaptersRoute,
+  createChapterRoute,
+  getChapterRoute,
+  updateChapterRoute,
+  chapterScopeRoute,
+  deleteChapterRoute,
+
+  // Las escenas de la producción entera van **antes** que la ficha del capítulo con parámetro:
+  // comparten el prefijo `/productions/{id}/`, y el orden de la tabla es el que resuelve.
+  listProductionScenesRoute,
+  listScenesRoute,
+  createSceneRoute,
+  getSceneRoute,
+  updateSceneRoute,
+  sceneScopeRoute,
+  deleteSceneRoute,
+
   // Continuidad de rodaje: la jornada, su reparto, su continuidad por personaje y la utilería de
   // cada una. Ver `routes/continuity.ts`.
   listRecordingsRoute,
@@ -606,8 +725,9 @@ export const routes: readonly RegisteredRoute[] = [
   // suya, pero lo que devuelve es continuidad, y ésa es la clave que exige.
   characterContinuityRoute,
 
-  // Pendiente: guion, capítulos y escenas (21); inventario, entregas y presupuesto (22); compras
-  // a almacenes (23). Las tablas existen desde la `0002` y el panel ya las cuenta.
+  // Pendiente: la extracción asistida del guion (21); notas de entrega, calendario, presupuesto y
+  // el detalle de los planes de trabajo (22); compras a almacenes (23). Las tablas existen desde la
+  // `0002` y el panel ya las cuenta.
 
   // ─── Pixit ─────────────────────────────────────────────────────────────────
   // Pendiente: rebanada 24.

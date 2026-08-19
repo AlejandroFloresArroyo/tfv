@@ -12,26 +12,26 @@
 
 ## Catálogos
 
-- [ ] Personajes
-- [ ] Eliminar un personaje deja sin personaje sus continuidades
-- [ ] Sets con sus artículos; un artículo puede estar en varios
-- [ ] Eliminar un set no elimina sus artículos
-- [ ] Biblioteca de videos con reproducción
-- [ ] Eliminar un video retira las piezas de utilería que lo señalaban
+- [x] Personajes
+- [x] Eliminar un personaje deja sin personaje sus continuidades
+- [x] Sets con sus artículos; un artículo puede estar en varios
+- [x] Eliminar un set no elimina sus artículos
+- [x] Biblioteca de videos con reproducción
+- [x] Eliminar un video retira las piezas de utilería que lo señalaban
 
 ## Desglose
 
-- [ ] Guiones con su índice, archivo y marca de extracción
-- [ ] Sustituir el archivo invalida la extracción
-- [ ] Capítulos con índice único en la producción
-- [ ] Escenas con índice único en el capítulo
-- [ ] Consulta del último índice y comprobación de disponibilidad
-- [ ] Recuentos de escenas y de planes
-- [ ] Etiqueta compuesta de escena
-- [ ] Eliminar un capítulo arrastra sus escenas
-- [ ] **Eliminar una escena desvincula jornadas y planes, devolviéndolos a su estado inicial**
-- [ ] Eliminar un guion desvincula sus capítulos
-- [ ] Consulta de la estructura completa como índice navegable
+- [x] Guiones con su índice, archivo y marca de extracción
+- [x] Sustituir el archivo invalida la extracción
+- [x] Capítulos con índice único en la producción
+- [x] Escenas con índice único en el capítulo
+- [x] Consulta del último índice y comprobación de disponibilidad
+- [x] Recuentos de escenas y de planes
+- [x] Etiqueta compuesta de escena
+- [x] Eliminar un capítulo arrastra sus escenas
+- [x] **Eliminar una escena desvincula jornadas y planes, devolviéndolos a su estado inicial**
+- [x] Eliminar un guion desvincula sus capítulos
+- [x] Consulta de la estructura completa como índice navegable
 
 ## Continuidad
 
@@ -47,12 +47,18 @@
 - [x] Notas de jornada
 - [x] Consulta de la continuidad de un personaje
 - [x] Vista completa de una jornada
-- [ ] Consulta de dónde se ha usado un artículo
+- [x] Consulta de dónde se ha usado un artículo — sets y jornadas, con la continuidad concreta
 
 ## Referencias
 
-- [ ] Resolver la referencia del capítulo que apunta a la colección equivocada
-- [ ] Resolver las referencias derivadas hacia colecciones inexistentes
+Las dos venían resueltas desde la migración `0002`, y lo que faltaba era **comprobarlo y dejar
+constancia** en vez de marcar la casilla de memoria. Se verificó contra el catálogo del motor
+—`pg_constraint` e `information_schema`, no el código que las declara, que es lo que los defectos
+dicen que estaba mal— con dos pruebas en `apps/api/src/productions/script.test.ts`, comprobadas
+además invirtiéndolas para ver que muerden. Ver `HALLAZGOS.md` H-177 y H-178.
+
+- [x] Resolver la referencia del capítulo que apunta a la colección equivocada
+- [x] Resolver las referencias derivadas hacia colecciones inexistentes
 
 ## Lo que la rebanada 20 tiene fuera de su lista
 

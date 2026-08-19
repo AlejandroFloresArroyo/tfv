@@ -4105,6 +4105,205 @@ sigue ahí y sigue siendo «la vigente», así que volver a contratar responde q
 es cambiar de plan, que funciona. No rompe ningún escenario de la spec; sí deja un estado que nadie
 barre, al lado de la gracia, que sí se barre.
 
+### 2026-08-19 · El desglose del guion: guiones, capítulos y escenas
+
+**Cerrado — rebanada 20, sección «Desglose»: las once tareas, y las dos de «Referencias»**
+
+Las tres entidades sobre las que se organiza un rodaje, con su API entera y sin pantallas:
+`apps/api/src/productions/script.ts` y `apps/api/src/routes/script.ts`, veintidós rutas nuevas —de
+228 a 250 en el contrato publicado—. Las tablas existían desde la `0002` y las políticas desde la
+`0005`: **no hizo falta ninguna migración**.
+
+- **Guiones** con su índice, su archivo y su marca de extracción. Nacen sin extraer, y el estado no
+  se recibe por el cuerpo: admitirlo lo convertiría en un valor por omisión que cualquiera puede
+  sobrescribir para decir que ya se extrajo.
+- **Sustituir el archivo invalida la extracción**, y con ella las tres marcas que describían la del
+  archivo anterior. Sustituir es cambiar por **otro**: reasignar el mismo archivo no tira una
+  extracción porque alguien corrigió el nombre. Retirarlo sí la invalida.
+- **Capítulos** con índice único en la producción, **escenas** con índice único en el capítulo, las
+  dos con `409` en dos capas —consulta previa para el mensaje bueno, índice único parcial para la
+  carrera de dos peticiones simultáneas—.
+- **La etiqueta compuesta** sale de `sceneLabel()` de `@tfv/contracts`, no de una plantilla escrita
+  aquí. Es una de las diecisiete fórmulas que H-129 dejó definidas y sin consumir; ésta ya se
+  consume, y hace exactamente lo que su spec pide.
+- **Recuentos**: escenas por capítulo y planes por escena, cada uno en una consulta por lote y
+  nunca nulos, conforme a `computed-fields`.
+- **Eliminar un capítulo arrastra sus escenas** —la cascada de la clave foránea es física y aquí la
+  baja es lógica, así que la escribe el manejador— y **eliminar una escena desvincula jornadas y
+  planes devolviéndolos a su estado inicial**. Las dos se componen: dar de baja un capítulo suelta
+  también lo que referenciaba a sus escenas, o quedarían jornadas apuntando a escenas muertas.
+- **Eliminar un guion desvincula sus capítulos**: de qué guion salió el texto es procedencia, no
+  propiedad.
+- **La estructura completa** como índice navegable, sin paginar, en dos consultas.
+
+**La decisión que había que escribir: los índices no se renumeran**
+
+Borrar el capítulo 2 de tres deja al 3 llamándose 3. En un guion real los números son la referencia
+de todo el papeleo del equipo —el desglose de arte, la orden del día, las hojas de continuidad— y
+renumerar dejaría a media producción hablando de un capítulo que ya es otro. Por eso en la industria
+existen los «12A»: se intercala, no se recoloca. La propia spec lo confirma al pedir una consulta
+del siguiente índice libre: si los índices se recompactaran, esa consulta sobraría.
+
+De ahí sale la otra mitad, que es la que se equivoca sola: **el siguiente índice es el último más
+uno, no el primer hueco**. Rellenar el hueco reutilizaría un número que el equipo ya usó, que es la
+misma confusión por la puerta de atrás. El hueco queda libre y se puede pedir a mano — y pedirlo
+funciona, que es lo que lo convierte en una posibilidad y no en un residuo.
+
+Está escrito en la cabecera del módulo, en los dos manejadores de baja y en tres pruebas, porque es
+exactamente el sitio donde alguien «arreglaría» algo que no está roto.
+
+**Verificado, no supuesto**
+
+- **R-08 y R-09 eran papel, y ahora consta que se miró.** Los dos defectos de la sección
+  «Referencias» venían resueltos desde la `0002`. Se comprobó contra el **catálogo del motor** y no
+  contra el código que declara las referencias, que es justamente lo que los defectos dicen que
+  estaba mal: la única clave foránea que llega a `production_chapters` es `production_scenes.chapter_id`,
+  y ninguna del capítulo lleva a órdenes de almacén (R-08); las notas de jornada y los comentarios de
+  plan son tablas con su clave foránea y no campos derivados, y `production_workflow_coments` no
+  existe porque los dos tipos de comentario se unificaron en `production_comments` (R-09). Con dos
+  pruebas, **comprobadas invirtiéndolas** antes de fijarlas. H-177 y H-178.
+- **El bloque se recorre contra un servidor de verdad**, no llamando a manejadores:
+  `script-recorrido.test.ts` levanta la aplicación en un puerto efímero y la conduce con `fetch`.
+  Un guion que nace sin extraer, tres capítulos, nueve escenas de 1.1 a 3.4, la estructura navegable,
+  se borra el de en medio y el tres sigue siendo el tres, el siguiente libre dice cuatro, y el dos se
+  puede intercalar a mano. La afirmación central se comprobó invirtiéndola: esperando `[1, 2]` —lo
+  que daría renumerar— la prueba falla nombrando `[1, 3]`.
+- **La estructura exige las dos claves.** La ruta declara la de capítulos y el manejador exige además
+  la de escenas, porque la respuesta las contiene. Declarar sólo la primera ampliaría en silencio la
+  autoridad de quien la tiene: es H-07 otra vez, resuelto igual, con su prueba.
+
+**Cifras**, medidas sobre una base creada de cero para esta verificación: **1577 pruebas**, 43 más
+que las 1534 de partida, y las 43 son de este encargo —42 en `script.test.ts` y el recorrido contra
+servidor de verdad—. Por paquete: contratos 406, datos 90, interfaz 119, web 109 y **API 853**, que
+sube desde 810. `pnpm check` limpio en los seis paquetes. `pnpm lint` con **las mismas 6 incidencias
+de base** (H-150) y ninguna en los archivos de esta tanda.
+
+**Abierto**
+
+- **La escena que referencian las jornadas y los planes puede ser de otra producción** (H-180). La
+  clave foránea garantiza que la escena existe, no que sea de su producción — el mismo agujero que
+  el capítulo tenía con su guion y que aquí sí se cierra. Hoy es latente porque ninguna ruta escribe
+  esos dos `scene_id`; la guarda va donde se escribe el vínculo, que es de otras rebanadas.
+- **La spec llama al mismo campo del capítulo «sinopsis» y «descripción»** en dos requisitos
+  contiguos (H-179). Implementado sobre `synopsis`, que es como lo llama el modelo.
+- La **extracción asistida** del guion es la rebanada 21 y no se tocó: `productions.pdfs.sync` sigue
+  siendo la única clave de guiones sin ruta, y está escrito en el código para que se lea como
+  decisión y no como olvido.
+
+### 2026-08-19 · Los catálogos del rodaje, y el inventario que los llena
+
+Una producción existía, tenía taxonomía y planes de trabajo, y **no tenía con qué llenarla**: ni
+personajes, ni sets, ni videos de referencia, ni un solo objeto físico. El panel ya los contaba —seis
+recuentos que sólo podían dar cero— y las veintiocho tablas estaban puestas desde la `0002`. Faltaba
+lo de en medio.
+
+**Los ocho estados, y la tabla que la spec no escribió**
+
+`production-inventory` enumera los ocho estados de un artículo en una tabla de dos columnas y **no
+dice ni una palabra de qué pasa a qué**. Sin eso, «cambiar el estado» es escribir cualquier valor del
+enumerado encima de cualquier otro, que es como un jarrón devuelto a su dueño vuelve a estar
+disponible sin que nadie lo traiga de vuelta.
+
+El criterio adoptado, leído del departamento de arte, vive en `TRANSITIONS` **como dato y en un solo
+sitio**:
+
+| Regla | Por qué |
+|---|---|
+| `Disponible ↔ Almacenado` | Guardar y sacar del guardado, libre en ambos sentidos |
+| `* → Dañado · Incompleto · Perdido · Robado` | Las cosas se rompen y se pierden en cualquier momento, **incluso guardadas** |
+| `Dañado · Incompleto · Perdido · Robado → Disponible · Almacenado` | Nada de eso es terminal: se reparó, apareció la pieza, estaba debajo de una mesa |
+| `* → Devuelto` | Volvió a su dueño y salió de las manos de la producción |
+| `Devuelto → nada` | El único terminal |
+
+Y **`Entregado` no se pone a mano nunca**. Se llega ahí completando una nota de entrega, que se
+verifica pieza por pieza y la firman las dos partes. Las notas no entran en esta ronda, así que hoy
+**ningún camino lleva a `delivered`** — y es correcto que así sea: un estado que significa «lo firmó
+quien lo recibió», puesto con un botón, sería exactamente la mentira que la verificación por líneas
+existe para impedir. Está escrito en la cabecera del módulo, en la descripción de la ruta y fijado
+por una prueba: `delivered` es el único estado sin entrada, `returned` el único sin salida.
+
+La tabla se prueba **entera**, las sesenta y cuatro celdas, con lo esperado escrito desde las reglas
+y no desde la tabla —o las dos se equivocarían igual—. Y ese desdoblamiento sirvió a la primera: la
+prueba encadenaba las reglas como si fueran excluyentes, la primera que casa decide, y dejó fuera
+cuatro celdas. **Las reglas se suman**: que un jarrón dañado se repare y vuelva a disponible no
+impide devolverlo dañado a su dueño, que es lo que se hace con la utilería rentada que se rompió.
+
+**Lo que de verdad hay que acertar son las bajas, y ninguna cascada ayuda**
+
+Cinco bajas, cinco comportamientos distintos escritos en las specs: el personaje deja sus
+continuidades sin personaje, el set no se lleva sus artículos, el video **sí** se lleva la utilería
+que lo señalaba, y el artículo se retira de sets y continuidades sin destruir ni unos ni otras.
+
+Las cuatro tienen su cascada declarada en el esquema —`set null` en `character_id`, `cascade` en
+`set_id`, `video_id` e `item_id`— y **ninguna de las cuatro se dispara**, porque la baja de estas
+entidades es lógica: se escribe `deleted_at` y no se borra ninguna fila, así que el motor no tiene
+qué propagar. La red está declarada, se lee como si protegiera, y no sujeta nada. Se escriben a mano,
+las cuatro, con el motivo encima.
+
+La utilería del video **se elimina** en vez de quedarse sin video porque no puede quedarse sin él:
+`production_props_item_xor_video` exige artículo **o** video, nunca ninguno. Y las filas de
+composición de un set dado de baja **se conservan**, al revés que las del artículo: un decorado que
+se restaura y vuelve vacío no es el decorado que se dio de baja.
+
+**Cuatro mutaciones, para no fiarse del verde**
+
+Ninguna prueba se dio por buena por pasar a la primera. Se rompió el código a propósito cuatro veces
+—quitar el nombre de la categoría de la búsqueda, no retirar de los sets al dar de baja, confiar en
+la cascada del personaje, no retirar la utilería del video— y cada una la cazó la prueba que le
+tocaba, y sólo esa. Las tres últimas son la misma lección de arriba.
+
+**Lo que se encontró**
+
+- **H-174, y es el que duele: H-90 tiene un cuarto caso, en la vía principal del alta.** Dos empresas
+  no pueden llamar igual a su producción. `freeSlug` comprueba si el identificador legible está libre
+  **con las políticas puestas**, no ve la fila de la otra empresa, lo da por libre, y el índice único
+  de plataforma rechaza la inserción: `500` en lugar del `409` que la convención pide. Apareció solo,
+  al escribir la segunda empresa de una prueba. Es más caro que en almacenes y productos —los dos
+  casos que H-90 ya tenía abiertos— porque el identificador de una producción se deriva **siempre**,
+  se publique o no: basta con dar de alta una producción con un nombre corriente.
+- **H-171: el cambio de estado no se puede atribuir.** La spec pide autor e instante; el instante lo
+  da `updated_at` y el autor **no tiene dónde escribirse**. El almacén tiene `warehouse_stock_events`
+  para exactamente esto y el inventario de producción no tiene su equivalente. Las dos vías sin
+  migración tampoco valen: la bitácora guarda claves de un catálogo cerrado desde H-153, y añadir una
+  obliga a traducirla en `apps/web`, que es otro encargo.
+- **H-172: el `restrict` de las líneas de nota de entrega no se dispara nunca**, por lo mismo que las
+  cascadas de arriba. Se vio al ir a apoyarse en él para la tarea que quedó bloqueada.
+- **H-170: `production_items_code_unique` no excluye lo dado de baja.** Es H-139 en otra tabla. No
+  muerde, porque el código se acuña al azar sobre sesenta bits en vez de derivarse de la empresa; lo
+  que se pierde es que el espacio de códigos deje de liberarse nunca.
+- **H-173**: tres claves del catálogo migrado gobiernan selectores de un formulario y no operaciones,
+  así que se quedan sin ruta. No se les inventa una.
+
+Los cuatro primeros son migraciones y esta tanda no tiene número asignado, así que quedan anotados
+y ninguno se toca.
+
+**Lo que queda fuera, y por qué**
+
+Tres tareas del bloque de inventario siguen sin marcar, con su razón escrita en la propia línea:
+**la atribución del cambio de estado** (H-171), **las notas dentro de la consulta de dónde se usa** y
+**impedir eliminar un artículo que figure en una nota sin cerrar**. Las dos últimas esperan a lo
+mismo: las notas de entrega no existen todavía. Enumerarlas devolvería siempre la lista vacía, y eso
+no se lee como «no lo sé», se lee como «no está en ninguna» — que hoy nadie puede afirmar.
+
+La **etiqueta** se entrega como dato y no como dibujo: el servidor da el código y la carga útil que
+va en el símbolo, y garantiza el **viaje de ida y vuelta** —lo que se imprime es exactamente lo que
+la localización acepta de vuelta, y hay una prueba que encadena los dos—. Dibujar el código de barras
+es de la pantalla, que es de la rebanada 29 y no de esta ronda de API sola.
+
+**Verificación**
+
+`pnpm test --force` en verde con **1570** pruebas, 36 más que las 1534 de partida, **sobre una base
+creada desde cero**: se dejó caer `tfv_test_prod_catalogo` y se volvió a migrar entera antes de la
+pasada que cuenta. `pnpm check` limpio. `pnpm lint` con las seis incidencias de H-150 y ninguna nueva,
+ninguna en los archivos de esta tanda.
+
+Las treinta y seis corren **contra un servidor de verdad**, en un puerto efímero que elige el
+sistema: peticiones HTTP con su serialización, su cookie, su enrutado y su guardián, no llamadas al
+manejador. Y la que resume la tanda es el recorrido entero de una silla Thonet — nace disponible,
+recibe foto, se guarda, se rompe, se repara, rechaza «entregado» sin moverse, entra en dos sets, se
+usa en una jornada, dice dónde se ha usado, y aparece por el código de su etiqueta con su estado, su
+producción y su foto.
+
 ### 2026-08-19 · Continuidad de rodaje
 
 **Cerrado**
