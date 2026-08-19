@@ -126,36 +126,26 @@ Lo construido hasta ahora, medido y no estimado:
 
 | | |
 |---|---|
-| Rebanadas | 19 de 30 empezadas, **ninguna cerrada del todo** |
-| Código sin pruebas | 75 036 líneas |
-| Código de prueba | 24 853 líneas |
-| Pruebas | **1457** de vitest — 393 contratos, 87 datos, 757 API, 101 web, 119 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
-| Esquema | 97 tablas · 290 índices · 50 enumerados · 6 comprobaciones · 41 únicos parciales · 236 claves foráneas |
+| Rebanadas | 25 de 30 empezadas, **6 cerradas del todo**: 03, 08, 09, 11, 13 y 17 |
+| Tareas | **747 de 1228**, el 60,8 %. Contadas sobre los `tasks.md`, no estimadas. Otras 29 están marcadas **no aplicables** con su razón escrita: apuntan a la pila vieja, que la regla 1 deja intacta |
+| Código sin pruebas | 93 041 líneas |
+| Código de prueba | 33 985 líneas |
+| Pruebas | **1534** de vitest — 406 contratos, 90 datos, 810 API, 109 web, 119 interfaz — y **83 de extremo a extremo** con Playwright sobre un build de producción |
+| Esquema | 97 tablas · 295 índices · 50 enumerados · 8 comprobaciones · 42 únicos parciales · 238 claves foráneas |
 | Aislamiento | 215 políticas · 97/97 tablas · 0 con identidad cruda |
-| Migraciones | 25, replicadas desde cero en cada verificación |
-| Rutas | **220** registradas, 159 con permiso declarado, 18 públicas y enumeradas |
+| Migraciones | 28, replicadas desde cero en cada verificación |
+| Rutas | **228** registradas, 165 con permiso declarado, 43 sólo autenticadas y 20 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 62, en español e inglés (1649 mensajes, sin desalinear) |
-| Código sin pruebas | 31 130 líneas |
-| Código de prueba | 9 973 líneas |
-| Pruebas | **1154** de vitest — 268 contratos, 78 datos, 610 API, 101 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
-| Esquema | 95 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
-| Aislamiento | 210 políticas · 95/95 tablas · 0 con identidad cruda |
-| Migraciones | 22, replicadas desde cero en cada verificación |
-| Rutas | **193** registradas, 133 con permiso declarado, 17 públicas y enumeradas |
-| Pruebas | **1244** de vitest — 353 contratos, 78 datos, 623 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
-| Esquema | 96 tablas · 62 enumerados · 6 comprobaciones · 48 únicos parciales. **El recuento de índices queda sin actualizar**: no se pudo reproducir la medida de la que salió el «270» anterior, y un número sin medir es peor que ninguno |
-| Aislamiento | 211 políticas · 96/96 tablas · 0 con identidad cruda |
-| Migraciones | 22, replicadas desde cero en cada verificación |
-| Rutas | **182** registradas, 133 con permiso declarado, 16 públicas y enumeradas |
-| Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 50, en español e inglés (1396 mensajes, sin desalinear) |
+| Pantallas | 62, en español e inglés (1656 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
 colecciones explorables**, **el almacén entero, del catálogo a las existencias** y, desde el 19 de
-agosto, **el área de administración de plataforma**. La parte ancha del trabajo siguen siendo las
-rebanadas 08 a 27; la 10 está casi entera y las demás sin tocar.
+agosto, **el área de administración de plataforma** y **la contratación de planes**. La parte ancha
+del trabajo que queda son **producciones** (20–23) y **Pixit y locaciones** (24–27, en pausa por
+decisión de producto): entre las dos suman 295 de las 481 tareas abiertas. De los servicios de
+plataforma sólo sigue en curso la 10, y le faltan dos taxonomías que cuelgan de entidades que aún no
+existen.
 
 **La plataforma ya tiene dónde administrarse, y deja rastro de hacerlo.** Un administrador de
 plataforma puede mirar a través de todos los arrendatarios —eso existía desde la rebanada 05— y
@@ -163,6 +153,14 @@ ahora tiene un sitio propio desde el que ejercerlo: la bandeja de prospectos que
 implementada y sin pantalla, y dos padrones de sólo lectura. Cada ruta del área niega a un usuario
 corriente con `403`, y cada acción que se hace desde ella queda escrita en una bitácora que ni
 siquiera quien la protagoniza puede reescribir.
+
+**Contratar ya cierra el círculo, que era lo que abría todo lo demás.** El plan se contrata de verdad: la
+sesión de pago lleva a la página del procesador —hoy un suplente que no mueve dinero y lo dice—, y
+pagar ahí **firma el evento y lo entrega a `/payments/events`**, el mismo endpoint que atenderá al
+procesador real. La suscripción nace de ese evento y de ningún otro sitio, así que el camino que
+usará producción se ejerce en cada pasada. Detrás se encienden los recorridos que colgaban de tener
+suscripción —cambiar de plan, cancelar al vencimiento, reactivar, el historial de cobros— y,
+encadenada, **la tienda pública**, que exige suscripción vigente antes de servir nada.
 
 **Y ya se puede comprar.** Una tienda pública vende de verdad: el carrito se valora contra el
 catálogo publicado con la misma función que pinta la ficha, pagar **aparta unidades concretas** con
@@ -184,10 +182,13 @@ consulta —búsqueda insensible a acentos, filtros de gramática cerrada, orden
 paginación uniforme— y la interfaz guarda su estado **en la dirección**: un listado filtrado se
 comparte por enlace, retroceder deshace el último filtro y recargar no pierde nada.
 
-**La interfaz ya tiene red.** Treinta y nueve pruebas de extremo a extremo con Playwright, en unos
-doce segundos, sobre un build de producción. Cubren tema, idioma, las tres guardas, la renovación
-transparente, el cierre de sesión sin recarga, el recorrido de escritura completo y la exploración
-de colecciones entera. Lo que aún no cubren está enumerado en el `tasks.md` de la 28.
+**La interfaz ya tiene red.** Ochenta y tres pruebas de extremo a extremo con Playwright, en unos
+veintiséis segundos, sobre un build de producción y contra una base y unos puertos propios del árbol
+de trabajo desde el que se lanzan — que es lo que hace que se puedan correr sin pedirle permiso a
+nadie. Cubren tema, idioma, las tres guardas, la renovación transparente, el cierre de sesión sin
+recarga, el recorrido de escritura completo, la exploración de colecciones, el almacén de punta a
+punta y **el ciclo de contratación entero**. Lo que aún no cubren está enumerado en el `tasks.md` de
+la 28.
 
 ## Estado
 
@@ -198,8 +199,8 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Tareas | Nota |
 |---|---|---|---|---|
 | 00 | Andamiaje del espacio de trabajo | ✅ | — | Raíz, herramientas, base local |
-| 01 | `add-platform-contracts` | 🟡 | 23/37 | Dinero, errores, consulta, paginación, identificadores, **idempotencia**, **campos calculados** y **el cliente tipado generado**. Falta el registro de búsqueda y los esquemas de entrada y salida compartidos |
-| 02 | `add-postgres-data-model` | 🟡 | 29/34 | 91 tablas, 229 claves foráneas, 48 únicos parciales. Falta medir el volcado real, la siembra y el desfase en integración continua |
+| 01 | `add-platform-contracts` | 🟡 | 27/37 | Dinero, errores, consulta, paginación, identificadores, **idempotencia**, **campos calculados** y **el cliente tipado generado**. Falta el registro de búsqueda y los esquemas de entrada y salida compartidos |
+| 02 | `add-postgres-data-model` | 🟡 | 30/34 | 91 tablas, 229 claves foráneas, 48 únicos parciales. Falta medir el volcado real, la siembra y el desfase en integración continua |
 | 03 | `add-hono-api-runtime` | ✅ | 26/26 | Registro explícito, validación, contrato de error, contrato publicado con su cliente tipado y su candado de desfase, salud, límite de cuerpo y limitación de frecuencia. **La primera rebanada cerrada del todo** |
 
 > **La 09 se cierra el 2026-08-19**, la segunda. Al cerrarla salieron las dos cosas que nadie había
@@ -222,57 +223,57 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Tareas | Nota |
 |---|---|---|---|---|
 | 04 | `add-session-lifecycle` | 🟡 | 31/36 | Sesiones revocables, rotación con detección de reutilización, y revocación exigida por el motor. Falta sustituir la maquinaria propia por el servicio gestionado |
-| 05 | `add-authorization-enforcement` | 🟡 | 21/29 | Catálogo de **255** claves, resolución de rol, elusión acotada de propietario y de plataforma, permisos efectivos para la interfaz. Falta la medición previa al corte, que es lo que impide cerrarla |
-| 06 | `add-tenant-scoping` | 🟡 | 24/29 | **Las dos capas en pie**: 195 políticas sobre las 91 tablas, y los manejadores corriendo bajo `withRequester`. Faltan las de los dominios que aún no existen |
-| 07 | `add-verified-payment-webhooks` | 🟡 | 11/38 | **Firma verificada de verdad**, unicidad por reclamación e inserción, y transaccionalidad. Los manejadores por tipo **ya están**: los de suscripción con la 11, los de cobro en tienda con la 18 (H-88 cerrado) |
+| 05 | `add-authorization-enforcement` | 🟡 | 22/29 | Catálogo de **255** claves, resolución de rol, elusión acotada de propietario y de plataforma, permisos efectivos para la interfaz. Falta la medición previa al corte, que es lo que impide cerrarla |
+| 06 | `add-tenant-scoping` | 🟡 | 28/29 | **Las dos capas en pie**: 195 políticas sobre las 91 tablas, y los manejadores corriendo bajo `withRequester`. Faltan las de los dominios que aún no existen |
+| 07 | `add-verified-payment-webhooks` | 🟡 | 25/38 | **Firma verificada de verdad**, unicidad por reclamación e inserción, y transaccionalidad. Los manejadores por tipo **ya están**: los de suscripción con la 11, los de cobro en tienda con la 18 (H-88 cerrado) |
 
 ### Servicios de plataforma
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 08 | `migrate-media-storage` | 🟡 | **Subida directa entera y usada**: autorización acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión, confirmación que dice qué se escribió, y el selector con vista previa, reducción y reintento por objeto. La **sustitución de colecciones diferencia** —L-01— y las pantallas del almacén ya suben: galería del producto, e imagen única de almacén y ubicación. Faltan los marcadores de posición como activos propios y la ejecución del recolector, que espera al despachador de trabajos (09) |
+| 08 | `migrate-media-storage` | ✅ | 39/39. **Subida directa entera y usada**: autorización acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión, confirmación que dice qué se escribió, y el selector con vista previa, reducción y reintento por objeto. La **sustitución de colecciones diferencia** —L-01— y las pantallas del almacén ya suben: galería del producto, e imagen única de almacén y ubicación. **Cerrada el 2026-08-19**: los marcadores de posición ya son activos propios y el recolector corre programado sobre el despachador de la 09 —y nunca toca lo referenciado, ni la fila ni los objetos—. La única casilla sin marcar es **no aplicable con su razón escrita**: la vista previa de los formatos de cámara de teléfono, que se resuelve diciendo lo que no se puede previsualizar (H-51, H-68) |
 | 09 | `migrate-activity-and-notifications` | ✅ | 50/50. Bitácora transaccional de sólo anexado, audiencia por permiso, bandeja entera con su contador, preferencias y dispositivos, y el **despachador de trabajos**, que desbloquea la 08 y la 13. Cerrada el 2026-08-19: el asiento pasa a **clave y parámetros**, la referencia navegable sale de una sola función y apunta a pantallas que existen, el destinatario se da de alta ante el proveedor antes de su primer envío, y la administración de plantillas queda retirada con su delta y con una prueba que impide que vuelva. **La segunda rebanada cerrada del todo** |
-| 10 | `migrate-identity-and-companies` | 🟡 | 61/78. Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos, ya con sus dos pantallas**: el formulario público y la bandeja, que estrena el **área de administración de plataforma**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen |
-| 11 | `migrate-subscriptions-and-billing` | 🟡 | 43/43. Planes, contratación, asientos, gracia, las tres compuertas y el alta de comercio entera, con 78 pruebas. **Contratar cierra el círculo desde el 2026-08-19**: el suplente tiene su propia página de cobro y al pagarla firma el evento y lo entrega al mismo endpoint que atenderá al procesador real, así que la suscripción nace por donde nacerá siempre (H-163). Falta el **procesador real** (H-85), que es configuración externa |
+| 10 | `migrate-identity-and-companies` | 🟡 | 62/75. Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos, ya con sus dos pantallas**: el formulario público y la bandeja, que estrena el **área de administración de plataforma**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen |
+| 11 | `migrate-subscriptions-and-billing` | ✅ | 43/43. Planes, contratación, asientos, gracia, las tres compuertas y el alta de comercio entera, con 78 pruebas. **Contratar cierra el círculo desde el 2026-08-19**: el suplente tiene su propia página de cobro y al pagarla firma el evento y lo entrega al mismo endpoint que atenderá al procesador real, así que la suscripción nace por donde nacerá siempre (H-163). Lo único pendiente **no depende de nosotros**: el procesador real (H-85) es una cuenta con sus credenciales, y la costura por la que entra ya está ejercida |
 
 ### Columna de comercio
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 12 | `migrate-warehouse-catalog` | 🟡 | Entera salvo el detalle de producto y sus asistentes, que son pantalla (29b). El **alta provisional** y su bandeja ya están |
-| 13 | `add-transactional-stock-reservation` | 🟡 | Entera, 30/31, con el **agujero de las huérfanas rentadas** tapado. La verificación de coherencia **ya corre programada** y avisa a quien puede arreglarla (09, H-11 cerrado). M-04 sigue sin confirmar: se implementó el criterio de la spec |
-| 14 | `add-server-side-quotation-pricing` | 🟡 | Motor, autoridad del servidor, congelación al cerrar, **precio negociado, precio por paquete, cobros y saldo**. La interfaz consume ya la misma función, y **el documento comercial ya se imprime y se comparte por enlace**. Falta la firma capturada en pantalla. M-05 sigue sin confirmar |
-| 15 | `migrate-warehouse-orders` | 🟡 | 29/33. Ciclo, **aceptación atómica**, rechazo con motivo, propagación a la orden de compra y su bandeja. Las cuatro que faltan esperan al escaparate (19) y al servicio de producciones (20) |
-| 16 | `migrate-order-chat-realtime` | 🟡 | 24/38. Historial con cursor, envío optimista, acuses por lado, editar y borrar lo propio, mensajes del sistema y la pertenencia al pedido, con la pantalla dentro de la ficha. **Sin conexión persistente**: pide configuración externa que no hay, y el transporte queda detrás de una costura (H-60) |
-| 17 | `migrate-shipping-rates` | 🟡 | 31/33. El cálculo va como función pura en contratos con las tarifas inyectadas como dato, y el peso facturable en decimal exacto —en coma flotante 2 lb son 0.9071839999999999 kg—. Cuadro por empresa con su pantalla y simulador que pregunta al servidor. La estimación **recibe la transacción en vez de abrirla**, que es lo que dejó a la 18 cobrar con la tarifa que cotizó. Faltan las dos que esperan al escaparate anónimo |
-| 18 | `add-transactional-checkout` | 🟡 | 37/43. Carrito valorado en el servidor, **reserva efectiva con caducidad**, instantánea congelada, idempotencia y la materialización de las ocho entidades en transacción, con la marca al final. Las cuatro de mosaicos esperan a la 24; el aviso de fallo persistente y el reproceso manual, a un área de administración de plataforma |
-| 19 | `migrate-websites-and-site-builder` | 🟡 | 38/49. Sitios, resolución por subdominio, tienda y **el constructor entero**: temas con su campaña programada, secciones con su contenido, reordenación por arrastre y vista previa que comparte función y componente con lo que se sirve. Falta el carrito y la cuenta del comprador, que son de la 18 |
+| 12 | `migrate-warehouse-catalog` | 🟡 | 51/52. Entera salvo el detalle de producto y sus asistentes, que son pantalla (29b). El **alta provisional** y su bandeja ya están |
+| 13 | `add-transactional-stock-reservation` | ✅ | 31/31, con el **agujero de las huérfanas rentadas** tapado. La verificación de coherencia **ya corre programada** y avisa a quien puede arreglarla (09, H-11 cerrado). **M-04 resuelto el 2026-08-19**: comprometer lo que no está en la nave es la prestación —las bodegas lo traen de fuera—, así que se autoriza **sólo en mostrador**, la tienda pública sigue negándose, y se añadió la **confirmación de llegada** con su bandeja |
+| 14 | `add-server-side-quotation-pricing` | 🟡 | 33/35. Motor, autoridad del servidor, congelación al cerrar, **precio negociado, precio por paquete, cobros y saldo**. La interfaz consume ya la misma función, y **el documento comercial ya se imprime y se comparte por enlace**. Falta la firma capturada en pantalla. M-05 sigue sin confirmar |
+| 15 | `migrate-warehouse-orders` | 🟡 | 30/33. Ciclo, **aceptación atómica**, rechazo con motivo, propagación a la orden de compra y su bandeja. Las cuatro que faltan esperan al escaparate (19) y al servicio de producciones (20) |
+| 16 | `migrate-order-chat-realtime` | 🟡 | 24/34. Historial con cursor, envío optimista, acuses por lado, editar y borrar lo propio, mensajes del sistema y la pertenencia al pedido, con la pantalla dentro de la ficha. **Sin conexión persistente**: pide configuración externa que no hay, y el transporte queda detrás de una costura (H-60) |
+| 17 | `migrate-shipping-rates` | ✅ | 31/31. El cálculo va como función pura en contratos con las tarifas inyectadas como dato, y el peso facturable en decimal exacto —en coma flotante 2 lb son 0.9071839999999999 kg—. Cuadro por empresa con su pantalla y simulador que pregunta al servidor. La estimación **recibe la transacción en vez de abrirla**, que es lo que dejó a la 18 cobrar con la tarifa que cotizó. Las dos casillas sin marcar son **no aplicables con su razón escrita**: piden retirar del navegador unas copias que sólo existen en `tfv-frontend/`, el árbol viejo que la regla 1 deja intacto — en la pila nueva el cálculo y la distancia viven una sola vez, en `packages/contracts/src/shipping.ts` |
+| 18 | `add-transactional-checkout` | 🟡 | 37/44. Carrito valorado en el servidor, **reserva efectiva con caducidad**, instantánea congelada, idempotencia y la materialización de las ocho entidades en transacción, con la marca al final. Las cuatro de mosaicos esperan a la 24; el aviso de fallo persistente y el reproceso manual, a un área de administración de plataforma |
+| 19 | `migrate-websites-and-site-builder` | 🟡 | 38/48. Sitios, resolución por subdominio, tienda y **el constructor entero**: temas con su campaña programada, secciones con su contenido, reordenación por arrastre y vista previa que comparte función y componente con lo que se sirve. Falta el carrito y la cuenta del comprador, que son de la 18 |
 
 ### Columna de producciones
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 20 | `migrate-productions-core` | 🟡 | 7/44 más lo que no estaba en la lista. **La columna deja de estar en cero**: la producción entera —alta, ficha, fechas, publicación, panel y baja con su alcance—, su taxonomía con el rol que dirige el trabajo al equipo, y el flujo básico de los planes de trabajo. Faltan guion, capítulos y escenas (21), y jornadas, continuidad y catálogos, que son el grueso de la lista |
-| 21 | `add-durable-script-sync` | ⬜ | |
-| 22 | `migrate-productions-operations` | ⬜ | |
-| 23 | `add-transactional-procurement` | ⬜ | Converge las dos columnas |
+| 20 | `migrate-productions-core` | 🟡 | 9/41 más lo que no estaba en la lista. **La columna deja de estar en cero**: la producción entera —alta, ficha, fechas, publicación, panel y baja con su alcance—, su taxonomía con el rol que dirige el trabajo al equipo, y el flujo básico de los planes de trabajo. Faltan guion, capítulos y escenas (21), y jornadas, continuidad y catálogos, que son el grueso de la lista |
+| 21 | `add-durable-script-sync` | ⬜ | 0/33 |
+| 22 | `migrate-productions-operations` | ⬜ | 0/44 |
+| 23 | `add-transactional-procurement` | ⬜ | 2/43. Converge las dos columnas |
 
 ### Pixit y locaciones
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 24 | `migrate-pixit-catalog-and-ledger` | ⬜ | **Bloqueada**: decisión F-10 |
-| 25 | `add-server-side-pos-sales` | ⬜ | |
-| 26 | `migrate-mosaic-generation` | ⬜ | **Bloqueada**: decisión F-09 |
-| 27 | `migrate-locations-directory` | ⬜ | |
+| 24 | `migrate-pixit-catalog-and-ledger` | ⬜ | 0/42. **Bloqueada**: decisión F-10 |
+| 25 | `add-server-side-pos-sales` | ⬜ | 0/37 |
+| 26 | `migrate-mosaic-generation` | ⬜ | 0/39. **Bloqueada**: decisión F-09 |
+| 27 | `migrate-locations-directory` | ⬜ | 1/28 |
 
 ### Interfaz y corte
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 28 | `rebuild-ui-foundation` | 🟡 | Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial), con el **asistente por pasos**, el área de texto, el campo de importe y el selector con búsqueda. De la 28e faltan el selector de archivos, el editor enriquecido, la firma y el mapa; de la 28d, la exploración de colecciones |
-| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, contrapartes y direcciones (29a). La 29b **cierra el flujo del almacén**: alta y baja de almacén, los dos árboles editables, los **dos asistentes** de producto y de variante, la ficha corregible, existencias con etiquetas imprimibles, listas de precios con asignación masiva, **el panel del almacén** y el constructor de cotizaciones entero —sus cuatro bloques se guardan solos, y la ventana de fechas rehace los días que cobra cada línea antes de guardar—. El **documento de cotización y su enlace público** ya están; falta la conversación del pedido. 29c–29e esperan a sus rebanadas de servidor |
-| 30 | `add-data-migration-and-cutover` | ⬜ | |
+| 28 | `rebuild-ui-foundation` | 🟡 | 58/71. Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial), con el **asistente por pasos**, el área de texto, el campo de importe y el selector con búsqueda. De la 28e faltan el selector de archivos, el editor enriquecido, la firma y el mapa; de la 28d, la exploración de colecciones |
+| 29 | `rebuild-ui-domain-screens` | 🟡 | 18/56. Acceso, miembros, roles, contrapartes y direcciones (29a). La 29b **cierra el flujo del almacén**: alta y baja de almacén, los dos árboles editables, los **dos asistentes** de producto y de variante, la ficha corregible, existencias con etiquetas imprimibles, listas de precios con asignación masiva, **el panel del almacén** y el constructor de cotizaciones entero —sus cuatro bloques se guardan solos, y la ventana de fechas rehace los días que cobra cada línea antes de guardar—. El **documento de cotización y su enlace público** ya están; falta la conversación del pedido. 29c–29e esperan a sus rebanadas de servidor |
+| 30 | `add-data-migration-and-cutover` | ⬜ | 1/50 |
 
 ## Lo siguiente
 
