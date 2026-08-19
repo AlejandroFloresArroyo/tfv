@@ -206,6 +206,14 @@ import {
   updateQuoteRoute,
 } from "./quotes.ts"
 import {
+  createScriptRoute,
+  deleteScriptRoute,
+  getScriptRoute,
+  listScriptsRoute,
+  scriptScopeRoute,
+  updateScriptRoute,
+} from "./script.ts"
+import {
   changeShipmentStatusRoute,
   estimateShippingRoute,
   getShipmentRoute,
@@ -558,8 +566,16 @@ export const routes: readonly RegisteredRoute[] = [
   workflowScopeRoute,
   deleteWorkflowRoute,
 
-  // Pendiente: guion, capítulos y escenas (21); inventario, entregas y presupuesto (22); compras
-  // a almacenes (23). Las tablas existen desde la `0002` y el panel ya las cuenta.
+  // El desglose del guion: guiones, capítulos y escenas.
+  listScriptsRoute,
+  createScriptRoute,
+  getScriptRoute,
+  updateScriptRoute,
+  scriptScopeRoute,
+  deleteScriptRoute,
+
+  // Pendiente: la extracción asistida del guion (21); inventario, entregas y presupuesto (22);
+  // compras a almacenes (23). Las tablas existen desde la `0002` y el panel ya las cuenta.
 
   // ─── Pixit ─────────────────────────────────────────────────────────────────
   // Pendiente: rebanada 24.

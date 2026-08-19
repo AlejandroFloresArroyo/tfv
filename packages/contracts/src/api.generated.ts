@@ -1433,6 +1433,167 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/scripts": {
+    /** Listar los guiones de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_index?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      syncStatus?: string | Array<string>
+      responsibleId?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        name: string
+        index: number
+        documentUploadId: string | null
+        documentUrl: string | null
+        documentFileName: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        syncStatus: "not_extracted" | "queued" | "running" | "completed" | "failed"
+        syncError: string | null
+        syncedAt: string | null
+        scenesWithoutBody: number
+        chapterCount: number
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/scripts": {
+    /** Registrar un guion */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      index?: number
+      documentUploadId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      index: number
+      documentUploadId: string | null
+      documentUrl: string | null
+      documentFileName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      syncStatus: "not_extracted" | "queued" | "running" | "completed" | "failed"
+      syncError: string | null
+      syncedAt: string | null
+      scenesWithoutBody: number
+      chapterCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/scripts/{scriptId}": {
+    /** Ver un guion */
+    params: {
+      companyId: string
+      productionId: string
+      scriptId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      index: number
+      documentUploadId: string | null
+      documentUrl: string | null
+      documentFileName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      syncStatus: "not_extracted" | "queued" | "running" | "completed" | "failed"
+      syncError: string | null
+      syncedAt: string | null
+      scenesWithoutBody: number
+      chapterCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/scripts/{scriptId}": {
+    /** Editar un guion, o sustituir su archivo */
+    params: {
+      companyId: string
+      productionId: string
+      scriptId: string
+    }
+    body: {
+      name?: string
+      index?: number
+      documentUploadId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      index: number
+      documentUploadId: string | null
+      documentUrl: string | null
+      documentFileName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      syncStatus: "not_extracted" | "queued" | "running" | "completed" | "failed"
+      syncError: string | null
+      syncedAt: string | null
+      scenesWithoutBody: number
+      chapterCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/scripts/{scriptId}": {
+    /** Dar de baja un guion */
+    params: {
+      companyId: string
+      productionId: string
+      scriptId: string
+    }
+    response: undefined
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/scripts/{scriptId}/scope": {
+    /** Qué se desvincula al dar de baja el guion */
+    params: {
+      companyId: string
+      productionId: string
+      scriptId: string
+    }
+    response: {
+      chapters: number
+    }
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/workflows": {
     /** Listar los planes de trabajo de una producción */
     params: {
