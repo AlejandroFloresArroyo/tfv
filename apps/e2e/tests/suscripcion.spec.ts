@@ -1,27 +1,38 @@
 /**
  * El plan, los perfiles de facturación y los cobros.
  *
- * ## Lo que no se puede recorrer, y por qué
+ * ## Qué cambió aquí, y por qué
  *
- * **Contratar un plan no se puede.** La siembra no deja ninguno y la API no tiene alta de planes —
- * sólo `GET /plans`—, así que el catálogo llega vacío y no hay nada que pulsar. Con él se quedan
- * fuera todos los recorridos que cuelgan de tener suscripción: cambiar de plan, cancelar al
- * vencimiento, reactivar, la sesión de pago, y —encadenado— la tienda pública, que exige
- * suscripción vigente antes de servir nada.
+ * Este archivo afirmaba lo contrario de lo que afirma ahora: que **no había nada que contratar**.
+ * Se escribió cuando la siembra no dejaba ningún plan, y desde que deja tres la prueba pasó de
+ * describir una ausencia a mentir sobre una presencia (`HALLAZGOS.md` H-158). Es el modo de fallo
+ * de toda prueba escrita contra un hueco: cuando el hueco se llena, no se pone verde, se vuelve
+ * falsa.
  *
- * Está anotado en `HALLAZGOS.md`. Escribir un plan directamente en la base para poder contratar
- * dejaría media docena de pruebas verdes sobre un camino que nadie puede recorrer.
+ * Lo que cubre ahora es el recorrido entero, que hasta el 2026-08-19 no existía: contratar no
+ * cerraba el círculo porque nada activaba la suscripción (`H-163`). Ahora el suplente del procesador
+ * tiene su propia página de cobro y, al pagarla, firma el evento y lo entrega al mismo endpoint que
+ * atenderá al procesador de verdad. Esta prueba conduce ese camino como lo conduce una persona.
  *
- * ## Lo que sí
+ * ## Sobre qué empresa, y por qué no sobre la sembrada
  *
- * Que las tres pantallas **existan, se alcancen desde la navegación y digan la verdad cuando no hay
- * nada**. No es poco: una pantalla terminada a la que nadie enlaza es un defecto que sólo aparece
- * intentando usarla, y ya pasó una vez esta semana con el alta de producto (H-70).
+ * Sobre **una que la prueba crea y borra**. Contratar cambia el estado de una empresa entera —y con
+ * él lo que ven sus tiendas públicas—, así que hacerlo sobre una de las sembradas dejaría a otras
+ * pruebas mirando una empresa distinta de la que esperan según en qué orden les toque correr.
  *
- * Y el alta de un perfil de facturación, que es lo único de esta rebanada que se recorre entero.
+ * La cuenta es la que no tiene membresías: crear una empresa la convierte en su propietaria, y al
+ * borrarla vuelve a quedarse sin ninguna. Ninguna otra prueba la usa.
+ *
+ * Lo que **no** se puede encadenar aquí es la tienda pública, que es el efecto más visible de tener
+ * suscripción: una empresa recién creada no tiene el servicio de sitios y **no hay ninguna ruta que
+ * se lo conceda**. Ese encadenamiento se fija en `apps/api/src/payments/local-processor.test.ts`,
+ * donde el servicio se puede poner, y el motivo está en `HALLAZGOS.md` H-168.
  */
 
 import { expect, test, WAREHOUSE_COMPANY } from "../setup/fixtures.ts"
+
+/** Marca de lo que crea este recorrido, para reconocerlo y retirarlo. */
+const PREFIJO = "Contratación e2e "
 
 test("las tres pantallas de facturación se alcanzan desde la navegación", async ({
   as,
@@ -44,27 +55,117 @@ test("las tres pantallas de facturación se alcanzan desde la navegación", asyn
   await expect(page.getByRole("heading", { name: "Historial de cobros" })).toBeVisible()
 })
 
-test("sin plan contratado se dice, y sin catálogo no hay nada que contratar", async ({
-  as,
-  companies,
-}) => {
+test("el ciclo entero: contratar, pagar, cambiar, cancelar y reactivar", async ({ as }) => {
   /**
-   * Escrita contra **lo que hay**, no contra lo que debería haber.
-   *
-   * El día que la siembra deje planes, esta prueba fallará — y eso es lo que se quiere: que alguien
-   * venga aquí y escriba el recorrido de contratar, que hoy no existe. Dejarla fuera haría que la
-   * ausencia siguiera sin que nadie la viera.
+   * Un solo recorrido y no cinco pruebas: los cinco pasos son **estados sucesivos de la misma
+   * suscripción**, y cada uno sólo existe si el anterior ocurrió. Partirlos obligaría a fabricar el
+   * estado de entrada de cada uno por fuera, que es exactamente lo que esta suite existe para no
+   * hacer.
    */
-  const context = await as("owner")
+  test.setTimeout(120_000)
+
+  const context = await as("outsider")
+
+  // Al principio, no en un `finally`: un tiempo agotado se lleva por delante el navegador antes de
+  // que el `finally` corra, así que la limpieza que de verdad funciona es la de la entrada.
+  const previas = await context.request.get("/api/companies?limit=50")
+  if (previas.ok()) {
+    const { items } = (await previas.json()) as { items: { id: string; name: string }[] }
+    for (const item of items.filter((row) => row.name.startsWith(PREFIJO))) {
+      await context.request.delete(`/api/companies/${item.id}`)
+    }
+  }
+
+  const creada = await context.request.post("/api/companies", {
+    data: { name: `${PREFIJO}${Date.now().toString(36).slice(-5)}` },
+  })
+  expect(creada.ok(), `no se pudo crear la empresa: ${await creada.text()}`).toBe(true)
+  const { id: companyId } = (await creada.json()) as { id: string }
+
   const page = await context.newPage()
-  const companyId = companies[WAREHOUSE_COMPANY] as string
+  const plan = `/c/${companyId}/settings/plan`
 
-  await page.goto(`/c/${companyId}/settings/plan`)
-
+  // ─── 1 · El catálogo se ofrece ─────────────────────────────────────────────
+  await page.goto(plan)
   await expect(page.getByText("Esta empresa no tiene ningún plan contratado")).toBeVisible()
-  // Ni un plan que elegir: el catálogo está vacío porque nada lo llena.
-  await expect(page.getByRole("button", { name: "Contratar" })).toHaveCount(0)
-  await expect(page.getByRole("button", { name: "Cancelar suscripción" })).toHaveCount(0)
+  // Los tres que siembra la instalación, cada uno con su botón. Es lo contrario de lo que esta
+  // prueba afirmaba antes.
+  await expect(page.getByRole("button", { name: "Contratar" })).toHaveCount(3)
+
+  const casaDeRenta = page.locator("li").filter({ hasText: "Casa de renta" }).first()
+
+  // ─── 2 · Abandonar el pago no deja suscripción ─────────────────────────────
+  // Escenario de la spec, con sus palabras: «puede volver a intentarlo». Sólo se puede recorrer
+  // porque el suplente tiene página propia: si emitiera el evento al abrir la sesión, no habría
+  // ningún momento en el que abandonar signifique algo.
+  await casaDeRenta.getByRole("button", { name: "Contratar" }).click()
+  await page.getByRole("dialog").getByRole("button", { name: "Ir al pago" }).click()
+
+  await page.waitForURL(/\/payments\/local\/checkouts\//)
+  await page.getByRole("link", { name: "Cancelar y volver" }).click()
+
+  await page.waitForURL(/\/settings\/plan/)
+  await expect(page.getByText("Esta empresa no tiene ningún plan contratado")).toBeVisible()
+
+  // ─── 3 · Contratar de verdad ───────────────────────────────────────────────
+  await casaDeRenta.getByRole("button", { name: "Contratar" }).click()
+  const contratar = page.getByRole("dialog")
+  await contratar.getByLabel("Asientos").fill("5")
+  await contratar.getByRole("button", { name: "Ir al pago" }).click()
+
+  await page.waitForURL(/\/payments\/local\/checkouts\//)
+  // La página del procesador, que no es una del producto: lo dice ella misma, y el importe que
+  // enseña es el del plan por los asientos pedidos —349,00 × 5—, no un cero de relleno.
+  await expect(page.getByRole("heading", { name: "Procesador de pagos suplente" })).toBeVisible()
+  await expect(page.getByText("Casa de renta")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Pagar 1745.00 MXN" })).toBeVisible()
+
+  await page.getByRole("button", { name: /^Pagar/ }).click()
+
+  // ─── 4 · La vuelta, con la suscripción ya activa ───────────────────────────
+  // Y activa **sin que la pantalla haya hecho nada**: lo único que hizo el navegador fue volver.
+  // Quien la activó fue el evento firmado que el suplente entregó a `/payments/events`.
+  await page.waitForURL(/\/settings\/plan/)
+  const actual = page.getByText("Plan actual").locator("xpath=ancestor::div[1]")
+  await expect(actual.getByText("Casa de renta")).toBeVisible()
+  await expect(actual.getByText("Activa")).toBeVisible()
+  await expect(page.getByText("5 asientos")).toBeVisible()
+  // La fecha de renovación sale del cobro del primer periodo, que es el segundo evento. Sin él la
+  // suscripción existiría sin periodo y aquí no habría fecha ninguna.
+  await expect(page.getByText(/Se renueva el/)).toBeVisible()
+
+  // ─── 5 · El cobro queda registrado ─────────────────────────────────────────
+  await page.goto(`/c/${companyId}/settings/payments`)
+  await expect(page.getByText("1745,00 MXN")).toBeVisible()
+  await expect(page.getByText("5 asientos")).toBeVisible()
+
+  // ─── 6 · Cambiar de plan conserva los asientos ─────────────────────────────
+  await page.goto(plan)
+  const productora = page.locator("li").filter({ hasText: "Productora" }).first()
+  await productora.getByRole("button", { name: "Cambiar a este plan" }).click()
+  await page.getByRole("dialog").getByRole("button", { name: "Cambiar de plan" }).click()
+
+  await expect(actual.getByText("Productora")).toBeVisible()
+  // Los cinco siguen ahí: el diálogo de cambio no los pide porque no se tocan.
+  await expect(page.getByText("5 asientos")).toBeVisible()
+
+  // ─── 7 · Cancelar surte efecto al vencimiento ──────────────────────────────
+  await page.getByRole("button", { name: "Cancelar suscripción" }).click()
+  await page.getByRole("dialog").getByRole("button", { name: "Cancelar al vencimiento" }).click()
+
+  // «Se le informa de la fecha en que terminará», con esas palabras en la spec.
+  await expect(page.getByText(/Cancelada\. Termina el /)).toBeVisible()
+  // Y sigue operando: el estado no pasa a cancelado, porque el periodo pagado sigue vivo.
+  await expect(actual.getByText("Activa")).toBeVisible()
+
+  // ─── 8 · Reactivar deshace la cancelación ──────────────────────────────────
+  await page.getByRole("button", { name: "Reactivar", exact: true }).click()
+  await page.getByRole("dialog").getByRole("button", { name: "Reactivar" }).click()
+
+  await expect(page.getByText(/Cancelada\. Termina el /)).toHaveCount(0)
+  await expect(page.getByText(/Se renueva el/)).toBeVisible()
+
+  await context.request.delete(`/api/companies/${companyId}`)
 })
 
 test("el alta de un perfil de facturación se recorre entera y resume lo escrito", async ({

@@ -22,15 +22,20 @@ import { closeConnection, db } from "@tfv/db"
 import {
   companies,
   companyMembers,
+  companyServices,
   companySubscriptions,
+  globalCategories,
   loginAttempts,
   notificationDeliveries,
   paymentEvents,
   roles,
+  services,
   sessions,
   subscriptionPayments,
   subscriptionPlans,
   users,
+  warehouses,
+  websites,
 } from "@tfv/db/schema"
 import { eq, sql } from "drizzle-orm"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
@@ -48,7 +53,7 @@ let restoreOrigin: (() => void) | null = null
 
 async function reset() {
   await db.execute(
-    sql`truncate table ${notificationDeliveries}, ${sessions}, ${loginAttempts}, ${paymentEvents}, ${subscriptionPayments}, ${companySubscriptions}, ${subscriptionPlans}, ${users}, ${companyMembers}, ${roles}, ${companies} cascade`,
+    sql`truncate table ${notificationDeliveries}, ${sessions}, ${loginAttempts}, ${paymentEvents}, ${subscriptionPayments}, ${companySubscriptions}, ${subscriptionPlans}, ${websites}, ${globalCategories}, ${warehouses}, ${companyServices}, ${services}, ${users}, ${companyMembers}, ${roles}, ${companies} cascade`,
   )
 }
 
@@ -430,5 +435,97 @@ describe("con la suscripción ya contratada", () => {
     await request("POST", `/companies/${companyId}/subscription/reactivate`, {}, cookie)
 
     expect((await subscriptionOf(companyId))?.cancelAtPeriodEnd).toBe(false)
+  })
+})
+
+// ─── El encadenamiento ───────────────────────────────────────────────────────
+
+describe("la tienda pública, encadenada a la suscripción", () => {
+  /**
+   * Es la prueba de que el círculo se cierra.
+   *
+   * Una suscripción activa en una tabla no demuestra nada por sí sola. Lo que lo demuestra es que
+   * **algo que estaba cerrado se abre**: la tienda pública de la empresa exige suscripción vigente
+   * antes de servir nada, y esa compuerta no depende de ningún interruptor —está siempre encendida—.
+   * Antes de pagar responde «no disponible» por facturación; después sirve su catálogo.
+   *
+   * Se comprueba aquí y no en el navegador porque en la suite de extremo a extremo la única empresa
+   * con el servicio de sitios habilitado es la sembrada, y otra prueba afirma sobre ella justo lo
+   * contrario. No hay forma de habilitarle el servicio a una empresa recién creada: no existe la
+   * ruta. Ver `HALLAZGOS.md` H-168.
+   */
+  async function conTienda(email: string) {
+    const cookie = await signUp(email)
+    const companyId = await newCompany(cookie)
+    const planId = await newPlan(1, "Casa de renta")
+
+    // Los servicios y la vertical de la taxonomía global: los tres son datos de plataforma, y hoy
+    // ninguna ruta los concede. Se ponen a mano, como hace la suite de la propia tienda.
+    for (const keycode of ["websites", "warehouses"]) {
+      const serviceId = newId()
+      await db.insert(services).values({ id: serviceId, keycode, name: keycode })
+      await db.insert(companyServices).values({ id: newId(), companyId, serviceId })
+    }
+
+    const vertical = newId()
+    await db
+      .insert(globalCategories)
+      .values({ id: vertical, name: "Tienda de almacén", keyname: "warehouse-store" })
+
+    const warehouse = await json<{ id: string }>(
+      await request("POST", `/companies/${companyId}/warehouses`, { name: "Nave" }, cookie),
+    )
+
+    const site = await json<{ slug: string }>(
+      await request(
+        "POST",
+        `/companies/${companyId}/websites`,
+        {
+          name: "Tienda encadenada",
+          warehouseId: warehouse.id,
+          categoryId: vertical,
+          isPublished: true,
+        },
+        cookie,
+      ),
+    )
+
+    return { cookie, companyId, planId, slug: site.slug }
+  }
+
+  it("cerrada por facturación antes de pagar, servida después", async () => {
+    const { cookie, companyId, planId, slug } = await conTienda("encadenada@ejemplo.mx")
+
+    const antes = await json<{ status: string; reason?: string }>(
+      await app.request(`/public/sites/${slug}`),
+    )
+    expect(antes.status).toBe("unavailable")
+    expect(antes.reason).toBe("subscription")
+
+    const checkout = await json<{ url: string }>(
+      await request(
+        "POST",
+        `/companies/${companyId}/subscription`,
+        { planId, interval: "month", seats: 1 },
+        cookie,
+      ),
+    )
+
+    // Sigue cerrada mientras nadie pague: abrir la sesión no activa nada.
+    const durante = await json<{ status: string }>(await app.request(`/public/sites/${slug}`))
+    expect(durante.status).toBe("unavailable")
+
+    await app.request(`/payments/local/checkouts/${sessionOf(checkout.url)}/pay`, {
+      method: "POST",
+    })
+
+    const despues = await json<{ status: string; site?: { name: string } }>(
+      await app.request(`/public/sites/${slug}`),
+    )
+    expect(despues.status).toBe("ready")
+    expect(despues.site?.name).toBe("Tienda encadenada")
+
+    // Y el catálogo se sirve de verdad, que es lo que un visitante viene a ver.
+    expect((await app.request(`/public/sites/${slug}/products`)).status).toBe(200)
   })
 })

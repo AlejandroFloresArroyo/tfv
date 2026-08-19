@@ -170,7 +170,15 @@ export function apiEnv(): Record<string, string> {
     COOKIE_PATH_PREFIX: "/api",
     CORS_ORIGINS: `http://127.0.0.1:${ENTORNO.webPort},http://localhost:${ENTORNO.webPort}`,
     SITES_DOMAIN: `localhost:${ENTORNO.webPort}`,
-    BILLING_RETURN_ORIGIN: `http://localhost:${ENTORNO.webPort}`,
+    /**
+     * A dónde vuelve el navegador desde la sesión de pago: **el origen por el que entró**.
+     *
+     * Decía `localhost` y la suite conduce por `127.0.0.1`. Son hosts distintos para el navegador,
+     * así que la credencial de sesión —emitida para `127.0.0.1`— no viaja al volver: quien completa
+     * un pago aterriza en la pantalla de plan **sin sesión** y acaba en la de entrar. No se veía
+     * porque hasta ahora nadie podía completar un pago (`HALLAZGOS.md` H-167).
+     */
+    BILLING_RETURN_ORIGIN: BASE_URL,
     // Un suplente en memoria que no mueve dinero. Sin él, toda pantalla de cobro falla al abrirse
     // y las suscripciones no se pueden recorrer.
     PAYMENTS_PROVIDER: "local",
