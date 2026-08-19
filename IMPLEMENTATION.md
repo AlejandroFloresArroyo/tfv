@@ -121,27 +121,16 @@ Lo construido hasta ahora, medido y no estimado:
 
 | | |
 |---|---|
-<<<<<<< HEAD
-| Rebanadas | 11 de 30 empezadas, **ninguna cerrada del todo** |
-| Pruebas | **793** de vitest — 160 contratos, 97 diseño, 68 datos, 414 API, 54 web — más 63 de extremo a extremo |
-| Esquema | 93 tablas · 279 índices · 50 enumerados |
-| Aislamiento | 204 políticas · 93/93 tablas · 0 con identidad cruda |
-| Migraciones | 17, replicadas desde cero en cada verificación |
-| Rutas | **146** registradas |
-| Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 38, en español e inglés (1 056 mensajes, sin desalinear) |
-=======
-| Rebanadas | 10 de 30 empezadas, **ninguna cerrada del todo** |
+| Rebanadas | 16 de 30 empezadas, **ninguna cerrada del todo** |
 | Código sin pruebas | 31 130 líneas |
 | Código de prueba | 9 973 líneas |
-| Pruebas | **867** de vitest — 183 contratos, 62 datos, 432 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
-| Esquema | 93 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
-| Aislamiento | 200 políticas · 93/93 tablas · 0 con identidad cruda |
-| Migraciones | 17, replicadas desde cero en cada verificación |
-| Rutas | **138** registradas, 105 con permiso declarado, 13 públicas y enumeradas |
+| Pruebas | **918** de vitest — 183 contratos, 71 datos, 474 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
+| Esquema | 94 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
+| Aislamiento | 206 políticas · 94/94 tablas · 0 con identidad cruda |
+| Migraciones | 18, replicadas desde cero en cada verificación |
+| Rutas | **150** registradas, 106 con permiso declarado, 13 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 38, en español e inglés (1085 mensajes, sin desalinear) |
->>>>>>> dev
+| Pantallas | 40, en español e inglés (1130 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
@@ -197,13 +186,8 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-<<<<<<< HEAD
-| 08 | `migrate-media-storage` | 🟡 | **Subida directa entera**: autorización de escritura acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión sobre el mismo registro, confirmación que dice qué se escribió, y validación de nombre, tipo y coherencia. Del lado del cliente, el selector con vista previa, reducción y reintento por objeto. Falta que las pantallas lo usen, y el recolector **ya se ejecuta solo**, con plazo configurable y sin tocar archivos referenciados (09) |
-| 09 | `migrate-activity-and-notifications` | 🟡 | Bitácora transaccional de sólo anexado, audiencia por permiso, bandeja entera con su contador, preferencias y dispositivos. Y el **despachador de trabajos**, que desbloquea la 08 y la 13. Faltan los proveedores de empuje y de correo —configuración externa— y anotar las ~35 rutas de escritura que aún no dejan asiento |
-=======
 | 08 | `migrate-media-storage` | 🟡 | **Subida directa entera y usada**: autorización acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión, confirmación que dice qué se escribió, y el selector con vista previa, reducción y reintento por objeto. La **sustitución de colecciones diferencia** —L-01— y las pantallas del almacén ya suben: galería del producto, e imagen única de almacén y ubicación. Faltan los marcadores de posición como activos propios y la ejecución del recolector, que espera al despachador de trabajos (09) |
-| 09 | `migrate-activity-and-notifications` | ⬜ | |
->>>>>>> dev
+| 09 | `migrate-activity-and-notifications` | 🟡 | Bitácora transaccional de sólo anexado, audiencia por permiso, bandeja entera con su contador, preferencias y dispositivos. Y el **despachador de trabajos**, que desbloquea la 08 y la 13. Faltan los proveedores de empuje y de correo —configuración externa— y anotar las ~35 rutas de escritura que aún no dejan asiento |
 | 10 | `migrate-identity-and-companies` | 🟡 | Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen, y las pantallas de prospecto —el formulario público es de la 19 y la bandeja necesita un área de administración de plataforma |
 | 11 | `migrate-subscriptions-and-billing` | ⬜ | |
 
@@ -212,13 +196,8 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
 | 12 | `migrate-warehouse-catalog` | 🟡 | Entera salvo el detalle de producto y sus asistentes, que son pantalla (29b). El **alta provisional** y su bandeja ya están |
-<<<<<<< HEAD
 | 13 | `add-transactional-stock-reservation` | 🟡 | Entera, 30/31, con el **agujero de las huérfanas rentadas** tapado. La verificación de coherencia **ya corre programada** y avisa a quien puede arreglarla (09, H-11 cerrado). M-04 sigue sin confirmar: se implementó el criterio de la spec |
-| 14 | `add-server-side-quotation-pricing` | 🟡 | Motor, autoridad del servidor, congelación al cerrar, **precio negociado, precio por paquete, cobros y saldo**. La interfaz consume ya la misma función. Falta el documento comercial, que espera a `pdf-documents`. M-05 sigue sin confirmar |
-=======
-| 13 | `add-transactional-stock-reservation` | 🟡 | Entera, 30/31, con el **agujero de las huérfanas rentadas** tapado. Falta sólo la ejecución programada de la verificación de coherencia, que espera al despachador de la 09. M-04 sigue sin confirmar: se implementó el criterio de la spec |
 | 14 | `add-server-side-quotation-pricing` | 🟡 | Motor, autoridad del servidor, congelación al cerrar, **precio negociado, precio por paquete, cobros y saldo**. La interfaz consume ya la misma función, y **el documento comercial ya se imprime y se comparte por enlace**. Falta la firma capturada en pantalla. M-05 sigue sin confirmar |
->>>>>>> dev
 | 15 | `migrate-warehouse-orders` | 🟡 | 29/33. Ciclo, **aceptación atómica**, rechazo con motivo, propagación a la orden de compra y su bandeja. Las cuatro que faltan esperan al escaparate (19) y al servicio de producciones (20) |
 | 16 | `migrate-order-chat-realtime` | 🟡 | 24/38. Historial con cursor, envío optimista, acuses por lado, editar y borrar lo propio, mensajes del sistema y la pertenencia al pedido, con la pantalla dentro de la ficha. **Sin conexión persistente**: pide configuración externa que no hay, y el transporte queda detrás de una costura (H-60) |
 | 17 | `migrate-shipping-rates` | ⬜ | |
@@ -2560,121 +2539,6 @@ lecturas firmadas y caducas.
 742 pruebas antes de la última fusión y las cinco suites en verde después. La base de pruebas
 compartida volvió a morder: dos ejecuciones simultáneas se pisan y producen fallos en archivos que
 nadie ha tocado (H-12). Se perdió una vuelta de diagnóstico por eso, en los dos lados.
-<<<<<<< HEAD
-
-### 2026-08-18 · La bitácora, la bandeja y el despachador que faltaba
-
-Rebanada **09 · `migrate-activity-and-notifications`**, y con ella la pieza que dos rebanadas
-llevaban esperando.
-
-**El asiento va dentro de la transacción, y eso es todo el requisito**
-
-`recordActivity` recibe la transacción de quien muta. De ahí salen las dos mitades sin escribir una
-línea más: si la mutación se revierte no hay asiento, y si el asiento no se puede escribir la
-mutación no se confirma. La implementación anterior emitía la actividad sin esperarla y descartaba
-sus errores, de modo que una operación podía completarse sin dejar rastro y nadie lo sabía.
-
-Y una acción denegada no registra nada **sale gratis**, por dónde vive la compuerta de permisos:
-en el middleware, antes del manejador. Un `403` no llega a ejecutar nada.
-
-**La misma clave autoriza y selecciona**
-
-La audiencia son los miembros cuyo rol concede **todas** las claves que la acción declara, más los
-propietarios —tengan el rol que tengan, porque la propiedad no es un permiso sino la vía que los
-elude—, menos el autor. Es el vínculo que la spec pide con `access-control`: hasta la rebanada 05
-los permisos seleccionaban audiencia sin autorizar nada (`DEFECTS.md` S-07), y desde entonces
-autorizaban sin seleccionar. Ahora hacen las dos cosas y son la misma cadena literal.
-
-**El despachador, y por qué una tabla**
-
-No había ninguna cola en el repositorio, y dos piezas escritas y probadas llevaban meses sin que
-nadie las llamara: el recolector de subidas abandonadas (08) y la verificación de coherencia de
-existencias (13, H-11). Un temporizador las llamaría; lo que no sabría es cuándo corrió la última
-vez, ni sobrevivir a un reinicio a mitad, ni dejar constancia de un fallo.
-
-Cuatro estados, un intento contado **al tomar** el trabajo —para que un proceso que muera a mitad
-deje constancia—, `for update skip locked` para que dos despachadores no se lleven el mismo, espera
-creciente y acotada, y `failed` como final visible. Un trabajo que espera reintento no es un estado
-más: es `queued` con `attempts` y `run_at` en el futuro.
-
-Las doce pruebas del despachador comprueban sobre todo **cómo falla**: que reintenta, que se rinde,
-que un trabajo que revienta no se lleva por delante al que va detrás, que uno sin manejador no gasta
-cinco intentos, y que el que quedó en curso se recupera. Una cola que nadie vio fallar no es una
-cola.
-
-**El defecto que apareció al escribir la prueba que se me pidió**
-
-«El recolector nunca toca un archivo referenciado» era una propiedad que **no se cumplía**.
-`collectAbandoned` elige por antigüedad y estado, y no mira si algo apunta al archivo. De las
-treinta y dos claves foráneas que llegan a `uploads`, cinco propagan el borrado —una foto de
-utilería, una imagen de locación, **el comprobante de un pago**— y las otras veintisiete dejan la
-referencia en nulo.
-
-Comprobado contra la base antes de tocar nada: la fila de `location_images` desaparecía. Una entidad
-guardada antes de que llegara la confirmación se llevaba por delante su propia fila veinticuatro
-horas después, y el síntoma —una foto que falta— no se parece en nada a la causa.
-
-La guarda va en el **motor** y no en el recolector, por dos razones: allí es una convención y aquí
-es una garantía que hereda cualquier otro camino que borre un archivo; y la lista de quién
-referencia la lleva el catálogo, así que una tabla nueva con una foto queda protegida el día que se
-crea. Se **omite** el borrado en lugar de fallar: fallar revertiría la recogida entera, y un solo
-archivo referenciado dejaría la limpieza sin ocurrir para siempre. Queda un resto anotado (H-75):
-los objetos del almacenamiento se retiran antes del borrado, y eso sólo se arregla dentro de
-`uploads.ts`.
-
-**Alcance acotado a propósito: un canal que funciona**
-
-De los tres canales entra entero el de **bandeja**. Empuje y correo necesitan configuración externa
-que este entorno no tiene, y fingirla habría dado tres canales a medias. La costura es
-`registerTransport`, y lo que hay detrás está probado con un transporte que falla adrede: la
-operación de negocio se completa, la entrega queda encolada, se reintenta y **no se duplica**.
-
-Una entrega de un canal sin proveedor **se queda en la cola** y no cuenta como fallo. No ha fallado
-nada: falta un proveedor, y llenar de ruido la única lista que hay que mirar es la forma de que
-nadie vuelva a mirarla. Las de recuperación de contraseña y verificación de correo llevan encoladas
-desde la rebanada 04 y siguen ahí, esperando la misma cuenta.
-
-**Dos correcciones a la spec**
-
-- **La bandeja no es un canal apagable** (H-77). Con ella apagada, una actividad de cuya audiencia
-  alguien forma parte no le deja rastro en ninguna parte mientras el resto de la empresa sí la ve.
-  La elección se acota a los canales salientes; la bandeja es el registro.
-- **El aviso de novedades se reinicia al abrir la bandeja**, no al disminuir el contador (H-78). Con
-  la regla anterior, marcar una como leída borraba el aviso de las otras cuatro recién llegadas.
-
-**Dos huecos del motor que sólo aparecen con el código delante**
-
-- La política de escritura de las entregas no dejaba al destinatario **marcar la suya como leída**
-  (H-76). El síntoma habría sido una fila que no cambia, sin error: una política que no deja pasar
-  no falla, no encuentra la fila.
-- `withSystem(operación, [])` **no es «sistema»** para el motor (H-79): `app.is_system()` pregunta
-  por el alcance de empresas, y un trabajo global no declara ninguna. Hizo falta
-  `app.declares_operation()`, que distingue lo que de verdad separa una operación de sistema de una
-  petición de usuario.
-
-**Comprobado**
-
-Los seis paquetes, Biome sobre lo propio, y **793 pruebas** de vitest —160 de contratos, 97 del
-sistema de diseño, 68 de datos, 414 de la API y 54 de web—, con las migraciones replicadas **desde
-cero** tras borrar la base de pruebas. Cuarenta y dos son nuevas: 9 de datos, 12 del despachador, 7 de sus trabajos y 23 de la
-bitácora y la bandeja.
-
-**Una trampa de la base compartida, otra vez.** La primera pasada del conjunto entero falló con
-sesenta y tres pruebas rotas en archivos que nadie había tocado, justo después de haber tenido el
-servicio levantado contra la base de pruebas: sus conexiones seguían sujetando filas cuando la suite
-fue a truncar. Es H-12 con otra cara — **con un servicio apuntando a la base de pruebas, la suite no
-se puede correr**—. Apagado, la misma pasada da 793 en verde.
-
-Y se miró en pantalla, con la aplicación levantada en puertos propios: la campana anunciando «3 sin
-leer», marcar y archivar moviendo la fila entre filtros, el filtro de la bitácora llevándose la
-dirección —de 6 asientos a 2—, el interruptor de empuje apagado y sin poder encenderse, y la autora
-de los cambios **sin una sola notificación** de lo que hizo ella.
-
-**Lo que queda de la rebanada**
-
-Los dos proveedores, las ~35 rutas de escritura que aún no dejan asiento (H-82), y la clave de
-permiso propia de la bitácora, que hoy usa la más cercana porque el catálogo está cerrado (H-81).
-=======
 ### 2026-08-18 · El documento que el cliente firma
 
 El servicio de documentos, que quedó anotado «para después» cuando se decidió imprimir desde el
@@ -2920,4 +2784,116 @@ añadieron dos más desde la ficha, se cambió la portada, se reordenó y se qui
 la retirada dejó de responder. La imagen de un almacén y la de una ubicación, lo mismo, incluida la
 retirada. Los cinco objetos por imagen se sirven con su tipo: el original en `png` y sus derivados
 en `jpg`.
->>>>>>> dev
+
+### 2026-08-18 · La bitácora, la bandeja y el despachador que faltaba
+
+Rebanada **09 · `migrate-activity-and-notifications`**, y con ella la pieza que dos rebanadas
+llevaban esperando.
+
+**El asiento va dentro de la transacción, y eso es todo el requisito**
+
+`recordActivity` recibe la transacción de quien muta. De ahí salen las dos mitades sin escribir una
+línea más: si la mutación se revierte no hay asiento, y si el asiento no se puede escribir la
+mutación no se confirma. La implementación anterior emitía la actividad sin esperarla y descartaba
+sus errores, de modo que una operación podía completarse sin dejar rastro y nadie lo sabía.
+
+Y una acción denegada no registra nada **sale gratis**, por dónde vive la compuerta de permisos:
+en el middleware, antes del manejador. Un `403` no llega a ejecutar nada.
+
+**La misma clave autoriza y selecciona**
+
+La audiencia son los miembros cuyo rol concede **todas** las claves que la acción declara, más los
+propietarios —tengan el rol que tengan, porque la propiedad no es un permiso sino la vía que los
+elude—, menos el autor. Es el vínculo que la spec pide con `access-control`: hasta la rebanada 05
+los permisos seleccionaban audiencia sin autorizar nada (`DEFECTS.md` S-07), y desde entonces
+autorizaban sin seleccionar. Ahora hacen las dos cosas y son la misma cadena literal.
+
+**El despachador, y por qué una tabla**
+
+No había ninguna cola en el repositorio, y dos piezas escritas y probadas llevaban meses sin que
+nadie las llamara: el recolector de subidas abandonadas (08) y la verificación de coherencia de
+existencias (13, H-11). Un temporizador las llamaría; lo que no sabría es cuándo corrió la última
+vez, ni sobrevivir a un reinicio a mitad, ni dejar constancia de un fallo.
+
+Cuatro estados, un intento contado **al tomar** el trabajo —para que un proceso que muera a mitad
+deje constancia—, `for update skip locked` para que dos despachadores no se lleven el mismo, espera
+creciente y acotada, y `failed` como final visible. Un trabajo que espera reintento no es un estado
+más: es `queued` con `attempts` y `run_at` en el futuro.
+
+Las doce pruebas del despachador comprueban sobre todo **cómo falla**: que reintenta, que se rinde,
+que un trabajo que revienta no se lleva por delante al que va detrás, que uno sin manejador no gasta
+cinco intentos, y que el que quedó en curso se recupera. Una cola que nadie vio fallar no es una
+cola.
+
+**El defecto que apareció al escribir la prueba que se me pidió**
+
+«El recolector nunca toca un archivo referenciado» era una propiedad que **no se cumplía**.
+`collectAbandoned` elige por antigüedad y estado, y no mira si algo apunta al archivo. De las
+treinta y dos claves foráneas que llegan a `uploads`, cinco propagan el borrado —una foto de
+utilería, una imagen de locación, **el comprobante de un pago**— y las otras veintisiete dejan la
+referencia en nulo.
+
+Comprobado contra la base antes de tocar nada: la fila de `location_images` desaparecía. Una entidad
+guardada antes de que llegara la confirmación se llevaba por delante su propia fila veinticuatro
+horas después, y el síntoma —una foto que falta— no se parece en nada a la causa.
+
+La guarda va en el **motor** y no en el recolector, por dos razones: allí es una convención y aquí
+es una garantía que hereda cualquier otro camino que borre un archivo; y la lista de quién
+referencia la lleva el catálogo, así que una tabla nueva con una foto queda protegida el día que se
+crea. Se **omite** el borrado en lugar de fallar: fallar revertiría la recogida entera, y un solo
+archivo referenciado dejaría la limpieza sin ocurrir para siempre. Queda un resto anotado (H-75):
+los objetos del almacenamiento se retiran antes del borrado, y eso sólo se arregla dentro de
+`uploads.ts`.
+
+**Alcance acotado a propósito: un canal que funciona**
+
+De los tres canales entra entero el de **bandeja**. Empuje y correo necesitan configuración externa
+que este entorno no tiene, y fingirla habría dado tres canales a medias. La costura es
+`registerTransport`, y lo que hay detrás está probado con un transporte que falla adrede: la
+operación de negocio se completa, la entrega queda encolada, se reintenta y **no se duplica**.
+
+Una entrega de un canal sin proveedor **se queda en la cola** y no cuenta como fallo. No ha fallado
+nada: falta un proveedor, y llenar de ruido la única lista que hay que mirar es la forma de que
+nadie vuelva a mirarla. Las de recuperación de contraseña y verificación de correo llevan encoladas
+desde la rebanada 04 y siguen ahí, esperando la misma cuenta.
+
+**Dos correcciones a la spec**
+
+- **La bandeja no es un canal apagable** (H-77). Con ella apagada, una actividad de cuya audiencia
+  alguien forma parte no le deja rastro en ninguna parte mientras el resto de la empresa sí la ve.
+  La elección se acota a los canales salientes; la bandeja es el registro.
+- **El aviso de novedades se reinicia al abrir la bandeja**, no al disminuir el contador (H-78). Con
+  la regla anterior, marcar una como leída borraba el aviso de las otras cuatro recién llegadas.
+
+**Dos huecos del motor que sólo aparecen con el código delante**
+
+- La política de escritura de las entregas no dejaba al destinatario **marcar la suya como leída**
+  (H-76). El síntoma habría sido una fila que no cambia, sin error: una política que no deja pasar
+  no falla, no encuentra la fila.
+- `withSystem(operación, [])` **no es «sistema»** para el motor (H-79): `app.is_system()` pregunta
+  por el alcance de empresas, y un trabajo global no declara ninguna. Hizo falta
+  `app.declares_operation()`, que distingue lo que de verdad separa una operación de sistema de una
+  petición de usuario.
+
+**Comprobado**
+
+Los seis paquetes, Biome sobre lo propio, y **793 pruebas** de vitest —160 de contratos, 97 del
+sistema de diseño, 68 de datos, 414 de la API y 54 de web—, con las migraciones replicadas **desde
+cero** tras borrar la base de pruebas. Cuarenta y dos son nuevas: 9 de datos, 12 del despachador, 7 de sus trabajos y 23 de la
+bitácora y la bandeja.
+
+**Una trampa de la base compartida, otra vez.** La primera pasada del conjunto entero falló con
+sesenta y tres pruebas rotas en archivos que nadie había tocado, justo después de haber tenido el
+servicio levantado contra la base de pruebas: sus conexiones seguían sujetando filas cuando la suite
+fue a truncar. Es H-12 con otra cara — **con un servicio apuntando a la base de pruebas, la suite no
+se puede correr**—. Apagado, la misma pasada da 793 en verde.
+
+Y se miró en pantalla, con la aplicación levantada en puertos propios: la campana anunciando «3 sin
+leer», marcar y archivar moviendo la fila entre filtros, el filtro de la bitácora llevándose la
+dirección —de 6 asientos a 2—, el interruptor de empuje apagado y sin poder encenderse, y la autora
+de los cambios **sin una sola notificación** de lo que hizo ella.
+
+**Lo que queda de la rebanada**
+
+Los dos proveedores, las ~35 rutas de escritura que aún no dejan asiento (H-82), y la clave de
+permiso propia de la bitácora, que hoy usa la más cercana porque el catálogo está cerrado (H-81).

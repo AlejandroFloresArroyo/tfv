@@ -85,8 +85,22 @@ afterAll(async () => {
   await closeConnection()
 })
 
-/** Un archivo registrado y subido, como el que deja una subida que terminó bien. */
+/**
+ * Un archivo registrado y subido, como el que deja una subida que terminó bien.
+ *
+ * El marcador de posición es **uno solo** —lo dice un único parcial en el esquema— y además el
+ * motor no deja borrarlo, así que sobrevive a la limpieza de cada prueba. Se reutiliza el que ya
+ * exista en vez de intentar sembrar un segundo, que es lo que la base rechaza.
+ */
 async function seedUpload(options: { placeholder?: boolean } = {}): Promise<string> {
+  if (options.placeholder === true) {
+    const [existente] = await db
+      .select({ id: uploads.id })
+      .from(uploads)
+      .where(eq(uploads.isPlaceholder, true))
+    if (existente !== undefined) return existente.id
+  }
+
   const id = newId()
   await db.insert(uploads).values({
     id,
