@@ -126,36 +126,27 @@ Lo construido hasta ahora, medido y no estimado:
 
 | | |
 |---|---|
-| Rebanadas | 19 de 30 empezadas, **ninguna cerrada del todo** |
-| Código sin pruebas | 75 036 líneas |
-| Código de prueba | 24 853 líneas |
-| Pruebas | **1457** de vitest — 393 contratos, 87 datos, 757 API, 101 web, 119 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
-| Esquema | 97 tablas · 290 índices · 50 enumerados · 6 comprobaciones · 41 únicos parciales · 236 claves foráneas |
+| Rebanadas | 25 de 30 empezadas, **7 cerradas del todo**: 03, 08, 09, 11, 13, 17 y 20 |
+| Tareas | **783 de 1228**, el 63,8 %. Contadas sobre los `tasks.md`, no estimadas. Otras 29 están marcadas **no aplicables** con su razón escrita: apuntan a la pila vieja, que la regla 1 deja intacta |
+| Código sin pruebas | 100 871 líneas |
+| Código de prueba | 39 084 líneas |
+| Pruebas | **1660** de vitest — 406 contratos, 90 datos, 936 API, 109 web, 119 interfaz — y **83 de extremo a extremo** con Playwright sobre un build de producción |
+| Esquema | 97 tablas · 295 índices · 50 enumerados · 8 comprobaciones · 42 únicos parciales · 238 claves foráneas |
 | Aislamiento | 215 políticas · 97/97 tablas · 0 con identidad cruda |
-| Migraciones | 25, replicadas desde cero en cada verificación |
-| Rutas | **220** registradas, 159 con permiso declarado, 18 públicas y enumeradas |
+| Migraciones | 28, replicadas desde cero en cada verificación |
+| Rutas | **295** registradas, 232 con permiso declarado, 43 sólo autenticadas y 20 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 62, en español e inglés (1649 mensajes, sin desalinear) |
-| Código sin pruebas | 31 130 líneas |
-| Código de prueba | 9 973 líneas |
-| Pruebas | **1154** de vitest — 268 contratos, 78 datos, 610 API, 101 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
-| Esquema | 95 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
-| Aislamiento | 210 políticas · 95/95 tablas · 0 con identidad cruda |
-| Migraciones | 22, replicadas desde cero en cada verificación |
-| Rutas | **193** registradas, 133 con permiso declarado, 17 públicas y enumeradas |
-| Pruebas | **1244** de vitest — 353 contratos, 78 datos, 623 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
-| Esquema | 96 tablas · 62 enumerados · 6 comprobaciones · 48 únicos parciales. **El recuento de índices queda sin actualizar**: no se pudo reproducir la medida de la que salió el «270» anterior, y un número sin medir es peor que ninguno |
-| Aislamiento | 211 políticas · 96/96 tablas · 0 con identidad cruda |
-| Migraciones | 22, replicadas desde cero en cada verificación |
-| Rutas | **182** registradas, 133 con permiso declarado, 16 públicas y enumeradas |
-| Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 50, en español e inglés (1396 mensajes, sin desalinear) |
+| Pantallas | 62, en español e inglés (1656 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
 colecciones explorables**, **el almacén entero, del catálogo a las existencias** y, desde el 19 de
-agosto, **el área de administración de plataforma**. La parte ancha del trabajo siguen siendo las
-rebanadas 08 a 27; la 10 está casi entera y las demás sin tocar.
+agosto, **el área de administración de plataforma**, **la contratación de planes** y **el núcleo de
+producciones**. La parte ancha del trabajo que queda son las tres rebanadas de producciones que
+siguen a la 20 —guion asistido, operación y compras— y **Pixit y locaciones** (24–27, en pausa por
+decisión de producto): entre las dos suman 259 de las 445 tareas abiertas. De los servicios de
+plataforma sólo sigue en curso la 10, y le faltan dos taxonomías que cuelgan de entidades que aún no
+existen.
 
 **La plataforma ya tiene dónde administrarse, y deja rastro de hacerlo.** Un administrador de
 plataforma puede mirar a través de todos los arrendatarios —eso existía desde la rebanada 05— y
@@ -163,6 +154,22 @@ ahora tiene un sitio propio desde el que ejercerlo: la bandeja de prospectos que
 implementada y sin pantalla, y dos padrones de sólo lectura. Cada ruta del área niega a un usuario
 corriente con `403`, y cada acción que se hace desde ella queda escrita en una bitácora que ni
 siquiera quien la protagoniza puede reescribir.
+
+**Y una producción ya se puede desglosar entera.** Sube su guion, se parte en capítulos y escenas
+—con índices que **no se renumeran nunca**, porque en un rodaje los números los referencia el
+papeleo de todo el equipo—, se da de alta el reparto y la utilería física, y cada jornada registra
+qué llevaba puesto cada personaje. La utilería es **un artículo del inventario o un video de
+referencia, nunca las dos cosas ni ninguna**, sostenido en tres capas y no en una comprobación del
+manejador. Al final se puede preguntar lo que se pregunta de verdad tres meses después: dónde ha
+estado esta chamarra, en qué jornada y sobre quién.
+
+**Contratar ya cierra el círculo, que era lo que abría todo lo demás.** El plan se contrata de verdad: la
+sesión de pago lleva a la página del procesador —hoy un suplente que no mueve dinero y lo dice—, y
+pagar ahí **firma el evento y lo entrega a `/payments/events`**, el mismo endpoint que atenderá al
+procesador real. La suscripción nace de ese evento y de ningún otro sitio, así que el camino que
+usará producción se ejerce en cada pasada. Detrás se encienden los recorridos que colgaban de tener
+suscripción —cambiar de plan, cancelar al vencimiento, reactivar, el historial de cobros— y,
+encadenada, **la tienda pública**, que exige suscripción vigente antes de servir nada.
 
 **Y ya se puede comprar.** Una tienda pública vende de verdad: el carrito se valora contra el
 catálogo publicado con la misma función que pinta la ficha, pagar **aparta unidades concretas** con
@@ -184,10 +191,13 @@ consulta —búsqueda insensible a acentos, filtros de gramática cerrada, orden
 paginación uniforme— y la interfaz guarda su estado **en la dirección**: un listado filtrado se
 comparte por enlace, retroceder deshace el último filtro y recargar no pierde nada.
 
-**La interfaz ya tiene red.** Treinta y nueve pruebas de extremo a extremo con Playwright, en unos
-doce segundos, sobre un build de producción. Cubren tema, idioma, las tres guardas, la renovación
-transparente, el cierre de sesión sin recarga, el recorrido de escritura completo y la exploración
-de colecciones entera. Lo que aún no cubren está enumerado en el `tasks.md` de la 28.
+**La interfaz ya tiene red.** Ochenta y tres pruebas de extremo a extremo con Playwright, en unos
+veintiséis segundos, sobre un build de producción y contra una base y unos puertos propios del árbol
+de trabajo desde el que se lanzan — que es lo que hace que se puedan correr sin pedirle permiso a
+nadie. Cubren tema, idioma, las tres guardas, la renovación transparente, el cierre de sesión sin
+recarga, el recorrido de escritura completo, la exploración de colecciones, el almacén de punta a
+punta y **el ciclo de contratación entero**. Lo que aún no cubren está enumerado en el `tasks.md` de
+la 28.
 
 ## Estado
 
@@ -198,8 +208,8 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Tareas | Nota |
 |---|---|---|---|---|
 | 00 | Andamiaje del espacio de trabajo | ✅ | — | Raíz, herramientas, base local |
-| 01 | `add-platform-contracts` | 🟡 | 23/37 | Dinero, errores, consulta, paginación, identificadores, **idempotencia**, **campos calculados** y **el cliente tipado generado**. Falta el registro de búsqueda y los esquemas de entrada y salida compartidos |
-| 02 | `add-postgres-data-model` | 🟡 | 29/34 | 91 tablas, 229 claves foráneas, 48 únicos parciales. Falta medir el volcado real, la siembra y el desfase en integración continua |
+| 01 | `add-platform-contracts` | 🟡 | 27/37 | Dinero, errores, consulta, paginación, identificadores, **idempotencia**, **campos calculados** y **el cliente tipado generado**. Falta el registro de búsqueda y los esquemas de entrada y salida compartidos |
+| 02 | `add-postgres-data-model` | 🟡 | 30/34 | 91 tablas, 229 claves foráneas, 48 únicos parciales. Falta medir el volcado real, la siembra y el desfase en integración continua |
 | 03 | `add-hono-api-runtime` | ✅ | 26/26 | Registro explícito, validación, contrato de error, contrato publicado con su cliente tipado y su candado de desfase, salud, límite de cuerpo y limitación de frecuencia. **La primera rebanada cerrada del todo** |
 
 > **La 09 se cierra el 2026-08-19**, la segunda. Al cerrarla salieron las dos cosas que nadie había
@@ -222,57 +232,57 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Tareas | Nota |
 |---|---|---|---|---|
 | 04 | `add-session-lifecycle` | 🟡 | 31/36 | Sesiones revocables, rotación con detección de reutilización, y revocación exigida por el motor. Falta sustituir la maquinaria propia por el servicio gestionado |
-| 05 | `add-authorization-enforcement` | 🟡 | 21/29 | Catálogo de **255** claves, resolución de rol, elusión acotada de propietario y de plataforma, permisos efectivos para la interfaz. Falta la medición previa al corte, que es lo que impide cerrarla |
-| 06 | `add-tenant-scoping` | 🟡 | 24/29 | **Las dos capas en pie**: 195 políticas sobre las 91 tablas, y los manejadores corriendo bajo `withRequester`. Faltan las de los dominios que aún no existen |
-| 07 | `add-verified-payment-webhooks` | 🟡 | 11/38 | **Firma verificada de verdad**, unicidad por reclamación e inserción, y transaccionalidad. Los manejadores por tipo **ya están**: los de suscripción con la 11, los de cobro en tienda con la 18 (H-88 cerrado) |
+| 05 | `add-authorization-enforcement` | 🟡 | 22/29 | Catálogo de **255** claves, resolución de rol, elusión acotada de propietario y de plataforma, permisos efectivos para la interfaz. Falta la medición previa al corte, que es lo que impide cerrarla |
+| 06 | `add-tenant-scoping` | 🟡 | 28/29 | **Las dos capas en pie**: 195 políticas sobre las 91 tablas, y los manejadores corriendo bajo `withRequester`. Faltan las de los dominios que aún no existen |
+| 07 | `add-verified-payment-webhooks` | 🟡 | 25/38 | **Firma verificada de verdad**, unicidad por reclamación e inserción, y transaccionalidad. Los manejadores por tipo **ya están**: los de suscripción con la 11, los de cobro en tienda con la 18 (H-88 cerrado) |
 
 ### Servicios de plataforma
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 08 | `migrate-media-storage` | 🟡 | **Subida directa entera y usada**: autorización acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión, confirmación que dice qué se escribió, y el selector con vista previa, reducción y reintento por objeto. La **sustitución de colecciones diferencia** —L-01— y las pantallas del almacén ya suben: galería del producto, e imagen única de almacén y ubicación. Faltan los marcadores de posición como activos propios y la ejecución del recolector, que espera al despachador de trabajos (09) |
+| 08 | `migrate-media-storage` | ✅ | 39/39. **Subida directa entera y usada**: autorización acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión, confirmación que dice qué se escribió, y el selector con vista previa, reducción y reintento por objeto. La **sustitución de colecciones diferencia** —L-01— y las pantallas del almacén ya suben: galería del producto, e imagen única de almacén y ubicación. **Cerrada el 2026-08-19**: los marcadores de posición ya son activos propios y el recolector corre programado sobre el despachador de la 09 —y nunca toca lo referenciado, ni la fila ni los objetos—. La única casilla sin marcar es **no aplicable con su razón escrita**: la vista previa de los formatos de cámara de teléfono, que se resuelve diciendo lo que no se puede previsualizar (H-51, H-68) |
 | 09 | `migrate-activity-and-notifications` | ✅ | 50/50. Bitácora transaccional de sólo anexado, audiencia por permiso, bandeja entera con su contador, preferencias y dispositivos, y el **despachador de trabajos**, que desbloquea la 08 y la 13. Cerrada el 2026-08-19: el asiento pasa a **clave y parámetros**, la referencia navegable sale de una sola función y apunta a pantallas que existen, el destinatario se da de alta ante el proveedor antes de su primer envío, y la administración de plantillas queda retirada con su delta y con una prueba que impide que vuelva. **La segunda rebanada cerrada del todo** |
-| 10 | `migrate-identity-and-companies` | 🟡 | 61/78. Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos, ya con sus dos pantallas**: el formulario público y la bandeja, que estrena el **área de administración de plataforma**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen |
-| 11 | `migrate-subscriptions-and-billing` | 🟡 | 40/40. Planes, contratación, asientos, gracia, las tres compuertas y el alta de comercio entera, con 61 pruebas. Su lista se marcó el 2026-08-19 leyendo el código: la rebanada se fusionó sin marcar. Falta el **procesador real** (H-85), que es configuración externa |
+| 10 | `migrate-identity-and-companies` | 🟡 | 62/75. Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos, ya con sus dos pantallas**: el formulario público y la bandeja, que estrena el **área de administración de plataforma**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen |
+| 11 | `migrate-subscriptions-and-billing` | ✅ | 43/43. Planes, contratación, asientos, gracia, las tres compuertas y el alta de comercio entera, con 78 pruebas. **Contratar cierra el círculo desde el 2026-08-19**: el suplente tiene su propia página de cobro y al pagarla firma el evento y lo entrega al mismo endpoint que atenderá al procesador real, así que la suscripción nace por donde nacerá siempre (H-163). Lo único pendiente **no depende de nosotros**: el procesador real (H-85) es una cuenta con sus credenciales, y la costura por la que entra ya está ejercida |
 
 ### Columna de comercio
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 12 | `migrate-warehouse-catalog` | 🟡 | Entera salvo el detalle de producto y sus asistentes, que son pantalla (29b). El **alta provisional** y su bandeja ya están |
-| 13 | `add-transactional-stock-reservation` | 🟡 | Entera, 30/31, con el **agujero de las huérfanas rentadas** tapado. La verificación de coherencia **ya corre programada** y avisa a quien puede arreglarla (09, H-11 cerrado). M-04 sigue sin confirmar: se implementó el criterio de la spec |
-| 14 | `add-server-side-quotation-pricing` | 🟡 | Motor, autoridad del servidor, congelación al cerrar, **precio negociado, precio por paquete, cobros y saldo**. La interfaz consume ya la misma función, y **el documento comercial ya se imprime y se comparte por enlace**. Falta la firma capturada en pantalla. M-05 sigue sin confirmar |
-| 15 | `migrate-warehouse-orders` | 🟡 | 29/33. Ciclo, **aceptación atómica**, rechazo con motivo, propagación a la orden de compra y su bandeja. Las cuatro que faltan esperan al escaparate (19) y al servicio de producciones (20) |
-| 16 | `migrate-order-chat-realtime` | 🟡 | 24/38. Historial con cursor, envío optimista, acuses por lado, editar y borrar lo propio, mensajes del sistema y la pertenencia al pedido, con la pantalla dentro de la ficha. **Sin conexión persistente**: pide configuración externa que no hay, y el transporte queda detrás de una costura (H-60) |
-| 17 | `migrate-shipping-rates` | 🟡 | 31/33. El cálculo va como función pura en contratos con las tarifas inyectadas como dato, y el peso facturable en decimal exacto —en coma flotante 2 lb son 0.9071839999999999 kg—. Cuadro por empresa con su pantalla y simulador que pregunta al servidor. La estimación **recibe la transacción en vez de abrirla**, que es lo que dejó a la 18 cobrar con la tarifa que cotizó. Faltan las dos que esperan al escaparate anónimo |
-| 18 | `add-transactional-checkout` | 🟡 | 37/43. Carrito valorado en el servidor, **reserva efectiva con caducidad**, instantánea congelada, idempotencia y la materialización de las ocho entidades en transacción, con la marca al final. Las cuatro de mosaicos esperan a la 24; el aviso de fallo persistente y el reproceso manual, a un área de administración de plataforma |
-| 19 | `migrate-websites-and-site-builder` | 🟡 | 38/49. Sitios, resolución por subdominio, tienda y **el constructor entero**: temas con su campaña programada, secciones con su contenido, reordenación por arrastre y vista previa que comparte función y componente con lo que se sirve. Falta el carrito y la cuenta del comprador, que son de la 18 |
+| 12 | `migrate-warehouse-catalog` | 🟡 | 51/52. Entera salvo el detalle de producto y sus asistentes, que son pantalla (29b). El **alta provisional** y su bandeja ya están |
+| 13 | `add-transactional-stock-reservation` | ✅ | 31/31, con el **agujero de las huérfanas rentadas** tapado. La verificación de coherencia **ya corre programada** y avisa a quien puede arreglarla (09, H-11 cerrado). **M-04 resuelto el 2026-08-19**: comprometer lo que no está en la nave es la prestación —las bodegas lo traen de fuera—, así que se autoriza **sólo en mostrador**, la tienda pública sigue negándose, y se añadió la **confirmación de llegada** con su bandeja |
+| 14 | `add-server-side-quotation-pricing` | 🟡 | 33/35. Motor, autoridad del servidor, congelación al cerrar, **precio negociado, precio por paquete, cobros y saldo**. La interfaz consume ya la misma función, y **el documento comercial ya se imprime y se comparte por enlace**. Falta la firma capturada en pantalla. M-05 sigue sin confirmar |
+| 15 | `migrate-warehouse-orders` | 🟡 | 30/33. Ciclo, **aceptación atómica**, rechazo con motivo, propagación a la orden de compra y su bandeja. Las cuatro que faltan esperan al escaparate (19) y al servicio de producciones (20) |
+| 16 | `migrate-order-chat-realtime` | 🟡 | 24/34. Historial con cursor, envío optimista, acuses por lado, editar y borrar lo propio, mensajes del sistema y la pertenencia al pedido, con la pantalla dentro de la ficha. **Sin conexión persistente**: pide configuración externa que no hay, y el transporte queda detrás de una costura (H-60) |
+| 17 | `migrate-shipping-rates` | ✅ | 31/31. El cálculo va como función pura en contratos con las tarifas inyectadas como dato, y el peso facturable en decimal exacto —en coma flotante 2 lb son 0.9071839999999999 kg—. Cuadro por empresa con su pantalla y simulador que pregunta al servidor. La estimación **recibe la transacción en vez de abrirla**, que es lo que dejó a la 18 cobrar con la tarifa que cotizó. Las dos casillas sin marcar son **no aplicables con su razón escrita**: piden retirar del navegador unas copias que sólo existen en `tfv-frontend/`, el árbol viejo que la regla 1 deja intacto — en la pila nueva el cálculo y la distancia viven una sola vez, en `packages/contracts/src/shipping.ts` |
+| 18 | `add-transactional-checkout` | 🟡 | 37/44. Carrito valorado en el servidor, **reserva efectiva con caducidad**, instantánea congelada, idempotencia y la materialización de las ocho entidades en transacción, con la marca al final. Las cuatro de mosaicos esperan a la 24; el aviso de fallo persistente y el reproceso manual, a un área de administración de plataforma |
+| 19 | `migrate-websites-and-site-builder` | 🟡 | 38/48. Sitios, resolución por subdominio, tienda y **el constructor entero**: temas con su campaña programada, secciones con su contenido, reordenación por arrastre y vista previa que comparte función y componente con lo que se sirve. Falta el carrito y la cuenta del comprador, que son de la 18 |
 
 ### Columna de producciones
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 20 | `migrate-productions-core` | 🟡 | 7/44 más lo que no estaba en la lista. **La columna deja de estar en cero**: la producción entera —alta, ficha, fechas, publicación, panel y baja con su alcance—, su taxonomía con el rol que dirige el trabajo al equipo, y el flujo básico de los planes de trabajo. Faltan guion, capítulos y escenas (21), y jornadas, continuidad y catálogos, que son el grueso de la lista |
-| 21 | `add-durable-script-sync` | ⬜ | |
-| 22 | `migrate-productions-operations` | ⬜ | |
-| 23 | `add-transactional-procurement` | ⬜ | Converge las dos columnas |
+| 20 | `migrate-productions-core` | ✅ | 41/41. **Cerrada el 2026-08-19**, en una tanda de tres encargos en paralelo. La producción entera —alta, ficha, fechas, publicación, panel, taxonomía y planes—, los **catálogos del rodaje** —personajes, sets y biblioteca de videos—, el **desglose del guion** —guiones, capítulos y escenas, con índices que no se renumeran— y la **continuidad** —jornadas, reparto, utilería excluyente y el cuaderno del script—. Los dos defectos heredados, R-08 y R-09, comprobados contra el catálogo del motor: no existen en el modelo nuevo. Una prueba encadena los tres bloques hasta «¿dónde ha estado esta chamarra?» |
+| 21 | `add-durable-script-sync` | ⬜ | 0/33 |
+| 22 | `migrate-productions-operations` | 🟡 | 4/44. El **inventario de artículos** se adelantó con la 20, porque sin objetos no hay ni sets ni utilería que probar: alta con sus ocho estados y su tabla de transiciones, etiqueta legible por máquina con localización por código, fotos y búsqueda. `Entregado` queda **inalcanzable a propósito**: sólo lo pone una nota de entrega verificada, y las notas son de esta rebanada |
+| 23 | `add-transactional-procurement` | ⬜ | 2/43. Converge las dos columnas |
 
 ### Pixit y locaciones
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 24 | `migrate-pixit-catalog-and-ledger` | ⬜ | **Bloqueada**: decisión F-10 |
-| 25 | `add-server-side-pos-sales` | ⬜ | |
-| 26 | `migrate-mosaic-generation` | ⬜ | **Bloqueada**: decisión F-09 |
-| 27 | `migrate-locations-directory` | ⬜ | |
+| 24 | `migrate-pixit-catalog-and-ledger` | ⬜ | 0/42. **Bloqueada**: decisión F-10 |
+| 25 | `add-server-side-pos-sales` | ⬜ | 0/37 |
+| 26 | `migrate-mosaic-generation` | ⬜ | 0/39. **Bloqueada**: decisión F-09 |
+| 27 | `migrate-locations-directory` | ⬜ | 1/28 |
 
 ### Interfaz y corte
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 28 | `rebuild-ui-foundation` | 🟡 | Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial), con el **asistente por pasos**, el área de texto, el campo de importe y el selector con búsqueda. De la 28e faltan el selector de archivos, el editor enriquecido, la firma y el mapa; de la 28d, la exploración de colecciones |
-| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, contrapartes y direcciones (29a). La 29b **cierra el flujo del almacén**: alta y baja de almacén, los dos árboles editables, los **dos asistentes** de producto y de variante, la ficha corregible, existencias con etiquetas imprimibles, listas de precios con asignación masiva, **el panel del almacén** y el constructor de cotizaciones entero —sus cuatro bloques se guardan solos, y la ventana de fechas rehace los días que cobra cada línea antes de guardar—. El **documento de cotización y su enlace público** ya están; falta la conversación del pedido. 29c–29e esperan a sus rebanadas de servidor |
-| 30 | `add-data-migration-and-cutover` | ⬜ | |
+| 28 | `rebuild-ui-foundation` | 🟡 | 58/71. Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial), con el **asistente por pasos**, el área de texto, el campo de importe y el selector con búsqueda. De la 28e faltan el selector de archivos, el editor enriquecido, la firma y el mapa; de la 28d, la exploración de colecciones |
+| 29 | `rebuild-ui-domain-screens` | 🟡 | 18/56. Acceso, miembros, roles, contrapartes y direcciones (29a). La 29b **cierra el flujo del almacén**: alta y baja de almacén, los dos árboles editables, los **dos asistentes** de producto y de variante, la ficha corregible, existencias con etiquetas imprimibles, listas de precios con asignación masiva, **el panel del almacén** y el constructor de cotizaciones entero —sus cuatro bloques se guardan solos, y la ventana de fechas rehace los días que cobra cada línea antes de guardar—. El **documento de cotización y su enlace público** ya están; falta la conversación del pedido. 29c–29e esperan a sus rebanadas de servidor |
+| 30 | `add-data-migration-and-cutover` | ⬜ | 1/50 |
 
 ## Lo siguiente
 
@@ -352,20 +362,23 @@ Ninguna bloquea el trabajo en curso. Por orden de cuándo harán falta:
 
 | Cuándo | Decisión | Quién |
 |---|---|---|
-| Rebanada 13 | Si acuñar inventario inexistente es prestación o defecto (M-04) | Negocio |
-| Rebanada 14 | Convención de signo del ISR directo y alcance fiscal (M-05) | Administración |
 | Rebanada 24 | Anulación de venta por compensación (F-10) | Contabilidad |
 | Rebanada 26 | Cuál indexación del mosaico es la real (F-09) | Comprobación física |
-| Rebanada 10 | Si transferir la propiedad debe poder delegarse a un rol. Hoy no tiene clave en el catálogo y se exige el papel; concederla añadiría una clave que la implementación anterior no tiene | Producto |
 | Rebanada 28e | Si la licencia del editor de imagen es transferible (F-13) | Legal |
-| Rebanada 30 | Qué se hace con las cuentas existentes marcadas como verificadas | Producto |
 
-Las de la 13 y la 14 ya están implementadas con el criterio de la spec y señaladas en el código,
-según la regla 5. Confirmar la de la 14 es cambiar una fila de la tabla de tratamiento; confirmar la
-de la 13, el valor por defecto de un parámetro. Ninguna de las dos toca el modelo, y la marca de
-trazabilidad de las unidades acuñadas se conserva se decida lo que se decida.
+Las tres son de fuera: dos esperan a Pixit, que está en pausa, y la tercera a un contrato. Ninguna
+detiene nada de lo que está en marcha.
 
-Resueltas: **cómo se propaga la identidad al motor** (rebanada 06, ver D-07 y la bitácora del
+**Resueltas el 2026-08-19**, en la sesión de repaso:
+
+| Decisión | Resolución |
+|---|---|
+| **M-04** · si comprometer inventario que no está en la nave es prestación o defecto | **Prestación.** Las bodegas traen de fuera lo que no tienen; para eso existe. Se autoriza **sólo en mostrador** —la tienda pública sigue negándose— y se añadió la **confirmación de llegada** con su bandeja, para que lo comprometido y lo que ya está en la nave dejen de ser la misma cosa. El permiso se queda como está |
+| **M-05** · convención de signo del ISR directo y alcance fiscal | **Sólo calcular bien.** No hay aspiración de cumplimiento formal: el motor tiene que dar el número correcto, y eso ya lo hace |
+| **Rebanada 10** · si transferir la propiedad de una empresa puede delegarse | **Sólo el propietario.** No se añade clave al catálogo, que sigue cerrado en 255 |
+| **Rebanada 30** · qué se hace con las cuentas existentes marcadas como verificadas | **Se les cree.** Una cuenta verificada en la pila anterior entra verificada |
+
+Resueltas antes: **cómo se propaga la identidad al motor** (rebanada 06, ver D-07 y la bitácora del
 2026-08-16), **si se acepta la ventana de revocación** —no se acepta, se paga la consulta— y
 **el alcance de traducción**: español e inglés desde el primer componente, sin prefijo de idioma
 en la dirección.
@@ -4003,3 +4016,397 @@ Una cuenta de AWS, un nombre de depósito y una credencial de administración co
 vez `bucket --aws`. Después: `copy-media-objects` en frío y otra vez en el corte, las variables
 `STORAGE_*`, `rewrite-media-urls`, `placeholders`, y `bucket` al final para comprobar que el depósito
 nuevo sirve. Está en `.env.example` y en la cabecera de `copy-media-objects`, en ese orden.
+
+### 2026-08-19 · Contratar, y que la tienda se encienda detrás
+
+Se podía pulsar «Contratar» y no pasaba nada. La sesión de pago se acuñaba, el navegador volvía a la
+misma pantalla, y `company_subscriptions` seguía vacía: **nada activaba la suscripción**. Con ella se
+quedaban sin recorrer cambiar de plan, cancelar, reactivar, el historial de cobros y —encadenada— la
+tienda pública, que exige suscripción vigente antes de servir nada.
+
+**El atajo que no se tomó**
+
+La salida barata era que la pantalla de planes leyera el `?session=` que el suplente le devolvía y
+activara ella la suscripción. Habría funcionado en una tarde, y habría sido lo peor de las dos
+opciones: una vía que **producción no tiene** —allí la suscripción nace de un evento firmado que el
+procesador manda a `/payments/events`— y, de paso, el camino que sí usará producción sin ejercerse
+nunca. Dos formas de nacer una suscripción, y una de ellas sin firma ninguna.
+
+**Lo que se hizo: el suplente recorre el camino real**
+
+El suplente hace lo que hace el procesador. Tiene **su propia página de cobro**, servida por la API y
+no por la aplicación, y cuando alguien paga en ella **firma dos eventos y los entrega por HTTP** a
+`/payments/events`, con su firma, su ventana temporal y su unicidad. La pantalla de planes no cambió
+ni una línea: sigue yendo a donde el procesador le diga y volviendo a mirar el resultado.
+
+La página no es decoración: es **el disparador explícito** que hacía falta. Sin ella habría que
+emitir el evento al abrir la sesión, y entonces contratar activaría sin que nadie pulsara nada — con
+lo que se pierde el escenario que la spec pide poder recorrer, «abandonar el pago no deja
+suscripción, y puede volver a intentarlo». Con página hay dos salidas de verdad, que son las dos que
+ofrece un procesador.
+
+Dos eventos y no uno, también como el procesador: `checkout.session.completed` hace nacer la
+suscripción e `invoice.paid` cobra el primer periodo. El primero **no trae periodo** —el de verdad
+tampoco—, así que sin el segundo no habría fecha de renovación que enseñar ni un solo cobro en el
+historial. Los dos llevan identificador estable derivado de la sesión: reintentar el pago, o volver
+atrás en el navegador, entrega los mismos y la unicidad los reconoce.
+
+Todo lo del suplente vive en un archivo, `payments/local-processor.ts`, y sus dos rutas responden
+`404` sin `PAYMENTS_PROVIDER=local`. El día que haya procesador de verdad se borra el archivo.
+
+**Tres cosas que sólo aparecen recorriendo el ciclo**
+
+- **Cancelar alargaba la suscripción** (H-164). El suplente no recordaba nada de lo que emitía, así
+  que componía el periodo desde el instante de cada llamada: cancelar un día 20 devolvía un
+  vencimiento un mes más tarde, y eso se escribía tal cual. Dar de baja movía el vencimiento hacia
+  adelante. Ahora recuerda lo que emite, y al segundo —las marcas del procesador van en segundos, y
+  un periodo con milisegundos deja de coincidir consigo mismo en cuanto viaja dentro de un evento—.
+- **Los tres planes costaban cero** (H-165). El precio salía de los dígitos finales de la referencia
+  del producto, y lo que la siembra deja es `local_plan_casa`: sin dígitos, nivel cero, importe cero.
+  La pantalla ofrecía el catálogo entero de balde y el primer cobro se registraba en cero. El nivel
+  pasa a leerse del catálogo, que es lo que el procesador de verdad sabe de su propio producto.
+- **Volver del pago perdía la sesión** en la suite de navegador (H-167). El origen de vuelta decía
+  `localhost` y la suite conduce por `127.0.0.1`: hosts distintos, credencial que no viaja. Llevaba
+  ahí desde que existe la variable, sin que nadie pudiera verlo porque nadie podía completar un pago.
+
+**Lo que la tienda pública dejó ver**
+
+El encadenamiento es la prueba de que el círculo se cierra, y al recorrerlo apareció que **ninguna
+tienda creada desde la pantalla puede servir catálogo** (H-166): la vertical se declara con una
+categoría de la taxonomía global —`warehouse-store`— y la siembra no crea ninguna, así que todo sitio
+nace sin vertical y su tienda dice «Estamos preparando esta tienda» para siempre. Con la categoría
+puesta a mano, la misma tienda pasa de «no está disponible» a servir su catálogo en cuanto se
+paga. La corrección es una fila de la siembra y queda anotada para quien lleve esa rebanada.
+
+Y quedó anotado el motivo de que ese encadenamiento se fije en una prueba de la API y no en el
+navegador (H-168): **no hay ninguna ruta que habilite un servicio a una empresa**, sólo la siembra
+escribe `company_services`, así que una empresa creada por la prueba nunca podrá tener tienda — y la
+única que la tiene es la sembrada, sobre la que otra prueba afirma justo lo contrario.
+
+**Verificación**
+
+`pnpm test --force` en verde con **1534** pruebas, 17 más que las 1517 de partida: el ciclo entero
+contra el suplente con un servidor de verdad escuchando —la entrega es una petición HTTP contra el
+endpoint público, no una llamada al manejador—, el precio, la idempotencia del reintento y el
+encadenamiento con la tienda. `pnpm check` limpio y `pnpm lint` sin ninguna incidencia nueva: las
+seis que salen son las de H-150, ninguna en los archivos de esta tanda.
+
+`pnpm test:e2e` en verde, **83 de 83**, con `suscripcion.spec.ts` reescrita: afirmaba que no había
+nada que contratar (H-158) y ahora conduce el recorrido entero. Sobre una empresa que la propia
+prueba crea y borra, porque contratar cambia el estado de una empresa completa.
+
+Y en un navegador de verdad, encadenado: la tienda dice «La empresa que la publica no tiene una
+suscripción vigente» → se contrata «Casa de renta» con cinco asientos → la página del suplente cobra
+1745,00 MXN → se vuelve y la suscripción está **activa, con sus cinco asientos y su fecha de
+renovación** → el cobro aparece en el historial → **la misma tienda sirve su catálogo** → cancelar la
+deja operando hasta el vencimiento y la tienda sigue sirviéndose → reactivar y cambiar de plan hacen
+lo que dicen.
+
+**Lo que queda fuera**
+
+El **procesador real** (H-85), que es una cuenta con sus credenciales. La fila de la siembra que deja
+la vertical de las tiendas (H-166) y la ruta que habilita servicios a una empresa (H-168), las dos de
+otras rebanadas.
+
+Y una observación que se deja dicha sin tocar nada: **nadie pasa a cancelada una suscripción cuyo
+periodo terminó**. Deja de operar por la fecha —que es lo que las compuertas miran— pero la fila
+sigue ahí y sigue siendo «la vigente», así que volver a contratar responde que ya hay una y el camino
+es cambiar de plan, que funciona. No rompe ningún escenario de la spec; sí deja un estado que nadie
+barre, al lado de la gracia, que sí se barre.
+
+### 2026-08-19 · El desglose del guion: guiones, capítulos y escenas
+
+**Cerrado — rebanada 20, sección «Desglose»: las once tareas, y las dos de «Referencias»**
+
+Las tres entidades sobre las que se organiza un rodaje, con su API entera y sin pantallas:
+`apps/api/src/productions/script.ts` y `apps/api/src/routes/script.ts`, veintidós rutas nuevas —de
+228 a 250 en el contrato publicado—. Las tablas existían desde la `0002` y las políticas desde la
+`0005`: **no hizo falta ninguna migración**.
+
+- **Guiones** con su índice, su archivo y su marca de extracción. Nacen sin extraer, y el estado no
+  se recibe por el cuerpo: admitirlo lo convertiría en un valor por omisión que cualquiera puede
+  sobrescribir para decir que ya se extrajo.
+- **Sustituir el archivo invalida la extracción**, y con ella las tres marcas que describían la del
+  archivo anterior. Sustituir es cambiar por **otro**: reasignar el mismo archivo no tira una
+  extracción porque alguien corrigió el nombre. Retirarlo sí la invalida.
+- **Capítulos** con índice único en la producción, **escenas** con índice único en el capítulo, las
+  dos con `409` en dos capas —consulta previa para el mensaje bueno, índice único parcial para la
+  carrera de dos peticiones simultáneas—.
+- **La etiqueta compuesta** sale de `sceneLabel()` de `@tfv/contracts`, no de una plantilla escrita
+  aquí. Es una de las diecisiete fórmulas que H-129 dejó definidas y sin consumir; ésta ya se
+  consume, y hace exactamente lo que su spec pide.
+- **Recuentos**: escenas por capítulo y planes por escena, cada uno en una consulta por lote y
+  nunca nulos, conforme a `computed-fields`.
+- **Eliminar un capítulo arrastra sus escenas** —la cascada de la clave foránea es física y aquí la
+  baja es lógica, así que la escribe el manejador— y **eliminar una escena desvincula jornadas y
+  planes devolviéndolos a su estado inicial**. Las dos se componen: dar de baja un capítulo suelta
+  también lo que referenciaba a sus escenas, o quedarían jornadas apuntando a escenas muertas.
+- **Eliminar un guion desvincula sus capítulos**: de qué guion salió el texto es procedencia, no
+  propiedad.
+- **La estructura completa** como índice navegable, sin paginar, en dos consultas.
+
+**La decisión que había que escribir: los índices no se renumeran**
+
+Borrar el capítulo 2 de tres deja al 3 llamándose 3. En un guion real los números son la referencia
+de todo el papeleo del equipo —el desglose de arte, la orden del día, las hojas de continuidad— y
+renumerar dejaría a media producción hablando de un capítulo que ya es otro. Por eso en la industria
+existen los «12A»: se intercala, no se recoloca. La propia spec lo confirma al pedir una consulta
+del siguiente índice libre: si los índices se recompactaran, esa consulta sobraría.
+
+De ahí sale la otra mitad, que es la que se equivoca sola: **el siguiente índice es el último más
+uno, no el primer hueco**. Rellenar el hueco reutilizaría un número que el equipo ya usó, que es la
+misma confusión por la puerta de atrás. El hueco queda libre y se puede pedir a mano — y pedirlo
+funciona, que es lo que lo convierte en una posibilidad y no en un residuo.
+
+Está escrito en la cabecera del módulo, en los dos manejadores de baja y en tres pruebas, porque es
+exactamente el sitio donde alguien «arreglaría» algo que no está roto.
+
+**Verificado, no supuesto**
+
+- **R-08 y R-09 eran papel, y ahora consta que se miró.** Los dos defectos de la sección
+  «Referencias» venían resueltos desde la `0002`. Se comprobó contra el **catálogo del motor** y no
+  contra el código que declara las referencias, que es justamente lo que los defectos dicen que
+  estaba mal: la única clave foránea que llega a `production_chapters` es `production_scenes.chapter_id`,
+  y ninguna del capítulo lleva a órdenes de almacén (R-08); las notas de jornada y los comentarios de
+  plan son tablas con su clave foránea y no campos derivados, y `production_workflow_coments` no
+  existe porque los dos tipos de comentario se unificaron en `production_comments` (R-09). Con dos
+  pruebas, **comprobadas invirtiéndolas** antes de fijarlas. H-177 y H-178.
+- **El bloque se recorre contra un servidor de verdad**, no llamando a manejadores:
+  `script-recorrido.test.ts` levanta la aplicación en un puerto efímero y la conduce con `fetch`.
+  Un guion que nace sin extraer, tres capítulos, nueve escenas de 1.1 a 3.4, la estructura navegable,
+  se borra el de en medio y el tres sigue siendo el tres, el siguiente libre dice cuatro, y el dos se
+  puede intercalar a mano. La afirmación central se comprobó invirtiéndola: esperando `[1, 2]` —lo
+  que daría renumerar— la prueba falla nombrando `[1, 3]`.
+- **La estructura exige las dos claves.** La ruta declara la de capítulos y el manejador exige además
+  la de escenas, porque la respuesta las contiene. Declarar sólo la primera ampliaría en silencio la
+  autoridad de quien la tiene: es H-07 otra vez, resuelto igual, con su prueba.
+
+**Cifras**, medidas sobre una base creada de cero para esta verificación: **1577 pruebas**, 43 más
+que las 1534 de partida, y las 43 son de este encargo —42 en `script.test.ts` y el recorrido contra
+servidor de verdad—. Por paquete: contratos 406, datos 90, interfaz 119, web 109 y **API 853**, que
+sube desde 810. `pnpm check` limpio en los seis paquetes. `pnpm lint` con **las mismas 6 incidencias
+de base** (H-150) y ninguna en los archivos de esta tanda.
+
+**Abierto**
+
+- **La escena que referencian las jornadas y los planes puede ser de otra producción** (H-180). La
+  clave foránea garantiza que la escena existe, no que sea de su producción — el mismo agujero que
+  el capítulo tenía con su guion y que aquí sí se cierra. Hoy es latente porque ninguna ruta escribe
+  esos dos `scene_id`; la guarda va donde se escribe el vínculo, que es de otras rebanadas.
+- **La spec llama al mismo campo del capítulo «sinopsis» y «descripción»** en dos requisitos
+  contiguos (H-179). Implementado sobre `synopsis`, que es como lo llama el modelo.
+- La **extracción asistida** del guion es la rebanada 21 y no se tocó: `productions.pdfs.sync` sigue
+  siendo la única clave de guiones sin ruta, y está escrito en el código para que se lea como
+  decisión y no como olvido.
+
+### 2026-08-19 · Los catálogos del rodaje, y el inventario que los llena
+
+Una producción existía, tenía taxonomía y planes de trabajo, y **no tenía con qué llenarla**: ni
+personajes, ni sets, ni videos de referencia, ni un solo objeto físico. El panel ya los contaba —seis
+recuentos que sólo podían dar cero— y las veintiocho tablas estaban puestas desde la `0002`. Faltaba
+lo de en medio.
+
+**Los ocho estados, y la tabla que la spec no escribió**
+
+`production-inventory` enumera los ocho estados de un artículo en una tabla de dos columnas y **no
+dice ni una palabra de qué pasa a qué**. Sin eso, «cambiar el estado» es escribir cualquier valor del
+enumerado encima de cualquier otro, que es como un jarrón devuelto a su dueño vuelve a estar
+disponible sin que nadie lo traiga de vuelta.
+
+El criterio adoptado, leído del departamento de arte, vive en `TRANSITIONS` **como dato y en un solo
+sitio**:
+
+| Regla | Por qué |
+|---|---|
+| `Disponible ↔ Almacenado` | Guardar y sacar del guardado, libre en ambos sentidos |
+| `* → Dañado · Incompleto · Perdido · Robado` | Las cosas se rompen y se pierden en cualquier momento, **incluso guardadas** |
+| `Dañado · Incompleto · Perdido · Robado → Disponible · Almacenado` | Nada de eso es terminal: se reparó, apareció la pieza, estaba debajo de una mesa |
+| `* → Devuelto` | Volvió a su dueño y salió de las manos de la producción |
+| `Devuelto → nada` | El único terminal |
+
+Y **`Entregado` no se pone a mano nunca**. Se llega ahí completando una nota de entrega, que se
+verifica pieza por pieza y la firman las dos partes. Las notas no entran en esta ronda, así que hoy
+**ningún camino lleva a `delivered`** — y es correcto que así sea: un estado que significa «lo firmó
+quien lo recibió», puesto con un botón, sería exactamente la mentira que la verificación por líneas
+existe para impedir. Está escrito en la cabecera del módulo, en la descripción de la ruta y fijado
+por una prueba: `delivered` es el único estado sin entrada, `returned` el único sin salida.
+
+La tabla se prueba **entera**, las sesenta y cuatro celdas, con lo esperado escrito desde las reglas
+y no desde la tabla —o las dos se equivocarían igual—. Y ese desdoblamiento sirvió a la primera: la
+prueba encadenaba las reglas como si fueran excluyentes, la primera que casa decide, y dejó fuera
+cuatro celdas. **Las reglas se suman**: que un jarrón dañado se repare y vuelva a disponible no
+impide devolverlo dañado a su dueño, que es lo que se hace con la utilería rentada que se rompió.
+
+**Lo que de verdad hay que acertar son las bajas, y ninguna cascada ayuda**
+
+Cinco bajas, cinco comportamientos distintos escritos en las specs: el personaje deja sus
+continuidades sin personaje, el set no se lleva sus artículos, el video **sí** se lleva la utilería
+que lo señalaba, y el artículo se retira de sets y continuidades sin destruir ni unos ni otras.
+
+Las cuatro tienen su cascada declarada en el esquema —`set null` en `character_id`, `cascade` en
+`set_id`, `video_id` e `item_id`— y **ninguna de las cuatro se dispara**, porque la baja de estas
+entidades es lógica: se escribe `deleted_at` y no se borra ninguna fila, así que el motor no tiene
+qué propagar. La red está declarada, se lee como si protegiera, y no sujeta nada. Se escriben a mano,
+las cuatro, con el motivo encima.
+
+La utilería del video **se elimina** en vez de quedarse sin video porque no puede quedarse sin él:
+`production_props_item_xor_video` exige artículo **o** video, nunca ninguno. Y las filas de
+composición de un set dado de baja **se conservan**, al revés que las del artículo: un decorado que
+se restaura y vuelve vacío no es el decorado que se dio de baja.
+
+**Cuatro mutaciones, para no fiarse del verde**
+
+Ninguna prueba se dio por buena por pasar a la primera. Se rompió el código a propósito cuatro veces
+—quitar el nombre de la categoría de la búsqueda, no retirar de los sets al dar de baja, confiar en
+la cascada del personaje, no retirar la utilería del video— y cada una la cazó la prueba que le
+tocaba, y sólo esa. Las tres últimas son la misma lección de arriba.
+
+**Lo que se encontró**
+
+- **H-174, y es el que duele: H-90 tiene un cuarto caso, en la vía principal del alta.** Dos empresas
+  no pueden llamar igual a su producción. `freeSlug` comprueba si el identificador legible está libre
+  **con las políticas puestas**, no ve la fila de la otra empresa, lo da por libre, y el índice único
+  de plataforma rechaza la inserción: `500` en lugar del `409` que la convención pide. Apareció solo,
+  al escribir la segunda empresa de una prueba. Es más caro que en almacenes y productos —los dos
+  casos que H-90 ya tenía abiertos— porque el identificador de una producción se deriva **siempre**,
+  se publique o no: basta con dar de alta una producción con un nombre corriente.
+- **H-171: el cambio de estado no se puede atribuir.** La spec pide autor e instante; el instante lo
+  da `updated_at` y el autor **no tiene dónde escribirse**. El almacén tiene `warehouse_stock_events`
+  para exactamente esto y el inventario de producción no tiene su equivalente. Las dos vías sin
+  migración tampoco valen: la bitácora guarda claves de un catálogo cerrado desde H-153, y añadir una
+  obliga a traducirla en `apps/web`, que es otro encargo.
+- **H-172: el `restrict` de las líneas de nota de entrega no se dispara nunca**, por lo mismo que las
+  cascadas de arriba. Se vio al ir a apoyarse en él para la tarea que quedó bloqueada.
+- **H-170: `production_items_code_unique` no excluye lo dado de baja.** Es H-139 en otra tabla. No
+  muerde, porque el código se acuña al azar sobre sesenta bits en vez de derivarse de la empresa; lo
+  que se pierde es que el espacio de códigos deje de liberarse nunca.
+- **H-173**: tres claves del catálogo migrado gobiernan selectores de un formulario y no operaciones,
+  así que se quedan sin ruta. No se les inventa una.
+
+Los cuatro primeros son migraciones y esta tanda no tiene número asignado, así que quedan anotados
+y ninguno se toca.
+
+**Lo que queda fuera, y por qué**
+
+Tres tareas del bloque de inventario siguen sin marcar, con su razón escrita en la propia línea:
+**la atribución del cambio de estado** (H-171), **las notas dentro de la consulta de dónde se usa** y
+**impedir eliminar un artículo que figure en una nota sin cerrar**. Las dos últimas esperan a lo
+mismo: las notas de entrega no existen todavía. Enumerarlas devolvería siempre la lista vacía, y eso
+no se lee como «no lo sé», se lee como «no está en ninguna» — que hoy nadie puede afirmar.
+
+La **etiqueta** se entrega como dato y no como dibujo: el servidor da el código y la carga útil que
+va en el símbolo, y garantiza el **viaje de ida y vuelta** —lo que se imprime es exactamente lo que
+la localización acepta de vuelta, y hay una prueba que encadena los dos—. Dibujar el código de barras
+es de la pantalla, que es de la rebanada 29 y no de esta ronda de API sola.
+
+**Verificación**
+
+`pnpm test --force` en verde con **1570** pruebas, 36 más que las 1534 de partida, **sobre una base
+creada desde cero**: se dejó caer `tfv_test_prod_catalogo` y se volvió a migrar entera antes de la
+pasada que cuenta. `pnpm check` limpio. `pnpm lint` con las seis incidencias de H-150 y ninguna nueva,
+ninguna en los archivos de esta tanda.
+
+Las treinta y seis corren **contra un servidor de verdad**, en un puerto efímero que elige el
+sistema: peticiones HTTP con su serialización, su cookie, su enrutado y su guardián, no llamadas al
+manejador. Y la que resume la tanda es el recorrido entero de una silla Thonet — nace disponible,
+recibe foto, se guarda, se rompe, se repara, rechaza «entregado» sin moverse, entra en dos sets, se
+usa en una jornada, dice dónde se ha usado, y aparece por el código de su etiqueta con su estado, su
+producción y su foto.
+
+### 2026-08-19 · Continuidad de rodaje
+
+**Cerrado**
+
+Doce de las trece tareas de la sección **Continuidad** de `migrate-productions-core`. Es el registro
+de cómo aparece cada personaje en cada jornada: lo que permite que una escena grabada en marzo
+enlace visualmente con otra grabada en julio.
+
+- **Jornadas de rodaje** con su escena, su tipo —grabación o regrabación—, su responsable y sus tres
+  estados. Nacen en borrador, se cierran, se vuelven a abrir y se dan de baja.
+- **Asignar el reparto** crea una continuidad por personaje y pone la jornada en curso, «porque
+  asignar el reparto es el acto con el que empieza el trabajo». Volver a asignar a alguien que ya
+  está **no** crea una segunda continuidad.
+- **Continuidad por personaje**, y también sin personaje: la spec pide poder registrar lo que no
+  corresponde a nadie en concreto. Retirar el personaje conserva la continuidad y su utilería.
+- **Utilería excluyente**: artículo o video, nunca ambos ni ninguno.
+- **Reconciliación por tipo**, atómica, sin que un tipo toque al otro.
+- **Notas de la jornada** —el cuaderno del script—, con su autor y su instante.
+- **Consulta de la continuidad de un personaje** y **vista completa de la jornada**, con su escena,
+  su capítulo, sus personajes, la utilería resuelta de cada uno y las notas del día.
+
+Diecinueve rutas nuevas en `routes/continuity.ts`, sobre `productions/continuity.ts`. Las dos
+familias de claves del catálogo cerrado quedan ejercidas —`productions.recordings.*` y
+`productions.continuities.*`—, cada una en su sitio y sin colapsar ninguna.
+
+**Dos decisiones escritas donde alguien iría a cambiarlas**
+
+**Cerrar una jornada no exige tener la continuidad completa.** La spec le pone candado a la nota de
+entrega —«cerrar una nota exige verificarlo todo»— y deliberadamente no se lo pone a la jornada. No
+es un olvido: el día de rodaje se acaba cuando se acaba, y una aplicación que se negara obligaría a
+inventar datos para poder seguir. El motivo vive en la cabecera del módulo, que es el sitio donde
+alguien añadiría la validación «obvia», y hay prueba de que una jornada sin ninguna continuidad se
+cierra (H-186).
+
+**La utilería es excluyente de verdad, en tres capas y ninguna es una comprobación en el manejador.**
+Abajo del todo la restricción `production_props_item_xor_video` del motor, que ya existía y hasta hoy
+nadie había ejercido. En medio el tipo `PropRef` del módulo, que no puede expresar «las dos» ni
+«ninguna», con un único constructor de fila por el que pasa toda inserción. Arriba, un camino de
+transporte por tipo con su propia clave, así que por la API el caso ni siquiera se puede pedir.
+Probado por los cuatro lados: los dos y ninguno **contra el motor** —que es donde el caso existe—,
+afirmando el nombre de la restricción y con su control de que una pieza de un solo lado sí entra; y
+cada uno solo por la API.
+
+**Verificado, no supuesto**
+
+- Asignar cuatro personajes y volver a asignar uno de los cuatro deja **cuatro** continuidades.
+- Reconciliar los artículos a `{A, D}` sobre `{A, B, C}` más un video deja `{A, D}` **y el video**.
+- Eliminar una continuidad con cuatro artículos borra sus cuatro piezas y deja **los cuatro
+  artículos** en el inventario de la producción.
+- Dar de baja una jornada la retira de todas las vías por las que se llega a ella, y los artículos y
+  videos siguen existiendo.
+- Una jornada dada de baja **deja de figurar en el historial del personaje**. No sale gratis: la baja
+  de la jornada es lógica y la continuidad no tiene columna de baja, así que esa consulta filtra
+  explícitamente (H-187).
+- La escena, el personaje, el artículo y el video de **otra producción** responden `404` por los
+  cuatro caminos. El modelo no ata ninguna de esas cuatro referencias a la producción (H-188).
+
+**El recorrido entero, contra un socket**
+
+Una prueba conduce el día completo por HTTP contra un servidor de verdad en un puerto efímero, no
+llamando a manejadores: nace en borrador → reparto de cuatro → en curso → se reasigna uno y no
+aparece una quinta → utilería de los dos tipos → se reconcilian los artículos y los videos no se
+mueven → se anota → la vista completa lo enseña todo → el historial del personaje lo ve desde el
+otro lado → se cierra con tres de los cuatro personajes sin registrar.
+
+Pasó a la primera, que no demuestra nada, así que se comprobó que muerde: quitando el filtro por tipo
+de la reconciliación cae por los videos borrados, y quitando la resta de la asignación cae por la
+quinta continuidad. Las dos roturas se deshicieron después.
+
+**Verificación**
+
+`pnpm test --force` sobre una base recién creada, en verde con **1580** pruebas, **46 más** que las
+1534 de partida — las 46 son las de continuidad, y ninguna otra suite se movió. `pnpm check` limpio.
+`pnpm lint` con las **mismas seis** incidencias de H-150, ninguna en los archivos de esta tanda.
+
+Se regeneró `packages/contracts/src/api.generated.ts` con `pnpm --filter @tfv/api contract`: el
+candado de desfase lo exige, y pasó de 228 a **247** endpoints. Es un archivo generado y hay dos
+árboles de trabajo más añadiendo rutas ahora mismo, así que al integrar hay que volver a emitirlo una
+vez, no fusionarlo a mano.
+
+**Lo que queda fuera, y por qué**
+
+- **«Consulta de dónde se ha usado un artículo»**, la decimotercera tarea. Es un requisito de esta
+  misma spec pero de otro dueño: la entidad es el artículo del inventario de la producción, y quien
+  la posee la escribe con el resto de su superficie. Queda con su aviso: ese camino sube por
+  `production_props → production_continuities → production_recordings` **sin pasar por ningún filtro
+  de este módulo**, así que necesita su propio `deleted_at is null` en el último salto o informará de
+  jornadas dadas de baja (H-187).
+- **`productions.continuities.all_selectable`**, una clave del catálogo sin ningún requisito de la
+  spec detrás. No se le inventa ruta: adivinar qué autoriza una clave y construirle superficie es
+  fijar producto desde la implementación (H-185).
+- **El resquicio de concurrencia de la no duplicación**. La sostiene una resta y no el motor, porque
+  `production_continuities` no tiene único parcial sobre `(recording_id, character_id)` y no puede
+  tenerlo a secas —la columna admite nulo a propósito—. Cerrarlo pide migración, y esta rebanada no
+  abre ninguna: hay un solo número libre y tres árboles avanzando (H-184).
+
+**Hallazgos**: H-184, H-185, H-186, H-187 y H-188.

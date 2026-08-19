@@ -10,6 +10,16 @@
 >
 > Sigue faltando **el procesador real** (H-85), que es configuración externa y no código de aquí.
 
+> **Revisadas el 2026-08-19, recorriendo el ciclo en un navegador.** Las cuarenta estaban hechas y
+> aun así **contratar no cerraba el círculo**: el suplente devolvía la dirección de vuelta en lugar
+> de una página de cobro, así que nadie activaba la suscripción y `company_subscriptions` se quedaba
+> vacía (H-163). Con eso caían, sin que ninguna casilla lo dijera, todos los recorridos que cuelgan
+> de tener suscripción — y, encadenada, la tienda pública.
+>
+> Es la lección de H-151 otra vez: una casilla marcada porque el código está escrito no dice que el
+> recorrido se pueda hacer. Las tres de abajo se añaden para que **lo que se afirma sea el
+> recorrido**, y no el código que lo haría posible.
+
 ## Catálogo
 
 - [x] Planes con nivel, título, descripción y prestaciones
@@ -70,3 +80,9 @@
 - [x] Prueba: fallo de cobro no elimina la suscripción
 - [x] Prueba: sin perfil operativo la tienda no cobra
 - [x] Prueba: perfil activo no primario no habilita
+- [x] **Prueba: el ciclo de contratación entero contra el suplente**, con el evento firmado
+      entregado por HTTP al endpoint público y no por llamada interna
+- [x] **Prueba de navegador: contratar, pagar, cambiar de plan, cancelar y reactivar**, sobre una
+      empresa que la propia prueba crea y borra
+- [x] **Prueba: la tienda pública pasa a servirse cuando la suscripción se activa** — el
+      encadenamiento que demuestra que el círculo se cierra

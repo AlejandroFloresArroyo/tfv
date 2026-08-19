@@ -28,9 +28,9 @@
  * producción y no está haciendo nada.
  */
 
-import type { Money } from "@tfv/contracts"
-import { DomainError, formatMoney, money } from "@tfv/contracts"
+import { DomainError } from "@tfv/contracts"
 import type { BillingInterval } from "@tfv/contracts/billing"
+import { localPrices, localSnapshot, openLocalCheckout } from "../payments/local-processor.ts"
 
 // ─── Lo que el dominio necesita saber ────────────────────────────────────────
 
@@ -190,47 +190,17 @@ export const unconfiguredProvider: PaymentProvider = {
 // ─── El suplente local ───────────────────────────────────────────────────────
 
 /**
- * Precio por asiento y periodo, derivado del nivel del plan.
+ * Suplente en memoria, para poder ejercer el ciclo entero sin cuenta del procesador.
  *
- * Sólo lo usa el suplente. El nivel viaja dentro de la referencia del producto —`plan_<nivel>`—
- * porque el suplente no tiene catálogo propio que consultar.
- */
-function localUnitAmount(tier: number, interval: BillingInterval): Money {
-  const perMonth = money(tier === 0 ? "0.00" : `${tier * 349}.00`)
-  // El año sale a diez meses: es el descuento por permanencia que cualquier catálogo tiene, y
-  // tenerlo hace visible en la pantalla que la periodicidad cambia el importe.
-  return interval === "year" ? ((perMonth * 10n) as Money) : perMonth
-}
-
-/**
- * Suplente en memoria, para poder ejercer las pantallas sin cuenta del procesador.
+ * **No mueve dinero y no lo disimula**: las referencias que emite llevan el prefijo `local_` y su
+ * página de cobro lo dice en la primera línea. Se activa con `PAYMENTS_PROVIDER=local` y nunca por
+ * defecto.
  *
- * **No mueve dinero y no lo disimula**: las direcciones que devuelve son de este mismo servicio, y
- * las referencias que emite llevan el prefijo `local_`. Se activa con `PAYMENTS_PROVIDER=local` y
- * nunca por defecto.
+ * Su maquinaria —la página, las sesiones abiertas y los eventos firmados que emite al pagarse—
+ * vive en `payments/local-processor.ts`, que es donde vive todo lo que se borra el día que haya
+ * procesador de verdad. Aquí queda sólo el adaptador a la costura.
  */
 export function localProvider(now: () => Date = () => new Date()): PaymentProvider {
-  const periodOf = (interval: BillingInterval): { start: Date; end: Date } => {
-    const start = now()
-    const end = new Date(start)
-    if (interval === "year") end.setUTCFullYear(end.getUTCFullYear() + 1)
-    else if (interval === "month") end.setUTCMonth(end.getUTCMonth() + 1)
-    else if (interval === "week") end.setUTCDate(end.getUTCDate() + 7)
-    else end.setUTCDate(end.getUTCDate() + 1)
-    return { start, end }
-  }
-
-  const snapshot = (id: string, priceId: string): SubscriptionSnapshot => {
-    const interval = priceId.includes("year") ? "year" : "month"
-    const { start, end } = periodOf(interval)
-    return {
-      externalSubscriptionId: id,
-      externalPriceId: priceId,
-      periodStart: start,
-      periodEnd: end,
-    }
-  }
-
   const account = (id: string): ConnectedAccount => ({
     id,
     // Recién creada acepta cargos de forma limitada y le falta documentación, que es el estado en
@@ -243,28 +213,28 @@ export function localProvider(now: () => Date = () => new Date()): PaymentProvid
   return {
     name: "local",
 
-    listPrices: async (externalProductId) => {
-      const tier = Number(externalProductId.replace(/^\D+/, "")) || 0
-      return (["month", "year"] as const).map((interval) => ({
-        id: `local_price_${tier}_${interval}`,
-        interval,
-        intervalCount: 1,
-        unitAmount: formatMoney(localUnitAmount(tier, interval)),
-        currency: "MXN",
-      }))
-    },
+    listPrices: async (externalProductId) => localPrices(externalProductId),
 
-    createCheckoutSession: async (request) => {
-      const id = `local_cs_${request.companyId}_${Date.now()}`
-      // Lleva la referencia de la sesión en la dirección: es lo que permite completarla desde la
-      // pantalla sin inventar un canal aparte.
-      return { id, url: `${request.successUrl}?session=${encodeURIComponent(id)}` }
-    },
+    /**
+     * Abre la sesión y devuelve **la página del suplente**, no la de vuelta.
+     *
+     * Antes devolvía la dirección de vuelta con la referencia pegada detrás, y eso dejaba la
+     * activación en manos de la pantalla — una vía que producción no tiene. Ahora se pasa por la
+     * página del suplente, se paga allí, y la suscripción nace del evento firmado que se entrega a
+     * `/payments/events`, que es el camino que recorrerá el procesador de verdad.
+     */
+    createCheckoutSession: async (request) => openLocalCheckout(request),
 
-    changePlan: async (id, priceId) => snapshot(id, priceId),
-    changeSeats: async (id) => snapshot(id, `local_price_seats`),
-    cancelAtPeriodEnd: async (id) => snapshot(id, `local_price_cancel`),
-    resume: async (id) => snapshot(id, `local_price_resume`),
+    /**
+     * Las cuatro respuestas salen del registro del suplente, que **recuerda el periodo**.
+     *
+     * Inventarlo en cada respuesta hacía que cancelar devolviera un vencimiento más lejano que el
+     * real: la baja alargaba la suscripción. Ver `HALLAZGOS.md` H-164.
+     */
+    changePlan: async (id, priceId) => localSnapshot(id, { priceId }, now()),
+    changeSeats: async (id, seats) => localSnapshot(id, { seats }, now()),
+    cancelAtPeriodEnd: async (id) => localSnapshot(id, {}, now()),
+    resume: async (id) => localSnapshot(id, {}, now()),
 
     createConnectedAccount: async (request) => account(`local_acct_${request.companyId}`),
     updateConnectedAccount: async (accountId) => account(accountId),

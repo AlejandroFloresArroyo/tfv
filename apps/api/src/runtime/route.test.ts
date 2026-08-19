@@ -67,6 +67,21 @@ describe("superficie pública", () => {
      */
     "POST /payments/events",
     /**
+     * Las dos del procesador **suplente**, añadidas el 2026-08-19 de forma deliberada.
+     *
+     * Son la página en la que se paga y su botón, y existen sólo con `PAYMENTS_PROVIDER=local`: con
+     * procesador de verdad responden `404`, porque su página la sirve él en su propio dominio.
+     *
+     * **Públicas porque el procesador no tiene sesión, y el suplente no la finge**: quien llega
+     * viene redirigido y su credencial no viaja —va acotada al camino bajo el que el navegador ve la
+     * API, y esto no cuelga de la aplicación—. Lo que protege la activación no es quién abre la
+     * página: es la firma del evento que se emite al pagar, verificada por `POST /payments/events`
+     * como cualquier otro. **El camino no lleva empresa** y lo que se puede alcanzar con una
+     * referencia ajena es una sesión de pago que ya se abrió, nunca datos de nadie.
+     */
+    "GET /payments/local/checkouts/{session}",
+    "POST /payments/local/checkouts/{session}/pay",
+    /**
      * Añadida el 2026-08-18, de forma deliberada.
      *
      * El formulario de contacto: quien deja sus datos no tiene cuenta, y exigirle una lo dejaría
