@@ -16,6 +16,7 @@
  * Vía hasta la empresa: columna directa en la compra y sus derivados.
  */
 
+import type { ShippingQuote } from "@tfv/contracts"
 import { relations, sql } from "drizzle-orm"
 import {
   boolean,
@@ -106,19 +107,16 @@ export interface CheckoutLine {
   }
 }
 
-/** Desglose del envío, con el tipo de cambio aplicado cuando lo hubo. */
-export interface ShippingBreakdown {
-  readonly mode: string
-  readonly billableWeightKg: string
-  readonly realWeightKg: string
-  readonly volumetricWeightKg: string
-  readonly itemCount: number
-  readonly base: string
-  readonly variable: string
-  readonly surcharges: string
-  readonly total: string
-  readonly exchangeRate?: string
-}
+/**
+ * Desglose del envío, con el tipo de cambio aplicado cuando lo hubo.
+ *
+ * **Es el tipo del motor, no una copia suya.** Antes era una interfaz declarada aquí a mano, y una
+ * segunda declaración de la misma estructura acaba divergiendo de la que la produce: `surcharges`
+ * era una cadena cuando el cálculo enumera un recargo por umbral alcanzado. Lo que se guarda es
+ * exactamente lo que `computeShipping` devuelve. Mismo motivo que `QuotationBreakdown` en
+ * `warehouse-commerce.ts`.
+ */
+export type { ShippingQuote as ShippingBreakdown } from "@tfv/contracts"
 
 /**
  * Instantánea de la compra, persistida **antes** del pago.
@@ -157,7 +155,7 @@ export const checkouts = pgTable(
     currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
 
     shippingMode: shippingMode("shipping_mode").notNull(),
-    shippingBreakdown: jsonb("shipping_breakdown").$type<ShippingBreakdown>(),
+    shippingBreakdown: jsonb("shipping_breakdown").$type<ShippingQuote>(),
     shipFromAddressId: reference("ship_from_address_id").references(() => companyAddresses.id, {
       onDelete: "set null",
     }),
