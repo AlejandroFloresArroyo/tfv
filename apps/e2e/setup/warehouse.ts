@@ -10,6 +10,16 @@
 import type { APIResponse, BrowserContext, Page } from "@playwright/test"
 import { expect } from "./fixtures.ts"
 
+/**
+ * Reintentos de transporte para las peticiones de preparación.
+ *
+ * No es tapar un fallo: `maxRetries` sólo reintenta `ECONNRESET`, nunca un código de respuesta. La
+ * primera ráfaga de peticiones contra una API recién arrancada se lleva alguna conexión por delante
+ * —«socket hang up»— y eso tumba una prueba por algo que no tiene nada que ver con lo que viene a
+ * comprobar. Lo que la prueba afirma sigue sin reintentarse.
+ */
+const TRANSPORTE = { maxRetries: 3 } as const
+
 export const QUOTES = (companyId: string, warehouseId: string) =>
   `/c/${companyId}/warehouses/${warehouseId}/quotes`
 
@@ -49,6 +59,7 @@ export async function ownQuote(
   const warehouse = `/api/companies/${companyId}/warehouses/${warehouseId}`
   const attempt = async (measurementId?: string) =>
     await context.request.post(`${warehouse}/quotes`, {
+      ...TRANSPORTE,
       data: {
         type: "rent",
         name,
@@ -61,7 +72,10 @@ export async function ownQuote(
   let created = units > 0 ? undefined : await attempt()
 
   if (units > 0) {
-    const rates = await context.request.get(`${warehouse}/rates?availableForRent=true&limit=30`)
+    const rates = await context.request.get(
+      `${warehouse}/rates?availableForRent=true&limit=30`,
+      TRANSPORTE,
+    )
     expect(rates.ok(), "no se pudieron leer las tarifas").toBe(true)
     const { items } = (await rates.json()) as {
       items: { measurementId: string; available: number }[]
@@ -136,7 +150,10 @@ export async function ownOrder(
   trash: { companyId: string; warehouseId: string; orderId: string }[],
 ): Promise<string> {
   const warehouse = `/api/companies/${companyId}/warehouses/${warehouseId}`
-  const rates = await context.request.get(`${warehouse}/rates?availableForRent=true&limit=30`)
+  const rates = await context.request.get(
+    `${warehouse}/rates?availableForRent=true&limit=30`,
+    TRANSPORTE,
+  )
   expect(rates.ok(), "no se pudieron leer las tarifas").toBe(true)
 
   const { items } = (await rates.json()) as {
@@ -146,6 +163,7 @@ export async function ownOrder(
   expect(roomy, "el almacén no tiene equipo libre que pedir").toBeTruthy()
 
   const created = await context.request.post(`${warehouse}/orders`, {
+    ...TRANSPORTE,
     data: {
       origin: "production",
       type: "rent",
