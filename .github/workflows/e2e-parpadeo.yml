@@ -1,0 +1,137 @@
+# La cacería de H-146: repetir la suite de navegador hasta que el parpadeo se enseñe.
+#
+# ## Por qué hace falta un archivo para esto
+#
+# `HALLAZGOS.md` H-146 dice que cae **una prueba de cada tres vueltas**, nunca la misma, y que la que
+# cae pasa aislada. Un defecto así no se diagnostica mirando: se diagnostica con muchas vueltas
+# idénticas y un recuento de cuál cayó en cada una. Hasta ahora cada vuelta se corría a mano en una
+# máquina distinta, con otro estado de la base y otro número de trabajadores — es decir, no eran
+# vueltas idénticas, y por eso el patrón no aparecía.
+#
+# Esto son N máquinas iguales dando M vueltas cada una, y un recuento al final. Es el instrumento que
+# faltaba, y por eso vive aquí y no en la cabeza de nadie.
+#
+# ## Cómo se lee el resultado
+#
+# El resumen dice, por prueba, en cuántas vueltas cayó. Lo que se busca no es el total: es si las que
+# caen **comparten algo** —la empresa y el almacén sembrados son de todas, así que hay que mirar más
+# fino: qué escribe cada una sobre el inventario compartido y en qué orden—.
+#
+# Se lanza a mano: `gh workflow run e2e-parpadeo.yml -f vueltas=4 -f trabajadores=2`.
+
+name: Parpadeo del navegador (H-146)
+
+on:
+  workflow_dispatch:
+    inputs:
+      vueltas:
+        description: Vueltas completas de la suite por máquina.
+        required: false
+        default: "4"
+      trabajadores:
+        description: Trabajadores de Playwright. La integración continua usa 2.
+        required: false
+        default: "2"
+      tandas:
+        description: Máquinas en paralelo (1 a 6).
+        required: false
+        default: "5"
+
+permissions:
+  contents: read
+
+jobs:
+  # La rejilla se calcula aquí porque una matriz no puede leer un `input` directamente: necesita una
+  # lista, y la lista se fabrica.
+  rejilla:
+    name: Repartir las tandas
+    runs-on: ubuntu-latest
+    outputs:
+      tandas: ${{ steps.calcular.outputs.tandas }}
+    steps:
+      - id: calcular
+        env:
+          TANDAS: ${{ inputs.tandas }}
+        run: |
+          set -euo pipefail
+          if ! [ "$TANDAS" -ge 1 ] 2>/dev/null || [ "$TANDAS" -gt 6 ]; then
+            echo "::error::El número de tandas tiene que estar entre 1 y 6."
+            exit 1
+          fi
+          echo "tandas=$(seq 1 "$TANDAS" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+
+  cazar:
+    name: Tanda ${{ matrix.tanda }}
+    needs: rejilla
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    strategy:
+      # Sin `fail-fast`: si una tanda reproduce el fallo, las demás tienen que seguir — el dato que
+      # se busca es **con qué frecuencia** y **cuál**, y cancelar al primer rojo lo destruye.
+      fail-fast: false
+      matrix:
+        tanda: ${{ fromJson(needs.rejilla.outputs.tandas) }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/entorno
+      - uses: ./.github/actions/supabase
+
+      - name: Instalar Chromium
+        run: pnpm --filter @tfv/e2e exec playwright install --with-deps chromium
+
+      - name: Dar las vueltas
+        # El fallo de una vuelta no puede parar el bucle: es el dato, no el final.
+        continue-on-error: true
+        env:
+          VUELTAS: ${{ inputs.vueltas }}
+          TRABAJADORES: ${{ inputs.trabajadores }}
+        run: |
+          set -uo pipefail
+          mkdir -p resultados
+
+          for i in $(seq 1 "$VUELTAS"); do
+            echo "::group::Vuelta $i de $VUELTAS"
+            PLAYWRIGHT_JSON_OUTPUT_NAME="$PWD/resultados/tanda-${{ matrix.tanda }}-vuelta-$i.json" \
+              pnpm --filter @tfv/e2e exec playwright test \
+                --workers="$TRABAJADORES" \
+                --retries=0 \
+                --reporter=json \
+              && echo "vuelta $i: verde" \
+              || echo "vuelta $i: ROJA"
+            echo "::endgroup::"
+          done
+
+          # Se recuenta aquí y no sólo al final para que el registro de cada tanda ya lo diga.
+          echo "## Tanda ${{ matrix.tanda }}" >> "$GITHUB_STEP_SUMMARY"
+          node .github/scripts/resumen-parpadeo.mjs resultados >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guardar los resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parpadeo-tanda-${{ matrix.tanda }}
+          path: resultados/
+          retention-days: 14
+          if-no-files-found: warn
+
+  recuento:
+    name: Recuento
+    needs: cazar
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: parpadeo-tanda-*
+          path: resultados
+          merge-multiple: true
+
+      # Sin `pnpm install`: el recuento es Node pelado a propósito, para que el resumen no dependa
+      # de que la instalación de dependencias haya ido bien.
+      - name: Contar quién cayó y cuántas veces
+        run: node .github/scripts/resumen-parpadeo.mjs resultados >> "$GITHUB_STEP_SUMMARY"

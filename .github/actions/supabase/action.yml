@@ -1,0 +1,68 @@
+# La pila local de Supabase en el ejecutor, y sus credenciales publicadas al entorno.
+#
+# ## Por qué la pila entera y no un `postgres:17` pelado
+#
+# La salida barata existe y está escrita: las migraciones hacen `grant ... to authenticated,
+# service_role` y **ninguna crea esos roles** —los crea el proveedor—, así que un Postgres pelado
+# revienta en el primer `grant`. `packages/db/testing.ts` ya los crea cuando no están, junto con el
+# esquema `auth`, `auth.uid()` y `auth.sessions`, y por sí sola esa salida bastaría para las suites
+# de `packages/db`, `packages/contracts`, `packages/ui` y `apps/web`: son segundos contra minutos.
+#
+# No basta para `apps/api`, y no por fidelidad sino porque **no arranca**. Media docena de suites de
+# `src/media` hablan con el almacenamiento de verdad a propósito —`storage.test.ts` lo dice: ejercer
+# contra un doble comprobaría nuestra idea de S3— y `storage.test.ts` **lanza** si faltan
+# `STORAGE_S3_ACCESS_KEY_ID` y `STORAGE_S3_SECRET_ACCESS_KEY`, con el motivo escrito: «una prueba que
+# se saltara sería una prueba que dice que sí sin haber mirado». No se salta: falla. Y la suite de
+# navegador sube una foto de verdad desde el navegador al almacenamiento (`fotos.spec.ts`).
+#
+# Así que la elección no era barata contra fiel: era barata contra **936 pruebas de API que no
+# corren**. Se levanta la pila, y se recorta por donde no cuesta fidelidad — abajo.
+#
+# ## Lo que se deja fuera, y lo que eso cuesta
+#
+# Se excluye lo que esta aplicación no toca: el estudio, el gestor de metadatos, el motor de
+# funciones, el agrupador de conexiones, el correo de mentira, la analítica y su recolector, la
+# transformación de imágenes, y el canal en vivo —la rebanada 16 dejó el transporte detrás de una
+# costura precisamente porque no hay conexión persistente todavía (H-60)—.
+#
+# Se quedan los cuatro de los que sí depende algo: la base, la pasarela —`STORAGE_URL` apunta a ella,
+# no al almacenamiento directamente—, el almacenamiento con su protocolo S3, y el servicio de
+# identidad del proveedor, que es quien deja puesto el esquema `auth` en la base que trae la pila.
+
+name: Pila de Supabase
+description: Levanta la pila local y publica sus credenciales en el entorno del trabajo.
+
+runs:
+  using: composite
+  steps:
+    - name: Levantar la pila
+      shell: bash
+      # `supabase` es una dependencia de desarrollo de la raíz, así que es la versión que este
+      # repositorio fija y no la que traiga el ejecutor.
+      run: |
+        pnpm exec supabase start \
+          -x studio,postgres-meta,edge-runtime,supavisor,mailpit,realtime,logflare,vector,imgproxy
+
+    # Las credenciales de la pila local son fijas y públicas —vienen en toda instalación de
+    # Supabase—, pero se leen en vez de escribirse: escritas aquí serían una copia más que
+    # actualizar el día que el proveedor las cambie, y este archivo no es el sitio donde nadie iría
+    # a buscarlas.
+    - name: Publicar las credenciales en el entorno
+      shell: bash
+      run: |
+        set -euo pipefail
+        eval "$(pnpm exec supabase status -o env | grep -E '^[A-Z0-9_]+=')"
+
+        {
+          echo "DATABASE_URL=${DB_URL}"
+          echo "STORAGE_URL=${API_URL}/storage/v1"
+          echo "STORAGE_BUCKET=tfv"
+          echo "STORAGE_SERVICE_KEY=${SERVICE_ROLE_KEY}"
+          echo "STORAGE_S3_ENDPOINT=${STORAGE_S3_URL}"
+          echo "STORAGE_S3_REGION=${S3_PROTOCOL_REGION}"
+          echo "STORAGE_S3_ACCESS_KEY_ID=${S3_PROTOCOL_ACCESS_KEY_ID}"
+          echo "STORAGE_S3_SECRET_ACCESS_KEY=${S3_PROTOCOL_ACCESS_KEY_SECRET}"
+          echo "STORAGE_S3_PUBLIC_URL=${API_URL}/storage/v1/object/public/tfv"
+        } >> "$GITHUB_ENV"
+
+        echo "Pila lista. Base en ${DB_URL}, almacenamiento en ${API_URL}/storage/v1"

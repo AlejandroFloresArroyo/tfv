@@ -1,0 +1,38 @@
+# El arranque que necesitan todos los trabajos: Node, pnpm y las dependencias instaladas.
+#
+# Vive aparte porque son cuatro pasos idénticos repetidos en cinco sitios, y porque la versión de
+# Node es de las cosas que hay que poder cambiar **en un solo lugar**: la API corre TypeScript
+# directo con `--experimental-strip-types`, así que el motor no es un detalle de infraestructura
+# sino parte de lo que se está probando.
+
+name: Entorno del espacio de trabajo
+description: Node, pnpm y las dependencias del monorepo, listas para trabajar.
+
+inputs:
+  node-version:
+    description: La versión de Node. Por defecto la que se despliega.
+    required: false
+    # `package.json` declara `>=22`. Se fija una versión concreta y no el mínimo: lo que se prueba
+    # tiene que ser lo que se despliega, y `railway.toml` pide esta misma.
+    default: "24"
+
+runs:
+  using: composite
+  steps:
+    # `pnpm` antes que `setup-node`: la caché de `setup-node` necesita que el gestor ya exista para
+    # poder preguntarle dónde tiene el almacén.
+    - name: Instalar pnpm
+      # La versión sale de `packageManager` en `package.json`, que es la única que la declara.
+      uses: pnpm/action-setup@v4
+
+    - name: Instalar Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+
+    # `--frozen-lockfile` a propósito: en integración continua, un fichero de bloqueo que no cuadra
+    # con los manifiestos es un fallo que hay que ver, no algo que se arregle solo por el camino.
+    - name: Instalar dependencias
+      shell: bash
+      run: pnpm install --frozen-lockfile
