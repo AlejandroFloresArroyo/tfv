@@ -268,7 +268,6 @@ async function seedPlans(): Promise<number> {
   return puestos
 }
 
-
 async function seedCatalog(): Promise<Map<string, string>> {
   const ids = new Map<string, string>()
 
