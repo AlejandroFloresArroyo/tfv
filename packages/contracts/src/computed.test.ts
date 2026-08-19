@@ -10,26 +10,27 @@
 import { describe, expect, it } from "vitest"
 import {
   ALWAYS,
-  ON_REQUEST,
   activeCustomization,
   cashExpected,
   countOf,
   deliveryIsFinished,
+  discountedPrice,
   fullName,
   fullPhone,
   histogram,
   inventoryBalance,
   isAlwaysPresent,
+  ON_REQUEST,
   primaryOf,
+  STOCK_STATUSES,
+  type StorageKind,
+  salesTotal,
   sceneLabel,
+  singleOf,
   siteAddress,
   siteSubdomain,
-  singleOf,
-  STOCK_STATUSES,
-  storageDepth,
   stockBreakdown,
-  discountedPrice,
-  salesTotal,
+  storageDepth,
   TASK_STATUSES,
 } from "./computed.ts"
 import { formatMoney, money } from "./money.ts"
@@ -238,9 +239,14 @@ describe("nivel de profundidad de una ubicación", () => {
   })
 
   it("permite decidir si un nodo puede anidarse bajo otro", () => {
-    // Es para lo que existe: un tipo sólo cuelga de otro estrictamente más general.
-    expect(storageDepth("shelf") > storageDepth("rack")).toBe(true)
-    expect(storageDepth("shelf") > storageDepth("shelf")).toBe(false)
+    // Es para lo que existe: un tipo sólo cuelga de otro **estrictamente** más general. Que dos
+    // ubicaciones del mismo tipo no se aniden entre sí es la mitad de la regla.
+    const puedeColgar = (hijo: StorageKind, padre: StorageKind) =>
+      storageDepth(hijo) > storageDepth(padre)
+
+    expect(puedeColgar("shelf", "rack")).toBe(true)
+    expect(puedeColgar("shelf", "shelf")).toBe(false)
+    expect(puedeColgar("rack", "shelf")).toBe(false)
   })
 })
 
@@ -298,19 +304,13 @@ describe("personalización vigente de un sitio", () => {
   }
 
   it("«Una campaña vigente sustituye al tema primario»", () => {
-    const vigente = activeCustomization(
-      [primaria, diciembre],
-      new Date("2026-12-15T12:00:00Z"),
-    )
+    const vigente = activeCustomization([primaria, diciembre], new Date("2026-12-15T12:00:00Z"))
 
     expect(vigente?.id).toBe("diciembre")
   })
 
   it("«Fuera de la ventana vuelve el primario»", () => {
-    const vigente = activeCustomization(
-      [primaria, diciembre],
-      new Date("2027-01-15T12:00:00Z"),
-    )
+    const vigente = activeCustomization([primaria, diciembre], new Date("2027-01-15T12:00:00Z"))
 
     expect(vigente?.id).toBe("primaria")
   })

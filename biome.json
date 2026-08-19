@@ -16,7 +16,8 @@
       "!tfv-frontend",
       "!supabase/.temp",
       "!supabase/.branches",
-      "!**/next-env.d.ts"
+      "!**/next-env.d.ts",
+      "!packages/contracts/src/api.generated.ts"
     ]
   },
   "formatter": {

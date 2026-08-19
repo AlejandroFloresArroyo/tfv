@@ -24,7 +24,7 @@
  * forma del esquema.
  */
 
-import { add, type Money, money, type Percent, applyPercent, percent, ZERO } from "./money.ts"
+import { add, applyPercent, type Money, money, type Percent, percent, ZERO } from "./money.ts"
 
 // ─── Recuentos ───────────────────────────────────────────────────────────────
 
@@ -105,9 +105,7 @@ export const STOCK_STATUSES = [
 export type StockStatus = (typeof STOCK_STATUSES)[number]
 
 /** Desglose de existencias de una medida de producto. */
-export function stockBreakdown(
-  units: readonly { status: string }[],
-): Record<StockStatus, number> {
+export function stockBreakdown(units: readonly { status: string }[]): Record<StockStatus, number> {
   return histogram(STOCK_STATUSES, units)
 }
 
@@ -324,8 +322,10 @@ function byMostSpecific(a: Customization, b: Customization): number {
   const start = (b.startsAt?.getTime() ?? 0) - (a.startsAt?.getTime() ?? 0)
   if (start !== 0) return start
 
-  return (a.endsAt?.getTime() ?? Number.MAX_SAFE_INTEGER) -
+  return (
+    (a.endsAt?.getTime() ?? Number.MAX_SAFE_INTEGER) -
     (b.endsAt?.getTime() ?? Number.MAX_SAFE_INTEGER)
+  )
 }
 
 // ─── Sitio ───────────────────────────────────────────────────────────────────
@@ -357,11 +357,7 @@ export function siteSubdomain(site: SiteIdentity, sitesDomain: string): string {
  * «El esquema SHALL ser seguro en entornos productivos». Fuera de producción no lo es, y hace falta
  * que no lo sea: en local no hay certificado para `tienda.localhost:3000`.
  */
-export function siteAddress(
-  site: SiteIdentity,
-  sitesDomain: string,
-  secure: boolean,
-): string {
+export function siteAddress(site: SiteIdentity, sitesDomain: string, secure: boolean): string {
   return `${secure ? "https" : "http"}://${siteSubdomain(site, sitesDomain)}`
 }
 
