@@ -104,6 +104,14 @@ import {
   updateRoleRoute,
 } from "./companies.ts"
 import {
+  closeRecordingRoute,
+  createRecordingRoute,
+  getRecordingRoute,
+  listRecordingsRoute,
+  openRecordingRoute,
+  updateRecordingRoute,
+} from "./continuity.ts"
+import {
   categoryScopeRoute,
   createCategoryRoute,
   createClientRoute,
@@ -557,6 +565,15 @@ export const routes: readonly RegisteredRoute[] = [
   updateWorkflowRoute,
   workflowScopeRoute,
   deleteWorkflowRoute,
+
+  // Continuidad de rodaje: la jornada, su reparto, su continuidad por personaje y la utilería de
+  // cada una. Ver `routes/continuity.ts`.
+  listRecordingsRoute,
+  createRecordingRoute,
+  getRecordingRoute,
+  updateRecordingRoute,
+  closeRecordingRoute,
+  openRecordingRoute,
 
   // Pendiente: guion, capítulos y escenas (21); inventario, entregas y presupuesto (22); compras
   // a almacenes (23). Las tablas existen desde la `0002` y el panel ya las cuenta.
