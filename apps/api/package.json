@@ -10,7 +10,8 @@
     "test": "vitest run",
     "contract": "node --env-file-if-exists=../../.env --experimental-strip-types src/scripts/emit-contract.ts",
     "seed": "node --env-file-if-exists=../../.env --experimental-strip-types src/scripts/seed.ts",
-    "placeholders": "node --env-file-if-exists=../../.env --experimental-strip-types src/scripts/ensure-placeholders.ts"
+    "placeholders": "node --env-file-if-exists=../../.env --experimental-strip-types src/scripts/ensure-placeholders.ts",
+    "rewrite-media-urls": "node --env-file-if-exists=../../.env --experimental-strip-types src/scripts/rewrite-media-urls.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",

@@ -63,6 +63,32 @@
 - [x] Ejercitadas en el navegador de principio a fin: se sube una foto de verdad, se reordena, se
       cambia la portada, se quita — y el objeto retirado deja de responder
 
+## Proveedor de almacenamiento
+
+- [x] Interfaz de proveedor con las tres operaciones que hablaban HTTP —firmar la escritura,
+      componer la dirección pública, retirar objetos—, y el proveedor de hoy como primera
+      implementación. Nadie más cambia: `uploads.ts` y `collections.ts` siguen llamando a las
+      mismas tres funciones
+- [x] Prueba de contrato que **no conoce a ningún proveedor**: recorre los que haya y les exige lo
+      mismo, contra el almacenamiento de verdad. Cinco propiedades, las de la spec
+- [x] Segundo proveedor hablando el protocolo de S3: dirección prefirmada de `PUT` con SigV4,
+      `ListObjectsV2` por prefijo y borrado por clave. Sin cliente oficial, y el motivo escrito en
+      la cabecera del módulo de firma
+- [x] La firma, contra los **vectores publicados** por AWS: el resumen de la petición canónica del
+      ejemplo de `GET Object` prefirmado y la derivación de la clave de firma
+- [x] **Ejercido contra un servidor de verdad**: la pila local expone su punto S3, así que el
+      proveedor se prueba sin credenciales de AWS. Las pruebas de subida de extremo a extremo pasan
+      enteras con `STORAGE_PROVIDER=s3`
+- [x] El proveedor por omisión **no cambia**: lo que se despliega hoy sigue siendo el de ahora, y
+      hay una prueba que lo fija
+- [x] Reescritura de las direcciones ya persistidas, con su guion y su prueba. Por prefijo,
+      idempotente, y sin aplicar por omisión: lo primero que hay que poder hacer antes de mover mil
+      filas es contar cuántas se mueven. Escenario nuevo en la spec (H-135)
+- [ ] Copia de los objetos entre depósitos. No es de este guion —mueve direcciones, no bytes— y
+      hacerlo desde aquí sería reimplementar mal lo que `aws s3 sync` hace bien
+- [ ] Creación del depósito y su política de lectura pública. Hoy el depósito local existe porque
+      alguien lo creó a mano: no hay ni migración ni guion que lo deje puesto (H-136)
+
 ## Verificación
 
 - [~] Prueba: autorización caducada se rechaza. La caducidad la fija el almacenamiento en dos
