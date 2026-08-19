@@ -3,7 +3,12 @@
 ## Decisión previa
 
 - [ ] Resolver `DEFECTS.md` M-05: convención de signo del ISR directo
-- [ ] Decidir si el bloque fiscal aspira a cumplimiento formal
+- [x] Decidir si el bloque fiscal aspira a cumplimiento formal — **decidido el 2026-08-19: no**.
+      El bloque aspira **sólo a calcular bien**, no a cumplimiento formal. El código ya lo cumple:
+      hay una tabla de tratamiento y sólo una (`packages/contracts/src/quotation.ts:662-706`) y
+      no existe nada de timbrado, CFDI ni catálogos del SAT en el árbol. Lo comprueban
+      `quotation.test.ts:382-414`: el trasladado aumenta la base, la retención la disminuye, el
+      desactivado no interviene aunque tenga porcentaje y el acreditable no interviene
 
 > El motor implementa el criterio adoptado en la spec —una sola tabla, el ISR directo aumenta la
 > base— y lo deja señalado en el código. Confirmarlo es una fila de la tabla; cambiarlo también.

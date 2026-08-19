@@ -61,8 +61,10 @@ se han evaluado, así que nadie sabe cuántas operaciones legítimas dependen de
       decisión, no un descuido
 - [ ] Prueba: sin permiso, no se registra actividad ni se envía notificación — necesita la bitácora
       de la rebanada 09
-- [ ] Prueba: propietario no elude la habilitación del servicio — necesita rutas de servicio, que
-      llegan con la 12
+- [x] Prueba: propietario no elude la habilitación del servicio — `billing/merchants.test.ts:719`:
+      quien crea la empresa es su propietario, tiene suscripción vigente y sin el servicio
+      contratado recibe `403 service_not_enabled`. La elusión no llega a esta compuerta a
+      propósito, y está escrito en `auth/middleware.ts:176-179`
 - [ ] Cobertura: una prueba por cada permiso del catálogo que niegue y otra que conceda
 
 ## Hallazgo del andamiaje

@@ -31,7 +31,10 @@
 - [x] Enlace de verificación de un solo uso y con caducidad
 - [x] Sin verificar no se inicia sesión, con mensaje que lo explique
 - [x] Reenvío de la verificación
-- [ ] Decidir el trato de las cuentas existentes marcadas como verificadas — **decisión pendiente**, hace falta en la 30
+- [x] Decidir el trato de las cuentas existentes marcadas como verificadas — **decidido el
+      2026-08-19: se creen**. Las cuentas verificadas de la pila anterior migran verificadas y no
+      se les vuelve a pedir el correo. El trasvase que lo ejecuta es de la rebanada 30, donde la
+      decisión queda anotada en su misma tarea
 
 ## Recuperación
 

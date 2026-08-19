@@ -4,7 +4,11 @@
 
 - [ ] Fijar la ventana de parada aceptable
 - [ ] Decidir el trato de las credenciales existentes
-- [ ] Decidir el trato de las cuentas verificadas sin verificación real
+- [x] Decidir el trato de las cuentas verificadas sin verificación real — **decidido el
+      2026-08-19: se creen**. Se migran como verificadas. Pedirle otra vez el correo a quien lleva
+      años entrando convertiría el corte en una reverificación masiva, y el defecto que las dejó
+      así —`DEFECTS.md` S-15, el alta forzaba `valid: true`— ya no existe en la pila nueva: aquí
+      el alta nace sin verificar y el enlace es lo que verifica
 - [ ] Decidir si se reconstruye el historial de unidades
 - [ ] Decidir el destino de las filas que no pasan las restricciones
 
