@@ -1,7 +1,7 @@
 "use client"
 
 import { Avatar, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from "@tfv/ui"
-import { Building2, KeyRound, LogOut, UserRound } from "lucide-react"
+import { Building2, KeyRound, LogOut, ShieldCheck, UserRound } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
@@ -85,6 +85,21 @@ export function UserMenu({ profile }: { profile: Profile }) {
         >
           {t("shell.sessions")}
         </MenuItem>
+
+        {/*
+          La única vía a la administración de plataforma, y sólo para quien la ejerce. **No es lo
+          que la protege**: el armazón de `/platform` redirige a quien no lleva la marca y la API
+          responde `403` a quien escriba la dirección. Esto sólo evita ofrecer una puerta que no
+          abre — y, del otro lado, evita que quien sí la tiene tenga que recordar el camino.
+        */}
+        {profile.isPlatformAdmin ? (
+          <MenuItem
+            icon={<ShieldCheck className="size-4" aria-hidden="true" />}
+            onSelect={() => router.push("/platform")}
+          >
+            {t("platform.title")}
+          </MenuItem>
+        ) : null}
 
         <MenuSeparator />
 

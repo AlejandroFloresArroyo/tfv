@@ -31,6 +31,7 @@ import {
 import { db } from "@tfv/db"
 import { notificationDeliveries, prospects } from "@tfv/db/schema"
 import { and, count, desc, eq, isNull, sql } from "drizzle-orm"
+import { recordPlatformAction } from "../platform/platform.ts"
 import { invite } from "./accounts.ts"
 import { announceDevLink } from "./dev-links.ts"
 
@@ -143,10 +144,17 @@ export interface UpdateProspectInput {
   readonly message?: string | undefined
 }
 
-/** Corrige lo que llegó mal escrito. Un correo con una errata no se convierte en cuenta. */
+/**
+ * Corrige lo que llegó mal escrito. Un correo con una errata no se convierte en cuenta.
+ *
+ * Deja asiento en la bitácora de plataforma, **dentro de la misma transacción**: corregir el correo
+ * de un prospecto decide a qué dirección acabará yendo el enlace de una cuenta nueva, así que quién
+ * lo cambió y cuándo es exactamente la pregunta que alguien hará después.
+ */
 export async function updateProspect(
   prospectId: string,
   input: UpdateProspectInput,
+  performedById: string,
 ): Promise<ProspectRecord> {
   const patch: Record<string, unknown> = { updatedAt: new Date() }
   if (input.name !== undefined) patch.name = input.name.trim()
@@ -156,25 +164,51 @@ export async function updateProspect(
   if (input.companyName !== undefined) patch.companyName = input.companyName.trim()
   if (input.message !== undefined) patch.message = input.message.trim()
 
-  const [row] = await db
-    .update(prospects)
-    .set(patch)
-    .where(and(eq(prospects.id, prospectId), isNull(prospects.deletedAt)))
-    .returning()
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(prospects)
+      .set(patch)
+      .where(and(eq(prospects.id, prospectId), isNull(prospects.deletedAt)))
+      .returning()
 
-  if (!row) throw new NotFoundError("El prospecto no existe")
-  return toRecord(row)
+    if (!row) throw new NotFoundError("El prospecto no existe")
+
+    await recordPlatformAction(tx, {
+      action: "update",
+      entity: "prospects",
+      entityId: row.id,
+      entityLabel: row.email,
+      title: "Prospecto corregido",
+      description: Object.keys(input)
+        .filter((key) => input[key as keyof UpdateProspectInput] !== undefined)
+        .join(", "),
+      performedById,
+    })
+
+    return toRecord(row)
+  })
 }
 
 /** Descarta un contacto que no lleva a ninguna parte. Baja lógica: el rastro se conserva. */
-export async function discardProspect(prospectId: string): Promise<void> {
-  const [row] = await db
-    .update(prospects)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
-    .where(and(eq(prospects.id, prospectId), isNull(prospects.deletedAt)))
-    .returning({ id: prospects.id })
+export async function discardProspect(prospectId: string, performedById: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(prospects)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(prospects.id, prospectId), isNull(prospects.deletedAt)))
+      .returning({ id: prospects.id, email: prospects.email })
 
-  if (!row) throw new NotFoundError("El prospecto no existe")
+    if (!row) throw new NotFoundError("El prospecto no existe")
+
+    await recordPlatformAction(tx, {
+      action: "delete",
+      entity: "prospects",
+      entityId: row.id,
+      entityLabel: row.email,
+      title: "Prospecto descartado",
+      performedById,
+    })
+  })
 }
 
 export interface AcceptedProspect {
@@ -243,6 +277,19 @@ export async function acceptProspect(
       .returning()
 
     if (!updated) throw new Error("El prospecto no se actualizó")
+
+    // El asiento va en la misma transacción que la creación de la cuenta. Aceptar un prospecto es
+    // dar de alta a una persona en la plataforma, y es la acción de administración cuyo rastro más
+    // falta hace: si la cuenta no debía existir, esto es lo único que dice de dónde salió.
+    await recordPlatformAction(tx, {
+      action: "create",
+      entity: "prospects",
+      entityId: updated.id,
+      entityLabel: prospect.email,
+      title: "Prospecto aceptado",
+      description: `Se creó la cuenta ${outcome.userId}`,
+      performedById: acceptedById,
+    })
 
     announceDevLink("prospect_accepted", outcome.token, prospect.email)
     return { prospect: toRecord(updated), userId: outcome.userId, token: outcome.token }

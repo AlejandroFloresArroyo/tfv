@@ -78,6 +78,7 @@ export {
   type OrderChatProps,
 } from "./components/order-chat.tsx"
 export { PasswordInput, type PasswordInputProps } from "./components/password-input.tsx"
+export { ReorderList, type ReorderListProps } from "./components/reorder-list.tsx"
 export { SearchSelect, type SearchSelectProps } from "./components/search-select.tsx"
 export { Spinner, type SpinnerProps } from "./components/spinner.tsx"
 export {
@@ -141,6 +142,12 @@ export type {
   UploadTarget,
 } from "./lib/file-upload.ts"
 export * as fileUpload from "./lib/file-upload.ts"
+export type { DragState, Reorder } from "./lib/reorder.ts"
+/**
+ * La máquina del arrastre, agrupada por lo mismo que la del asistente: `move`, `drop` y `cancel`
+ * sueltos en la raíz del sistema de diseño chocarían con medio vocabulario de cualquier pantalla.
+ */
+export * as reorder from "./lib/reorder.ts"
 export { filterOptions, type SelectOption } from "./lib/search-select.ts"
 export type { StepErrors, WizardState, WizardStep } from "./lib/wizard.ts"
 export * as wizard from "./lib/wizard.ts"
