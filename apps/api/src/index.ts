@@ -12,6 +12,8 @@
 import { serve } from "@hono/node-server"
 import { closeConnection, ping } from "@tfv/db"
 import { env } from "./env.ts"
+import { type RunningDispatcher, startDispatcher } from "./jobs/dispatcher.ts"
+import { registerBuiltinJobs } from "./jobs/handlers.ts"
 import { routes } from "./routes/index.ts"
 import { createApp } from "./runtime/app.ts"
 import { rootLogger } from "./runtime/logger.ts"
@@ -55,9 +57,32 @@ async function main() {
     }
   })
 
+  /**
+   * El despachador de trabajos, si esta instancia lo atiende.
+   *
+   * Arranca **después** del servidor: encolar no depende de él —las mutaciones dejan sus avisos en
+   * la cola pase lo que pase—, así que si tarda o falla la primera vuelta, el servicio ya está
+   * atendiendo peticiones.
+   */
+  let dispatcher: RunningDispatcher | null = null
+
+  if (env.JOBS_ENABLED) {
+    registerBuiltinJobs()
+    dispatcher = startDispatcher({
+      intervalMs: env.JOBS_INTERVAL_MS,
+      stuckAfterMs: env.JOBS_STUCK_AFTER_MS,
+      backoffMs: env.JOBS_BACKOFF_MS,
+      maxBackoffMs: env.JOBS_MAX_BACKOFF_MS,
+    })
+    rootLogger.info("despachador de trabajos en marcha", { cada: env.JOBS_INTERVAL_MS })
+  } else {
+    rootLogger.warn("despachador de trabajos apagado: los trabajos se encolan y nadie los atiende")
+  }
+
   // Apagado ordenado: dejar de aceptar peticiones, terminar las en curso, soltar la base.
   const shutdown = (signal: string) => {
     rootLogger.info("apagando", { signal })
+    dispatcher?.stop()
     server.close(async () => {
       await closeConnection()
       process.exit(0)
