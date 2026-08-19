@@ -1,0 +1,60 @@
+# El servicio de API en Railway.
+#
+# ## Por qué Railway y no un anfitrión sin servidor
+#
+# Este servicio es un **proceso largo**, no una función. Levanta un despachador de trabajos con
+# `setInterval` (`src/jobs/dispatcher.ts`) del que dependen tres cosas que nadie pide a mano: el
+# recolector de subidas abandonadas, la verificación de coherencia de existencias y la entrega de
+# avisos. En un modelo sin servidor ese temporizador no existe entre peticiones, así que las tres
+# dejan de correr sin que nada falle — que es la peor forma de dejar de funcionar.
+#
+# Railway tiene modelo de proceso y **no duerme el servicio por defecto**: su modo «Serverless»
+# —antes «App Sleeping»— es de activación explícita. Hay que dejarlo apagado en este servicio, y eso
+# está escrito en el guion de puesta en marcha.
+#
+# ## Qué corre antes de aceptar tráfico
+#
+# `preDeployCommand` corre con el código nuevo y **antes** de que la versión reciba peticiones. Ahí
+# van las tres cosas que un despliegue tiene que dejar en su sitio, en este orden:
+#
+#   1. Las migraciones, con el candado de H-169 detrás — si a la base le falta alguna, el despliegue
+#      se planta en vez de arrancar sobre un esquema que no es el que el código cree.
+#   2. El depósito de objetos (H-136): idempotente y **reparador**, comprueba lectura pública y el
+#      preflight de `PUT` desde donde escribe el navegador.
+#   3. Los marcadores de posición, que son activos propios y también se mudan.
+#
+# La **siembra no está aquí** a propósito: es un paso de una sola vez, con permiso explícito, y no
+# algo que ocurra en cada despliegue. Ver `apps/api/src/scripts/seed.ts` y el guion de puesta en
+# marcha.
+
+[build]
+builder = "RAILPACK"
+
+# Sólo se vuelve a desplegar cuando cambia algo que este servicio ejecuta. La web comparte
+# repositorio y no comparte código de ejecución con esto.
+watchPatterns = [
+  "apps/api/**",
+  "packages/contracts/**",
+  "packages/db/**",
+  "package.json",
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
+]
+
+[deploy]
+preDeployCommand = ["pnpm run deploy:prepare"]
+
+# TypeScript directo, sin paso de emisión: es como corre en desarrollo y en las pruebas de extremo a
+# extremo, así que es lo mismo que está ejercido.
+startCommand = "node --experimental-strip-types apps/api/src/index.ts"
+
+# `/health` es la ruta que ya usa la suite de extremo a extremo para saber que la API está en pie.
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+
+# Un proceso que se cae por una excepción no atendida tiene que volver; uno que no arranca por
+# configuración inválida **no**, porque reintentarlo no la va a arreglar y sólo esconde el motivo.
+# `ON_FAILURE` con reintentos acotados es el punto medio: lo intenta y luego deja el despliegue en
+# rojo, con el error de `env.ts` en la bitácora.
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
