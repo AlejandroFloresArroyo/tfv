@@ -124,10 +124,10 @@ Lo construido hasta ahora, medido y no estimado:
 | Rebanadas | 19 de 30 empezadas, **ninguna cerrada del todo** |
 | Código sin pruebas | 31 130 líneas |
 | Código de prueba | 9 973 líneas |
-| Pruebas | **1097** de vitest — 256 contratos, 78 datos, 573 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
-| Esquema | 95 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
-| Aislamiento | 208 políticas · 95/95 tablas · 0 con identidad cruda |
-| Migraciones | 21, replicadas desde cero en cada verificación |
+| Pruebas | **1232** de vitest — 353 contratos, 78 datos, 611 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
+| Esquema | 96 tablas · 62 enumerados · 6 comprobaciones · 48 únicos parciales. **El recuento de índices queda sin actualizar**: no se pudo reproducir la medida de la que salió el «270» anterior, y un número sin medir es peor que ninguno |
+| Aislamiento | 211 políticas · 96/96 tablas · 0 con identidad cruda |
+| Migraciones | 22, replicadas desde cero en cada verificación |
 | Rutas | **182** registradas, 133 con permiso declarado, 16 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
 | Pantallas | 48, en español e inglés (1356 mensajes, sin desalinear) |
@@ -164,9 +164,14 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Tareas | Nota |
 |---|---|---|---|---|
 | 00 | Andamiaje del espacio de trabajo | ✅ | — | Raíz, herramientas, base local |
-| 01 | `add-platform-contracts` | 🟡 | 10/37 | Dinero, errores, consulta, paginación, identificadores. Falta idempotencia, campos calculados, cliente tipado y el registro de búsqueda |
+| 01 | `add-platform-contracts` | 🟡 | 23/37 | Dinero, errores, consulta, paginación, identificadores, **idempotencia**, **campos calculados** y **el cliente tipado generado**. Falta el registro de búsqueda y los esquemas de entrada y salida compartidos |
 | 02 | `add-postgres-data-model` | 🟡 | 29/34 | 91 tablas, 229 claves foráneas, 48 únicos parciales. Falta medir el volcado real, la siembra y el desfase en integración continua |
-| 03 | `add-hono-api-runtime` | 🟡 | 20/26 | Registro explícito, validación, contrato de error, contrato publicado, salud. Falta cliente tipado, límite de cuerpo y limitación de frecuencia genérica |
+| 03 | `add-hono-api-runtime` | ✅ | 26/26 | Registro explícito, validación, contrato de error, contrato publicado con su cliente tipado y su candado de desfase, salud, límite de cuerpo y limitación de frecuencia. **La primera rebanada cerrada del todo** |
+
+> **La 03 se cierra el 2026-08-19**, esta vez con sus veintiséis tareas marcadas y no por costumbre.
+> Al cerrarla apareció lo que faltaba por mirar: el comando que emite el contrato apuntaba a un
+> archivo que no existía (H-126), y las capas del motor se montaban por camino y no por verbo, así
+> que una ruta heredaba los guardianes de sus hermanas según el orden de la tabla (H-127).
 
 > **Corregido el 2026-08-16.** La 02 y la 03 figuraban como terminadas y no lo estaban: sus listas
 > de tareas nunca se habían marcado, y al repasarlas contra el código aparecieron huecos reales.
@@ -2992,3 +2997,66 @@ máquina de estados en contratos, 7 de aislamiento en datos —incluida la polí
 en los tres lados— y 19 de extremo a extremo en la API. `pnpm check` y `pnpm lint` limpios. La
 pantalla, ejercitada en un navegador: bajar la base local de `99` a `49` y ver el cálculo siguiente
 pasar de `119.00` a `69.00` es el requisito «se cambia una tarifa sin desplegar», mirado.
+
+
+### 2026-08-19 · Los cimientos que llevaban cinco meses a medias
+
+**Cerrado — rebanadas 01 y 03**
+
+- **Idempotencia** (`api-conventions`). Repetir una escritura con la misma clave produce un solo
+  efecto y devuelve el resultado de la primera; con otro cuerpo, `409`. Tabla propia (`0026`),
+  reclamación por `insert` con índice único, y su caducidad colgando del despachador de trabajos.
+- **Campos calculados** (`computed-fields`). La spec entera estaba sin implementar: las diecisiete
+  fórmulas están ahora en un solo sitio, puras, con 49 pruebas de valores concretos.
+- **El cliente tipado generado** del contrato publicado: 186 endpoints, con su candado de desfase.
+- **Límite de cuerpo y limitación de frecuencia** en el motor. Con eso, **la 03 queda cerrada del
+  todo, 26 de 26** — la primera rebanada que se cierra entera.
+
+**Lo que la clave de idempotencia no puede ser**
+
+Un espacio de nombres global. Aquí se guarda un **cuerpo de respuesta ya calculado**, así que si la
+unicidad fuera sobre la clave sola, quien acierte o adivine la de otro recibiría su respuesta —los
+importes de un cobro, los datos de una persona—, servida por el mecanismo que existe para que nadie
+pague dos veces. La terna es **(actor, empresa, clave)**, con el índice único y la política del
+motor diciendo lo mismo por los dos lados, y una prueba que comprueba que repetir la clave de otro
+no devuelve su resultado: sencillamente no encuentra nada y la petición corre con sus permisos.
+
+Del cuerpo de entrada **sólo se guarda la huella**. Del de salida no hay alternativa —el requisito
+es devolver *lo mismo*—, y lo que se acota es el riesgo: sólo la respuesta de una petición correcta,
+sólo la alcanza su actor, y caduca en horas.
+
+**Dos defectos que aparecieron al cerrarla**
+
+- `pnpm --filter @tfv/api contract` **apuntaba a un archivo que nunca se escribió**. Estaba
+  declarado desde la rebanada 03 y nadie lo notó porque nada lo llamaba: el comando esperaba al
+  cliente tipado y el cliente tipado esperaba al comando (H-126).
+- **Las capas del motor se montaban por camino y no por verbo**, así que una ruta heredaba los
+  guardianes de sus hermanas y el resultado dependía del orden de la tabla de rutas. Hoy hay 47
+  caminos con más de un verbo y en 40 los regímenes difieren. Comprobado antes de tocarlo: una ruta
+  pública declarada después de una autenticada sobre el mismo camino respondía `401`. Falla cerrado,
+  así que no abrió nada; lo que rompía es peor de ver — **el permiso que una ruta exige de verdad no
+  era el que declara** (H-127).
+
+**Verificado, no supuesto**
+
+- `pnpm test --force`: **1232** en verde, 135 más que las 1097 de partida. `pnpm check` y
+  `pnpm lint` limpios.
+- Contra el servicio en marcha, en un puerto propio: un cuerpo de dos megas responde `413` con la
+  forma del contrato de error; el sexto intento de un origen con el cupo en cinco responde `429` con
+  `Retry-After`, y **otro origen sigue pasando**; crear una empresa dos veces con la misma clave
+  devuelve el mismo identificador y deja **una** empresa en la base, y con otro cuerpo responde
+  `409` con `idempotency_key_reused`.
+- La pantalla de sesiones activas, servida y renderizada, ya consume el **cliente tipado**: es la
+  única de las cuarenta y ocho que se pasó, y a propósito.
+
+**Abierto, y por qué**
+
+- **Las otras cuarenta y siete pantallas** (H-128). Seis encargos están dentro de ellas ahora mismo.
+  `apiCall` convive con `apiGet` y `apiTyped` con `api()`, así que convertirlas es endpoint por
+  endpoint y sin ronda de migración — cuando no haya nadie dentro.
+- **Los campos calculados están definidos y sin consumir** (H-129). Esta rebanada da la definición
+  única; llamarla es de cada dominio, y la mayoría de esos dominios aún no existen.
+- **La idempotencia no llega a la compra pública** (H-131): no hay actor al que acotar la clave, y
+  `defineRoute` lo impide al cargar. De dónde sale el alcance sin sesión lo decide la rebanada 18.
+- **El limitador cuenta por proceso** (H-130). Es un guardarraíl de recursos, no un control de
+  credenciales; el de intentos de acceso vive en la base precisamente por eso.

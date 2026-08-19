@@ -20,15 +20,15 @@
 
 - [x] Generación de la descripción a partir de los esquemas de ejecución
 - [x] Superficie de consulta de la descripción
-- [ ] Generación del cliente tipado — **pendiente**; hace falta antes de la interfaz (28)
-- [ ] Comprobación de desfase en integración continua
+- [x] Generación del cliente tipado — `pnpm --filter @tfv/api contract`; el comando ya estaba declarado y **el archivo no existía** (`HALLAZGOS.md` H-126)
+- [x] Comprobación de desfase — regenera y compara; el mensaje del fallo dice el comando. **No hay pipeline de integración continua en este repositorio**: corre en `pnpm test`
 
 ## Operación
 
 - [x] Endpoint de salud, con comprobación de la base de datos
 - [x] Registro estructurado con identificador de correlación por petición
-- [ ] Límite de tamaño de cuerpo por endpoint — **pendiente**
-- [ ] Limitación de frecuencia, por credencial y por origen — existe la de inicio de sesión (rebanada 04); falta la genérica del armazón
+- [x] Límite de tamaño de cuerpo por endpoint — techo general configurable y `maxBodyBytes` por ruta; va **antes** que el guardián
+- [x] Limitación de frecuencia, por credencial y por origen — la genérica del armazón, en memoria y por proceso (`HALLAZGOS.md` H-130). Llega apagada en pruebas, con su motivo escrito
 - [x] Política de orígenes cruzados con lista explícita, sin comodín
 
 ## Retirada de alcance
@@ -41,5 +41,5 @@
 
 - [x] Prueba: una ruta sin régimen declarado responde `401` sin credencial
 - [x] Prueba: la tabla de rutas coincide con la descripción publicada
-- [ ] Prueba: un cuerpo que excede el límite responde `413`
-- [ ] Prueba: superar la frecuencia responde `429`
+- [x] Prueba: un cuerpo que excede el límite responde `413` — y sin declarar la longitud también
+- [x] Prueba: superar la frecuencia responde `429` — con reloj inyectado, más el desempate entre orígenes

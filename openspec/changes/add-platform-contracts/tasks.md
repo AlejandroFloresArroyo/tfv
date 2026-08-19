@@ -38,22 +38,26 @@
 
 ## Idempotencia
 
-- [ ] Almacén de claves de idempotencia con su plazo de retención
-- [ ] Repetición con el mismo cuerpo devuelve el resultado original
-- [ ] Repetición con cuerpo distinto responde `409`
+- [x] Almacén de claves de idempotencia con su plazo de retención — tabla `idempotency_keys` (migración `0026`), acotada a **(actor, empresa, clave)**; la caducidad la barre el trabajo periódico `idempotencia.caducar-claves`
+- [x] Repetición con el mismo cuerpo devuelve el resultado original
+- [x] Repetición con cuerpo distinto responde `409`
+
+> El mecanismo está entero y **aplicado en dos rutas** —`POST /companies` y `POST /companies/{companyId}/roles`—, no repartido por todos los módulos: los de dominio están en obras. Declararlo en una ruta es una línea (`idempotent: true`), y el encabezado aparece solo en el contrato publicado.
 
 ## Campos calculados
 
-- [ ] Recuentos: cómo se expresan y cuándo se calculan
-- [ ] Histogramas de estado, con todos los estados presentes en cero
-- [ ] Agregados monetarios
-- [ ] Identidad derivada
-- [ ] Selección: dirección primaria, personalización vigente, pago de la cotización
-- [ ] Declarar por recurso qué campos son siempre presentes y cuáles bajo petición
-- [ ] Prueba con valores concretos por cada fórmula
+- [x] Recuentos: cómo se expresan y cuándo se calculan
+- [x] Histogramas de estado, con todos los estados presentes en cero
+- [x] Agregados monetarios
+- [x] Identidad derivada
+- [x] Selección: dirección primaria, personalización vigente, pago de la cotización
+- [x] Declarar por recurso qué campos son siempre presentes y cuáles bajo petición — `COMPUTED_FIELDS`, un solo sitio que se puede leer entero
+- [x] Prueba con valores concretos por cada fórmula — 49, transcritas de los escenarios
+
+> Las fórmulas están en `packages/contracts/src/computed.ts`, que es lo que esta rebanada debe: **una sola definición** de cada campo derivado, pura y sin acceso a datos. **Que cada endpoint las consuma es de su dominio**, y la mayoría de esos dominios todavía no existen (Pixit, producciones, sitios). Ver `HALLAZGOS.md` H-129.
 
 ## Publicación del contrato
 
-- [ ] Generación de la descripción legible por máquina a partir de los esquemas de ejecución
-- [ ] Generación del cliente tipado a partir de esa descripción
-- [ ] Comprobación en integración continua de que no hay desfase
+- [x] Generación de la descripción legible por máquina a partir de los esquemas de ejecución — `/openapi.json`, desde la rebanada 03
+- [x] Generación del cliente tipado a partir de esa descripción — `pnpm --filter @tfv/api contract` emite `packages/contracts/src/api.generated.ts`, 186 endpoints
+- [x] Comprobación de que no hay desfase — `apps/api/src/runtime/contract.test.ts` regenera y compara. **No hay pipeline de integración continua en este repositorio**: la comprobación corre donde corre todo, en `pnpm test`

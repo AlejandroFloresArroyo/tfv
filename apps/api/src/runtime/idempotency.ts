@@ -39,6 +39,14 @@
  * fallo pasajero en uno permanente: el cliente reintentaría con su misma clave y recibiría el mismo
  * error para siempre, sin forma de completar la operación salvo inventarse otra clave — que es
  * exactamente lo que la clave existe para que no tenga que hacer.
+ *
+ * ## Lo que la repetición no conserva
+ *
+ * El cuerpo se guarda como JSON del motor, así que **el orden de las claves puede salir distinto**
+ * en la repetición. Es el mismo documento —el orden de las claves de un objeto no significa nada— y
+ * cualquier consumidor que lo interprete recibe exactamente lo mismo. Sólo lo notaría quien
+ * comparase la respuesta byte a byte, que no es lo que el requisito pide ni algo que ningún cliente
+ * haga. Observado al ejercitarlo contra el servicio en marcha, no supuesto.
  */
 
 import { createHash } from "node:crypto"
