@@ -45,7 +45,7 @@
 - [x] Reducción de imágenes antes de subir, sin ampliar las pequeñas — en el selector (28e)
 - [x] Extracción de portada en los videos — en el selector (28e)
 - [~] Vista previa de los formatos de cámara de teléfono. Resuelto como dice H-51 —se dice lo que no
-      se puede previsualizar— y corregido H-63: el ciclo de comprobación de React dejaba la vista
+      se puede previsualizar— y corregido H-68: el ciclo de comprobación de React dejaba la vista
       previa apuntando a una dirección revocada al cambiar de paso
 - [x] Informe de progreso y reintento **por objeto**: que falle la miniatura no obliga a resubir
       el original

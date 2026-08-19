@@ -2580,19 +2580,19 @@ proveedor recibe un campo llamado `prefixes` y **no borra por prefijo**, borra p
 se quedaban ahí sin fila en la base que los reclamara — así que ni el recolector volvería a mirarlos.
 Afectaba también a la recolección de subidas abandonadas. Ahora se pregunta primero qué hay bajo el
 prefijo y se borra por clave, que además resuelve que las extensiones no se puedan dar por sabidas.
-Es H-62, y leyendo el código era correcto.
+Es H-67, y leyendo el código era correcto.
 
 Con él, otros dos que tampoco se leen: la ficha pintaba las fotos recién subidas con una dirección
 vacía hasta recargar —ahora la galería se rehace con la respuesta del servidor— y la vista previa
 del selector se rompía al cambiar de paso del asistente, sólo en desarrollo, porque el ciclo de
 comprobación de React revoca las direcciones recién creadas y la marca de «de éste ya me ocupé»
-sobrevive a esa limpieza (H-63).
+sobrevive a esa limpieza (H-68).
 
 **Una pantalla terminada a la que no enlazaba nadie**
 
 `products/new` aparecía una sola vez en toda la aplicación: dentro de su propia página. El asistente
 de alta de producto estaba entero —cinco pasos, sus permisos, su guarda— y la única forma de llegar
-era escribir la dirección. Es H-61, y es el mismo motivo por el que este encargo pide abrir el
+era escribir la dirección. Es H-66, y es el mismo motivo por el que este encargo pide abrir el
 navegador: no se ve leyendo código.
 
 **Subir va después de guardar, siempre**
@@ -2615,7 +2615,7 @@ portada queda viven en `~/lib/gallery.ts` y el componente sólo cablea eventos.
 El catálogo de 255 claves **no tiene ninguna de archivos**. La galería va con
 `warehouses.products.edit_info` —las fotos son la información del producto dicha en imágenes, donde
 ya viven el nombre y la descripción— y las imágenes del almacén y de la ubicación con las de su
-edición, que ya existen. Anotado como H-64: añadir claves propias amplía la superficie de
+edición, que ya existen. Anotado como H-69: añadir claves propias amplía la superficie de
 autorización y es decisión de producto.
 
 **Comprobado**

@@ -484,7 +484,7 @@ function usePreviews(files: readonly PickedFile[]): ReadonlyMap<string, Preview>
       // Y la marca de «de éste ya me ocupé». El ciclo de comprobación de React monta, limpia y
       // vuelve a montar; sin borrarla, la segunda pasada se salta la creación y el `<img>` se queda
       // apuntando a una dirección que esta misma limpieza acaba de revocar — un hueco gris que se
-      // lee como «esta foto no se subió». Sólo se ve en desarrollo, que es donde se mira. Ver H-63.
+      // lee como «esta foto no se subió». Sólo se ve en desarrollo, que es donde se mira. Ver H-68.
       seen.clear()
     }
   }, [])

@@ -127,7 +127,7 @@ async function objectsUnder(prefix: string): Promise<string[]> {
  * borra por prefijo, sino por clave exacta. Pasarle `empresa/archivo` no toca
  * `empresa/archivo/original.jpg`, y la operación responde `200` sin haber borrado nada — así que el
  * registro desaparecía de la base y sus cinco objetos se quedaban ocupando almacenamiento para
- * siempre. Se ve subiendo una foto y quitándola; leyendo el código, no. Ver `HALLAZGOS.md` H-62.
+ * siempre. Se ve subiendo una foto y quitándola; leyendo el código, no. Ver `HALLAZGOS.md` H-67.
  *
  * Por eso primero se pregunta qué hay y luego se borra por clave. No falla si no hay nada: una
  * subida que se interrumpió antes de escribir deja registro y ningún objeto, y ése es el caso
