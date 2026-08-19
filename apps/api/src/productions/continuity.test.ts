@@ -38,7 +38,7 @@ import {
   uploads,
   users,
 } from "@tfv/db/schema"
-import { eq, sql } from "drizzle-orm"
+import { and, eq, isNull, sql } from "drizzle-orm"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { routes } from "../routes/index.ts"
 import { createApp } from "../runtime/app.ts"
@@ -451,7 +451,7 @@ async function countItems(productionId: string) {
   const rows = await db
     .select({ id: productionItems.id })
     .from(productionItems)
-    .where(eq(productionItems.productionId, productionId))
+    .where(and(eq(productionItems.productionId, productionId), isNull(productionItems.deletedAt)))
   return rows.length
 }
 
@@ -459,7 +459,7 @@ async function countVideos(productionId: string) {
   const rows = await db
     .select({ id: productionVideos.id })
     .from(productionVideos)
-    .where(eq(productionVideos.productionId, productionId))
+    .where(and(eq(productionVideos.productionId, productionId), isNull(productionVideos.deletedAt)))
   return rows.length
 }
 
