@@ -139,6 +139,12 @@ import {
 import { paymentWebhookRoute } from "./payments.ts"
 import { permissionCatalogRoute } from "./permissions.ts"
 import {
+  platformActivityRoute,
+  platformCompaniesRoute,
+  platformCompanyMembersRoute,
+  platformUsersRoute,
+} from "./platform.ts"
+import {
   acceptProspectRoute,
   captureProspectRoute,
   discardProspectRoute,
@@ -256,6 +262,15 @@ export const routes: readonly RegisteredRoute[] = [
 
   // ─── Autorización ──────────────────────────────────────────────────────────
   permissionCatalogRoute,
+
+  // ─── Administración de plataforma ──────────────────────────────────────────
+  // Ninguna lleva `:companyId`: lo que atienden no pertenece a ninguna empresa, así que no hay
+  // permiso de empresa contra el que resolverlas. Todas son de lectura salvo la bandeja de
+  // prospectos, que está arriba con el resto del acceso.
+  platformCompaniesRoute,
+  platformCompanyMembersRoute,
+  platformUsersRoute,
+  platformActivityRoute,
 
   // ─── Núcleo ────────────────────────────────────────────────────────────────
   createCompanyRoute,
