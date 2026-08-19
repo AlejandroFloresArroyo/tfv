@@ -78,11 +78,16 @@ empresa—, y las cuatro cuentas cubren las cuatro vías por las que se concede 
 
 > `pnpm test` corre contra **`tfv_test`**, una base aparte del mismo servidor local que se crea y se
 > migra sola la primera vez. Las suites truncan sus tablas, y ahora eso no toca los datos con los
-> que se está mirando la aplicación. `pnpm test:e2e` sí usa la de desarrollo —conduce la aplicación
-> que está corriendo—, pero no borra nada.
+> que se está mirando la aplicación.
 >
-> Lo que sigue sin resolver: **dos ejecuciones simultáneas de `pnpm test` se pisan**, porque
-> comparten esa base de pruebas.
+> `pnpm test:e2e` **también tiene la suya**, `tfv_test_e2e`, y levanta su propia API contra ella en
+> un par de puertos deducidos del árbol de trabajo desde el que se lanza —web `32xx`, API `52xx` con
+> el mismo final—. Antes reutilizaba la API del `5000`, es decir la base de desarrollo, y correrla
+> le borraba los datos a quien estuviera mirando la aplicación (`HALLAZGOS.md` H-138). Ya no hace
+> falta tener nada levantado para lanzarla, y lanzarla no estorba a nada que lo esté.
+>
+> Lo que sigue sin resolver: **dos ejecuciones simultáneas de la misma suite se pisan**, porque
+> comparten su base.
 
 ## Decisiones de herramientas
 
@@ -2992,3 +2997,61 @@ máquina de estados en contratos, 7 de aislamiento en datos —incluida la polí
 en los tres lados— y 19 de extremo a extremo en la API. `pnpm check` y `pnpm lint` limpios. La
 pantalla, ejercitada en un navegador: bajar la base local de `99` a `49` y ver el cálculo siguiente
 pasar de `119.00` a `69.00` es el requisito «se cambia una tarifa sin desplegar», mirado.
+### 2026-08-19 · La red se puede volver a tender
+
+La suite de extremo a extremo llevaba varias rondas sin correrse, y no por descuido: **no se podía
+correr sin quitarle los datos a alguien**. Reutilizaba la API del `5000` —que es la de desarrollo,
+apuntando a la base de desarrollo—, ocupaba el `3100` fijo, y sembraba en cada arranque. Lanzarla
+con `pnpm dev` abierto era borrarle la sesión a quien estuviera mirando la aplicación, y dos árboles
+de trabajo no podían lanzarla a la vez.
+
+**Su base y sus puertos, deducidos del árbol**
+
+Ahora levanta su propia API contra `tfv_test_e2e`, creada, migrada y sembrada **antes de que la API
+abra su conexión** — que es el único sitio donde cabe, porque Playwright arranca los servidores
+antes de correr la preparación global. Los puertos salen de la ruta del árbol de trabajo: estables
+para el mismo árbol y distintos entre árboles, que con seis trabajando en paralelo es exactamente la
+propiedad que hace falta. Unos fijos obligarían a que cada uno los escribiera en su `.env`; unos al
+azar dejarían servidores huérfanos imposibles de reconocer.
+
+Dos cerrojos contra el accidente que esto existe para evitar: la resolución se planta si la base
+resulta ser la de desarrollo, y la preparación se planta ante el nombre con el que la levanta
+Supabase. La siembra se invoca sin archivo de entorno, para que en la variable que decide a quién se
+le borran los datos no haya que confiar en un orden de precedencia.
+
+**Lo que la suite se había perdido**
+
+En las rondas que no corrió entraron fotos de producto, documento de cotización con enlace público,
+conversación del pedido, bandeja y bitácora, tienda pública, tarifas de envío y suscripciones. Dos
+afirmaciones suyas se habían quedado viejas por el camino: el asistente de alta de producto ganó un
+paso, y la ficha de una cotización dejó de imprimir la fecha en prosa.
+
+Los recorridos nuevos se eligieron por lo que se rompe sin que nadie se entere, no por cuántas
+pantallas tocan. El documento y su enlace público es el que más capas cruza —la dirección se compone
+con el origen de la petición, así que se lee de la pantalla y se abre desde un navegador sin sesión
+ni cookies—. Los avisos van con dos sesiones a la vez, porque el autor no recibe el suyo y una
+bitácora con asientos sembrados pasaría igual aunque nada llegara a ella. Las fotos se suben de
+verdad: los bytes no pasan por la API, y al quitar una se comprueba que su objeto deja de responder,
+que es H-71 dicho como prueba. Y el cuadro de tarifas se guarda y se ve salir esa misma cifra por el
+simulador, que es el defecto que la rebanada cerró, comprobado por los dos extremos.
+
+**Y lo que no se puede recorrer, que es el hallazgo**
+
+La tienda pública está terminada y **no hay puerta**: no hay pantalla que dé de alta un sitio, nada
+la enlaza, y servirla exige suscripción vigente que no se puede contratar porque no hay planes ni
+forma de crearlos. Las suscripciones caen con ella. Fabricar un plan escribiendo en la base habría
+dado media docena de pruebas verdes sobre un camino que ninguna persona puede recorrer; en su lugar
+quedan escritas las dos salidas que un visitante sí alcanza, y las ausencias anotadas como H-140 y
+H-141 con pruebas que fallarán el día que dejen de ser ciertas.
+
+Correr la suite dos veces seguidas sacó otro: **dar de alta un segundo perfil de facturación
+responde `500`**, por un índice parcial que no excluye lo dado de baja mientras el de al lado sí lo
+hace (H-139). Es la clase de defecto que sólo aparece repitiendo, y la razón de que la repetición
+sea parte de la verificación.
+
+**Comprobado**
+
+La base borrada a mano y **dos vueltas seguidas en verde —83 pruebas cada una, 20 más que las 63 de
+partida— sin limpiar nada entre medias**. `pnpm test --force` en verde con **1097**. `pnpm check` y
+`pnpm lint` limpios. Y al terminar, la sesión de desarrollo del `3000` seguía viva, que es el punto
+entero.
