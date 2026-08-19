@@ -689,6 +689,23 @@
       "noDecisionPermission": "Sin permiso para aceptar ni rechazar",
       "canceledWith": "Rechazado: {reason}",
       "goToQuote": "Ver la cotización que generó",
+      "chat": {
+        "title": "Conversación",
+        "placeholder": "Escribe un mensaje…",
+        "send": "Enviar",
+        "empty": "Aquí se habla de este pedido: ajustar una cantidad, avisar de un retraso, confirmar una recogida.",
+        "older": "Ver lo anterior",
+        "system": "Sistema",
+        "clientSide": "Cliente",
+        "providerSide": "Almacén",
+        "edited": "editado",
+        "read": "Leído por el otro lado",
+        "sending": "enviando…",
+        "failed": "no se envió",
+        "retry": "Reintentar",
+        "reconnecting": "Reconectando…",
+        "readOnly": "Sin permiso para escribir en esta conversación."
+      },
       "state": {
         "pending": "Pendiente",
         "accepted": "Aceptado",
