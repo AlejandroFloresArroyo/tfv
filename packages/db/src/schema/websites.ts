@@ -14,6 +14,7 @@
  * Vía hasta la empresa: columna directa.
  */
 
+import type { Section } from "@tfv/contracts/sections"
 import { relations, sql } from "drizzle-orm"
 import {
   boolean,
@@ -80,39 +81,19 @@ export const websites = pgTable(
   ],
 )
 
-/** Un botón de una sección. */
-export interface SectionButton {
-  readonly code: string
-  readonly label: string
-  readonly icon?: string
-  readonly value?: string
-  readonly action: "link" | "scroll" | "app"
-  readonly variant: "filled" | "outline" | "light"
-}
-
-/** Un elemento repetible dentro de una sección: un testimonio, una característica, una pregunta. */
-export interface SectionItem {
-  readonly code: string
-  readonly title?: string
-  readonly description?: string
-  readonly icon?: string
-  readonly avatar?: string
-  readonly image?: string
-}
+/**
+ * La forma del contenido de una sección **no se declara aquí**: se importa de
+ * `@tfv/contracts/sections`, donde vive junto a las reglas que la gobiernan.
+ *
+ * Escrita dos veces —una en el esquema y otra en los contratos— las dos coincidirían hasta el día
+ * en que alguien añadiera un campo en una sola, y el desajuste se vería como un dato que se guarda
+ * y no se pinta. El tipo de una columna `jsonb` sólo existe en TypeScript, así que traerlo de allí
+ * no cuesta ninguna migración.
+ */
+export type { SectionButton, SectionItem } from "@tfv/contracts/sections"
 
 /** Un bloque de la página. `kind` es del catálogo cerrado; uno desconocido se omite al renderizar. */
-export interface CustomizationSection {
-  readonly kind: string
-  readonly show: boolean
-  readonly position: number
-  readonly title?: string
-  readonly description?: string
-  readonly icon?: string
-  readonly props?: Readonly<Record<string, unknown>>
-  readonly styles?: Readonly<Record<string, string>>
-  readonly items?: readonly SectionItem[]
-  readonly buttons?: readonly SectionButton[]
-}
+export type CustomizationSection = Section
 
 /**
  * Un tema completo del sitio: color, banner y lista ordenada de secciones.

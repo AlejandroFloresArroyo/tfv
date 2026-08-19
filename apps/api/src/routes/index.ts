@@ -183,6 +183,15 @@ import {
   updateShippingRatesRoute,
 } from "./shipping.ts"
 import {
+  createCustomizationRoute,
+  deleteCustomizationRoute,
+  getCustomizationRoute,
+  listCustomizationsRoute,
+  previewSitePageRoute,
+  storefrontPageRoute,
+  updateCustomizationRoute,
+} from "./site-builder.ts"
+import {
   changeUnitStatusRoute,
   createPriceListRoute,
   createUnitsRoute,
@@ -498,9 +507,18 @@ export const routes: readonly RegisteredRoute[] = [
   updateWebsiteRoute,
   deleteWebsiteRoute,
 
-  // La tienda pública que cuelga de un sitio. Las tres son públicas, y su motivo está escrito en
+  // El constructor: los temas de un sitio y su contenido, más la vista previa de lo que servirían.
+  listCustomizationsRoute,
+  previewSitePageRoute,
+  createCustomizationRoute,
+  getCustomizationRoute,
+  updateCustomizationRoute,
+  deleteCustomizationRoute,
+
+  // La tienda pública que cuelga de un sitio. Las cuatro son públicas, y su motivo está escrito en
   // cada una: es la superficie que se sirve a quien no tiene cuenta.
   storefrontSiteRoute,
+  storefrontPageRoute,
   storefrontProductsRoute,
   storefrontProductRoute,
 ]

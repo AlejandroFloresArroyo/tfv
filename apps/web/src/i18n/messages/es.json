@@ -1368,7 +1368,8 @@
     "unavailableBilling": "La empresa que la publica no tiene una suscripción vigente. Vuelve más tarde.",
     "unavailableService": "La empresa que la publica no tiene activo el servicio de tiendas. Vuelve más tarde.",
     "underConstruction": "Estamos preparando esta tienda. Vuelve pronto.",
-    "variants": "Variantes"
+    "variants": "Variantes",
+    "emptyCategories": "Todavía no hay categorías que mostrar."
   },
   "contact": {
     "companyName": "Empresa",
@@ -1610,6 +1611,78 @@
       "searchPlaceholder": "Buscar en la bitácora",
       "empty": "Todavía no hay ningún asiento",
       "emptyBody": "Aquí queda cada acción de plataforma con quién la hizo y sobre quién. Lo que se hace dentro de una empresa queda en la bitácora de esa empresa."
+    }
+  },
+  "websites": {
+    "title": "Sitios",
+    "subtitle": "Las tiendas públicas de {company}.",
+    "empty": "Todavía no hay ningún sitio",
+    "emptyBody": "Un sitio es la tienda pública de tu empresa: se sirve en su propio subdominio y enseña el catálogo del almacén que le asignes.",
+    "create": "Nuevo sitio",
+    "createTitle": "Nuevo sitio",
+    "createBody": "La dirección se deriva del nombre. Podrás cambiarla después.",
+    "name": "Nombre",
+    "description": "Descripción",
+    "source": "Fuente del catálogo",
+    "sourceHint": "El almacén del que salen los productos que se venden.",
+    "noSource": "Sin fuente por ahora",
+    "published": "Publicado",
+    "unpublished": "Sin publicar",
+    "publish": "Publicar",
+    "builder": {
+      "title": "Constructor",
+      "themes": "Temas",
+      "newTheme": "Nuevo",
+      "newThemeName": "Tema nuevo",
+      "primary": "Primario",
+      "active": "Vigente",
+      "deleteTheme": "Eliminar el tema {name}",
+      "sections": "Secciones",
+      "addSection": "Añadir sección",
+      "noSections": "Esta página todavía no muestra ninguna sección.",
+      "removeSection": "Quitar la sección de {section}",
+      "moveHandle": "Mover la sección de {section}",
+      "hide": "Ocultar en la tienda",
+      "show": "Mostrar en la tienda",
+      "unknownKind": "Tipo desconocido",
+      "brokenTargets": "Hay un botón que baja a una sección que no está en este tema: {targets}. Añádela o cambia el destino antes de guardar.",
+      "sectionTitle": "Título",
+      "sectionDescription": "Descripción",
+      "items": "Elementos",
+      "addItem": "Añadir elemento",
+      "removeItem": "Quitar el elemento",
+      "itemTitle": "Título del elemento",
+      "itemDescription": "Texto del elemento",
+      "buttons": "Botones",
+      "addButton": "Añadir botón",
+      "newButton": "Botón",
+      "removeButton": "Quitar el botón",
+      "buttonLabel": "Etiqueta",
+      "buttonAction": "Qué hace",
+      "buttonTarget": "Sección de destino",
+      "buttonValue": "Destino",
+      "save": "Guardar cambios",
+      "saved": "Todo guardado",
+      "unsaved": "Cambios sin guardar",
+      "preview": "Vista previa",
+      "previewNote": "Es el mismo renderizado que sirve la tienda. Lo que ves aquí es lo que se publica.",
+      "previewUnpublished": "Este sitio no está publicado: la vista previa no puede enseñar su catálogo hasta que lo publiques.",
+      "openPublic": "Abrir la tienda",
+      "kinds": {
+        "hero": "Portada",
+        "categories": "Categorías",
+        "products": "Productos",
+        "about": "Acerca de",
+        "features": "Características",
+        "testimonials": "Testimonios",
+        "faq": "Preguntas frecuentes",
+        "footer": "Pie"
+      },
+      "actions": {
+        "link": "Ir a una dirección",
+        "scroll": "Bajar a una sección",
+        "app": "Acción de la tienda"
+      }
     }
   }
 }

@@ -3,10 +3,13 @@ import { ImageOff } from "lucide-react"
 import Link from "next/link"
 import { getFormatter, getTranslations } from "next-intl/server"
 import { Photo } from "~/components/photo.tsx"
+import { SECTION_PRODUCT_SAMPLE, sectionsCatalog } from "~/components/site/page.ts"
+import { SiteSections } from "~/components/site/sections.tsx"
 import { formatAmount } from "~/lib/amount.ts"
 import {
   catalogParams,
   fetchProducts,
+  fetchSitePage,
   type ProductCard,
   productPath,
   resolveSite,
@@ -61,70 +64,108 @@ export default async function StorefrontCatalogPage({
   const search = params_.get("search") ?? ""
   const categoryId = params_.get("categoryId")
 
+  /**
+   * Las secciones sólo en la portada, no sobre un catálogo filtrado.
+   *
+   * Quien busca «panel LED» ya dijo a qué venía, y volver a enseñarle la portada entera encima de
+   * su resultado es empujar hacia abajo lo que pidió. Es la misma decisión que toma cualquier
+   * tienda: la página de inicio se compone, la de resultados no.
+   */
+  const landing = search === "" && categoryId === null && params_.get("page") === null
+
+  const site = landing ? await fetchSitePage(slug) : null
+  const sample = landing
+    ? await fetchProducts(slug, new URLSearchParams({ limit: String(SECTION_PRODUCT_SAMPLE) }))
+    : null
+
   return (
-    <main className="mx-auto w-full max-w-(--breakpoint-desktop) flex-1 px-4 py-6 tablet:px-6 tablet:py-8">
-      {/* Una página pública necesita su encabezado: es lo primero que lee un lector de pantalla y
+    <>
+      {site === null ? null : (
+        <SiteSections
+          sections={site.sections}
+          color={site.color}
+          bannerUrl={site.bannerUrl}
+          catalog={sectionsCatalog({
+            slug,
+            categories: resolution.site.categories,
+            products: sample?.items ?? [],
+            money,
+            emptyProducts: t("empty"),
+            emptyCategories: t("emptyCategories"),
+            askForPriceLabel: t("askForPrice"),
+          })}
+        />
+      )}
+
+      <main className="mx-auto w-full max-w-(--breakpoint-desktop) flex-1 px-4 py-6 tablet:px-6 tablet:py-8">
+        {/* Una página pública necesita su encabezado: es lo primero que lee un lector de pantalla y
           lo que un buscador toma como asunto de la página. El nombre de la tienda queda arriba, en
           la navegación, así que repetirlo aquí lo diría dos veces. */}
-      <h1 className="mb-4 text-h4 font-bold tracking-tight text-content">{t("catalog")}</h1>
+        <h1 className="mb-4 text-h4 font-bold tracking-tight text-content">{t("catalog")}</h1>
 
-      <form method="get" className="mb-5 flex flex-wrap items-center gap-2">
-        {/* La categoría elegida sobrevive a una búsqueda nueva; la página, no: buscar empieza por
+        <form method="get" className="mb-5 flex flex-wrap items-center gap-2">
+          {/* La categoría elegida sobrevive a una búsqueda nueva; la página, no: buscar empieza por
             el principio, y conservar la séptima página daría un catálogo vacío. */}
-        {categoryId ? <input type="hidden" name="categoryId" value={categoryId} /> : null}
-        <input
-          type="search"
-          name="search"
-          defaultValue={search}
-          placeholder={t("searchPlaceholder")}
-          aria-label={t("search")}
-          className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-body1 text-content placeholder:text-content-faint"
-        />
-        <button
-          type="submit"
-          className="rounded-lg bg-brand px-4 py-2 text-body1 font-semibold text-ink-6"
-        >
-          {t("search")}
-        </button>
-      </form>
-
-      {resolution.site.categories.length > 0 ? (
-        <Categories
-          slug={slug}
-          categories={resolution.site.categories}
-          selected={categoryId}
-          search={search}
-          allLabel={t("allCategories")}
-        />
-      ) : null}
-
-      {page === null || page.items.length === 0 ? (
-        <p className="rounded-xl border border-line bg-surface px-4 py-10 text-center text-body1 text-content-muted">
-          {t("empty")}
-        </p>
-      ) : (
-        <>
-          <ul className="grid grid-cols-2 gap-4 tablet:grid-cols-3 desktop:grid-cols-4">
-            {page.items.map((product) => (
-              <li key={product.id}>
-                <Card slug={slug} product={product} money={money} askForPrice={t("askForPrice")} />
-              </li>
-            ))}
-          </ul>
-
-          <Pager
-            page={page.page}
-            totalPages={page.totalPages}
-            hasPrevious={page.hasPrevious}
-            hasNext={page.hasNext}
-            params={params_}
-            previousLabel={t("previous")}
-            nextLabel={t("next")}
-            statusLabel={t("pageOf", { page: page.page, total: page.totalPages })}
+          {categoryId ? <input type="hidden" name="categoryId" value={categoryId} /> : null}
+          <input
+            type="search"
+            name="search"
+            defaultValue={search}
+            placeholder={t("searchPlaceholder")}
+            aria-label={t("search")}
+            className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-body1 text-content placeholder:text-content-faint"
           />
-        </>
-      )}
-    </main>
+          <button
+            type="submit"
+            className="rounded-lg bg-brand px-4 py-2 text-body1 font-semibold text-ink-6"
+          >
+            {t("search")}
+          </button>
+        </form>
+
+        {resolution.site.categories.length > 0 ? (
+          <Categories
+            slug={slug}
+            categories={resolution.site.categories}
+            selected={categoryId}
+            search={search}
+            allLabel={t("allCategories")}
+          />
+        ) : null}
+
+        {page === null || page.items.length === 0 ? (
+          <p className="rounded-xl border border-line bg-surface px-4 py-10 text-center text-body1 text-content-muted">
+            {t("empty")}
+          </p>
+        ) : (
+          <>
+            <ul className="grid grid-cols-2 gap-4 tablet:grid-cols-3 desktop:grid-cols-4">
+              {page.items.map((product) => (
+                <li key={product.id}>
+                  <Card
+                    slug={slug}
+                    product={product}
+                    money={money}
+                    askForPrice={t("askForPrice")}
+                  />
+                </li>
+              ))}
+            </ul>
+
+            <Pager
+              page={page.page}
+              totalPages={page.totalPages}
+              hasPrevious={page.hasPrevious}
+              hasNext={page.hasNext}
+              params={params_}
+              previousLabel={t("previous")}
+              nextLabel={t("next")}
+              statusLabel={t("pageOf", { page: page.page, total: page.totalPages })}
+            />
+          </>
+        )}
+      </main>
+    </>
   )
 }
 

@@ -1368,7 +1368,8 @@
     "unavailableBilling": "The company behind it has no active subscription. Please come back later.",
     "unavailableService": "The company behind it does not have the storefront service enabled. Please come back later.",
     "underConstruction": "We are still setting this store up. Come back soon.",
-    "variants": "Variants"
+    "variants": "Variants",
+    "emptyCategories": "No categories to show yet."
   },
   "contact": {
     "companyName": "Company",
@@ -1610,6 +1611,78 @@
       "searchPlaceholder": "Search the log",
       "empty": "No entries yet",
       "emptyBody": "Every platform action lands here with who did it and to whom. What is done inside a company stays in that company's log."
+    }
+  },
+  "websites": {
+    "title": "Sites",
+    "subtitle": "The public storefronts of {company}.",
+    "empty": "No sites yet",
+    "emptyBody": "A site is your company's public storefront: it is served on its own subdomain and shows the catalog of the warehouse you assign to it.",
+    "create": "New site",
+    "createTitle": "New site",
+    "createBody": "The address is derived from the name. You can change it later.",
+    "name": "Name",
+    "description": "Description",
+    "source": "Catalog source",
+    "sourceHint": "The warehouse the products for sale come from.",
+    "noSource": "No source for now",
+    "published": "Published",
+    "unpublished": "Unpublished",
+    "publish": "Publish",
+    "builder": {
+      "title": "Builder",
+      "themes": "Themes",
+      "newTheme": "New",
+      "newThemeName": "New theme",
+      "primary": "Primary",
+      "active": "Live",
+      "deleteTheme": "Delete the {name} theme",
+      "sections": "Sections",
+      "addSection": "Add section",
+      "noSections": "This page does not show any section yet.",
+      "removeSection": "Remove the {section} section",
+      "moveHandle": "Move the {section} section",
+      "hide": "Hide on the storefront",
+      "show": "Show on the storefront",
+      "unknownKind": "Unknown type",
+      "brokenTargets": "A button scrolls to a section that is not in this theme: {targets}. Add it or change the target before saving.",
+      "sectionTitle": "Title",
+      "sectionDescription": "Description",
+      "items": "Items",
+      "addItem": "Add item",
+      "removeItem": "Remove item",
+      "itemTitle": "Item title",
+      "itemDescription": "Item text",
+      "buttons": "Buttons",
+      "addButton": "Add button",
+      "newButton": "Button",
+      "removeButton": "Remove button",
+      "buttonLabel": "Label",
+      "buttonAction": "What it does",
+      "buttonTarget": "Target section",
+      "buttonValue": "Target",
+      "save": "Save changes",
+      "saved": "All saved",
+      "unsaved": "Unsaved changes",
+      "preview": "Preview",
+      "previewNote": "This is the same rendering the storefront serves. What you see here is what gets published.",
+      "previewUnpublished": "This site is not published: the preview cannot show its catalog until you publish it.",
+      "openPublic": "Open the storefront",
+      "kinds": {
+        "hero": "Hero",
+        "categories": "Categories",
+        "products": "Products",
+        "about": "About",
+        "features": "Features",
+        "testimonials": "Testimonials",
+        "faq": "FAQ",
+        "footer": "Footer"
+      },
+      "actions": {
+        "link": "Go to an address",
+        "scroll": "Scroll to a section",
+        "app": "Storefront action"
+      }
     }
   }
 }
