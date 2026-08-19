@@ -44,6 +44,14 @@ import {
 } from "@tfv/db/schema"
 import { and, count, eq, inArray, isNull } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
+import {
+  assertUsableImages,
+  diffSingle,
+  type ImageRef,
+  imageRefs,
+  releaseUploads,
+  sweepObjects,
+} from "../media/collections.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 
 /** La clave del servicio en el catálogo. Es la que gobierna la habilitación. */
@@ -57,6 +65,10 @@ export interface WarehouseRecord {
   readonly slug: string | null
   readonly isPublished: boolean
   readonly priority: string
+  readonly imageUploadId: string | null
+  /** La dirección de la imagen, y su derivado de celda. Nulas cuando no hay imagen. */
+  readonly imageUrl: string | null
+  readonly imageThumbnailUrl: string | null
   readonly createdAt: Date
   readonly updatedAt: Date
 }
@@ -121,7 +133,17 @@ export async function listWarehouses(
       .limit(limit)
       .offset(offset)
 
-    return buildPage(rows.map(toRecord), total?.value ?? 0, page, limit)
+    const images = await imageRefs(
+      tx,
+      rows.map((row) => row.imageUploadId),
+    )
+
+    return buildPage(
+      rows.map((row) => toRecord(row, images)),
+      total?.value ?? 0,
+      page,
+      limit,
+    )
   })
 }
 
@@ -132,7 +154,8 @@ export async function getWarehouse(
 ): Promise<WarehouseRecord> {
   return withRequester(actor, async (tx) => {
     await assertCompany(tx, companyId)
-    return toRecord(await loadWarehouse(tx, companyId, warehouseId))
+    const row = await loadWarehouse(tx, companyId, warehouseId)
+    return toRecord(row, await imageRefs(tx, [row.imageUploadId]))
   })
 }
 
@@ -143,6 +166,7 @@ export interface CreateWarehouseInput {
   readonly description?: string | undefined
   readonly priority?: string | undefined
   readonly isPublished?: boolean | undefined
+  readonly imageUploadId?: string | null | undefined
 }
 
 export async function createWarehouse(
@@ -154,6 +178,9 @@ export async function createWarehouse(
     await assertCompany(tx, companyId)
     await assertServiceEnabled(tx, companyId)
 
+    const image = input.imageUploadId ?? null
+    if (image !== null) await assertUsableImages(tx, companyId, [image])
+
     const [created] = await tx
       .insert(warehouses)
       .values({
@@ -162,13 +189,14 @@ export async function createWarehouse(
         name: input.name.trim(),
         description: input.description?.trim() ?? "",
         slug: await freeSlug(tx, input.name),
+        imageUploadId: image,
         ...(input.priority === undefined ? {} : { priority: input.priority }),
         ...(input.isPublished === undefined ? {} : { isPublished: input.isPublished }),
       })
       .returning()
 
     if (!created) throw new Error("la inserción del almacén no devolvió fila")
-    return toRecord(created)
+    return toRecord(created, await imageRefs(tx, [created.imageUploadId]))
   })
 }
 
@@ -185,6 +213,14 @@ export interface UpdateWarehouseInput {
    * darle otro distinto en silencio es no hacer lo que pidió.
    */
   readonly slug?: string | undefined
+  /**
+   * La imagen.
+   *
+   * `null` la retira, que es distinto de omitirla —eso la deja como está—. Sustituirla elimina la
+   * anterior por completo, salvo que sea un marcador de posición o que otra entidad la referencie:
+   * lo decide `media/collections.ts` y no este módulo.
+   */
+  readonly imageUploadId?: string | null | undefined
 }
 
 export async function updateWarehouse(
@@ -193,7 +229,7 @@ export async function updateWarehouse(
   warehouseId: string,
   input: UpdateWarehouseInput,
 ): Promise<WarehouseRecord> {
-  return withRequester(actor, async (tx) => {
+  const { record, released } = await withRequester(actor, async (tx) => {
     await assertCompany(tx, companyId)
     const current = await loadWarehouse(tx, companyId, warehouseId)
 
@@ -209,7 +245,24 @@ export async function updateWarehouse(
       patch.slug = slug
     }
 
-    if (Object.keys(patch).length === 0) return toRecord(current)
+    // La imagen se resuelve con el mismo diferencial que una colección de una sola foto: asignar la
+    // que ya estaba no retira nada, y quitarla sin poner otra sí.
+    const image =
+      input.imageUploadId === undefined
+        ? undefined
+        : diffSingle(current.imageUploadId, input.imageUploadId)
+
+    if (image !== undefined) {
+      await assertUsableImages(tx, companyId, image.added)
+      patch.imageUploadId = input.imageUploadId
+    }
+
+    if (Object.keys(patch).length === 0) {
+      return {
+        record: toRecord(current, await imageRefs(tx, [current.imageUploadId])),
+        released: undefined,
+      }
+    }
 
     const [updated] = await tx
       .update(warehouses)
@@ -218,8 +271,17 @@ export async function updateWarehouse(
       .returning()
 
     if (!updated) throw new NotFoundError("El almacén no existe")
-    return toRecord(updated)
+
+    return {
+      record: toRecord(updated, await imageRefs(tx, [updated.imageUploadId])),
+      // Después de haber escrito la columna: la comprobación de referencias mira el estado de esta
+      // transacción, y hecha antes diría que la imagen anterior sigue en uso.
+      released: image === undefined ? undefined : await releaseUploads(tx, image.removed),
+    }
   })
+
+  if (released !== undefined) await sweepObjects(released)
+  return record
 }
 
 /**
@@ -483,7 +545,12 @@ export async function loadWarehouse(tx: Transaction, companyId: string, warehous
   return row
 }
 
-function toRecord(row: typeof warehouses.$inferSelect): WarehouseRecord {
+function toRecord(
+  row: typeof warehouses.$inferSelect,
+  images: ReadonlyMap<string, ImageRef> = new Map(),
+): WarehouseRecord {
+  const image = row.imageUploadId === null ? undefined : images.get(row.imageUploadId)
+
   return {
     id: row.id,
     companyId: row.companyId,
@@ -492,6 +559,9 @@ function toRecord(row: typeof warehouses.$inferSelect): WarehouseRecord {
     slug: row.slug,
     isPublished: row.isPublished,
     priority: row.priority,
+    imageUploadId: row.imageUploadId,
+    imageUrl: image?.url ?? null,
+    imageThumbnailUrl: image?.thumbnailUrl ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }

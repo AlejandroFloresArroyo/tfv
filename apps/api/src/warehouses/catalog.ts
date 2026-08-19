@@ -53,12 +53,20 @@ import { type Transaction, withRequester } from "@tfv/db"
 import {
   type ClothingSheet,
   type Dimensions,
+  uploads,
   warehouseMeasurements,
+  warehouseProductImages,
   warehouseProducts,
   warehouseStockUnits,
 } from "@tfv/db/schema"
-import { and, count, eq, inArray, isNull, sql } from "drizzle-orm"
+import { and, asc, count, eq, inArray, isNull, sql } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
+import {
+  assertUsableImages,
+  diffCollection,
+  releaseUploads,
+  sweepObjects,
+} from "../media/collections.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 import { categorySubtree } from "./categories.ts"
 import { recordEvents } from "./stock.ts"
@@ -98,8 +106,25 @@ export interface ProductRecord {
   readonly isPublished: boolean
   /** Alta provisional desde una cotización, pendiente de completarse. */
   readonly isProvisional: boolean
+  /**
+   * La portada, en tamaño de celda, o nada.
+   *
+   * Viaja con el producto en los listados porque es para lo que existe una portada: la rejilla del
+   * catálogo enseña una foto por producto y no puede pedir la galería de cada uno.
+   */
+  readonly coverUrl: string | null
   readonly createdAt: Date
   readonly updatedAt: Date
+}
+
+/** Una foto de la galería, con lo que la pantalla necesita para pintarla. */
+export interface ProductImageRecord {
+  readonly uploadId: string
+  readonly url: string
+  /** El derivado de celda. Nulo cuando el navegador que la subió no supo producirlo. */
+  readonly thumbnailUrl: string | null
+  readonly position: number
+  readonly isCover: boolean
 }
 
 export interface MeasurementRecord {
@@ -123,6 +148,7 @@ export interface ProductDetail extends ProductRecord {
   readonly measurements: readonly MeasurementRecord[]
   readonly variants: readonly ProductRecord[]
   readonly accessories: readonly ProductRecord[]
+  readonly images: readonly ProductImageRecord[]
 }
 
 // ─── Consulta ────────────────────────────────────────────────────────────────
@@ -210,8 +236,22 @@ export async function listProducts(
       .limit(limit)
       .offset(offset)
 
-    return buildPage(rows.map(toProductRecord), total?.value ?? 0, page, limit)
+    const covers = await coversOf(
+      tx,
+      rows.map((row) => row.id),
+    )
+
+    return buildPage(
+      rows.map((row) => withCover(toProductRecord(row), covers)),
+      total?.value ?? 0,
+      page,
+      limit,
+    )
   })
+}
+
+function withCover(record: ProductRecord, covers: ReadonlyMap<string, string>): ProductRecord {
+  return { ...record, coverUrl: covers.get(record.id) ?? null }
 }
 
 export async function getProduct(
@@ -222,21 +262,7 @@ export async function getProduct(
 ): Promise<ProductDetail> {
   return withRequester(actor, async (tx) => {
     await loadWarehouse(tx, companyId, warehouseId)
-    const product = await loadProduct(tx, warehouseId, productId)
-
-    const children = await tx
-      .select()
-      .from(warehouseProducts)
-      .where(and(eq(warehouseProducts.parentId, productId), isNull(warehouseProducts.deletedAt)))
-
-    return {
-      ...toProductRecord(product),
-      measurements: await measurementsOf(tx, productId),
-      variants: children.filter((row) => row.relationToParent === "variant").map(toProductRecord),
-      accessories: children
-        .filter((row) => row.relationToParent === "accessory")
-        .map(toProductRecord),
-    }
+    return getStructure(tx, warehouseId, productId)
   })
 }
 
@@ -707,6 +733,195 @@ export async function deleteMeasurement(
   })
 }
 
+// ─── Fotos ───────────────────────────────────────────────────────────────────
+
+export interface ProductImagesInput {
+  /** La galería entera, **en el orden en que se enseña**. Lo que no venga, deja de estar. */
+  readonly uploadIds: readonly string[]
+  /** Cuál se enseña en el listado. Ausente, se conserva la que hubiera; si no, la primera. */
+  readonly coverUploadId?: string | null | undefined
+}
+
+/**
+ * Sustituye la galería de un producto.
+ *
+ * Es el requisito «Sustituir una colección de archivos» aplicado: se envía la colección entera y el
+ * servidor **diferencia**. Se envía entera y no «añade ésta, quita aquélla» porque el orden es parte
+ * de la colección, y un orden que se compone de operaciones sueltas acaba dependiendo de en qué
+ * orden lleguen.
+ *
+ * Lo que queda fuera de la galería se suelta con las tres salvaguardas de `media/collections.ts`:
+ * no se toca lo que sigue estando, ni lo que otra entidad referencia, ni un marcador de posición.
+ *
+ * **La portada existe siempre que haya fotos.** Un producto con galería y sin portada obligaría a
+ * cada listado a inventarse cuál enseñar, y dos listados se inventarían cosas distintas.
+ */
+export async function setProductImages(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  productId: string,
+  input: ProductImagesInput,
+): Promise<ProductDetail> {
+  const { detail, released } = await withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    await loadProduct(tx, warehouseId, productId)
+
+    const existing = await tx
+      .select()
+      .from(warehouseProductImages)
+      .where(eq(warehouseProductImages.productId, productId))
+      .orderBy(asc(warehouseProductImages.position))
+
+    const diff = diffCollection(
+      existing.map((row) => row.uploadId),
+      input.uploadIds,
+    )
+
+    await assertUsableImages(tx, companyId, diff.next)
+
+    if (diff.removed.length > 0) {
+      await tx
+        .delete(warehouseProductImages)
+        .where(
+          and(
+            eq(warehouseProductImages.productId, productId),
+            inArray(warehouseProductImages.uploadId, [...diff.removed]),
+          ),
+        )
+    }
+
+    // La portada se apaga en **una** sentencia antes de encender la nueva: el índice único parcial
+    // se comprueba al terminar cada sentencia, y apagar y encender fila a fila deja un instante con
+    // dos portadas que el motor rechaza con razón.
+    await tx
+      .update(warehouseProductImages)
+      .set({ isCover: false })
+      .where(
+        and(
+          eq(warehouseProductImages.productId, productId),
+          eq(warehouseProductImages.isCover, true),
+        ),
+      )
+
+    for (const [position, uploadId] of diff.next.entries()) {
+      if (diff.added.includes(uploadId)) {
+        await tx
+          .insert(warehouseProductImages)
+          .values({ id: newId(), productId, uploadId, position })
+        continue
+      }
+
+      await tx
+        .update(warehouseProductImages)
+        .set({ position, updatedAt: new Date() })
+        .where(
+          and(
+            eq(warehouseProductImages.productId, productId),
+            eq(warehouseProductImages.uploadId, uploadId),
+          ),
+        )
+    }
+
+    const cover = chooseCover(diff.next, input.coverUploadId, existing)
+    if (cover !== null) {
+      await tx
+        .update(warehouseProductImages)
+        .set({ isCover: true })
+        .where(
+          and(
+            eq(warehouseProductImages.productId, productId),
+            eq(warehouseProductImages.uploadId, cover),
+          ),
+        )
+    }
+
+    return {
+      detail: await getStructure(tx, warehouseId, productId),
+      // Va **después** de haber quitado las filas de la galería: la comprobación de referencias mira
+      // el estado de esta transacción, y hecha antes diría que la foto sigue en uso.
+      released: await releaseUploads(tx, diff.removed),
+    }
+  })
+
+  await sweepObjects(released)
+  return detail
+}
+
+/**
+ * Cuál es la portada.
+ *
+ * Lo elegido manda; si no se eligió, sigue la que ya lo era mientras siga en la galería; y si no,
+ * la primera. Elegir una que no está en la colección es no elegir: se ignora en lugar de rechazar,
+ * porque la pantalla puede quitar una foto y mandar su elección anterior en el mismo envío.
+ */
+function chooseCover(
+  next: readonly string[],
+  chosen: string | null | undefined,
+  existing: readonly { uploadId: string; isCover: boolean }[],
+): string | null {
+  if (next.length === 0) return null
+  if (chosen != null && next.includes(chosen)) return chosen
+
+  const current = existing.find((row) => row.isCover)?.uploadId
+  if (current !== undefined && next.includes(current)) return current
+
+  return next[0] ?? null
+}
+
+/** La galería de un producto, en su orden. */
+async function imagesOf(tx: Transaction, productId: string): Promise<ProductImageRecord[]> {
+  const rows = await tx
+    .select({
+      uploadId: warehouseProductImages.uploadId,
+      position: warehouseProductImages.position,
+      isCover: warehouseProductImages.isCover,
+      url: uploads.url,
+      variants: uploads.variants,
+    })
+    .from(warehouseProductImages)
+    .innerJoin(uploads, eq(uploads.id, warehouseProductImages.uploadId))
+    .where(eq(warehouseProductImages.productId, productId))
+    .orderBy(asc(warehouseProductImages.position))
+
+  return rows.map((row) => ({
+    uploadId: row.uploadId,
+    url: row.url,
+    thumbnailUrl: row.variants?.thumbnail ?? null,
+    position: row.position,
+    isCover: row.isCover,
+  }))
+}
+
+/**
+ * La portada de cada producto de una lista, en una sola consulta.
+ *
+ * Una por producto en el bucle serían cincuenta consultas para pintar una rejilla de cincuenta.
+ */
+async function coversOf(
+  tx: Transaction,
+  productIds: readonly string[],
+): Promise<Map<string, string>> {
+  if (productIds.length === 0) return new Map()
+
+  const rows = await tx
+    .select({
+      productId: warehouseProductImages.productId,
+      url: uploads.url,
+      variants: uploads.variants,
+    })
+    .from(warehouseProductImages)
+    .innerJoin(uploads, eq(uploads.id, warehouseProductImages.uploadId))
+    .where(
+      and(
+        inArray(warehouseProductImages.productId, [...productIds]),
+        eq(warehouseProductImages.isCover, true),
+      ),
+    )
+
+  return new Map(rows.map((row) => [row.productId, row.variants?.thumbnail ?? row.url]))
+}
+
 // ─── Ayuda ───────────────────────────────────────────────────────────────────
 
 /**
@@ -947,13 +1162,18 @@ async function getStructure(
     .from(warehouseProducts)
     .where(and(eq(warehouseProducts.parentId, productId), isNull(warehouseProducts.deletedAt)))
 
+  const covers = await coversOf(tx, [productId, ...children.map((row) => row.id)])
+  const child = (relation: ProductRelation) =>
+    children
+      .filter((row) => row.relationToParent === relation)
+      .map((row) => withCover(toProductRecord(row), covers))
+
   return {
-    ...toProductRecord(product),
+    ...withCover(toProductRecord(product), covers),
     measurements: await measurementsOf(tx, productId),
-    variants: children.filter((row) => row.relationToParent === "variant").map(toProductRecord),
-    accessories: children
-      .filter((row) => row.relationToParent === "accessory")
-      .map(toProductRecord),
+    variants: child("variant"),
+    accessories: child("accessory"),
+    images: await imagesOf(tx, productId),
   }
 }
 
@@ -1025,6 +1245,9 @@ function toProductRecord(row: typeof warehouseProducts.$inferSelect): ProductRec
     slug: row.slug,
     isPublished: row.isPublished,
     isProvisional: row.isProvisional,
+    // La rellena `withCover` cuando quien lee necesita enseñarla: la portada sale de otra tabla, y
+    // traerla fila a fila serían tantas consultas como productos tenga la rejilla.
+    coverUrl: null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }

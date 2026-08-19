@@ -113,6 +113,13 @@
       "when": 1787090418447,
       "tag": "0015_confirmacion_de_archivos",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1787102402504,
+      "tag": "0016_imagenes_de_producto",
+      "breakpoints": true
     }
   ]
 }

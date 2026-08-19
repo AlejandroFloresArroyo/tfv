@@ -1,16 +1,6 @@
 "use client"
 
-import {
-  createProductInput,
-  LENGTH_UNITS,
-  type LengthUnit,
-  MASS_UNITS,
-  type MassUnit,
-  MEASUREMENT_KINDS,
-  type MeasurementKind,
-  measurementInput,
-  productChildInput,
-} from "@tfv/contracts/catalog"
+import { createProductInput, measurementInput, productChildInput } from "@tfv/contracts/catalog"
 import {
   AmountInput,
   Button,
@@ -20,11 +10,9 @@ import {
   Input,
   Panel,
   SearchSelect,
-  Select,
   type SelectOption,
   Switch,
   Textarea,
-  toDecimalString,
   Wizard,
   type WizardState,
   type WizardStepView,
@@ -35,6 +23,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useFormatter, useTranslations } from "next-intl"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { z } from "zod"
+import { PhotoPicker, usePhotoUploads } from "~/components/photo-picker.tsx"
 import { decimalSeparator } from "~/lib/amount.ts"
 import { ApiError, api } from "~/lib/api.client.ts"
 import { type FieldErrorCode, fieldErrors } from "~/lib/field-errors.ts"
@@ -152,6 +141,8 @@ export interface Permissions {
   readonly canSelectCategory: boolean
   readonly canEditLocation: boolean
   readonly canPublish: boolean
+  /** Las fotos van con la información del producto. Ver `HALLAZGOS.md` H-69. */
+  readonly canEditPhotos: boolean
 }
 
 export function ProductWizard({
@@ -178,6 +169,7 @@ export function ProductWizard({
   const pathname = usePathname()
   const params = useSearchParams()
 
+  const photos = usePhotoUploads(companyId)
   const [values, setValues] = useState<Values>(INITIAL)
   const [state, setState] = useState<WizardState>(wizard.start())
   const [pending, setPending] = useState(false)
@@ -468,6 +460,23 @@ export function ProductWizard({
         ),
       },
 
+      ...(permissions.canEditPhotos
+        ? [
+            {
+              id: "photos",
+              label: t("warehouses.wizard.photos"),
+              content: () => (
+                <div className="flex flex-col gap-4">
+                  <p className="text-body2 text-content-muted">
+                    {t("warehouses.wizard.photosHelp")}
+                  </p>
+                  <PhotoPicker uploads={photos} />
+                </div>
+              ),
+            } satisfies WizardStepView<Values>,
+          ]
+        : []),
+
       {
         id: "structure",
         label: t("warehouses.wizard.structure"),
@@ -510,7 +519,19 @@ export function ProductWizard({
       },
     ],
     // `values` entra entero porque cada paso pinta lo que se está escribiendo.
-    [values, permissions, categories, globalCategories, storages, members, t, say, edit, decimal],
+    [
+      values,
+      permissions,
+      categories,
+      globalCategories,
+      storages,
+      members,
+      photos,
+      t,
+      say,
+      edit,
+      decimal,
+    ],
   )
 
   // El paso viaja en la dirección para que el botón de atrás del navegador haga lo que se espera.
@@ -535,6 +556,14 @@ export function ProductWizard({
     }
   }
 
+  /**
+   * Crear, y **después** subir.
+   *
+   * La escritura de las fotos va directa al almacenamiento y puede fallar por su cuenta. Subiendo
+   * antes, una foto caída se llevaría por delante los cinco pasos que la persona acaba de rellenar;
+   * subiendo después, lo peor que pasa es que el producto quede creado sin fotos y se añadan desde
+   * su ficha, que ya sabe hacerlo.
+   */
   async function submit() {
     setPending(true)
     setFailure(null)
@@ -544,6 +573,15 @@ export function ProductWizard({
         `/companies/${companyId}/warehouses/${warehouseId}/products`,
         { method: "POST", body: body(values, decimal) },
       )
+
+      const outcome = await photos.run()
+      if (outcome.uploaded.length > 0) {
+        await api(
+          `/companies/${companyId}/warehouses/${warehouseId}/products/${created.id}/images`,
+          { method: "PUT", body: { uploadIds: [...outcome.uploaded] } },
+        )
+      }
+
       router.push(`/c/${companyId}/warehouses/${warehouseId}/products/${created.id}`)
     } catch (error) {
       setPending(false)
@@ -560,7 +598,7 @@ export function ProductWizard({
         onStateChange={change}
         onSubmit={submit}
         onCancel={() => router.push(`/c/${companyId}/warehouses/${warehouseId}`)}
-        dirty={JSON.stringify(values) !== JSON.stringify(INITIAL)}
+        dirty={JSON.stringify(values) !== JSON.stringify(INITIAL) || photos.files.length > 0}
         pending={pending}
         {...(failure === null ? {} : { error: failure })}
         labels={{

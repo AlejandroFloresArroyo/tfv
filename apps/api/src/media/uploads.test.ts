@@ -25,6 +25,7 @@ import { eq, sql } from "drizzle-orm"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { routes } from "../routes/index.ts"
 import { createApp } from "../runtime/app.ts"
+import { removeObjects } from "./storage.ts"
 
 const app = createApp(routes)
 const PASSWORD = "una-frase-larga-y-buena"
@@ -89,9 +90,7 @@ async function signUp(email: string): Promise<string> {
 }
 
 async function newCompany(cookie: string, name: string): Promise<string> {
-  const company = await json<{ id: string }>(
-    await request("POST", "/companies", { name }, cookie),
-  )
+  const company = await json<{ id: string }>(await request("POST", "/companies", { name }, cookie))
   return company.id
 }
 
@@ -103,7 +102,8 @@ beforeAll(async () => {
   companyId = await newCompany(cookie, "Casa de Renta")
 })
 
-const authorize = (body: unknown) => request("POST", `/companies/${companyId}/uploads`, body, cookie)
+const authorize = (body: unknown) =>
+  request("POST", `/companies/${companyId}/uploads`, body, cookie)
 
 const FOTO = { fileName: "camara.jpg", contentType: "image/jpeg", byteSize: 120_000 }
 
@@ -293,5 +293,36 @@ describe("el aislamiento entre arrendatarios", () => {
     )
 
     expect(response.status).toBe(404)
+  })
+})
+
+describe("retirar los objetos", () => {
+  it("se lleva los cinco, no sólo el registro", async () => {
+    // El endpoint de borrado del proveedor recibe un campo llamado `prefixes` y **borra por clave
+    // exacta**: pasarle `empresa/archivo` responde `200` sin tocar `empresa/archivo/original.jpg`.
+    // Sin esta prueba, sustituir una foto seguía dejando sus cinco objetos ocupando almacenamiento
+    // para siempre, y la base sin fila que los reclamara. Ver `HALLAZGOS.md` H-71.
+    const { upload, targets } = await json<Authorization>(await authorize(FOTO))
+
+    for (const target of targets) {
+      const written = await fetch(target.url, {
+        method: "PUT",
+        headers: target.headers,
+        body: new Uint8Array([1, 2, 3, 4]),
+      })
+      expect(written.ok).toBe(true)
+    }
+
+    const [row] = await db
+      .select({ storagePath: uploads.storagePath, url: uploads.url })
+      .from(uploads)
+      .where(eq(uploads.id, upload.id))
+    if (!row) throw new Error("el archivo debería estar registrado")
+
+    expect((await fetch(row.url)).ok).toBe(true)
+
+    await removeObjects([row.storagePath])
+
+    expect((await fetch(row.url)).ok).toBe(false)
   })
 })

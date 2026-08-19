@@ -298,6 +298,42 @@
   "language": {
     "label": "Language"
   },
+  "media": {
+    "picker": {
+      "label": "Photos",
+      "browse": "Choose photos",
+      "hint": "Drag photos here, or click to choose them. Up to 20 MB each.",
+      "remove": "Remove {fileName}",
+      "retry": "Retry {fileName}",
+      "progress": "{done} of {total} uploaded",
+      "rejected": {
+        "name": "{fileName}: the name needs a name and an extension.",
+        "kind": "{fileName}: only images are accepted here.",
+        "size": "{fileName}: it is larger than allowed.",
+        "count": "{fileName}: it does not fit, the maximum was reached."
+      },
+      "noPreview": "This format cannot be previewed here; it uploads all the same.",
+      "noDerivatives": "The original was uploaded, but this browser could not make the smaller sizes.",
+      "waiting": "Waiting",
+      "working": "Uploading",
+      "done": "Uploaded",
+      "failed": "Failed"
+    },
+    "gallery": {
+      "empty": "No photos yet. Choose the first ones below.",
+      "isCover": "Cover",
+      "position": "Position {position}",
+      "makeCover": "Use as cover",
+      "moveUp": "Move earlier",
+      "moveDown": "Move later",
+      "removePhoto": "Remove this photo",
+      "someFailed": "What did upload was saved. {count} photos are left to retry."
+    },
+    "single": {
+      "current": "Current image",
+      "remove": "Remove the image"
+    }
+  },
   "members": {
     "title": "Members",
     "subtitle": "Who can access {company}, and in what capacity.",
@@ -520,7 +556,10 @@
       "summary": "Summary",
       "unpublish": "Remove from shop",
       "variants": "Variants",
-      "yes": "Yes"
+      "yes": "Yes",
+      "create": "New product",
+      "editPhotos": "Photos",
+      "photosBody": "The cover is the one shown in the catalogue. Removing a photo here deletes it from storage."
     },
     "published": "Published",
     "quotes": {
@@ -836,7 +875,8 @@
       "deleteCascade": "{count, plural, one {Deletes # location, this one included} other {Deletes # locations, this one included}}",
       "deleteProducts": "{count, plural, =0 {Leaves no product without a location} one {Leaves # product without a location, without deleting it} other {Leaves # products without a location, without deleting them}}",
       "counting": "Counting what it affects…",
-      "countFailed": "Could not count what it affects."
+      "countFailed": "Could not count what it affects.",
+      "image": "Image"
     },
     "subtitle": "The facilities and storage spaces {company} operates from.",
     "title": "Warehouses",
@@ -906,7 +946,9 @@
       "unclassified": "Unclassified",
       "usesPriceLists": "Uses price lists",
       "usesPriceListsHint": "If ticked, the rate comes from the list and this price is the fallback.",
-      "variantsHelp": "The same thing with another trait: another colour, another size."
+      "variantsHelp": "The same thing with another trait: another colour, another size.",
+      "photos": "Photos",
+      "photosHelp": "They upload when the product is created, not before: that way a failed photo does not take down what you already typed. You can add more later from its page."
     },
     "warehouses": {
       "create": "New warehouse",
@@ -931,7 +973,8 @@
       "scopeOrders": "{count, plural, one {# order} other {# orders}}",
       "scopeOpenQuotes": "{count, plural, one {# quotation in progress} other {# quotations in progress}}",
       "scopeOpenOrders": "{count, plural, one {# order in progress} other {# orders in progress}}",
-      "scopeBlocked": "It cannot be deleted: it has {what}. Close or cancel them first."
+      "scopeBlocked": "It cannot be deleted: it has {what}. Close or cancel them first.",
+      "image": "Image"
     },
     "stock": {
       "title": "Units",
