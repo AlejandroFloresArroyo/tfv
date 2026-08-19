@@ -237,6 +237,29 @@ const schema = z
     /** Cada cuánto se comprueba que las reservas y el inventario digan lo mismo. */
     STOCK_COHERENCE_EVERY_MS: z.coerce.number().int().positive().default(21_600_000),
     NOTIFICATIONS_DELIVER_EVERY_MS: z.coerce.number().int().positive().default(60_000),
+
+    /**
+     * Cuánto tiempo aparta una compra el inventario mientras se paga.
+     *
+     * No es una constante del dominio: es cuánto está dispuesta la tienda a retirar una cámara del
+     * catálogo por alguien que todavía no ha pagado. Media hora es lo que tarda un pago con
+     * transferencia y una eternidad en un fin de semana de rodaje.
+     *
+     * La vigencia de la sesión de pago del procesador se fija a la misma, para que lo apartado y lo
+     * cobrable caduquen juntos: con dos plazos distintos, uno de los dos deja de ser cierto.
+     */
+    CHECKOUT_RESERVATION_MINUTES: z.coerce.number().int().positive().default(30),
+    /** Cada cuánto se barren las compras cuya sesión caducó. Por defecto, cada cinco minutos. */
+    CHECKOUT_SWEEP_EVERY_MS: z.coerce.number().int().positive().default(300_000),
+    /**
+     * El origen al que vuelve el comprador desde la sesión de pago.
+     *
+     * «La sesión de pago SHALL indicar a dónde volver… **dentro del dominio de la propia tienda**».
+     * Hoy la aplicación web sirve cada tienda bajo `/s/<identificador>`, así que de aquí sale el
+     * origen y el camino lo pone la compra. Cuando las tiendas se sirvan por subdominio propio,
+     * éste es el único sitio que cambia.
+     */
+    STOREFRONT_ORIGIN: z.string().url().default("http://localhost:3000"),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV === "production" && !value.STORAGE_SERVICE_KEY) {

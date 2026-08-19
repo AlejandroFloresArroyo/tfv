@@ -124,13 +124,22 @@ Lo construido hasta ahora, medido y no estimado:
 | Rebanadas | 19 de 30 empezadas, **ninguna cerrada del todo** |
 | Código sin pruebas | 75 036 líneas |
 | Código de prueba | 24 853 líneas |
-| Pruebas | **1253** de vitest — 284 contratos, 87 datos, 670 API, 93 web, 119 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
+| Pruebas | **1310** de vitest — 296 contratos, 87 datos, 707 API, 101 web, 119 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
 | Esquema | 96 tablas · 290 índices · 50 enumerados · 6 comprobaciones · 41 únicos parciales · 236 claves foráneas |
-| Aislamiento | 210 políticas · 96/96 tablas · 0 con identidad cruda |
-| Migraciones | 23, replicadas desde cero en cada verificación |
-| Rutas | **213** registradas, 159 con permiso declarado, 17 públicas y enumeradas |
+| Aislamiento | 212 políticas · 96/96 tablas · 0 con identidad cruda |
+| Migraciones | 24, replicadas desde cero en cada verificación |
+| Rutas | **220** registradas, 159 con permiso declarado, 18 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 60, en español e inglés (1609 mensajes, sin desalinear) |
+| Pantallas | 62, en español e inglés (1649 mensajes, sin desalinear) |
+| Código sin pruebas | 31 130 líneas |
+| Código de prueba | 9 973 líneas |
+| Pruebas | **1154** de vitest — 268 contratos, 78 datos, 610 API, 101 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
+| Esquema | 95 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
+| Aislamiento | 210 políticas · 95/95 tablas · 0 con identidad cruda |
+| Migraciones | 22, replicadas desde cero en cada verificación |
+| Rutas | **193** registradas, 133 con permiso declarado, 17 públicas y enumeradas |
+| Permisos | **255** claves, comprobadas antes de cualquier efecto |
+| Pantallas | 50, en español e inglés (1396 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
@@ -144,6 +153,13 @@ ahora tiene un sitio propio desde el que ejercerlo: la bandeja de prospectos que
 implementada y sin pantalla, y dos padrones de sólo lectura. Cada ruta del área niega a un usuario
 corriente con `403`, y cada acción que se hace desde ella queda escrita en una bitácora que ni
 siquiera quien la protagoniza puede reescribir.
+
+**Y ya se puede comprar.** Una tienda pública vende de verdad: el carrito se valora contra el
+catálogo publicado con la misma función que pinta la ficha, pagar **aparta unidades concretas** con
+caducidad, y el cobro confirmado materializa las ocho entidades en una transacción con la marca al
+final. Si el cobro falla no queda ni pedido ni existencia apartada; si el mismo cobro llega dos
+veces, hay un pedido. Son los cuatro defectos más caros del levantamiento —M-01, M-02, M-03 y
+M-10— cerrados de una vez.
 
 **El inventario ya es comercio, y se puede mirar.** Hay cotizaciones, y reservan equipo de verdad:
 unidades concretas apartadas con bloqueo, reconciliadas por diferencia, proyectadas sobre el
@@ -188,7 +204,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | 04 | `add-session-lifecycle` | 🟡 | 31/36 | Sesiones revocables, rotación con detección de reutilización, y revocación exigida por el motor. Falta sustituir la maquinaria propia por el servicio gestionado |
 | 05 | `add-authorization-enforcement` | 🟡 | 21/29 | Catálogo de **255** claves, resolución de rol, elusión acotada de propietario y de plataforma, permisos efectivos para la interfaz. Falta la medición previa al corte, que es lo que impide cerrarla |
 | 06 | `add-tenant-scoping` | 🟡 | 24/29 | **Las dos capas en pie**: 195 políticas sobre las 91 tablas, y los manejadores corriendo bajo `withRequester`. Faltan las de los dominios que aún no existen |
-| 07 | `add-verified-payment-webhooks` | 🟡 | 11/38 | **Firma verificada de verdad**, unicidad por reclamación e inserción, y transaccionalidad. Los manejadores por tipo esperan a las rebanadas 11 y 17 |
+| 07 | `add-verified-payment-webhooks` | 🟡 | 11/38 | **Firma verificada de verdad**, unicidad por reclamación e inserción, y transaccionalidad. Los manejadores por tipo **ya están**: los de suscripción con la 11, los de cobro en tienda con la 18 (H-88 cerrado) |
 
 ### Servicios de plataforma
 
@@ -198,6 +214,8 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | 09 | `migrate-activity-and-notifications` | 🟡 | Bitácora transaccional de sólo anexado, audiencia por permiso, bandeja entera con su contador, preferencias y dispositivos. Y el **despachador de trabajos**, que desbloquea la 08 y la 13. Faltan los proveedores de empuje y de correo —configuración externa— y anotar las ~35 rutas de escritura que aún no dejan asiento |
 | 10 | `migrate-identity-and-companies` | 🟡 | 61/78. Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos, ya con sus dos pantallas**: el formulario público y la bandeja, que estrena el **área de administración de plataforma**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen |
 | 11 | `migrate-subscriptions-and-billing` | ⬜ | |
+| 10 | `migrate-identity-and-companies` | 🟡 | Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen, y las pantallas de prospecto —el formulario público es de la 19 y la bandeja necesita un área de administración de plataforma |
+| 11 | `migrate-subscriptions-and-billing` | 🟡 | 40/40. Planes, contratación, asientos, gracia, las tres compuertas y el alta de comercio entera, con 61 pruebas. Su lista se marcó el 2026-08-19 leyendo el código: la rebanada se fusionó sin marcar. Falta el **procesador real** (H-85), que es configuración externa |
 
 ### Columna de comercio
 
@@ -211,6 +229,8 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | 17 | `migrate-shipping-rates` | ⬜ | |
 | 18 | `add-transactional-checkout` | ⬜ | |
 | 19 | `migrate-websites-and-site-builder` | 🟡 | 38/49. Sitios, resolución por subdominio, tienda y **el constructor entero**: temas con su campaña programada, secciones con su contenido, reordenación por arrastre y vista previa que comparte función y componente con lo que se sirve. Falta el carrito y la cuenta del comprador, que son de la 18 |
+| 18 | `add-transactional-checkout` | 🟡 | 37/43. Carrito valorado en el servidor, **reserva efectiva con caducidad**, instantánea congelada, idempotencia y la materialización de las ocho entidades en transacción, con la marca al final. Las cuatro de mosaicos esperan a la 24; el aviso de fallo persistente y el reproceso manual, a un área de administración de plataforma |
+| 19 | `migrate-websites-and-site-builder` | ⬜ | |
 
 ### Columna de producciones
 
@@ -266,6 +286,11 @@ En este orden, y con el motivo de que sea ése:
    transaccionalidad; los manejadores esperan a las rebanadas 11 y 17). Queda **sustituir la
    maquinaria de sesión propia por el servicio gestionado**, que cierra la 04: es una reescritura
    del camino de autenticación, necesita configuración externa, y no debe hacerse sin supervisión.
+11. **La compra en la tienda pública** (hecho): el carrito valorado en el servidor, la reserva
+   efectiva con caducidad y la materialización de las ocho entidades en transacción, con la marca al
+   final. Con ella llegan los manejadores de cobro que la 07 dejó pendientes, y de paso tres
+   políticas que dejaban al comprador reescribir la instantánea de su compra, fabricar el asiento de
+   su cobro e insertar una orden de trabajo en el almacén de cualquier empresa.
 
 Dos cosas que no van en esta lista porque no dependen de nosotros: la **medición previa al corte**
 de la 05, que necesita tráfico real de la pila anterior, y la **medición de importes** de la 14
@@ -288,8 +313,8 @@ Lo que queda, sin orden acordado todavía:
   autenticación y necesita configuración externa.
 - **El detalle de producto y sus asistentes** (29b). Sin ellos no se puede completar un alta
   provisional ni editar una medida desde la pantalla.
-- **Los manejadores de eventos de pago**, que esperan a suscripciones (11) y a la compra en
-  tienda (17).
+- **Un procesador de pagos real** (H-85). El ciclo entero corre contra una costura y su
+  suplente; lo que falta es una cuenta con sus credenciales, que es configuración externa.
 - **El sitio público** (29e): el formulario de contacto y la tienda de almacén. Con él llegan
   también la compra pública de la 15 y las unidades concretas por línea.
 - ~~**Un área de administración de plataforma**~~ (hecha, 2026-08-19): la bandeja de prospectos, el
@@ -3347,3 +3372,129 @@ planes» a «Reprogramado: 1».
 De ahí salió el último hallazgo, y no de leer código: un enlace seguido antes de tiempo dejó
 `undefined` en el camino y la respuesta fue `500`. Alcanza a las noventa rutas con parámetro de
 identificador, no sólo a éstas, así que no se corrige en un módulo (H-113).
+### 2026-08-19 · Comprar en la tienda, y que el pedido exista o no exista
+
+Rebanada **18 · `add-transactional-checkout`**, de 0 a 37, y con ella los cuatro defectos más caros
+del levantamiento: M-10, M-02, M-03 y M-01. Cierra además el H-88 que la 07 dejó esperando.
+
+**Apartar y cobrar empiezan a existir en el mismo instante**
+
+Comprobar existencia, apartar las unidades concretas, cotizar el envío, congelar la instantánea y
+abrir la sesión de pago van en **una sola transacción**. Si el procesador falla, no queda ni compra
+ni una unidad retirada del catálogo. La alternativa —apartar, confirmar, y llamar al procesador
+después— deja una ventana en la que un fallo de red saca inventario de la tienda sin que nadie pueda
+pagarlo ni soltarlo hasta que caduque.
+
+El costo es que la transacción sostiene los bloqueos mientras dura una llamada de red. Se paga a
+sabiendas: son unos cientos de milisegundos sobre las filas de un puñado de unidades.
+
+`for update skip locked` es lo que hace que dos compradores no se lleven la misma cámara. Sin él, la
+segunda transacción espera a la primera y acaba tomando las mismas filas; con él, salta lo bloqueado
+y coge lo siguiente, y si no queda nada falla por existencia insuficiente — que es la verdad. Es el
+defecto M-10, que la pila anterior tenía abierto por los dos lados: seleccionaba unidades **sin
+marcarlas**, y sus checkouts pendientes **no caducaban nunca**.
+
+**El orden de las escrituras no es casual, y el motivo es de la rebanada anterior**
+
+La compra se inserta **antes** de calcular el envío. La lectura de `user_addresses` la concede su
+dueño o **una compra que apunte a ella**, y esta transacción corre con el alcance de la empresa
+vendedora, no con la sesión del comprador: sin la fila ya escrita, el domicilio no se ve, el cálculo
+lo tomaría por «sin coordenadas» y el envío perdería su recargo por distancia en silencio. Es H-98
+visto desde el otro lado — la 17 lo encontró comparando las dos vías, y aquí es lo que fija el orden.
+
+**Por qué la materialización abre su propia transacción**
+
+El receptor de webhooks corre por la vía **elevada**: tiene que escribir `payment_events`, cuya
+política es `false` para todo el mundo salvo la administración de plataforma. Elevada significa *sin
+políticas*, y materializar ahí dentro habría sido renunciar a la segunda capa de aislamiento en la
+operación que más escribe de todo el sistema — ocho tablas de una empresa, disparadas por una señal
+externa.
+
+Así que abre la suya, con la empresa vendedora declarada. Lo que se pierde es que la reclamación del
+evento y el trabajo dejen de ser la misma transacción; lo que **no** se pierde es la ejecución única,
+porque nunca dependió de eso:
+
+- si la materialización falla, lanza, el receptor revierte también la reclamación y el procesador
+  vuelve a intentarlo entera;
+- si la materialización cuaja y la reclamación no, el reintento encuentra `fulfilled_at` puesta y no
+  duplica nada.
+
+Las dos barreras siguen siendo dos, y cada una hace su trabajo donde sirve: la unicidad del evento
+contra la doble entrega, la marca contra el mismo cobro anunciado por dos eventos distintos. La marca
+se pone **al final**, que es el detalle que arruina todo lo demás si se equivoca: la pila anterior la
+ponía antes de hacer el trabajo, así que un fallo dejaba una compra marcada como resuelta y sin
+pedido, irreparable por reintento (M-03).
+
+**Tres políticas que dejaban escribir a quien sólo debía mirar**
+
+Aparecieron escribiendo las pruebas de aislamiento, y son el mismo error que la propia `0005` deja
+advertido en su cabecera: **un `exists` se resuelve con la política de lectura del padre**.
+
+- `checkouts` tenía una sola política para todo, «la empresa **o** el comprador». La instantánea es
+  la fuente de la materialización, y su dueño podía reescribirla entre el pago y la confirmación.
+- `payments` se escribía componiendo con `checkouts`, que el comprador lee: podía fabricar el asiento
+  de su propio cobro.
+- `warehouse_orders` admite componerse con `buyer_orders`, que el comprador lee: podía **insertar una
+  orden de trabajo en el almacén de cualquier empresa**, porque con esa rama cierta el `warehouse_id`
+  deja de estar acotado por nada.
+
+Las tres corregidas en la `0021`, atravesando hasta `companies` como hizo la `0020` con los envíos, y
+las tres con prueba por `withRequester`. Las dos de escritura se vieron **fallar con la política
+vieja puesta** antes de darlas por buenas. Y por el otro lado faltaba lo contrario:
+`buyer_order_lines` sólo tenía política de arrendatario, así que el comprador veía su pedido y su
+total y no veía qué había comprado. H-102 y H-103.
+
+**El precio sale de donde salió el que se vio**
+
+El carrito no valora contra el catálogo por su cuenta: llama a `storefrontProduct`, la misma función
+con la que la tienda pinta la ficha. Así el escaparate no puede decir una cifra y el cobro otra, y la
+intersección de «qué producto alcanza la tienda» —publicado, no provisional, vivo, del almacén del
+sitio— no se escribe dos veces. Cuesta una resolución de tienda por producto distinto del carrito, y
+es un cambio barato por no tener dos definiciones de lo que se puede vender.
+
+Al hacerlo apareció H-104: la ficha pública publica el precio del **producto**, y la precedencia del
+catálogo dice que el de una medida es ése **más el ajuste de la medida**. Quien elige «Kit con
+óptica» ve el precio del cuerpo suelto hasta que abre el carrito. La compra cobra lo correcto y el
+carrito lo enseña antes de pagar; publicarlo por medida es cambiar lo que devuelve la tienda, que es
+de la 19.
+
+**Lo que la spec pedía y no se puede hacer todavía**
+
+La compra **de renta** se rechaza con motivo. Su tarifa sale de una lista de precios y una lista se
+aplica a un cliente concreto; quien mira una tienda pública no tiene ninguna, así que cobrarla
+significaría inventarle una tarifa — exactamente lo que la ficha se niega a hacer al no enseñar
+importes de renta. Es el criterio de la regla 5, señalado en el código y anotado (H-105).
+
+Y el envío, según la fórmula transcrita, **lo paga el comprador y no llega al neto del comercio**.
+Puede ser deliberado y no lo dice en ninguna parte; queda anotado para que la decisión se tome
+mirándola y no descubriéndola en una conciliación (H-106).
+
+**Bookkeeping heredado**
+
+La rebanada **11** estaba implementada y fusionada con su lista intacta: el agente que la hizo no
+llegó a marcarla. Repasadas las cuarenta contra `apps/api/src/billing/` y sus 61 pruebas, están todas
+hechas. Lo único que le faltaba de verdad era su otro extremo —los manejadores del cobro en tienda,
+H-88—, que llega con ésta: con ellos el libro de ingresos del comercio deja de estar vacío.
+
+**Lo que queda fuera, a propósito**
+
+La vertical de **mosaicos**, con sus cuatro casillas: sus artículos son de la rebanada 24, pausada. El
+modelo ya los admite y el carrito los rechaza con su motivo, así que lo que falta es la vertical, no
+la compra. El **aviso por fallo persistente** no se puede decidir hoy: la reclamación del evento se
+revierte con el fallo, así que `payment_events.attempts` nunca crece y no hay con qué contar los
+intentos —la incidencia sí queda registrada con su detalle—. Y el **reproceso manual** tiene su
+garantía puesta y le falta la superficie que lo dispare, que es un área de administración de
+plataforma que todavía no existe.
+
+**Verificación**
+
+`pnpm test` en verde con **1154** pruebas, 57 más que las 1097 de partida: 12 del cálculo y la
+máquina de estados en contratos, 37 de extremo a extremo en la API —incluidas las cuatro que
+justifican la rebanada— y 8 del carrito en el navegador. `pnpm check` y `pnpm lint` limpios, y las 22
+migraciones replicadas desde cero.
+
+Y **comprado en un navegador, de principio a fin y sin sesión al empezar**: catálogo, ficha, carrito,
+entrar, apartar, pagar con el suplente y volver a la tienda. La página de vuelta dijo «estamos
+confirmando» hasta que llegó el evento firmado, y entonces «compra confirmada». En la base quedaron
+las ocho entidades y dos unidades pasaron de disponibles a vendidas — las otras dos siguen en el
+catálogo.

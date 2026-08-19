@@ -5,6 +5,7 @@ import Link from "next/link"
 import { getFormatter, getTranslations } from "next-intl/server"
 import { Photo } from "~/components/photo.tsx"
 import { formatAmount } from "~/lib/amount.ts"
+import { AddToCart } from "../../add-to-cart.tsx"
 import { fetchProduct, type ProductCard, productPath, resolveSite } from "../../storefront.ts"
 
 /**
@@ -18,7 +19,8 @@ import { fetchProduct, type ProductCard, productPath, resolveSite } from "../../
  * pintarlos aunque quisiera. Es la mitad visible de una decisión que se toma en
  * `apps/api/src/websites/storefront.ts`, donde lo público se compone campo a campo.
  *
- * El botón de añadir al carrito espera a la rebanada 18, que es la que trae el carrito.
+ * El botón de añadir al carrito llegó con la rebanada 18. Vive en un componente de navegador
+ * porque el carrito vive en el navegador; esta página sigue siendo del servidor entera.
  */
 export async function generateMetadata({
   params,
@@ -160,6 +162,19 @@ export default async function StorefrontProductPage({
               </ul>
             </section>
           ) : null}
+
+          {/*
+            Añadir al carrito exige elegir **medida**: es lo que la línea referencia y lo que se
+            aparta. Un producto sin medidas o sin precio publicado no enseña el botón — no hay nada
+            que apartar, ni importe que cobrar.
+          */}
+          <AddToCart
+            slug={slug}
+            productName={product.name}
+            price={product.price}
+            coverUrl={product.coverUrl}
+            measurements={product.measurements}
+          />
         </div>
       </div>
 

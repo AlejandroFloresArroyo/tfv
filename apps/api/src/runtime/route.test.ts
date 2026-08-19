@@ -102,6 +102,18 @@ describe("superficie pública", () => {
      */
     "GET /public/sites/{slug}",
     /**
+     * Añadida el 2026-08-19, de forma deliberada. Rebanada 18.
+     *
+     * Valorar el carrito de una tienda pública. **Es un `POST` que no escribe nada**: lleva verbo
+     * de escritura porque la lista de artículos no cabe con holgura en una dirección, no porque
+     * cambie nada. Devuelve exactamente lo que la ficha ya enseña —precio publicado y cuántas
+     * unidades quedan—, resuelto por la misma función que la pinta.
+     *
+     * Pagar **no** está aquí y no puede estarlo: apartar inventario a nombre de alguien exige saber
+     * de quién, así que `POST /public/sites/{slug}/checkout` es autenticada.
+     */
+    "POST /public/sites/{slug}/cart",
+    /**
      * Las secciones que la personalización vigente pone en la portada. Mismo régimen que las otras
      * tres, y una propiedad más: **devuelve exactamente lo que devuelve la vista previa** del
      * constructor, que sí exige permiso. Las dos pasan por la misma composición, y eso es lo que

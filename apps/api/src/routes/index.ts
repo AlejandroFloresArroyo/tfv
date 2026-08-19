@@ -80,6 +80,15 @@ import {
   warehouseCategoryScopeRoute,
 } from "./catalog.ts"
 import {
+  cancelCheckoutRoute,
+  createCheckoutRoute,
+  myCheckoutRoute,
+  myCheckoutsRoute,
+  myOrderRoute,
+  myOrdersRoute,
+  priceCartRoute,
+} from "./checkout.ts"
+import {
   addMemberRoute,
   createCompanyRoute,
   createRoleRoute,
@@ -571,4 +580,18 @@ export const routes: readonly RegisteredRoute[] = [
   storefrontPageRoute,
   storefrontProductsRoute,
   storefrontProductRoute,
+
+  // ─── Compra en la tienda pública ───────────────────────────────────────────
+  // Valorar el carrito es público —es el escaparate con precios—; pagar exige cuenta, y las
+  // compras y los pedidos son de la persona, no de una empresa. Ver `storefront-checkout`.
+
+  priceCartRoute,
+  createCheckoutRoute,
+
+  myCheckoutsRoute,
+  myCheckoutRoute,
+  cancelCheckoutRoute,
+
+  myOrdersRoute,
+  myOrderRoute,
 ]

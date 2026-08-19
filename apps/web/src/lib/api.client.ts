@@ -59,6 +59,14 @@ interface RequestOptions {
    * enmascararía el mensaje real.
    */
   readonly withoutRefresh?: boolean
+  /**
+   * Cabeceras propias de la petición.
+   *
+   * Existe por la **clave de idempotencia** de `api-conventions`, que viaja en cabecera y no en el
+   * cuerpo. Y viajan también en el reintento tras renovar la sesión, que es la mitad que importa:
+   * un reintento con otra clave sería una segunda compra.
+   */
+  readonly headers?: Readonly<Record<string, string>>
 }
 
 /** Renovación en curso, si la hay. Es el punto de serialización. */
@@ -78,7 +86,12 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 }
 
 function send(path: string, options: RequestOptions): Promise<Response> {
-  const { method = "GET", body, signal } = options
+  const { method = "GET", body, signal, headers } = options
+
+  const own = {
+    ...(body === undefined ? {} : { "content-type": "application/json" }),
+    ...(headers ?? {}),
+  }
 
   return fetch(`/api${path}`, {
     method,
@@ -86,9 +99,8 @@ function send(path: string, options: RequestOptions): Promise<Response> {
     credentials: "same-origin",
     // Las claves ausentes se omiten en lugar de pasarse como `undefined`: con
     // `exactOptionalPropertyTypes` no es lo mismo «sin cuerpo» que «cuerpo indefinido».
-    ...(body === undefined
-      ? {}
-      : { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
+    ...(Object.keys(own).length === 0 ? {} : { headers: own }),
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     ...(signal ? { signal } : {}),
   })
 }

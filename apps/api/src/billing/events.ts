@@ -32,6 +32,14 @@ import { SUBSCRIPTION_STATUSES } from "@tfv/contracts/billing"
 import type { Transaction } from "@tfv/db"
 import { companySubscriptions, merchantProfiles, subscriptionPayments } from "@tfv/db/schema"
 import { and, eq, isNotNull, ne } from "drizzle-orm"
+import { abandonCheckout } from "../checkout/expiry.ts"
+import {
+  applyDispute,
+  applyRefund,
+  checkoutOfSession,
+  fulfillCheckout,
+  reportFailure,
+} from "../checkout/fulfillment.ts"
 import { rootLogger } from "../runtime/logger.ts"
 import { graceEndsAt, upsertSubscription } from "./subscriptions.ts"
 
@@ -398,6 +406,118 @@ const onAccountUpdated: Handler = async (tx, event) => {
     .where(eq(merchantProfiles.id, profile.id))
 }
 
+// ─── Cobro en tienda pública ─────────────────────────────────────────────────
+
+/**
+ * El cobro de una compra se confirmó: aquí se materializa el pedido.
+ *
+ * Rebanada 18, y el hueco que la 07 dejó anotado como H-88.
+ *
+ * Qué compra es, lo dicen los **metadatos** que se pusieron al abrir la sesión. Un cobro reintentado
+ * a mano desde el panel del procesador llega sin ellos, y entonces se busca por la referencia de la
+ * sesión — que es lo que `checkouts.external_session_id` guarda con su índice único.
+ *
+ * `fulfillCheckout` abre **su propia transacción**, con la empresa vendedora declarada, en lugar de
+ * usar ésta: la de aquí es elevada porque tiene que escribir `payment_events`, y elevada significa
+ * sin políticas. El motivo entero está escrito en `checkout/fulfillment.ts`; lo que importa aquí es
+ * que si lanza, esta transacción revierte también la reclamación del evento y el procesador vuelve a
+ * intentarlo.
+ */
+const onPaymentSucceeded: Handler = async (_tx, event) => {
+  const intent = object(event)
+  const metadata = readObject(intent, "metadata")
+
+  const checkoutId =
+    readString(metadata, "checkoutId") ??
+    (await checkoutOfSession(readString(intent, "id") ?? readString(intent, "checkout") ?? ""))
+
+  if (!checkoutId) {
+    rootLogger.warn("cobro de tienda sin compra a la que atribuirlo", { event: event.id })
+    return
+  }
+
+  const charges = readObject(intent, "charges")
+  const charge = Array.isArray(charges.data) ? readObject({ 0: charges.data[0] }, "0") : {}
+
+  try {
+    const result = await fulfillCheckout(checkoutId, {
+      ...(readString(intent, "id") === undefined
+        ? {}
+        : { externalPaymentIntentId: readString(intent, "id") }),
+      ...(readString(charge, "id") === undefined
+        ? {}
+        : { externalChargeId: readString(charge, "id") }),
+      ...(readString(intent, "payment_method_types") === undefined
+        ? { method: "card" }
+        : { method: readString(intent, "payment_method_types") }),
+      ...(readString(charge, "receipt_url") === undefined
+        ? {}
+        : { receiptUrl: readString(charge, "receipt_url") }),
+    })
+
+    if (result.kind === "materializado") {
+      rootLogger.info("compra materializada", { checkoutId, pedido: result.reference })
+    }
+  } catch (error) {
+    // La incidencia queda con el detalle suficiente para diagnosticarla, y se relanza para que el
+    // procesador reintente: un fallo que se traga aquí es un pedido pagado que nunca existe.
+    reportFailure(checkoutId, event.id, error)
+    throw error
+  }
+}
+
+/**
+ * El cobro no cuajó: la compra se cancela y **el inventario vuelve al catálogo**.
+ *
+ * Esperar a la caducidad también lo devolvería, pero media hora más tarde y por nada: si el
+ * procesador ya dijo que no, no hay pago que esperar. Es la mitad barata del requisito «abandonar el
+ * pago libera el inventario».
+ */
+const onPaymentFailed: Handler = async (_tx, event) => {
+  const intent = object(event)
+  const checkoutId =
+    readString(readObject(intent, "metadata"), "checkoutId") ??
+    (await checkoutOfSession(readString(intent, "id") ?? ""))
+
+  if (!checkoutId) return
+  await abandonCheckout(checkoutId, "El procesador rechazó el cobro")
+}
+
+/**
+ * Se devolvió el cobro, entero o en parte.
+ *
+ * El evento habla de un cargo y lo que aquí se conoce es el **cobro**, así que se localiza por la
+ * referencia del intento de pago que el cargo lleva dentro. Sin ella no hay a qué atribuir la
+ * devolución y se deja constancia en lugar de fallar: fallar haría reintentar un evento que no va a
+ * mejorar.
+ */
+const onChargeRefunded: Handler = async (_tx, event) => {
+  const charge = object(event)
+  const intentId = readString(charge, "payment_intent")
+  if (!intentId) {
+    rootLogger.warn("devolución sin cobro al que atribuirla", { event: event.id })
+    return
+  }
+
+  const refunded = readAmount(charge, "amount_refunded")
+  const captured = readAmount(charge, "amount_captured")
+  const isFull = readBoolean(charge, "refunded") ?? refunded === captured
+
+  await applyRefund(intentId, refunded, isFull)
+}
+
+/** Se abrió un contracargo. Queda anotado en el pago, que es donde se concilia. */
+const onDisputeOpened: Handler = async (_tx, event) => {
+  const intentId = readString(object(event), "payment_intent")
+  if (intentId) await applyDispute(intentId, true)
+}
+
+/** Se cerró el contracargo. Si se perdió, el reembolso llega por su propio evento. */
+const onDisputeClosed: Handler = async (_tx, event) => {
+  const intentId = readString(object(event), "payment_intent")
+  if (intentId) await applyDispute(intentId, false)
+}
+
 // ─── La tabla ────────────────────────────────────────────────────────────────
 
 /**
@@ -406,9 +526,9 @@ const onAccountUpdated: Handler = async (tx, event) => {
  * Un tipo que no esté aquí cae en «sin manejador»: se responde con éxito y queda constancia, que es
  * lo que la spec pide y lo que evita que el procesador reintente hasta desactivar el endpoint.
  *
- * **Falta el cobro en tienda pública** —`payment_intent.*`, `charge.refunded`, `charge.dispute.*`—,
- * que alimenta `merchant_payments`. Es de la rebanada 18, que es quien crea las sesiones de pago del
- * comprador; sin ellas no hay nada que estos eventos puedan nombrar. Anotado en H-88.
+ * **Ya está el cobro en tienda pública** —`payment_intent.*`, `charge.refunded` y
+ * `charge.dispute.*`—, que es lo que H-88 dejaba esperando a la rebanada 18: hasta que existieron
+ * las sesiones de pago del comprador no había nada que estos eventos pudieran nombrar.
  */
 export const BILLING_HANDLERS: Readonly<Record<string, Handler>> = {
   "checkout.session.completed": onCheckoutCompleted,
@@ -418,4 +538,12 @@ export const BILLING_HANDLERS: Readonly<Record<string, Handler>> = {
   "customer.subscription.updated": onSubscriptionUpdated,
   "customer.subscription.deleted": onSubscriptionDeleted,
   "account.updated": onAccountUpdated,
+
+  // La compra en tienda pública. Rebanada 18.
+  "payment_intent.succeeded": onPaymentSucceeded,
+  "payment_intent.payment_failed": onPaymentFailed,
+  "payment_intent.canceled": onPaymentFailed,
+  "charge.refunded": onChargeRefunded,
+  "charge.dispute.created": onDisputeOpened,
+  "charge.dispute.closed": onDisputeClosed,
 }
