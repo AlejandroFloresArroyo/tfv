@@ -1280,5 +1280,43 @@
     "doesNotReconcile": "The line amounts do not add up to the lines total. Review the quotation before sending this document.",
     "linkGone": "This link does not lead to a document",
     "linkGoneBody": "The document may have been removed, or the link may be incomplete. Ask whoever sent it for a new one."
+  },
+  "storefront": {
+    "accessories": "Accessories",
+    "allCategories": "All",
+    "askForPrice": "Price on request",
+    "backToCatalog": "Back to the catalogue",
+    "empty": "There are no products to show.",
+    "footer": "{name} · Store published with TFV",
+    "forRent": "For rent",
+    "forSale": "For sale",
+    "measurements": "Options",
+    "next": "Next",
+    "notFound": "There is no store here",
+    "notFoundBody": "The address you opened does not match any published store.",
+    "pageOf": "Page {page} of {total}",
+    "previous": "Previous",
+    "productNotFound": "This product is not available",
+    "productNotFoundBody": "It may have been taken off the catalogue, or the address may be wrong.",
+    "search": "Search",
+    "searchPlaceholder": "Search by name or description",
+    "unavailable": "This store is unavailable",
+    "unavailableBilling": "The company behind it has no active subscription. Please come back later.",
+    "unavailableService": "The company behind it does not have the storefront service enabled. Please come back later.",
+    "underConstruction": "We are still setting this store up. Come back soon.",
+    "variants": "Variants"
+  },
+  "contact": {
+    "companyName": "Company",
+    "email": "Email",
+    "hasAccount": "Already have an account?",
+    "lastname": "Last name",
+    "login": "Sign in",
+    "message": "Message",
+    "name": "First name",
+    "phone": "Phone",
+    "submit": "Send",
+    "subtitle": "Leave us your details and we will get in touch. No account required.",
+    "title": "Tell us what you need"
   }
 }
