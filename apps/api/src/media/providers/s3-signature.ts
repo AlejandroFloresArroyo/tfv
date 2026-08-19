@@ -41,6 +41,11 @@ export const UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD"
 /** Resumen de una carga vacía, que es la de un `GET` y la de un `DELETE`. */
 export const EMPTY_PAYLOAD_HASH = createHash("sha256").update("").digest("hex")
 
+/** Resumen de una carga que sí se conoce al firmar: la creación de un depósito lleva una. */
+export function payloadHash(body: string): string {
+  return createHash("sha256").update(body).digest("hex")
+}
+
 export interface S3Credentials {
   readonly accessKeyId: string
   readonly secretAccessKey: string

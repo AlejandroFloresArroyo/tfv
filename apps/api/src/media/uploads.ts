@@ -39,8 +39,14 @@ import { and, eq, isNull, lt } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { authorizeWrite, publicUrl, removeObjects, type WriteAuthorization } from "./storage.ts"
 
-/** Lo que admite el almacenamiento por objeto. Más allá, el navegador recibiría un error opaco. */
-const MAX_BYTES = 50 * 1024 * 1024
+/**
+ * Lo que admite el almacenamiento por objeto. Más allá, el navegador recibiría un error opaco.
+ *
+ * Aquí se valida el tamaño **declarado** en la solicitud, que no es el que se escribe: quien escribe
+ * es el navegador con una autorización que no ata el tamaño. Quien lo hace cumplir de verdad es el
+ * depósito, y por eso `bucket.ts` lo declara al crearlo (`HALLAZGOS.md` H-161).
+ */
+export const MAX_BYTES = 50 * 1024 * 1024
 
 /** Los derivados los produce el navegador, y salen en este formato salvo que declare otro. */
 const DEFAULT_DERIVATIVE = "image/jpeg"
@@ -299,14 +305,26 @@ async function load(actor: Actor, companyId: string, uploadId: string): Promise<
  * toca los marcadores de posición, que se usan cuando una entidad exige archivo y no se subió
  * ninguno, y **nunca se eliminan** aunque dejen de estar referenciados.
  *
- * Nadie la ejecuta sola todavía: el despachador de trabajos en segundo plano es la rebanada 09.
+ * ## Primero la fila, después los objetos
+ *
+ * Y no al revés, que es como estaba. Quien decide si una fila se borra es el motor: la guarda de la
+ * migración `0017` **omite** el borrado de un archivo que siga referenciado, y un archivo pendiente
+ * puede estarlo —la entidad se guardó antes de que llegara la confirmación, o la confirmación se
+ * perdió—. Retirando los objetos primero, esa fila sobrevivía apuntando a bytes que ya no existían:
+ * la imagen rota que la guarda existe para evitar, servida por el propio mecanismo que la protege.
+ * Así que se borra, se mira **qué se borró de verdad**, y sólo de eso se retiran los objetos
+ * (`HALLAZGOS.md` H-160).
+ *
+ * Devuelve cuántas se **eligieron**, no cuántas se llevaron: quien la llama resta las que el motor
+ * protegió para informar de las dos cifras, y ese número es información de operación —uno que crece
+ * dice que alguien deja entidades apuntando a subidas que nunca se confirman—.
  */
 export async function collectAbandoned(actor: Actor, olderThanHours = 24): Promise<number> {
   const limit = new Date(Date.now() - olderThanHours * 3_600_000)
 
   const abandoned = await withRequester(actor, async (tx) =>
     tx
-      .select({ id: uploads.id, storagePath: uploads.storagePath })
+      .select({ id: uploads.id })
       .from(uploads)
       .where(
         and(
@@ -319,13 +337,24 @@ export async function collectAbandoned(actor: Actor, olderThanHours = 24): Promi
 
   if (abandoned.length === 0) return 0
 
-  await removeObjects(abandoned.map((row) => row.storagePath))
+  const deleted = await withRequester(actor, async (tx) => {
+    const paths: string[] = []
 
-  await withRequester(actor, async (tx) => {
     for (const row of abandoned) {
-      await tx.delete(uploads).where(eq(uploads.id, row.id))
+      // Lo que devuelve el borrado son las filas que **el motor dejó borrar**: la que la guarda
+      // omite no sale aquí, y por eso sus objetos no se tocan.
+      const [gone] = await tx
+        .delete(uploads)
+        .where(eq(uploads.id, row.id))
+        .returning({ storagePath: uploads.storagePath })
+
+      if (gone) paths.push(gone.storagePath)
     }
+
+    return paths
   })
+
+  await removeObjects(deleted)
 
   return abandoned.length
 }

@@ -117,12 +117,29 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
-# Uncomment to configure local storage buckets
-# [storage.buckets.images]
-# public = false
-# file_size_limit = "50MiB"
-# allowed_mime_types = ["image/png", "image/jpeg"]
-# objects_path = "./images"
+# El depósito de la aplicación, declarado para que una máquina nueva lo tenga puesto al levantar la
+# pila. Antes existía porque alguien lo creó a mano (`openspec/HALLAZGOS.md` H-136).
+#
+# `public = true` no es un descuido: las direcciones de lectura se **persisten** en la fila de cada
+# archivo y acaban incrustadas en documentos generados y en enlaces repartidos, así que no pueden ir
+# firmadas — una firma caduca y rompería un documento emitido hace un mes. Lo que no debe verse no se
+# protege con la dirección.
+#
+# CORS no se declara aquí porque este almacenamiento lo resuelve para todos sus depósitos a la vez, y
+# responde a cualquier origen. **En AWS no**: allí hace falta declarar `PUT` desde el origen de la
+# aplicación o toda subida falla en producción mientras sigue funcionando en local. Lo pone
+# `pnpm --filter @tfv/api bucket --aws`, y lo comprueba `pnpm --filter @tfv/api bucket`.
+#
+# El nombre va escrito y no sale de `STORAGE_BUCKET` porque este archivo no lee el entorno: si se
+# cambia la variable, hay que cambiar esta sección. `allowed_mime_types` se deja sin declarar a
+# propósito — la API valida por **familias** de tipo, no por una lista cerrada, y una lista aquí
+# rechazaría en el almacenamiento formatos que la aplicación acepta.
+#
+# Esto sólo se aplica al levantar la pila. Sobre una que ya está en pie, el depósito lo deja puesto
+# —y lo repara— `pnpm --filter @tfv/api bucket`.
+[storage.buckets.tfv]
+public = true
+file_size_limit = "50MiB"
 
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]

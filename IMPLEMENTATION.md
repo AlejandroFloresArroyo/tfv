@@ -309,15 +309,19 @@ de la 05, que necesita tráfico real de la pila anterior, y la **medición de im
 
 Lo que queda, sin orden acordado todavía:
 
-- **Llevar el almacenamiento de objetos a S3** (2026-08-19, pedido por el propietario). **El código
-  ya está**: hay una interfaz de proveedor, el de hoy detrás de ella, un segundo que habla S3 con su
-  firma SigV4 —ejercido contra la pila local, que expone su punto S3— y el guion que reescribe las
-  direcciones ya persistidas. `STORAGE_PROVIDER` elige, y llega valiendo el de siempre.
-  Lo que falta es **infraestructura, no código**, y no se puede hacer desde aquí: depósito de AWS con
-  lectura pública y CORS, una credencial de escritura acotada al prefijo, y copiar los objetos con
-  `aws s3 sync` —el guion mueve direcciones, no bytes—. Hoy el depósito local existe porque alguien
-  lo creó a mano y no hay nada en el repositorio que lo deje puesto (H-136). Su sitio natural sigue
-  siendo junto a la rebanada 30, con el corte.
+- **Llevar el almacenamiento de objetos a S3** (2026-08-19, pedido por el propietario). **Listo para
+  ejecutar**: interfaz de proveedor, el de hoy detrás de ella, un segundo que habla S3 con su firma
+  SigV4 —ejercido contra la pila local, que expone su punto S3—, el guion que reescribe las
+  direcciones ya persistidas, y desde el 2026-08-19 las dos mitades que faltaban: el depósito se deja
+  puesto y se comprueba con `pnpm --filter @tfv/api bucket` —lectura pública leyendo sin credencial,
+  CORS preguntando el preflight de `PUT`—, y la copia de los objetos la ejecuta `aws s3 sync` desde
+  `copy-media-objects`. Los cuatro pasos de AWS los imprime `bucket --aws` compuestos desde esta
+  misma configuración, con la política de escritura acotada al depósito.
+
+  Lo que queda **no es nuestro y no se puede hacer desde aquí**: una cuenta de AWS, un nombre de
+  depósito y una credencial de administración con la que correr esos cuatro pasos una vez. El orden
+  completo de la mudanza está en `.env.example` y en la cabecera de `copy-media-objects`. Su sitio
+  natural sigue siendo junto a la rebanada 30, con el corte.
 
 - **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04). Es lo
   único de la lista anterior que quedó sin hacer, y a propósito: reescribe el camino de
@@ -3745,3 +3749,100 @@ todos de estilo, todos presentes tal cual en `b67f309` —comprobado con los cam
 aparte—. No se arreglan aquí: viven en archivos de otros dos encargos (regla 5), y la entrada
 anterior de esta bitácora los daba por limpios. Es la primera factura de no tener integración
 continua, y queda anotada en `HALLAZGOS.md` H-150.
+### 2026-08-19 · El depósito que nadie creaba, y la mudanza lista para ejecutar
+
+Lo que le quedaba a la rebanada **08 · `migrate-media-storage`** eran tres cosas con el mismo aire:
+las tres dependían de algo que no estaba escrito en ninguna parte. Quedan cerradas, y la lista de la
+rebanada se queda sin ninguna tarea que dependa de nosotros.
+
+**El depósito existía porque alguien lo creó a mano**
+
+No había migración, ni guion, ni configuración que lo dejara puesto (H-136). En una máquina limpia
+fallaba el primer archivo que alguien subiera, y desplegar exigía recordar un paso que nadie había
+escrito. Ahora lo deja puesto `pnpm --filter @tfv/api bucket`, es idempotente y **reparadora** —un
+depósito privado o sin tope de tamaño se corrige en vez de callarse—, y la corre `ensurePlaceholders`
+antes de escribir nada, así que la vía que ya existía para producción arrastra el depósito consigo.
+La pila local lo trae además declarado en `supabase/config.toml`, que es donde alguien lo buscará.
+
+Lo importante no es que lo cree, sino que **no se fía**. Un informe compuesto leyendo lo que uno
+mismo acaba de escribir es un informe sobre nuestra idea del almacenamiento. Así que la comprobación
+mira desde donde mira el navegador: escribe un objeto con la autorización que se le daría a él, pide
+el **preflight de `PUT`** contra esa misma dirección, y lo lee **sin credencial ninguna**. Si algo de
+eso no responde, el guion se planta con el motivo y con la orden que lo arregla.
+
+Las dos cosas que comprueba son las dos que deciden si una foto se ve. La primera es **lectura
+pública**: las direcciones se persisten en la fila del archivo y acaban repartidas, así que no pueden
+ir firmadas — una firma caduca y rompería un documento emitido hace un mes. La segunda es **CORS que
+admita `PUT` desde el origen de la aplicación**, y es la que da miedo: este almacenamiento responde a
+**cualquier** origen y un depósito de AWS recién creado no responde a ninguno. Sin comprobarlo, la
+mudanza a S3 habría fallado sólo en producción mientras seguía funcionando en local, que es el peor
+modo de fallo que hay.
+
+**Lo que no se puede ejercer no se escribe aquí**
+
+Al ir a poner la política de lectura y las reglas de CORS desde el proveedor de S3 apareció el motivo
+para no hacerlo (H-159): la pila local admite `HeadBucket` y `CreateBucket` —y crea el depósito
+**privado**— pero **ignora `?policy` y `?cors`**, y los responde como si fueran otra creación de
+depósito. Una implementación nuestra de esas dos operaciones habría respondido «hecho» sin haber
+hecho nada, y ninguna prueba podría haberlo notado. En el camino de dejar puesto el almacenamiento de
+producción, eso no es cerrar un hueco: es taparlo.
+
+Así que las pone `aws s3api`, y lo nuestro es **qué** se pide: las cuatro órdenes se componen del
+depósito, la región y los orígenes que la aplicación ya declara, con la política de lectura pública,
+las reglas de CORS y la credencial de escritura acotada al depósito fijadas por pruebas. El orden
+tampoco es cosmético —la política se rechaza mientras siga puesto el bloqueo de acceso público, que
+llega puesto de fábrica— y eso también está escrito donde se lee. `bucket --aws` las imprime para
+revisarlas y `--aplicar` las ejecuta.
+
+**La otra mitad de la mudanza: los bytes**
+
+El guion de reescritura mueve direcciones. Los objetos los mueve `aws s3 sync`, y la decisión está
+tomada a propósito: paralelismo, reanudación, multiparte, reintento y comparación por fecha son cinco
+cosas que no se negocian en una mudanza de verdad —se corre en frío y otra vez en el corte— y
+escribirlas costaría más que todo el módulo de archivos. Lo que sí es nuestro es el plan, y compuesto
+trajo un hallazgo que se paga caro descubrir de madrugada: **la herramienta toma un solo punto de
+acceso para las dos orillas**, así que copiar entre dos almacenamientos distintos no existe como una
+sola orden — son dos, con escala en disco y sitio para todo lo que pese el depósito (H-162).
+
+**El recolector, ejecutado por primera vez**
+
+Estaba escrito desde la rebanada 08 y **no lo había corrido nadie**. Ahora tiene su prueba de extremo
+a extremo: la subida vencida pierde su fila y sus cinco objetos, la que está ocurriendo ahora mismo
+sobrevive a la misma pasada, y un marcador de posición no se toca aunque esté vencido.
+
+Escribirla sacó el defecto (H-160). El recolector retiraba primero del almacenamiento y borraba
+después, y quien decide si una fila se borra es el motor: la guarda de la `0017` **omite** el borrado
+de un archivo referenciado. Un archivo pendiente sí puede estarlo —la entidad se guardó antes de que
+llegara la confirmación, que es el caso que la propia guarda describe—, así que esa fila sobrevivía
+apuntando a bytes que ya no existían: la imagen rota que la guarda existe para evitar, servida por el
+mecanismo que la protege. Se borra primero y se retiran sólo los objetos de lo que el motor dejó
+borrar, que es lo que el propio borrado devuelve.
+
+**Dos cosas más que aparecieron por el camino**
+
+El tope de 50 MB por objeto era una **declaración, no un límite** (H-161): la API valida el tamaño
+que viene en la solicitud, y quien escribe es el navegador con una autorización prefirmada que no lo
+ata. El único sitio donde se hace cumplir es el depósito, que hasta ahora nadie creaba — ahora se
+crea con el tope puesto, tomado de la misma constante, y hay prueba de que el almacenamiento rechaza
+lo que lo supera. Queda la mitad de S3, donde no existe un tope por depósito y atarlo pediría firmar
+`content-length` dentro de la autorización.
+
+Y la caducidad de la autorización, que llevaba sin probarse porque el proveedor de hoy la fija en dos
+horas: el segundo proveedor **la declara**, así que se firma con un segundo, se espera, y el
+almacenamiento responde que el permiso venció. Con su otra mitad en la misma prueba — reemitir vuelve
+a escribir en el acto.
+
+**Verificación**
+
+`pnpm test --force` en verde con **1481** pruebas, 20 más que las 1461 de partida: 7 del depósito
+contra depósitos de un solo uso, 9 de las órdenes de AWS y del plan de copia, 3 del recolector y 1 de
+la caducidad. `pnpm check` limpio. En el navegador, `fotos.spec` entera: se sube una foto de verdad
+desde la ficha del producto, se manda como portada y su objeto deja de responder al quitarla — con la
+siembra pasando ya por el depósito que se deja puesto.
+
+**Lo que queda para montar esto en producción, que no es código**
+
+Una cuenta de AWS, un nombre de depósito y una credencial de administración con la que correr una
+vez `bucket --aws`. Después: `copy-media-objects` en frío y otra vez en el corte, las variables
+`STORAGE_*`, `rewrite-media-urls`, `placeholders`, y `bucket` al final para comprobar que el depósito
+nuevo sirve. Está en `.env.example` y en la cabecera de `copy-media-objects`, en ese orden.

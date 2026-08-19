@@ -3,11 +3,18 @@
  *
  * Ver `openspec/specs/media-storage/spec.md`.
  *
- * Son **tres operaciones y ninguna más**, y esa cortedad es el punto: mientras el resto del sistema
- * sólo sepa pedir permiso, componer una dirección y retirar objetos, cambiar de proveedor es
- * escribir otra implementación de esta interfaz. Lo que la hace posible es que los bytes no pasan
- * por aquí — el modelo de subida directa no deja al servicio en medio del camino de datos, así que
- * no hay flujos, ni cargas parciales, ni reanudación que portar.
+ * Son **tres operaciones en el camino de datos y ninguna más**, y esa cortedad es el punto: mientras
+ * el resto del sistema sólo sepa pedir permiso, componer una dirección y retirar objetos, cambiar de
+ * proveedor es escribir otra implementación de esta interfaz. Lo que la hace posible es que los
+ * bytes no pasan por aquí — el modelo de subida directa no deja al servicio en medio del camino de
+ * datos, así que no hay flujos, ni cargas parciales, ni reanudación que portar.
+ *
+ * La cuarta, `ensureBucket`, no está en ese camino: corre **una vez, al montar**, y existe porque
+ * las otras tres dan por hecho un depósito que hasta ahora no creaba nadie (`HALLAZGOS.md` H-136).
+ * Se pone aquí y no en un guion aparte porque lo que hay que dejar puesto depende del proveedor
+ * —quien tiene el depósito sabe cómo se crea— y porque lo que **no** depende de él es la
+ * comprobación de que sirve, que es la misma para todos y vive en `bucket.ts`. Los dos proveedores
+ * la tienen ejercida en `bucket.test.ts`, contra depósitos de un solo uso.
  *
  * ## La regla que ninguna implementación puede romper
  *
@@ -20,6 +27,22 @@
  * prueba **no conoce a ningún proveedor**: recorre los que haya.
  */
 
+export interface BucketSetup {
+  readonly bucket: string
+  /** Si lo creó esta llamada. Falso significa que ya estaba, no que fallara. */
+  readonly created: boolean
+  /**
+   * Qué quedó declarado, en una línea por cosa.
+   *
+   * Es la salida del guion que se corre al desplegar, y lo único que distingue «no hizo falta» de
+   * «este proveedor no sabe hacerlo». La diferencia importa: en el almacenamiento de hoy la lectura
+   * pública es una propiedad del depósito y se declara aquí; en S3 es una **política del depósito**
+   * y se pone con la herramienta del proveedor, así que esta operación crea y calla — y quien
+   * comprueba que sirve es `bucket.ts`, leyendo un objeto sin credencial.
+   */
+  readonly notes: readonly string[]
+}
+
 export interface WriteAuthorization {
   /** Dirección absoluta a la que escribir. Lleva el permiso dentro. */
   readonly url: string
@@ -31,6 +54,19 @@ export interface WriteAuthorization {
 export interface StorageProvider {
   /** Cómo se llama en `STORAGE_PROVIDER`. Sale en los mensajes y en la prueba de contrato. */
   readonly name: string
+
+  /**
+   * Deja el depósito puesto, con lo que este proveedor sepa declarar de él.
+   *
+   * **Idempotente y reparadora**, como `ensurePlaceholders` y por lo mismo: se corre en cada
+   * despliegue, así que encontrarlo puesto no es un error, y encontrarlo mal puesto —privado, sin
+   * tope de tamaño— tiene que arreglarlo en vez de callarse.
+   *
+   * El tope se recibe y no se decide aquí: la API valida el tamaño **declarado** en la solicitud, y
+   * quien escribe es el navegador con una autorización que no lo ata. El único sitio donde ese
+   * límite se hace cumplir de verdad es el depósito (`HALLAZGOS.md` H-161).
+   */
+  ensureBucket(options: { readonly maxObjectBytes: number }): Promise<BucketSetup>
 
   /**
    * Autoriza a escribir **ese** objeto y ninguno más.
