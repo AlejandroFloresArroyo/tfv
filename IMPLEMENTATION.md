@@ -123,13 +123,13 @@ Lo construido hasta ahora, medido y no estimado:
 | Rebanadas | 10 de 30 empezadas, **ninguna cerrada del todo** |
 | Código sin pruebas | 31 130 líneas |
 | Código de prueba | 9 973 líneas |
-| Pruebas | **772** de vitest — 172 contratos, 59 datos, 385 API, 59 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
+| Pruebas | **820** de vitest — 183 contratos, 59 datos, 408 API, 73 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
 | Esquema | 91 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
 | Aislamiento | 195 políticas · 91/91 tablas · 0 con identidad cruda |
 | Migraciones | 11, replicadas desde cero en cada verificación |
-| Rutas | **132** registradas, 99 con permiso declarado, 13 públicas y enumeradas |
+| Rutas | **137** registradas, 104 con permiso declarado, 13 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 38, en español e inglés (1037 mensajes, sin desalinear) |
+| Pantallas | 38, en español e inglés (1052 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
@@ -198,7 +198,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | 13 | `add-transactional-stock-reservation` | 🟡 | Entera, 30/31, con el **agujero de las huérfanas rentadas** tapado. Falta sólo la ejecución programada de la verificación de coherencia, que espera al despachador de la 09. M-04 sigue sin confirmar: se implementó el criterio de la spec |
 | 14 | `add-server-side-quotation-pricing` | 🟡 | Motor, autoridad del servidor, congelación al cerrar, **precio negociado, precio por paquete, cobros y saldo**. La interfaz consume ya la misma función, y **el documento comercial ya se imprime y se comparte por enlace**. Falta la firma capturada en pantalla. M-05 sigue sin confirmar |
 | 15 | `migrate-warehouse-orders` | 🟡 | 29/33. Ciclo, **aceptación atómica**, rechazo con motivo, propagación a la orden de compra y su bandeja. Las cuatro que faltan esperan al escaparate (19) y al servicio de producciones (20) |
-| 16 | `migrate-order-chat-realtime` | ⬜ | |
+| 16 | `migrate-order-chat-realtime` | 🟡 | 24/38. Historial con cursor, envío optimista, acuses por lado, editar y borrar lo propio, mensajes del sistema y la pertenencia al pedido, con la pantalla dentro de la ficha. **Sin conexión persistente**: pide configuración externa que no hay, y el transporte queda detrás de una costura (H-60) |
 | 17 | `migrate-shipping-rates` | ⬜ | |
 | 18 | `add-transactional-checkout` | ⬜ | |
 | 19 | `migrate-websites-and-site-builder` | ⬜ | |
@@ -2615,3 +2615,82 @@ arriba: las cinco cotizaciones sembradas abiertas como documento, mandadas a imp
 nombre del archivo
 puesto en el título y devuelto al terminar, y el enlace público abierto en un contexto **sin una
 sola cookie**. Alterar la referencia lleva a «este enlace no lleva a ningún documento».
+### 2026-08-18 · Lo que se habla alrededor del pedido
+
+Un pedido no se resuelve solo con estados. Se resuelve preguntando si la grúa lleva el cabezal,
+avisando de que el camión sale a las ocho y no a las siete, y confirmando que alguien pasará por el
+equipo el jueves. Eso es lo que entra: la conversación del pedido, dentro del pedido.
+
+**Lo que no entra, y por qué se dice antes que lo demás**
+
+La spec pide conexión persistente autenticada con difusión entre instancias. No la hay. El
+transporte que la sostendría —canal de tiempo real gestionado, o notificación entre instancias del
+motor de datos con una conexión dedicada fuera del pozo— pide configuración que este entorno no
+tiene, y media conexión a medio funcionar es peor que ninguna: se ve perfecta en las pruebas y se
+comporta raro en cuanto hay dos personas.
+
+Entra en su lugar **todo lo que no depende del transporte**, que es la mayor parte, y el transporte
+queda detrás de una costura de seis funciones. Sustituirlo el día que haya con qué es escribir otra
+implementación de esa interfaz; la pantalla no se entera. Anotado como H-60.
+
+**Dos cursores, porque son dos preguntas**
+
+Hacia atrás —el historial— se camina por identificador, que en este sistema ya ordena por tiempo: el
+más antiguo que ya tienes es el sitio exacto por donde seguir, sin instantes que redondear.
+
+Hacia adelante no basta con los mensajes nuevos: hay que enterarse de los que se **editaron** y los
+que se **borraron**, y ésos son viejos. Se camina por instante de modificación, y ahí aparece la
+parte que no se ve venir: la base guarda microsegundos y el cursor viaja en milisegundos, así que un
+mensaje con microsegundos distintos de cero queda **siempre por delante de su propio cursor** y se
+entrega en cada consulta, para siempre. Se compara truncado al milisegundo, que es la precisión que
+sobrevive al viaje.
+
+Y al revés: un mensaje que **confirma** en la base después de que la consulta tomó su instante
+quedaría por detrás del cursor y no aparecería nunca en ninguna pantalla. Por eso quien pregunta
+retrocede dos segundos cuando ya no tiene cola. Recibir dos veces lo mismo no cuesta nada —se
+reconcilia por identificador—; perder un mensaje sí.
+
+**Los acuses son del lado, no de la persona**
+
+Si tres personas del almacén están en la conversación y una lee, queda leído para el lado del
+proveedor. Es lo correcto aquí: el cliente quiere saber si *el almacén* lo vio, no quién
+concretamente. El acuse mueve el instante de modificación del mensaje, y por eso el otro lado se
+entera por el mismo cursor con el que se entera de todo lo demás — sin eso, un acuse sería invisible
+hasta que alguien volviera a escribir.
+
+Editar y borrar sí son de la **persona**: reescribir lo que dijo un compañero es ponerle palabras en
+la boca.
+
+**El lado se le pregunta al motor**
+
+Si el almacén se te enseña, eres quien surte; si la contraparte del pedido es tuya, eres quien pidió.
+Las dos respuestas salen de las mismas políticas que gobiernan el aislamiento, así que no pueden
+decir una cosa distinta de la que dice el motor. La pantalla del lado cliente vive en producciones y
+no existe todavía (H-64), pero el lado ya se resuelve y tiene su prueba: cuando llegue, hace falta
+una ruta, no reescribir esto.
+
+**La clave que no existe**
+
+El catálogo cerrado no tiene ninguna para conversar. Mirar va con `warehouses.orders.view` y escribir
+con `warehouses.orders.edit`, que deja fuera a quien sólo mira. Es la elección conservadora, y no
+obviamente la correcta: colapsarlas ampliaría en silencio la autoridad de quien tenía la general, que
+es el error que ya costó una corrección en H-07. Anotado como H-62.
+
+**Dos ventanas, y lo que sólo se ve mirando**
+
+Rosa y Ale, dos cuentas, el mismo pedido. Mandar, editar, borrar, marcar leído, cortar la red y
+devolverla. Todo lo que hacía falta comprobar se comprobó, y apareció lo que ninguna prueba habría
+cazado: **los nombres de la escala de anchura de este sistema de diseño son espaciado**. `max-w-md`
+no son 28rem, son 0.842rem. El aviso del sistema salía en columna, una palabra por línea, y el
+síntoma parecía de centrado. Medido en el navegador, no supuesto — y ya había una pantalla en pie
+con el mismo nombre (H-63).
+
+**Comprobado**
+
+**629 pruebas** de vitest —157 de contratos, 59 de base, 51 de web y 362 de API—, cuarenta y ocho
+de ellas nuevas. Y la comprobación que ninguna de ellas hace: la conversación abierta dos veces, con
+dos cuentas, hablando consigo misma.
+
+La primera prueba del archivo no es de comportamiento: es la frontera. Nadie lee la conversación de
+un pedido ajeno —ni por la ruta del proveedor, ni desde su propio almacén, ni por debajo de la
+aplicación—, y está escrita antes que ninguna otra.

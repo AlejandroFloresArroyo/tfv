@@ -56,6 +56,7 @@ import {
 import { and, count, eq, inArray, isNull, ne, sql } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
+import { publishSystemMessage } from "./order-chat.ts"
 import { applyQuoteLines, quoteCode } from "./quotes.ts"
 import { pendingReturn, releaseLine } from "./reservations.ts"
 import { loadWarehouse } from "./warehouses.ts"
@@ -355,6 +356,11 @@ export async function acceptOrder(
       .returning()
 
     if (!updated) throw new Error("El pedido no se actualizó")
+
+    // El hito queda en la conversación, dentro de la misma transacción: un aviso publicado aparte
+    // podría acabar contando una aceptación que se revirtió.
+    await publishSystemMessage(tx, orderId, "El almacén aceptó el pedido y generó su cotización.")
+
     return { order: toRecord(updated, 0), quoteId, excluded }
   })
 }
@@ -400,6 +406,8 @@ export async function rejectOrder(
 
     if (!updated) throw new Error("El pedido no se actualizó")
 
+    await publishSystemMessage(tx, orderId, `El almacén rechazó el pedido: ${reason.trim()}`)
+
     await cancelPurchaseOrderIfExhausted(tx, order.purchaseOrderId, orderId, actor.userId)
     return toRecord(updated, 0)
   })
@@ -428,8 +436,23 @@ export async function changeOrderStatus(
       .returning()
 
     if (!updated) throw new Error("El pedido no se actualizó")
+
+    const hito = ORDER_MILESTONES[next]
+    if (hito) await publishSystemMessage(tx, orderId, hito)
+
     return toRecord(updated, 0)
   })
+}
+
+/**
+ * Lo que se cuenta en la conversación al mover el pedido.
+ *
+ * Sólo los hitos que la otra parte tiene que saber. Aceptar y rechazar tienen su propio aviso
+ * porque llevan cotización y motivo.
+ */
+const ORDER_MILESTONES: Partial<Record<OrderStatus, string>> = {
+  delivered: "El equipo salió del almacén.",
+  finished: "El pedido quedó finalizado.",
 }
 
 /**

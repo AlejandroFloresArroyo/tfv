@@ -469,6 +469,23 @@
       "originOf": {
         "production": "From production",
         "storefront": "From the shop"
+      },
+      "chat": {
+        "title": "Conversation",
+        "placeholder": "Write a message…",
+        "send": "Send",
+        "empty": "This is where this order gets talked through: adjusting a quantity, flagging a delay, confirming a pickup.",
+        "older": "See earlier messages",
+        "system": "System",
+        "clientSide": "Client",
+        "providerSide": "Warehouse",
+        "edited": "edited",
+        "read": "Read by the other side",
+        "sending": "sending…",
+        "failed": "not sent",
+        "retry": "Retry",
+        "reconnecting": "Reconnecting…",
+        "readOnly": "You do not have permission to write in this conversation."
       }
     },
     "products": {
