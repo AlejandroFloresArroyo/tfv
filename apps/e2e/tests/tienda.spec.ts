@@ -3,20 +3,14 @@
  *
  * ## Lo que este archivo **no** cubre, y por qué
  *
- * El catálogo público y la ficha del producto están escritos enteros y **no se pueden recorrer**.
- * Hacen falta tres cosas encadenadas y ninguna existe hoy:
+ * El catálogo público y la ficha del producto están escritos enteros y **no se pueden recorrer**:
+ * servir una tienda **exige suscripción vigente**, la siembra no deja ningún plan contratable y la
+ * API no tiene alta de planes, así que sobre una base recién sembrada toda tienda responde «no
+ * disponible» por facturación. Está anotado como `H-141`, y con él se cae también `H-140`.
  *
- * 1. Un sitio. La API tiene el alta (`POST /companies/{id}/websites`) y la aplicación web no tiene
- *    pantalla: `/c/{id}/websites` es la de «rebanada pendiente».
- * 2. Nada enlaza a la tienda desde el panel, así que ni sabiendo el identificador legible se llega
- *    sin escribir la dirección a mano.
- * 3. Y sobre todo: servir una tienda **exige suscripción vigente**, la siembra no deja ningún plan
- *    contratable, y la API no tiene alta de planes. Con la base recién sembrada, toda tienda
- *    responde «no disponible» por facturación.
- *
- * Está anotado en `HALLAZGOS.md`. Fabricar aquí un plan y una suscripción a base de escribir en la
- * base daría tres pruebas verdes sobre un camino que **ninguna persona puede recorrer**, que es
- * justo lo contrario de para lo que existe esta suite.
+ * Fabricar aquí un plan y una suscripción a base de escribir en la base daría tres pruebas verdes
+ * sobre un camino que **ninguna persona puede recorrer**, que es justo lo contrario de para lo que
+ * existe esta suite.
  *
  * ## Lo que sí se recorre
  *
@@ -57,9 +51,9 @@ test("una tienda de una empresa sin suscripción vigente se cierra, y dice por q
   const companyId = companies[WAREHOUSE_COMPANY] as string
   const base = `/api/companies/${companyId}/websites`
 
-  // Al principio, no en un `finally`. Y por la API, porque **no hay pantalla que dé de alta un
-  // sitio**: es el hallazgo, no un atajo. La tienda que se abre después sí se conduce como una
-  // persona, que es lo que esta prueba viene a comprobar.
+  // Al principio, no en un `finally`. El sitio se crea por la API porque lo que esta prueba viene a
+  // mirar es **la tienda vista desde fuera**, no su alta: el alta tiene su pantalla y su recorrido
+  // en la rebanada que la trae. Lo que sigue sí se conduce como una persona.
   const previos = await context.request.get(`${base}?limit=50`)
   if (previos.ok()) {
     const { items } = (await previos.json()) as { items: { id: string; name: string }[] }
@@ -98,14 +92,20 @@ test("una tienda de una empresa sin suscripción vigente se cierra, y dice por q
   await context.request.delete(`${base}/${sitio.id}`)
 })
 
-test("el panel no ofrece por dónde administrar una tienda todavía", async ({ as, companies }) => {
+test("la entrada «Sitios» del panel lleva a una pantalla, no a un callejón", async ({
+  as,
+  companies,
+}) => {
   /**
-   * Es un hallazgo escrito como prueba, y por eso comprueba **lo que hay**, no lo que debería.
+   * La comprobación que sólo se hace abriendo el navegador.
    *
-   * La entrada «Sitios» de la navegación existe porque la empresa tiene el servicio contratado, y
-   * lleva a la pantalla de rebanada pendiente. Cuando la 19 traiga la gestión, esta prueba fallará
-   * — y eso es lo que se quiere: que el día que exista, alguien venga aquí y escriba el recorrido
-   * de verdad en lugar de que la tienda pública siga sin recorrer otras seis rebanadas.
+   * Una entrada de navegación que lleva a un `404`, a un `500` o a una pantalla que no existe es un
+   * defecto que no se ve leyendo código —ya pasó con el alta de producto, `H-70`— y que ninguna
+   * prueba de la API puede cazar, porque del otro lado no hay ninguna petición que falle.
+   *
+   * Se afirma lo que tiene que ser cierto **con la rebanada pendiente y con ella entregada**: que
+   * se llega, que la pantalla se identifica, y que se sigue dentro del ámbito de la empresa. Lo que
+   * haya dentro es de quien traiga la rebanada.
    */
   const context = await as("owner")
   const page = await context.newPage()
@@ -120,6 +120,8 @@ test("el panel no ofrece por dónde administrar una tienda todavía", async ({ a
     .click()
   await page.waitForURL(/\/websites$/)
 
-  await expect(page.getByText(/rebanada|pendiente/i).first()).toBeVisible()
-  await expect(page.getByRole("button", { name: /Nuevo sitio|Crear sitio/ })).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "Sitios" }).first()).toBeVisible()
+  // Fallar una guarda saca al nivel de arriba, así que seguir viendo la navegación de la empresa es
+  // la forma de decir que no se falló ninguna.
+  await expect(page.getByRole("navigation", { name: WAREHOUSE_COMPANY })).toBeVisible()
 })
