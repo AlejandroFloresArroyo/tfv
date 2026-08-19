@@ -51,7 +51,8 @@ export function OrderConversation({
     createdAt: entry.createdAt,
     editedAt: entry.editedAt,
     // El acuse es del **otro** lado: lo que interesa de un mensaje propio es si lo vieron.
-    read: chat.side === "provider" ? entry.readByClientAt !== null : entry.readByProviderAt !== null,
+    read:
+      chat.side === "provider" ? entry.readByClientAt !== null : entry.readByProviderAt !== null,
     pending: entry.pending,
     failed: entry.failed,
     mine: entry.mine,
