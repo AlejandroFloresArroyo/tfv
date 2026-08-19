@@ -2473,7 +2473,7 @@ con el mismo nombre (H-63).
 
 **Comprobado**
 
-**628 pruebas** de vitest —157 de contratos, 59 de base, 50 de web y 362 de API—, cuarenta y siete
+**629 pruebas** de vitest —157 de contratos, 59 de base, 51 de web y 362 de API—, cuarenta y ocho
 de ellas nuevas. Y la comprobación que ninguna de ellas hace: la conversación abierta dos veces, con
 dos cuentas, hablando consigo misma.
 
