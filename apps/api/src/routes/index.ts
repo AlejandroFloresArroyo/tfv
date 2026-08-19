@@ -150,6 +150,14 @@ import {
   updateQuoteRoute,
 } from "./quotes.ts"
 import {
+  changeShipmentStatusRoute,
+  estimateShippingRoute,
+  getShipmentRoute,
+  getShippingRatesRoute,
+  updateShipmentRoute,
+  updateShippingRatesRoute,
+} from "./shipping.ts"
+import {
   changeUnitStatusRoute,
   createPriceListRoute,
   createUnitsRoute,
@@ -398,6 +406,18 @@ export const routes: readonly RegisteredRoute[] = [
   devicesRoute,
   registerDeviceRoute,
   revokeDeviceRoute,
+
+  // ─── Envíos ────────────────────────────────────────────────────────────────
+  // El cuadro de tarifas de la empresa, la estimación —el mismo cálculo con el que se cobra— y el
+  // seguimiento de la entrega. Ver `shipping-rates` y `order-fulfillment`.
+
+  getShippingRatesRoute,
+  updateShippingRatesRoute,
+  estimateShippingRoute,
+
+  getShipmentRoute,
+  updateShipmentRoute,
+  changeShipmentStatusRoute,
 
   // ─── Producciones ──────────────────────────────────────────────────────────
   // Pendiente: rebanada 20.

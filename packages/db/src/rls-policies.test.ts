@@ -48,6 +48,8 @@ const seed = {
   networkB: newId(),
   locationB: newId(),
   categoryG: newId(),
+  ratesA: newId(),
+  shipmentA: newId(),
   sessionAna: newId(),
   sessionBeto: newId(),
   sessionCliente: newId(),
@@ -120,8 +122,15 @@ async function sow() {
     insert into warehouse_orders (id, warehouse_id, code, origin, client_id)
       values ('${s.orderA}', '${s.warehouseA}', 'PED-1', 'storefront', '${s.counterpartyA}');
 
-    insert into buyer_orders (id, buyer_id, company_id, reference, subtotal, total)
-      values ('${s.buyerOrderA}', '${s.cliente}', '${s.companyA}', 'REF-1', '100.00', '100.00');
+    -- El envío nace antes que el pedido y éste lo enlaza después, que es el orden real de la
+    -- materialización y el motivo de que su alta siga siendo del sistema.
+    insert into shipments (id, mode, cost) values ('${s.shipmentA}', 'national', '199.00');
+
+    insert into buyer_orders
+      (id, buyer_id, company_id, reference, subtotal, total, shipment_id)
+      values
+      ('${s.buyerOrderA}', '${s.cliente}', '${s.companyA}', 'REF-1', '100.00', '100.00',
+       '${s.shipmentA}');
 
     insert into location_networks (id, company_id, name)
       values ('${s.networkB}', '${s.companyB}', 'Red B');
@@ -129,6 +138,10 @@ async function sow() {
       values ('${s.locationB}', '${s.networkB}', 'Nave industrial');
 
     insert into global_categories (id, name) values ('${s.categoryG}', 'Cine');
+
+    -- Sólo A configura sus tarifas de envío: B se queda con el cuadro por omisión, que es la
+    -- situación normal y la que hace visible el aislamiento de esta tabla.
+    insert into shipping_rates (id, company_id) values ('${s.ratesA}', '${s.companyA}');
 
     insert into sessions
       (id, user_id, chain_id, access_token_hash, refresh_token_hash, access_expires_at, expires_at,
@@ -210,7 +223,8 @@ describe("cobertura", () => {
     // El número es una alarma a propósito: añadir una tabla obliga a pasar por aquí, y por aquí es
     // donde se recuerda que una tabla nueva **no hereda** la política de plataforma —la 0005 la
     // repartió con un bucle que corrió una sola vez—. Así se descubrió que faltaba en `prospects`.
-    expect(tablas.length).toBe(94)
+    // 95 desde la 0020, que añade `shipping_rates` con sus dos políticas.
+    expect(tablas.length).toBe(95)
     expect(tablas.filter((t) => !t.rls).map((t) => t.relname)).toEqual([])
     expect(tablas.filter((t) => t.politicas === 0).map((t) => t.relname)).toEqual([])
   })
@@ -255,6 +269,81 @@ describe("aislamiento entre arrendatarios", () => {
         ),
       ),
     )
+  })
+})
+
+// ─── Tarifas de envío ────────────────────────────────────────────────────────
+
+describe("el cuadro de tarifas de envío", () => {
+  it("sólo lo ve su propia empresa", async () => {
+    expect(await countAs(seed.ana, "shipping_rates")).toBe(1)
+    expect(await countAs(seed.beto, "shipping_rates")).toBe(0)
+  })
+
+  it("no lo ve el comprador, que no es miembro de la empresa", async () => {
+    // Lo que el comprador tiene que poder ver es el importe ya calculado de su compra, no el cuadro
+    // con el que se calculó: es configuración interna del comercio.
+    expect(await countAs(seed.cliente, "shipping_rates")).toBe(0)
+  })
+
+  it("no se cambia la tarifa de otra empresa", async () => {
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.beto), (tx) =>
+        tx.execute(
+          sql.raw(`insert into shipping_rates (id, company_id)
+                 values ('${newId()}', '${seed.companyA}')`),
+        ),
+      ),
+    )
+  })
+
+  it("la materialización del pedido sí lo alcanza, declarando la empresa", async () => {
+    // Es la vía por la que la rebanada 18 cobrará el envío: `withSystem` suma el alcance declarado
+    // a las membresías, así que la empresa nombrada entra y ninguna otra.
+    const visible = await withSystem("envios.estimar", [seed.companyA], (tx) =>
+      count(tx, "shipping_rates"),
+    )
+
+    expect(visible).toBe(1)
+  })
+})
+
+// ─── Seguimiento del envío ───────────────────────────────────────────────────
+
+describe("el envío lo mueve quien lo despacha", () => {
+  it("el comercio dueño del pedido cambia el estado de su envío", async () => {
+    await withRequester(identity(seed.ana), (tx) =>
+      tx.execute(sql.raw(`update shipments set status = 'shipped' where id = '${seed.shipmentA}'`)),
+    )
+
+    const row = await readElevated(`select status from shipments where id = '${seed.shipmentA}'`)
+    expect(row?.status).toBe("shipped")
+  })
+
+  it("otra empresa no lo toca", async () => {
+    await withRequester(identity(seed.beto), (tx) =>
+      tx.execute(
+        sql.raw(`update shipments set status = 'canceled' where id = '${seed.shipmentA}'`),
+      ),
+    )
+
+    const row = await readElevated(`select status from shipments where id = '${seed.shipmentA}'`)
+    expect(row?.status).toBe("shipped")
+  })
+
+  it("el comprador lo lee pero no lo mueve", async () => {
+    // Es la razón de que el predicado atraviese hasta `companies`: la lectura del pedido es más
+    // ancha que su escritura, y apoyarse en ella dejaría al comprador darse por servido.
+    expect(await countAs(seed.cliente, "shipments")).toBe(1)
+
+    await withRequester(identity(seed.cliente), (tx) =>
+      tx.execute(
+        sql.raw(`update shipments set status = 'delivered' where id = '${seed.shipmentA}'`),
+      ),
+    )
+
+    const row = await readElevated(`select status from shipments where id = '${seed.shipmentA}'`)
+    expect(row?.status).toBe("shipped")
   })
 })
 

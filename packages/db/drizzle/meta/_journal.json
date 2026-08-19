@@ -134,6 +134,13 @@
       "when": 1787102708630,
       "tag": "0019_resolucion_de_sitio_publico",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787180400000,
+      "tag": "0020_tarifas_de_envio",
+      "breakpoints": true
     }
   ]
 }

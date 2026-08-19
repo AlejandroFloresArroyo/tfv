@@ -121,16 +121,16 @@ Lo construido hasta ahora, medido y no estimado:
 
 | | |
 |---|---|
-| Rebanadas | 16 de 30 empezadas, **ninguna cerrada del todo** |
+| Rebanadas | 17 de 30 empezadas, **ninguna cerrada del todo** |
 | Código sin pruebas | 31 130 líneas |
 | Código de prueba | 9 973 líneas |
-| Pruebas | **918** de vitest — 183 contratos, 71 datos, 474 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
-| Esquema | 94 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
-| Aislamiento | 206 políticas · 94/94 tablas · 0 con identidad cruda |
-| Migraciones | 18, replicadas desde cero en cada verificación |
-| Rutas | **150** registradas, 106 con permiso declarado, 13 públicas y enumeradas |
+| Pruebas | **982** de vitest — 221 contratos, 78 datos, 493 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
+| Esquema | 95 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
+| Aislamiento | 208 políticas · 95/95 tablas · 0 con identidad cruda |
+| Migraciones | 19, replicadas desde cero en cada verificación |
+| Rutas | **156** registradas, 112 con permiso declarado, 13 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 40, en español e inglés (1130 mensajes, sin desalinear) |
+| Pantallas | 41, en español e inglés (1183 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
@@ -264,6 +264,17 @@ de la 05, que necesita tráfico real de la pila anterior, y la **medición de im
 —cuántas cotizaciones abiertas cambian y en cuánto—. Su sitio es junto a la rebanada 30.
 
 Lo que queda, sin orden acordado todavía:
+
+- **Llevar el almacenamiento de objetos a S3** (2026-08-19, pedido por el propietario). Hoy los
+  bytes ya viven **fuera de la base** —almacenamiento de objetos, un objeto por variante, con la
+  clave `empresa/archivo/variante.ext`—, así que esto no es sacarlos de ninguna tabla: es cambiar
+  de proveedor. Lo que hay que reescribir son tres funciones de `apps/api/src/media/storage.ts`
+  —`authorizeWrite`, `publicUrl` y `removeObjects`—, y el motivo de que hoy no haya cliente de S3
+  está escrito ahí: se usa el punto de firma del proveedor en vez de calcular una firma SigV4 a
+  mano. Lo que **no** es gratis es el resto: las direcciones públicas ya persistidas están
+  incrustadas en documentos generados y en enlaces repartidos, y la spec lo exige explícitamente
+  («Un cambio de proveedor SHALL contemplar la actualización de las direcciones ya persistidas»).
+  Su sitio natural es junto a la rebanada 30, con el corte.
 
 - **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04). Es lo
   único de la lista anterior que quedó sin hacer, y a propósito: reescribe el camino de
@@ -2897,3 +2908,87 @@ de los cambios **sin una sola notificación** de lo que hizo ella.
 
 Los dos proveedores, las ~35 rutas de escritura que aún no dejan asiento (H-82), y la clave de
 permiso propia de la bitácora, que hoy usa la más cercana porque el catálogo está cerrado (H-81).
+
+### 2026-08-19 · Lo que cuesta llevárselo
+
+Rebanada **17 · `migrate-shipping-rates`**, de 0 a 29, más la parte de `order-fulfillment` que
+cierra el ciclo de un envío. La 18 la esperaba.
+
+**El motor va al paquete compartido, y por el mismo motivo que el de cotizaciones**
+
+`computeShipping` es una función pura en `@tfv/contracts`, con un caso por escenario de la spec. El
+defecto M-11 era el algoritmo **copiado palabra por palabra** en el servidor y en el navegador, con
+las tarifas escritas en el código: cambiar una tarifa pedía dos despliegues y, entre uno y otro, la
+estimación que veía el comprador no era lo que se le cobraba. Una implementación no puede divergir
+de sí misma.
+
+Las tarifas entran como dato, no como constante del módulo. `DEFAULT_SHIPPING_RATES` es el cuadro de
+la spec y sirve para que una empresa recién dada de alta pueda cobrar envíos antes de que nadie
+entre a configurarlos — no para calcular a espaldas de su cuadro.
+
+**Los pesos no son dinero, y aun así tienen que ser exactos**
+
+El dinero sale de `money.ts` y no se toca. Pero una libra son `0.453592` kilogramos y un peso
+volumétrico es una división: con coma flotante, dos libras dan `0.9071839999999999` y el peso
+facturable —el mayor entre el real y el volumétrico— se decide comparando números que nadie
+escribió. Así que las magnitudes llevan su propia aritmética decimal sobre enteros grandes, y se
+fijan a seis decimales **antes** de multiplicar la tarifa: es lo que hace que quien multiplique a
+mano el peso facturable que ve escrito obtenga el importe variable que ve escrito.
+
+La distancia sí es coma flotante, y a propósito: sólo se compara con un umbral y jamás multiplica un
+importe.
+
+**El defecto que apareció al escribir la prueba de que la estimación coincide con el cobro**
+
+No se comprueba con dos números escritos a mano: se ejecutan **las dos vías reales** —la ruta que
+consulta la interfaz y `estimateShipping` dentro de una transacción de sistema, que es como lo
+llamará la 18— y se comparan los totales. Dieron `519.00` y `599.00`.
+
+La causa: la lectura de `user_addresses` la concede su dueño **o una compra que apunte a ella**. Sin
+compra que lo enlace, la materialización no ve el domicilio del comprador, la consulta sale vacía y
+el cálculo lo tomaba por «sin coordenadas» —el caso que la spec manda calcular sin recargo—. El
+envío perdía sus ochenta pesos de recargo por distancia y el importe seguía pareciendo plausible.
+Faltar coordenadas y no ver la fila son dos cosas distintas y sólo una es normal: ahora la segunda
+detiene el cálculo (H-98).
+
+**El envío deja de ser cosa sólo del sistema**
+
+La `0005` dejó la escritura de `shipments` con `app.is_system()`, correcto mientras lo único que le
+pasaba a un envío fuera nacer. Marcarlo entregado a la paquetería lo hace una persona con su sesión,
+así que la `0020` admite además a la empresa dueña del pedido y el manejador corre por
+`withRequester`. El predicado **atraviesa hasta `companies`** en lugar de apoyarse en `buyer_orders`:
+la lectura del pedido es más ancha que su escritura —el comprador lee el suyo—, y apoyarse en ella
+habría dejado al comprador darse por servido (H-99).
+
+El alta sigue siendo del sistema, y no es un descuido: el envío nace antes de que nada lo apunte.
+
+**Una spec que no decidía**
+
+«La recolección SHALL tener costo cero» y, dos requisitos más abajo, «el envío SHALL llevar un
+recargo cuando supere los tres artículos», sin acotar modalidad. Una recolección de quince piezas
+cumplía los dos y costaba cincuenta pesos. Corregida la spec, con sus escenarios (H-100).
+
+**Llamable desde fuera, y dicho**
+
+`estimateShipping(tx, …)` recibe la transacción y no la abre. El manejador de
+`checkout.session.completed` que la rebanada 07 dejó pendiente sólo tiene que llamar ahí, dentro de
+su propia transacción y con las mismas tarifas con las que se estimó. La 18 no necesita escribir
+nada de cálculo.
+
+**Lo que queda fuera, a propósito**
+
+La estimación para un comprador **sin sesión** en una tienda pública. El cálculo está listo para
+ella; resolver la tienda por su subdominio y decidir qué se enseña sin sesión es la rebanada 19, y
+adelantarlo como una ruta pública suelta habría fijado esas decisiones desde el sitio equivocado
+(H-101). Y las dos copias del algoritmo que la lista de trabajo manda retirar viven en
+`tfv-frontend/`, que la regla 1 deja intacto: en la pila nueva no hay ninguna.
+
+Los permisos son los más cercanos del catálogo cerrado, que no tiene ni uno de envíos (H-96, H-97).
+
+**Verificación**
+
+`pnpm test` en verde con **982** pruebas, 64 más que las 918 de partida: 31 del motor y 7 de la
+máquina de estados en contratos, 7 de aislamiento en datos —incluida la política nueva, comprobada
+en los tres lados— y 19 de extremo a extremo en la API. `pnpm check` y `pnpm lint` limpios. La
+pantalla, ejercitada en un navegador: bajar la base local de `99` a `49` y ver el cálculo siguiente
+pasar de `119.00` a `69.00` es el requisito «se cambia una tarifa sin desplegar», mirado.
