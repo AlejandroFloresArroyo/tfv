@@ -41,7 +41,7 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
       de estado, el registro del retorno, y los bloques de condiciones de pago e impuestos, que se
       guardan solos. Faltan los de identidad y contactos, que tienen su ruta y su permiso pero
       todavía no su formulario
-- [ ] Documento de cotización y su enlace público
+- [x] **Documento de cotización y su enlace público**
 - [x] Pedidos con aceptación y rechazo
 - [ ] **Conversación en tiempo real del pedido**
 

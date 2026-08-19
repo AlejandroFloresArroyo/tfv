@@ -117,13 +117,13 @@ Lo construido hasta ahora, medido y no estimado:
 | Rebanadas | 10 de 30 empezadas, **ninguna cerrada del todo** |
 | Código sin pruebas | 31 130 líneas |
 | Código de prueba | 9 973 líneas |
-| Pruebas | **489** — 99 contratos, 59 datos, 258 API, 29 web, 44 de extremo a extremo |
+| Pruebas | **611** de vitest — 158 contratos, 59 datos, 352 API, 42 web. Las 62 de extremo a extremo no se volvieron a correr en esta tanda |
 | Esquema | 91 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
 | Aislamiento | 195 políticas · 91/91 tablas · 0 con identidad cruda |
 | Migraciones | 11, replicadas desde cero en cada verificación |
-| Rutas | **104** registradas, 81 con permiso declarado, 10 públicas y enumeradas |
+| Rutas | **126** registradas, 96 con permiso declarado, 13 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 23, en español e inglés (426 mensajes, sin desalinear) |
+| Pantallas | 25, en español e inglés (635 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
@@ -190,7 +190,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 |---|---|---|---|
 | 12 | `migrate-warehouse-catalog` | 🟡 | Entera salvo el detalle de producto y sus asistentes, que son pantalla (29b). El **alta provisional** y su bandeja ya están |
 | 13 | `add-transactional-stock-reservation` | 🟡 | Entera, 30/31, con el **agujero de las huérfanas rentadas** tapado. Falta sólo la ejecución programada de la verificación de coherencia, que espera al despachador de la 09. M-04 sigue sin confirmar: se implementó el criterio de la spec |
-| 14 | `add-server-side-quotation-pricing` | 🟡 | Motor, autoridad del servidor, congelación al cerrar, **precio negociado, precio por paquete, cobros y saldo**. La interfaz consume ya la misma función. Falta el documento comercial, que espera a `pdf-documents`. M-05 sigue sin confirmar |
+| 14 | `add-server-side-quotation-pricing` | 🟡 | Motor, autoridad del servidor, congelación al cerrar, **precio negociado, precio por paquete, cobros y saldo**. La interfaz consume ya la misma función, y **el documento comercial ya se imprime y se comparte por enlace**. Falta la firma capturada en pantalla. M-05 sigue sin confirmar |
 | 15 | `migrate-warehouse-orders` | 🟡 | 29/33. Ciclo, **aceptación atómica**, rechazo con motivo, propagación a la orden de compra y su bandeja. Las cuatro que faltan esperan al escaparate (19) y al servicio de producciones (20) |
 | 16 | `migrate-order-chat-realtime` | ⬜ | |
 | 17 | `migrate-shipping-rates` | ⬜ | |
@@ -220,7 +220,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
 | 28 | `rebuild-ui-foundation` | 🟡 | Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial). Falta la exploración de colecciones (28d) y, de la 28e, el asistente por pasos y los controles ricos |
-| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, contrapartes y direcciones (29a); catálogo, árbol de ubicaciones, **constructor de cotizaciones entero** —líneas, condiciones de pago, impuestos, cobros, retorno, extensión— y **pedidos con aceptación y rechazo** (29b). Faltan el detalle de producto y sus asistentes, los bloques de identidad y contactos, y el documento público. 29c–29e esperan a sus rebanadas de servidor |
+| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, contrapartes y direcciones (29a); catálogo, árbol de ubicaciones, **constructor de cotizaciones entero** —líneas, condiciones de pago, impuestos, cobros, retorno, extensión— y **pedidos con aceptación y rechazo** (29b). **El documento de cotización y su enlace público ya están.** Faltan el detalle de producto y sus asistentes, y los bloques de identidad y contactos. 29c–29e esperan a sus rebanadas de servidor |
 | 30 | `add-data-migration-and-cutover` | ⬜ | |
 
 ## Lo siguiente
@@ -2400,3 +2400,81 @@ Once tareas de la rebanada hechas; las veintisiete que quedan esperan a esas dos
 
 **339 pruebas** de la API, doce de ellas nuevas. No comprueban una función: comprueban que un
 tercero no pueda activar suscripciones ni materializar pedidos.
+
+### 2026-08-18 · El documento que el cliente firma
+
+El servicio de documentos, que quedó anotado «para después» cuando se decidió imprimir desde el
+navegador. Llega con la primera de sus seis familias hecha —la cotización— y la costura preparada
+para las otras cinco.
+
+**Lo que se decidió y por qué**
+
+Imprimir desde el navegador no es una carencia: es lo que hace que **previsualizar, imprimir y
+descargar no puedan diferir**. Son la misma hoja y el mismo modelo; descargar es el diálogo de
+impresión con el destino «Guardar como PDF». La spec pide que las tres representaciones coincidan, y
+aquí no hay nada que mantener de acuerdo porque no hay dos dibujos.
+
+El reparto queda así: el servidor **compone el documento** —qué dice, con qué importes, en qué
+orden— y el navegador lo dibuja. La composición es una función pura en `@tfv/contracts`, de modo que
+el modelo del documento se declara una vez y no dos.
+
+**Los importes son los de la cotización, no una segunda lectura**
+
+El desglose sale de `breakdownOf`, la misma función que alimenta la ficha: congelado si la
+cotización está cerrada, recalculado si sigue abierta. Volver a resolverlo aquí habría sido repetir
+H-14 en el documento, que es el peor sitio: la hoja que el cliente firma contradiciendo la pantalla
+desde la que se imprimió.
+
+Y el documento **comprueba que cuadra**. Los subtotales de grupo se suman de las filas visibles en
+lugar de copiarse del desglose, y si lo que suman no es el total de líneas, la pantalla lo dice
+antes de mandarlo — un aviso que no se imprime, porque es nuestro y no del cliente.
+
+**El enlace público, sin estado que mantener**
+
+La referencia es un **sobre firmado**: familia, empresa, ámbito y documento en cuarenta y nueve
+bytes, más una firma HMAC. Ochenta y siete caracteres. No hay columna ni tabla que limpiar, el
+enlace es estable —el que se mandó hace un mes sigue sirviendo— y alterarlo un solo carácter
+responde `404` sin decir por qué.
+
+Lo que **sí** cuesta: no se puede revocar uno suelto, sólo rotar el secreto. La spec no lo pide;
+queda anotado (H-64) con el motivo escrito en el propio archivo.
+
+La lectura sin sesión corre bajo `withSystem`, declarando la empresa **que nosotros firmamos**, no
+la que pide quien llama. Las políticas del motor siguen aplicándose: un fallo en el manejador no
+puede enseñar el documento de otra empresa. Y el candado de la superficie pública se amplió a mano,
+con su motivo, que es exactamente para lo que está.
+
+**Tres defectos que sólo se ven en papel**
+
+1. **`max-w-sm` mide doce píxeles** en este tema (H-60): el espaciado llamado `sm` gana a la escala
+   de contenedores. La columna de importes salía con una palabra por línea. En pantalla y en papel.
+2. **La hoja impresa es más estrecha que una tableta** (H-63), así que todo lo maquetado con
+   `tablet:` se apila en el papel. Las dos rejillas del documento se declaran a dos columnas también
+   en la regla de impresión.
+3. **El pie se quedaba solo en una segunda hoja en blanco.** Se probó a repetirlo en cada página
+   sacándolo del flujo, y el navegador lo pintó encima de las firmas. Firmas y pie van ahora en un
+   bloque indivisible: caben los dos, o pasan los dos juntos.
+
+**Lo que queda fuera, a propósito**
+
+Las otras cinco familias —nota de entrega, presupuesto, plan de trabajo, recibo de venta e
+instructivo de armado— y el visor de guiones. Ninguna tiene todavía entidad detrás: esperan a
+producciones (20 y 22) y a Pixit (24 a 26). La costura está puesta: el reparto por familia es un
+`switch` sobre la referencia firmada, y una familia sin manejador responde `404` como cualquier otra
+cosa que no existe.
+
+La **firma capturada en pantalla** tampoco entra: necesita el control de firma (28e) y
+almacenamiento de ficheros (08). El documento imprime el espacio vacío, que es lo que la spec pide
+para un documento sin firmar, y hoy se firma a mano sobre el papel.
+
+Y la **hoja de etiquetas de existencias** no se enchufó a este servicio: no existe todavía en este
+árbol. Cuando exista, lo que puede reutilizar es la regla de impresión.
+
+**Comprobado**
+
+**611 pruebas** de vitest —158 de contratos, 59 de datos, 352 de la API y 42 de web, **treinta
+nuevas**—, `check` y `lint` limpios. Y en el navegador, que es donde se ven los tres defectos de
+arriba: las cinco cotizaciones sembradas abiertas como documento, mandadas a imprimir a PDF, con el
+nombre del archivo
+puesto en el título y devuelto al terminar, y el enlace público abierto en un contexto **sin una
+sola cookie**. Alterar la referencia lleva a «este enlace no lleva a ningún documento».
