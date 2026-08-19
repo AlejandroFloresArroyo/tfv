@@ -172,13 +172,13 @@ export function CompanyNav({
   return (
     <nav
       aria-label={company.name}
-      className="shrink-0 border-b border-line px-4 py-3 laptop:w-58 laptop:border-r laptop:border-b-0 laptop:px-3 laptop:py-5"
+      className="shrink-0 border-edge border-b px-4 py-3 laptop:w-58 laptop:border-r laptop:border-b-0 laptop:px-3 laptop:py-5"
     >
       {companies.length > 1 ? (
         <Menu>
           <MenuTrigger
             className={cn(
-              "flex w-full items-center gap-2 rounded-sm px-2.5 py-2 text-left",
+              "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left",
               "transition-colors hover:bg-panel-hover",
             )}
           >
@@ -214,9 +214,7 @@ export function CompanyNav({
 
         {company.services.length > 0 ? (
           <li className="hidden pt-4 pb-1 laptop:block">
-            <span className="px-2.5 text-body3 font-semibold tracking-wide text-content-faint uppercase">
-              {t("shell.services")}
-            </span>
+            <span className="legend px-2.5 text-content-faint">{t("shell.services")}</span>
           </li>
         ) : null}
 
@@ -236,9 +234,7 @@ export function CompanyNav({
 
         {directory.length > 0 ? (
           <li className="hidden pt-4 pb-1 laptop:block">
-            <span className="px-2.5 text-body3 font-semibold tracking-wide text-content-faint uppercase">
-              {t("directory.title")}
-            </span>
+            <span className="legend px-2.5 text-content-faint">{t("directory.title")}</span>
           </li>
         ) : null}
 
@@ -263,9 +259,7 @@ export function CompanyNav({
         */}
         {settings.length > 0 ? (
           <li className="hidden pt-4 pb-1 laptop:block">
-            <span className="px-2.5 text-body3 font-semibold tracking-wide text-content-faint uppercase">
-              {t("settings.title")}
-            </span>
+            <span className="legend px-2.5 text-content-faint">{t("settings.title")}</span>
           </li>
         ) : null}
 
@@ -296,20 +290,31 @@ function NavLink({
   children: React.ReactNode
 }) {
   return (
-    <li className="shrink-0">
+    <li
+      className="shrink-0"
+      // En tacto la navegación es una fila que se desplaza, y la sección activa puede cargar
+      // recortada en el borde — justo la entrada que dice dónde estás. Se trae a la vista al
+      // montar; en escritorio la columna no desborda y esto no hace nada.
+      ref={(node) => {
+        if (active) node?.scrollIntoView({ inline: "nearest", block: "nearest" })
+      }}
+    >
       <Link
         href={href}
         // `aria-current` para que un lector de pantalla anuncie cuál es la sección activa. El color
         // solo no lo dice, y quien no ve el color se queda sin esa información.
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex items-center gap-2.5 rounded-sm px-2.5 py-2 text-body2 font-medium whitespace-nowrap transition-colors",
+          "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-body2 whitespace-nowrap transition-colors",
+          // La activa lleva la rúbrica en el icono, no sólo un fondo: con el mismo gris que el
+          // hover, «dónde estoy» y «dónde está el puntero» eran indistinguibles. El oro va en su
+          // versión de tinta, que sobre panel claro sí se ve (el puro da 1.6:1 ahí).
           active
-            ? "bg-panel-hover text-content"
-            : "text-content-muted hover:bg-panel-hover hover:text-content",
+            ? "bg-panel-hover font-semibold text-content"
+            : "font-medium text-content-muted hover:bg-panel-hover hover:text-content",
         )}
       >
-        <span className={active ? "text-content" : "text-content-faint"}>{icon}</span>
+        <span className={active ? "text-tinta-aparta" : "text-content-faint"}>{icon}</span>
         {children}
       </Link>
     </li>

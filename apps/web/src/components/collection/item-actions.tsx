@@ -48,7 +48,7 @@ export function ItemActions({ label, actions }: { label: string; actions: readon
           {actions.map((action) => (
             <MenuItem
               key={action.key}
-              className={action.danger ? "text-danger" : undefined}
+              className={action.danger ? "text-tinta-alto" : undefined}
               // El menú devuelve el foco a su disparador al cerrarse. Abrir el diálogo en el mismo
               // giro pone las dos cosas a mover el foco a la vez y gana la devolución: el diálogo
               // se abre y el foco se queda fuera. Se abre en el siguiente, ya cerrado el menú.

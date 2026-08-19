@@ -155,7 +155,7 @@ export function CollectionToolbar({
           <button
             type="button"
             onClick={() => apply(clearFilters(params))}
-            className="rounded-xs px-1.5 py-0.5 text-body3 font-semibold text-content-muted underline underline-offset-2 hover:text-content"
+            className="rounded-sm px-1.5 py-0.5 text-body3 font-semibold text-content-muted underline underline-offset-2 hover:text-content"
           >
             {t("collection.clearAll")}
           </button>
@@ -184,8 +184,8 @@ function ViewButton({
       onClick={onClick}
       className={
         active
-          ? "grid size-8 place-items-center rounded-xs bg-accent text-on-accent"
-          : "grid size-8 place-items-center rounded-xs text-content-faint hover:bg-panel-hover hover:text-content"
+          ? "grid size-8 place-items-center rounded-md bg-accent text-on-accent"
+          : "grid size-8 place-items-center rounded-md text-content-faint hover:bg-panel-hover hover:text-content"
       }
     >
       {children}
