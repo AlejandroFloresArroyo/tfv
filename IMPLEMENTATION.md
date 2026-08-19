@@ -265,6 +265,17 @@ de la 05, que necesita tráfico real de la pila anterior, y la **medición de im
 
 Lo que queda, sin orden acordado todavía:
 
+- **Llevar el almacenamiento de objetos a S3** (2026-08-19, pedido por el propietario). Hoy los
+  bytes ya viven **fuera de la base** —almacenamiento de objetos, un objeto por variante, con la
+  clave `empresa/archivo/variante.ext`—, así que esto no es sacarlos de ninguna tabla: es cambiar
+  de proveedor. Lo que hay que reescribir son tres funciones de `apps/api/src/media/storage.ts`
+  —`authorizeWrite`, `publicUrl` y `removeObjects`—, y el motivo de que hoy no haya cliente de S3
+  está escrito ahí: se usa el punto de firma del proveedor en vez de calcular una firma SigV4 a
+  mano. Lo que **no** es gratis es el resto: las direcciones públicas ya persistidas están
+  incrustadas en documentos generados y en enlaces repartidos, y la spec lo exige explícitamente
+  («Un cambio de proveedor SHALL contemplar la actualización de las direcciones ya persistidas»).
+  Su sitio natural es junto a la rebanada 30, con el corte.
+
 - **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04). Es lo
   único de la lista anterior que quedó sin hacer, y a propósito: reescribe el camino de
   autenticación y necesita configuración externa.
