@@ -26,6 +26,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { routes } from "../routes/index.ts"
 import { createApp } from "../runtime/app.ts"
 import { removeObjects } from "./storage.ts"
+import { collectAbandoned } from "./uploads.ts"
 
 const app = createApp(routes)
 const PASSWORD = "una-frase-larga-y-buena"
@@ -363,5 +364,103 @@ describe("retirar los objetos", () => {
     await removeObjects([row.storagePath])
 
     expect((await fetch(row.url)).ok).toBe(false)
+  })
+})
+
+/**
+ * El recolector corre **sin sesión de nadie**, igual que el trabajo en segundo plano que lo dispara.
+ *
+ * Las políticas de `uploads` son `true` a propósito —la fila de un archivo no lleva empresa— y lo
+ * que protege el contenido es la clave firmada. Ver `jobs/handlers.ts`, donde se explica al llamarlo.
+ */
+const SIN_SESION = {
+  userId: "00000000-0000-0000-0000-000000000000",
+  sessionId: "00000000-0000-0000-0000-000000000000",
+}
+
+const haceDosDias = () => new Date(Date.now() - 48 * 3_600_000)
+
+/** Una subida registrada y con sus cinco objetos escritos, pero **sin confirmar**. */
+async function subidaSinConfirmar(): Promise<{ id: string; url: string }> {
+  const { upload, targets } = await json<Authorization>(await authorize(FOTO))
+
+  for (const target of targets) {
+    const written = await fetch(target.url, {
+      method: "PUT",
+      headers: target.headers,
+      body: new Uint8Array([1, 2, 3, 4]),
+    })
+    expect(written.ok).toBe(true)
+  }
+
+  return { id: upload.id, url: upload.url }
+}
+
+describe("la recolección de lo abandonado", () => {
+  it("se lleva la subida que nadie confirmó, con sus objetos", async () => {
+    // Escenario: «Una subida abandonada se limpia». Sin esto, una subida interrumpida deja un
+    // registro huérfano para siempre y sus cinco objetos ocupando almacenamiento (`DEFECTS.md`
+    // O-05). El recolector estaba escrito desde la rebanada 08 y **sin ejecutar nunca**.
+    const abandonada = await subidaSinConfirmar()
+    const enCurso = await subidaSinConfirmar()
+
+    expect((await fetch(abandonada.url)).ok).toBe(true)
+
+    await db.update(uploads).set({ createdAt: haceDosDias() }).where(eq(uploads.id, abandonada.id))
+
+    const elegidas = await collectAbandoned(SIN_SESION)
+
+    expect(elegidas).toBe(1)
+    expect(await db.select().from(uploads).where(eq(uploads.id, abandonada.id))).toHaveLength(0)
+    expect((await fetch(abandonada.url)).ok).toBe(false)
+
+    // Y la que está ocurriendo ahora mismo sigue entera: el plazo no es decoración, es lo que separa
+    // «subida interrumpida» de «subida en curso por una conexión mala».
+    expect(await db.select().from(uploads).where(eq(uploads.id, enCurso.id))).toHaveLength(1)
+    expect((await fetch(enCurso.url)).ok).toBe(true)
+  })
+
+  it("no toca un archivo referenciado, ni su fila ni sus objetos", async () => {
+    // Escenario: «Un archivo referenciado nunca se recoge». Un archivo **pendiente** y referenciado
+    // existe de verdad: la entidad se guardó antes de que llegara la confirmación, o la confirmación
+    // se perdió — es el caso que describe la propia guarda de la migración `0017`. La fila la
+    // protege el motor; los objetos los tiene que proteger el recolector, y retirarlos antes de
+    // borrar dejaba la fila viva apuntando a bytes que ya no estaban. Ver `HALLAZGOS.md` H-160.
+    const referenciada = await subidaSinConfirmar()
+
+    await db
+      .update(companies)
+      .set({ logoUploadId: referenciada.id })
+      .where(eq(companies.id, companyId))
+    await db
+      .update(uploads)
+      .set({ createdAt: haceDosDias() })
+      .where(eq(uploads.id, referenciada.id))
+
+    await collectAbandoned(SIN_SESION)
+
+    expect(await db.select().from(uploads).where(eq(uploads.id, referenciada.id))).toHaveLength(1)
+    expect((await fetch(referenciada.url)).ok).toBe(true)
+
+    // Se retira a mano: sigue pendiente y vencida, así que dejarla ahí la haría recogible en la
+    // prueba siguiente y su cuenta dejaría de ser la que esa prueba afirma.
+    await db.update(companies).set({ logoUploadId: null }).where(eq(companies.id, companyId))
+    await db.delete(uploads).where(eq(uploads.id, referenciada.id))
+  })
+
+  it("nunca se lleva un marcador de posición", async () => {
+    // No se eliminan **aunque dejen de estar referenciados**: son la fila a la que apuntan las
+    // entidades que exigen archivo y no tienen ninguno. Se comprueba aquí porque el recolector es el
+    // único camino que borra archivos sin que nadie se lo haya pedido.
+    const marcador = await subidaSinConfirmar()
+
+    await db
+      .update(uploads)
+      .set({ isPlaceholder: true, createdAt: haceDosDias() })
+      .where(eq(uploads.id, marcador.id))
+
+    expect(await collectAbandoned(SIN_SESION)).toBe(0)
+    expect(await db.select().from(uploads).where(eq(uploads.id, marcador.id))).toHaveLength(1)
+    expect((await fetch(marcador.url)).ok).toBe(true)
   })
 })
