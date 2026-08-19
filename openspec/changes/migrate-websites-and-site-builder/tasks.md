@@ -2,23 +2,23 @@
 
 ## Sitio
 
-- [ ] Registro con nombre, logotipo, icono, categoría y fuente de catálogo
-- [ ] Rechazo de fuentes de otra empresa
-- [ ] Identificador legible único, con consulta de disponibilidad
-- [ ] Subdominio y dirección derivados
-- [ ] Publicación y despublicación
-- [ ] Eliminación que conserva la fuente y libera el identificador
+- [x] Registro con nombre, logotipo, icono, categoría y fuente de catálogo
+- [x] Rechazo de fuentes de otra empresa
+- [x] Identificador legible único, con consulta de disponibilidad
+- [x] Subdominio y dirección derivados
+- [x] Publicación y despublicación
+- [x] Eliminación que conserva la fuente y libera el identificador
 
 ## Resolución
 
-- [ ] Extracción del subdominio antes de servir contenido
-- [ ] El dominio principal no se ve afectado
-- [ ] Compuerta uno: sitio existente y publicado
-- [ ] Compuerta dos: suscripción vigente
-- [ ] Compuerta tres: servicio habilitado
-- [ ] Una página propia por cada fallo
-- [ ] Derivación por vertical, con página en construcción por defecto
-- [ ] Metadatos por página
+- [x] Extracción del subdominio antes de servir contenido
+- [x] El dominio principal no se ve afectado
+- [x] Compuerta uno: sitio existente y publicado
+- [x] Compuerta dos: suscripción vigente
+- [x] Compuerta tres: servicio habilitado
+- [x] Una página propia por cada fallo
+- [x] Derivación por vertical, con página en construcción por defecto
+- [x] Metadatos por página
 
 ## Constructor
 
@@ -41,11 +41,11 @@
 
 ## Tiendas
 
-- [ ] Navegación, pie y secciones de la personalización vigente
+- [ ] Navegación, pie y secciones de la personalización vigente — navegación y pie hechos; las secciones esperan al constructor
 - [ ] Registro y acceso desde la propia tienda
 - [ ] Cuenta del comprador: direcciones y pedidos de todas las tiendas
-- [ ] Catálogo paginado, con búsqueda y filtro por categoría con descendientes
-- [ ] Ficha por identificador o por identificador legible
+- [x] Catálogo paginado, con búsqueda y filtro por categoría con descendientes
+- [x] Ficha por identificador o por identificador legible
 - [ ] Carrito persistente, con subtotal y estimación de envío
 - [ ] Revalidación de precios y existencias antes de pagar
 - [ ] Modalidad venta o renta en la vertical de almacén
@@ -53,7 +53,11 @@
 - [ ] Páginas de confirmación y cancelación
 - [ ] Idioma seleccionable y persistente
 - [ ] El carrito sobrevive al inicio de sesión
-- [ ] Las lecturas públicas no exponen costos, ubicaciones ni datos fiscales
+- [x] Las lecturas públicas no exponen costos, ubicaciones ni datos fiscales
+
+> El **formulario público de contacto** que alimenta la bandeja de prospectos —rebanada 10,
+> `user-accounts`, «Captura pública de prospectos»— entró con esta rebanada: el servidor ya
+> estaba y sólo faltaba la pantalla. Vive en `apps/web/src/app/contacto/`.
 
 ## Limpieza
 
@@ -61,8 +65,8 @@
 
 ## Verificación
 
-- [ ] Prueba por cada una de las tres compuertas
-- [ ] Prueba: sitio despublicado no revela su existencia
+- [x] Prueba por cada una de las tres compuertas
+- [x] Prueba: sitio despublicado no revela su existencia
 - [ ] Prueba: la campaña programada sustituye y se retira sola
 - [ ] Prueba: cambio de precio antes de pagar se avisa
-- [ ] Prueba: el costo interno no sale en la ficha pública
+- [x] Prueba: el costo interno no sale en la ficha pública
