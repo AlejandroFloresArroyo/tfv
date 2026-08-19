@@ -25,6 +25,7 @@ import {
   productionChapters,
   productionCharacters,
   productionItems,
+  productionProps,
   productionScenes,
   productions,
   productionVideos,
@@ -74,12 +75,24 @@ interface Recording {
   updatedAt: string
 }
 
+interface Prop {
+  id: string
+  continuityId: string
+  kind: "item" | "video"
+  itemId: string | null
+  videoId: string | null
+  name: string
+  code: string | null
+  createdAt: string
+}
+
 interface Continuity {
   id: string
   recordingId: string
   characterId: string | null
   characterName: string | null
   responsibleId: string | null
+  props: Prop[]
   createdAt: string
   updatedAt: string
 }
@@ -253,6 +266,117 @@ async function assignCharacters(s: Stage, recordingId: string, characterIds: str
   )
   expect(response.status).toBe(200)
   return json<RecordingDetail>(response)
+}
+
+function continuityPath(s: Stage, recordingId: string, continuityId: string) {
+  return `${recordingsPath(s)}/${recordingId}/continuities/${continuityId}`
+}
+
+async function newContinuity(s: Stage, recordingId: string, body: Record<string, unknown> = {}) {
+  const response = await request(
+    "POST",
+    `${recordingsPath(s)}/${recordingId}/continuities`,
+    body,
+    s.session.cookie,
+  )
+  expect(response.status).toBe(201)
+  return json<Continuity>(response)
+}
+
+async function addItem(s: Stage, recordingId: string, continuityId: string, itemId: string) {
+  const response = await request(
+    "POST",
+    `${continuityPath(s, recordingId, continuityId)}/items`,
+    { itemId },
+    s.session.cookie,
+  )
+  expect(response.status).toBe(201)
+  return json<Prop>(response)
+}
+
+async function addVideo(s: Stage, recordingId: string, continuityId: string, videoId: string) {
+  const response = await request(
+    "POST",
+    `${continuityPath(s, recordingId, continuityId)}/videos`,
+    { videoId },
+    s.session.cookie,
+  )
+  expect(response.status).toBe(201)
+  return json<Prop>(response)
+}
+
+async function setItems(
+  s: Stage,
+  recordingId: string,
+  continuityId: string,
+  itemIds: string[],
+): Promise<Prop[]> {
+  const response = await request(
+    "PUT",
+    `${continuityPath(s, recordingId, continuityId)}/items`,
+    { itemIds },
+    s.session.cookie,
+  )
+  expect(response.status).toBe(200)
+  return (await json<Continuity>(response)).props
+}
+
+async function setVideos(
+  s: Stage,
+  recordingId: string,
+  continuityId: string,
+  videoIds: string[],
+): Promise<Prop[]> {
+  const response = await request(
+    "PUT",
+    `${continuityPath(s, recordingId, continuityId)}/videos`,
+    { videoIds },
+    s.session.cookie,
+  )
+  expect(response.status).toBe(200)
+  return (await json<Continuity>(response)).props
+}
+
+/**
+ * Qué restricción del motor rechazó la escritura.
+ *
+ * El mensaje que envuelve el cliente sólo trae la consulta; el nombre de la restricción viene en la
+ * causa. Afirmarlo **por nombre** es lo que distingue «el motor lo impidió» de «falló algo»: una
+ * prueba que sólo mirase que hubo error pasaría igual con la columna mal escrita.
+ */
+async function rejectedBy(work: Promise<unknown>): Promise<string> {
+  try {
+    await work
+  } catch (error) {
+    const cause = (error as { cause?: { constraint_name?: string } }).cause
+    return cause?.constraint_name ?? "sin restricción"
+  }
+  return "no falló"
+}
+
+/** Recuentos directos: lo que sobrevive a una eliminación se comprueba en la base, no en la API. */
+async function countProps(continuityId: string) {
+  const rows = await db
+    .select({ id: productionProps.id })
+    .from(productionProps)
+    .where(eq(productionProps.continuityId, continuityId))
+  return rows.length
+}
+
+async function countItems(productionId: string) {
+  const rows = await db
+    .select({ id: productionItems.id })
+    .from(productionItems)
+    .where(eq(productionItems.productionId, productionId))
+  return rows.length
+}
+
+async function countVideos(productionId: string) {
+  const rows = await db
+    .select({ id: productionVideos.id })
+    .from(productionVideos)
+    .where(eq(productionVideos.productionId, productionId))
+  return rows.length
 }
 
 let scopedAccounts = 0
@@ -641,7 +765,330 @@ describe("una continuidad por personaje y jornada", () => {
   })
 })
 
-// Las siembras que todavía no usa ningún caso quedan referenciadas para que el análisis no las dé
-// por muertas mientras se construyen los incrementos que las estrenan.
-void sowItem
-void sowVideo
+// ─── La utilería es artículo o video, nunca ambos ni ninguno ─────────────────
+
+describe("una pieza de utilería es artículo o video", () => {
+  it("el motor rechaza una pieza que referencie las dos cosas", async () => {
+    // Escenario: «No se admiten ambas referencias». Se prueba **contra el motor** y no contra la
+    // API a propósito: por la API no hay forma de pedirlo —hay un camino por tipo, y ninguno
+    // acepta el otro—, así que el único sitio donde este caso existe es la restricción de
+    // comprobación `production_props_item_xor_video`. Es la capa más baja, y es la que se afirma.
+    const s = await stage()
+    const recording = await newRecording(s)
+    const continuity = await newContinuity(s, recording.id)
+    const itemId = await sowItem(s.productionId, "Chaqueta")
+    const videoId = await sowVideo(s.productionId, "Referencia")
+
+    const constraint = await rejectedBy(
+      db
+        .insert(productionProps)
+        .values({ id: newId(), continuityId: continuity.id, itemId, videoId }),
+    )
+
+    expect(constraint).toBe("production_props_item_xor_video")
+  })
+
+  it("el motor rechaza una pieza que no referencie nada", async () => {
+    // Escenario: «No se admite una pieza vacía». Misma capa, el otro lado de la exclusión.
+    const s = await stage()
+    const recording = await newRecording(s)
+    const continuity = await newContinuity(s, recording.id)
+
+    const constraint = await rejectedBy(
+      db.insert(productionProps).values({ id: newId(), continuityId: continuity.id }),
+    )
+
+    expect(constraint).toBe("production_props_item_xor_video")
+  })
+
+  it("una pieza con un solo lado sí entra, que es lo que hace significativos los dos rechazos", async () => {
+    // El control del par anterior: sin esto, los dos casos de arriba pasarían igual si **toda**
+    // inserción en la tabla fallara.
+    const s = await stage()
+    const recording = await newRecording(s)
+    const continuity = await newContinuity(s, recording.id)
+    const itemId = await sowItem(s.productionId, "Chaqueta")
+
+    const constraint = await rejectedBy(
+      db.insert(productionProps).values({ id: newId(), continuityId: continuity.id, itemId }),
+    )
+
+    expect(constraint).toBe("no falló")
+  })
+
+  it("un artículo solo se cuelga y se ve resuelto", async () => {
+    const s = await stage()
+    const recording = await newRecording(s)
+    const continuity = await newContinuity(s, recording.id)
+    const itemId = await sowItem(s.productionId, "Chaqueta de mezclilla")
+
+    const prop = await json<Prop>(
+      await request(
+        "POST",
+        `${continuityPath(s, recording.id, continuity.id)}/items`,
+        { itemId },
+        s.session.cookie,
+      ),
+    )
+
+    expect(prop.kind).toBe("item")
+    expect(prop.itemId).toBe(itemId)
+    expect(prop.videoId).toBeNull()
+    expect(prop.name).toBe("Chaqueta de mezclilla")
+    expect(prop.code).not.toBeNull()
+  })
+
+  it("un video solo se cuelga y se ve resuelto", async () => {
+    const s = await stage()
+    const recording = await newRecording(s)
+    const continuity = await newContinuity(s, recording.id)
+    const videoId = await sowVideo(s.productionId, "Cómo debía verse")
+
+    const prop = await json<Prop>(
+      await request(
+        "POST",
+        `${continuityPath(s, recording.id, continuity.id)}/videos`,
+        { videoId },
+        s.session.cookie,
+      ),
+    )
+
+    expect(prop.kind).toBe("video")
+    expect(prop.videoId).toBe(videoId)
+    expect(prop.itemId).toBeNull()
+    expect(prop.name).toBe("Cómo debía verse")
+    expect(prop.code).toBeNull()
+  })
+
+  it("el artículo de otra producción no se cuelga", async () => {
+    const s = await stage()
+    const recording = await newRecording(s)
+    const continuity = await newContinuity(s, recording.id)
+    const other = await newProduction(s.session, s.companyId, "Otra Serie")
+    const foreign = await sowItem(other.id, "Ajeno")
+
+    // La propia primero: distingue «el artículo no vale» de «la ruta no existe».
+    await addItem(s, recording.id, continuity.id, await sowItem(s.productionId, "Propio"))
+
+    const response = await request(
+      "POST",
+      `${continuityPath(s, recording.id, continuity.id)}/items`,
+      { itemId: foreign },
+      s.session.cookie,
+    )
+
+    expect(response.status).toBe(404)
+  })
+
+  it("el video de otra producción no se cuelga", async () => {
+    const s = await stage()
+    const recording = await newRecording(s)
+    const continuity = await newContinuity(s, recording.id)
+    const other = await newProduction(s.session, s.companyId, "Otra Serie")
+    const foreign = await sowVideo(other.id, "Ajeno")
+
+    await addVideo(s, recording.id, continuity.id, await sowVideo(s.productionId, "Propio"))
+
+    const response = await request(
+      "POST",
+      `${continuityPath(s, recording.id, continuity.id)}/videos`,
+      { videoId: foreign },
+      s.session.cookie,
+    )
+
+    expect(response.status).toBe(404)
+  })
+})
+
+// ─── Reconciliación ──────────────────────────────────────────────────────────
+
+describe("se establece de una vez el conjunto de artículos", () => {
+  it("crea lo que falta, quita lo que sobra y no toca los videos", async () => {
+    // Escenario: «Se establece el conjunto de artículos».
+    const s = await stage()
+    const recording = await newRecording(s)
+    const continuity = await newContinuity(s, recording.id)
+
+    const a = await sowItem(s.productionId, "A")
+    const b = await sowItem(s.productionId, "B")
+    const c = await sowItem(s.productionId, "C")
+    const d = await sowItem(s.productionId, "D")
+    const video = await sowVideo(s.productionId, "Referencia")
+
+    await setItems(s, recording.id, continuity.id, [a, b, c])
+    await addVideo(s, recording.id, continuity.id, video)
+
+    const props = await setItems(s, recording.id, continuity.id, [a, d])
+
+    const items = props.filter((row) => row.kind === "item").map((row) => row.itemId)
+    expect(items.sort()).toEqual([a, d].sort())
+    expect(items).not.toContain(b)
+    expect(items).not.toContain(c)
+
+    const videos = props.filter((row) => row.kind === "video").map((row) => row.videoId)
+    expect(videos).toEqual([video])
+  })
+
+  it("el conjunto vacío deja la continuidad sin artículos y con sus videos", async () => {
+    const s = await stage()
+    const recording = await newRecording(s)
+    const continuity = await newContinuity(s, recording.id)
+    const a = await sowItem(s.productionId, "A")
+    const video = await sowVideo(s.productionId, "Referencia")
+    await setItems(s, recording.id, continuity.id, [a])
+    await addVideo(s, recording.id, continuity.id, video)
+
+    const props = await setItems(s, recording.id, continuity.id, [])
+
+    expect(props.filter((row) => row.kind === "item")).toHaveLength(0)
+    expect(props.filter((row) => row.kind === "video")).toHaveLength(1)
+  })
+})
+
+describe("se establece de una vez el conjunto de videos", () => {
+  it("deja un video y no toca los tres artículos", async () => {
+    // Escenario: «Se establece el conjunto de videos».
+    const s = await stage()
+    const recording = await newRecording(s)
+    const continuity = await newContinuity(s, recording.id)
+
+    const items = await Promise.all(["A", "B", "C"].map((name) => sowItem(s.productionId, name)))
+    const uno = await sowVideo(s.productionId, "Uno")
+    const dos = await sowVideo(s.productionId, "Dos")
+
+    await setItems(s, recording.id, continuity.id, items)
+    await setVideos(s, recording.id, continuity.id, [uno, dos])
+
+    const props = await setVideos(s, recording.id, continuity.id, [uno])
+
+    expect(props.filter((row) => row.kind === "video").map((row) => row.videoId)).toEqual([uno])
+    expect(
+      props
+        .filter((row) => row.kind === "item")
+        .map((row) => row.itemId)
+        .sort(),
+    ).toEqual([...items].sort())
+  })
+
+  it("una cuenta con la clave de artículos no reconcilia videos", async () => {
+    const s = await stage()
+    const recording = await newRecording(s)
+    const continuity = await newContinuity(s, recording.id)
+    const video = await sowVideo(s.productionId, "Referencia")
+    const cookie = await memberWith(s.companyId, [
+      "productions.productions.view",
+      "productions.recordings.view",
+      "productions.continuities.view",
+      "productions.continuities.products",
+    ])
+
+    const items = await request(
+      "PUT",
+      `${continuityPath(s, recording.id, continuity.id)}/items`,
+      { itemIds: [] },
+      cookie,
+    )
+    expect(items.status).toBe(200)
+
+    const videos = await request(
+      "PUT",
+      `${continuityPath(s, recording.id, continuity.id)}/videos`,
+      { videoIds: [video] },
+      cookie,
+    )
+    expect(videos.status).toBe(403)
+  })
+})
+
+// ─── Lo que sobrevive a cada eliminación ─────────────────────────────────────
+
+describe("eliminar no se lleva lo referenciado", () => {
+  it("retirar el personaje conserva la utilería", async () => {
+    // Segunda mitad del escenario «Se retira el personaje de una continuidad»: «conserva su
+    // utilería».
+    const s = await stage()
+    const recording = await newRecording(s)
+    const marta = await sowCharacter(s.productionId, "Marta")
+    const [continuity] = (await assignCharacters(s, recording.id, [marta])).continuities
+    const item = await sowItem(s.productionId, "Chaqueta")
+    const video = await sowVideo(s.productionId, "Referencia")
+    await addItem(s, recording.id, continuity?.id as string, item)
+    await addVideo(s, recording.id, continuity?.id as string, video)
+
+    await request(
+      "PUT",
+      `${continuityPath(s, recording.id, continuity?.id as string)}/character`,
+      { characterId: null },
+      s.session.cookie,
+    )
+
+    const after = await recordingOf(s, recording.id)
+    expect(after.continuities[0]?.characterId).toBeNull()
+    expect(after.continuities[0]?.props).toHaveLength(2)
+  })
+
+  it("eliminar la continuidad elimina su utilería y deja los artículos en el inventario", async () => {
+    // Escenario: «Los artículos sobreviven a la continuidad».
+    const s = await stage()
+    const recording = await newRecording(s)
+    const continuity = await newContinuity(s, recording.id)
+    const items = await Promise.all(
+      ["A", "B", "C", "D"].map((name) => sowItem(s.productionId, name)),
+    )
+    await setItems(s, recording.id, continuity.id, items)
+
+    const response = await request(
+      "DELETE",
+      continuityPath(s, recording.id, continuity.id),
+      undefined,
+      s.session.cookie,
+    )
+    expect(response.status).toBe(204)
+
+    expect(await countProps(continuity.id)).toBe(0)
+    expect(await countItems(s.productionId)).toBe(4)
+  })
+
+  it("eliminar la jornada arrastra sus continuidades y deja artículos y videos", async () => {
+    // Escenario: «La eliminación arrastra las continuidades».
+    const s = await stage()
+    const recording = await newRecording(s)
+    const cast = await Promise.all(
+      ["Marta", "Julián", "La vecina", "El perro"].map((name) =>
+        sowCharacter(s.productionId, name),
+      ),
+    )
+    const opened = await assignCharacters(s, recording.id, cast)
+    const item = await sowItem(s.productionId, "Chaqueta")
+    const video = await sowVideo(s.productionId, "Referencia")
+    await addItem(s, recording.id, opened.continuities[0]?.id as string, item)
+    await addVideo(s, recording.id, opened.continuities[0]?.id as string, video)
+
+    const response = await request(
+      "DELETE",
+      `${recordingsPath(s)}/${recording.id}`,
+      undefined,
+      s.session.cookie,
+    )
+    expect(response.status).toBe(204)
+
+    // La jornada deja de existir por todas las vías por las que se llega a ella, y con ella sus
+    // cuatro continuidades. La baja es lógica —el modelo le da columna a la jornada y no a la
+    // continuidad—, así que lo que se afirma es lo que se observa (`HALLAZGOS.md` H-187).
+    const gone = await request(
+      "GET",
+      `${recordingsPath(s)}/${recording.id}`,
+      undefined,
+      s.session.cookie,
+    )
+    expect(gone.status).toBe(404)
+
+    const page = await json<{ items: Recording[]; totalItems: number }>(
+      await request("GET", recordingsPath(s), undefined, s.session.cookie),
+    )
+    expect(page.totalItems).toBe(0)
+
+    expect(await countItems(s.productionId)).toBe(1)
+    expect(await countVideos(s.productionId)).toBe(1)
+  })
+})

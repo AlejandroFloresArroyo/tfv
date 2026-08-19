@@ -59,11 +59,14 @@ import {
   productionChapters,
   productionCharacters,
   productionContinuities,
+  productionItems,
+  productionProps,
   productionRecordings,
   productionScenes,
+  productionVideos,
   users,
 } from "@tfv/db/schema"
-import { and, count, eq, inArray, isNull } from "drizzle-orm"
+import { and, count, eq, inArray, isNotNull, isNull } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 import { RECORDING_STATUSES, type RecordingStatus } from "./panel.ts"
@@ -91,6 +94,40 @@ export interface RecordingRecord {
   readonly updatedAt: Date
 }
 
+/**
+ * Una pieza de utilería, **tal y como se pide crearla**.
+ *
+ * Éste es el candado de la exclusión, y está aquí y no en un manejador a propósito: el tipo no
+ * puede expresar «las dos» ni «ninguna». No hay un objeto con dos campos opcionales que alguien
+ * tenga que acordarse de comprobar — hay dos formas, y cada una trae exactamente una referencia.
+ *
+ * Debajo todavía queda una capa más: la restricción de comprobación
+ * `production_props_item_xor_video`, que lo sostiene aunque el código se equivoque. Y encima hay
+ * otra: el transporte tiene un camino por tipo, así que ni siquiera se puede pedir. Tres capas
+ * para una regla que en la spec ocupa una línea, porque la línea dice **por qué** importa: un
+ * artículo es algo que existe y hay que llevar al set; un video es documentación de cómo debía
+ * verse. Confundirlos manda a alguien a buscar por la nave un objeto que nunca existió.
+ */
+export type PropRef =
+  | { readonly kind: "item"; readonly itemId: string }
+  | { readonly kind: "video"; readonly videoId: string }
+
+export type PropKind = PropRef["kind"]
+
+/** Una pieza de utilería ya registrada, con su referencia resuelta. */
+export interface PropRecord {
+  readonly id: string
+  readonly continuityId: string
+  readonly kind: PropKind
+  readonly itemId: string | null
+  readonly videoId: string | null
+  /** El nombre de lo referenciado. Es lo que se lee en el set, no el identificador. */
+  readonly name: string
+  /** La etiqueta del artículo. Nula en los videos, que no llevan ninguna. */
+  readonly code: string | null
+  readonly createdAt: Date
+}
+
 /** Cómo aparece un personaje en una jornada. Puede quedarse sin personaje. */
 export interface ContinuityRecord {
   readonly id: string
@@ -99,6 +136,7 @@ export interface ContinuityRecord {
   readonly characterName: string | null
   readonly responsibleId: string | null
   readonly responsibleName: string | null
+  readonly props: readonly PropRecord[]
   readonly createdAt: Date
   readonly updatedAt: Date
 }
@@ -327,6 +365,39 @@ async function setRecordingStatus(
   })
 }
 
+/**
+ * Da de baja la jornada.
+ *
+ * «Eliminar una jornada de rodaje SHALL eliminar sus continuidades y la utilería de éstas, y SHALL
+ * desvincularla de su escena.»
+ *
+ * Baja **lógica**, y una sola fila. El modelo le da columna de baja a la jornada —y no a la
+ * continuidad—, así que ésta es la forma que el modelo pide, la misma que la del plan de trabajo.
+ * Las continuidades desaparecen con ella porque **toda** lectura de este módulo parte de la
+ * jornada y la filtra; los artículos y los videos referenciados no se tocan, que es lo que la spec
+ * protege. Y «desvincularla de su escena» se cumple sin escribir nada: quien mira desde la escena
+ * también filtra las bajas.
+ *
+ * La asimetría entre esta baja y la de la continuidad —física— está anotada en `HALLAZGOS.md`
+ * H-187, con el aviso para quien escriba «dónde se ha usado un artículo».
+ */
+export async function deleteRecording(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+): Promise<void> {
+  await withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadRecording(tx, productionId, recordingId)
+
+    await tx
+      .update(productionRecordings)
+      .set({ deletedAt: new Date() })
+      .where(eq(productionRecordings.id, recordingId))
+  })
+}
+
 // ─── Asignar el reparto ──────────────────────────────────────────────────────
 
 /**
@@ -489,6 +560,178 @@ export async function deleteContinuity(
   })
 }
 
+// ─── Utilería ────────────────────────────────────────────────────────────────
+
+/**
+ * Cuelga un artículo del inventario de la producción.
+ *
+ * Repetir el mismo artículo devuelve **el que ya estaba** en lugar de fallar: la utilería de una
+ * continuidad es un conjunto, no una cuenta. El motor ya lo impide con el único parcial
+ * `production_props_item_unique`; aquí se traduce en la respuesta que el llamante espera.
+ */
+export async function addContinuityItem(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+  continuityId: string,
+  itemId: string,
+): Promise<PropRecord> {
+  return addProp(actor, companyId, productionId, recordingId, continuityId, {
+    kind: "item",
+    itemId,
+  })
+}
+
+/** Cuelga un video de referencia. Simétrica de la anterior, y con su propia clave de permiso. */
+export async function addContinuityVideo(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+  continuityId: string,
+  videoId: string,
+): Promise<PropRecord> {
+  return addProp(actor, companyId, productionId, recordingId, continuityId, {
+    kind: "video",
+    videoId,
+  })
+}
+
+async function addProp(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+  continuityId: string,
+  ref: PropRef,
+): Promise<PropRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadRecording(tx, productionId, recordingId)
+    await loadContinuity(tx, recordingId, continuityId)
+    await requireReferences(tx, productionId, [ref])
+
+    await tx.insert(productionProps).values(propValues(continuityId, ref)).onConflictDoNothing()
+
+    const props = await propsOf(tx, [continuityId])
+    const mine = (props.get(continuityId) ?? []).find((prop) =>
+      ref.kind === "item" ? prop.itemId === ref.itemId : prop.videoId === ref.videoId,
+    )
+
+    if (!mine) throw new Error("la pieza de utilería no quedó registrada")
+    return mine
+  })
+}
+
+/**
+ * Establece de una vez el conjunto completo de artículos.
+ *
+ * «La operación SHALL ser atómica y no SHALL afectar a las piezas que referencian videos.» Las dos
+ * cosas salen de cómo está escrita, no de una comprobación:
+ *
+ * - **Atómica** porque `withRequester` abre una transacción y todo ocurre dentro. O están las tres
+ *   escrituras o no está ninguna.
+ * - **Sin tocar los videos** porque el conjunto de partida se lee filtrando por `item_id is not
+ *   null`. Las piezas de video no entran en la diferencia, así que no hay forma de que salgan de
+ *   ella.
+ */
+export async function setContinuityItems(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+  continuityId: string,
+  itemIds: readonly string[],
+): Promise<ContinuityRecord> {
+  return reconcileProps(actor, companyId, productionId, recordingId, continuityId, "item", itemIds)
+}
+
+/** Establece de una vez el conjunto completo de videos. Simétrica, y sin tocar los artículos. */
+export async function setContinuityVideos(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+  continuityId: string,
+  videoIds: readonly string[],
+): Promise<ContinuityRecord> {
+  return reconcileProps(
+    actor,
+    companyId,
+    productionId,
+    recordingId,
+    continuityId,
+    "video",
+    videoIds,
+  )
+}
+
+async function reconcileProps(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  recordingId: string,
+  continuityId: string,
+  kind: PropKind,
+  ids: readonly string[],
+): Promise<ContinuityRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadRecording(tx, productionId, recordingId)
+    const continuity = await loadContinuity(tx, recordingId, continuityId)
+
+    const wanted = [...new Set(ids)]
+    const refs = wanted.map(
+      (id): PropRef =>
+        kind === "item" ? { kind: "item", itemId: id } : { kind: "video", videoId: id },
+    )
+    await requireReferences(tx, productionId, refs)
+
+    // El conjunto de partida es **sólo el de este tipo**. Lo del otro tipo no entra en la
+    // diferencia, así que la reconciliación no puede quitarlo.
+    const column = kind === "item" ? productionProps.itemId : productionProps.videoId
+    const current = await tx
+      .select({ id: productionProps.id, referenceId: column })
+      .from(productionProps)
+      .where(and(eq(productionProps.continuityId, continuityId), isNotNull(column)))
+
+    const keep = new Set(wanted)
+    const surplus = current.filter((row) => row.referenceId === null || !keep.has(row.referenceId))
+    const present = new Set(current.map((row) => row.referenceId))
+    const missing = refs.filter((ref) =>
+      ref.kind === "item" ? !present.has(ref.itemId) : !present.has(ref.videoId),
+    )
+
+    if (surplus.length > 0) {
+      await tx.delete(productionProps).where(
+        inArray(
+          productionProps.id,
+          surplus.map((row) => row.id),
+        ),
+      )
+    }
+
+    if (missing.length > 0) {
+      await tx.insert(productionProps).values(missing.map((ref) => propValues(continuityId, ref)))
+    }
+
+    return (await decorateContinuities(tx, [continuity]))[0] as ContinuityRecord
+  })
+}
+
+/**
+ * La única forma de construir la fila de una pieza.
+ *
+ * Toda inserción pasa por aquí, y aquí la referencia llega ya decidida por el tipo: una rama pone
+ * el artículo y anula el video, la otra al revés. No hay tercera rama que escribir mal.
+ */
+function propValues(continuityId: string, ref: PropRef) {
+  return ref.kind === "item"
+    ? { id: newId(), continuityId, itemId: ref.itemId, videoId: null }
+    : { id: newId(), continuityId, itemId: null, videoId: ref.videoId }
+}
+
 // ─── Ayuda ───────────────────────────────────────────────────────────────────
 
 /** La jornada con sus continuidades, dentro de la transacción que ya está abierta. */
@@ -530,6 +773,10 @@ async function decorateContinuities(
     tx,
     rows.map((row) => row.responsibleId),
   )
+  const props = await propsOf(
+    tx,
+    rows.map((row) => row.id),
+  )
 
   return rows.map((row) => ({
     id: row.id,
@@ -539,9 +786,114 @@ async function decorateContinuities(
     responsibleId: row.responsibleId,
     responsibleName:
       row.responsibleId === null ? null : (responsibles.get(row.responsibleId) ?? null),
+    props: props.get(row.id) ?? [],
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }))
+}
+
+/**
+ * La utilería de un lote de continuidades, **resuelta** y en una sola consulta.
+ *
+ * «Resuelta» es lo que pide la spec: quien abre una jornada tiene que leer «Chaqueta de mezclilla»,
+ * no un identificador. Los dos enlaces son externos porque exactamente uno está puesto en cada
+ * fila, que es de lo que trata toda esta parte.
+ */
+async function propsOf(
+  tx: Transaction,
+  continuityIds: readonly string[],
+): Promise<Map<string, PropRecord[]>> {
+  const byContinuity = new Map<string, PropRecord[]>()
+  if (continuityIds.length === 0) return byContinuity
+
+  const rows = await tx
+    .select({
+      id: productionProps.id,
+      continuityId: productionProps.continuityId,
+      itemId: productionProps.itemId,
+      videoId: productionProps.videoId,
+      createdAt: productionProps.createdAt,
+      itemName: productionItems.name,
+      itemCode: productionItems.code,
+      videoName: productionVideos.name,
+    })
+    .from(productionProps)
+    .leftJoin(productionItems, eq(productionItems.id, productionProps.itemId))
+    .leftJoin(productionVideos, eq(productionVideos.id, productionProps.videoId))
+    .where(inArray(productionProps.continuityId, [...continuityIds]))
+    .orderBy(productionProps.createdAt, productionProps.id)
+
+  for (const row of rows) {
+    const isItem = row.itemId !== null
+    const prop: PropRecord = {
+      id: row.id,
+      continuityId: row.continuityId,
+      kind: isItem ? "item" : "video",
+      itemId: row.itemId,
+      videoId: row.videoId,
+      name: (isItem ? row.itemName : row.videoName) ?? "",
+      code: isItem ? row.itemCode : null,
+      createdAt: row.createdAt,
+    }
+
+    const list = byContinuity.get(row.continuityId)
+    if (list) list.push(prop)
+    else byContinuity.set(row.continuityId, [prop])
+  }
+
+  return byContinuity
+}
+
+/**
+ * Los artículos y los videos, **resueltos contra la producción**.
+ *
+ * Un artículo del inventario de otra producción no es utilería de ésta, y el modelo no lo impide:
+ * `production_props` apunta a `production_items` y a `production_videos` sin más
+ * (`HALLAZGOS.md` H-188).
+ */
+async function requireReferences(
+  tx: Transaction,
+  productionId: string,
+  refs: readonly PropRef[],
+): Promise<void> {
+  const itemIds = [...new Set(refs.filter((ref) => ref.kind === "item").map((ref) => ref.itemId))]
+  const videoIds = [
+    ...new Set(refs.filter((ref) => ref.kind === "video").map((ref) => ref.videoId)),
+  ]
+
+  if (itemIds.length > 0) {
+    const rows = await tx
+      .select({ id: productionItems.id })
+      .from(productionItems)
+      .where(
+        and(
+          inArray(productionItems.id, itemIds),
+          eq(productionItems.productionId, productionId),
+          isNull(productionItems.deletedAt),
+        ),
+      )
+
+    if (rows.length !== itemIds.length) {
+      throw new NotFoundError("Alguno de los artículos no existe en esta producción")
+    }
+  }
+
+  if (videoIds.length > 0) {
+    const rows = await tx
+      .select({ id: productionVideos.id })
+      .from(productionVideos)
+      .where(
+        and(
+          inArray(productionVideos.id, videoIds),
+          eq(productionVideos.productionId, productionId),
+          isNull(productionVideos.deletedAt),
+        ),
+      )
+
+    if (rows.length !== videoIds.length) {
+      throw new NotFoundError("Alguno de los videos no existe en esta producción")
+    }
+  }
 }
 
 /**

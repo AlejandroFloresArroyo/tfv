@@ -28,11 +28,14 @@ import { toInstant } from "@tfv/contracts"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import {
+  addContinuityItem,
+  addContinuityVideo,
   assignCharacters,
   closeRecording,
   createContinuity,
   createRecording,
   deleteContinuity,
+  deleteRecording,
   getRecording,
   listRecordings,
   openRecording,
@@ -40,6 +43,8 @@ import {
   RECORDING_STATUSES,
   recordingQuery,
   setContinuityCharacter,
+  setContinuityItems,
+  setContinuityVideos,
   updateRecording,
 } from "../productions/continuity.ts"
 import { defineRoute, REQUIRES } from "../runtime/route.ts"
@@ -68,6 +73,17 @@ const recordingSchema = z.object({
   updatedAt: z.string(),
 })
 
+const propSchema = z.object({
+  id: z.string(),
+  continuityId: z.string(),
+  kind: z.enum(["item", "video"]),
+  itemId: z.string().nullable(),
+  videoId: z.string().nullable(),
+  name: z.string(),
+  code: z.string().nullable(),
+  createdAt: z.string(),
+})
+
 const continuitySchema = z.object({
   id: z.string(),
   recordingId: z.string(),
@@ -75,6 +91,7 @@ const continuitySchema = z.object({
   characterName: z.string().nullable(),
   responsibleId: z.string().nullable(),
   responsibleName: z.string().nullable(),
+  props: z.array(propSchema),
   createdAt: z.string(),
   updatedAt: z.string(),
 })
@@ -92,8 +109,17 @@ function serializeRecording(row: Awaited<ReturnType<typeof createRecording>>) {
   return { ...row, createdAt: toInstant(row.createdAt), updatedAt: toInstant(row.updatedAt) }
 }
 
+function serializeProp(row: Awaited<ReturnType<typeof addContinuityItem>>) {
+  return { ...row, createdAt: toInstant(row.createdAt) }
+}
+
 function serializeContinuity(row: Awaited<ReturnType<typeof createContinuity>>) {
-  return { ...row, createdAt: toInstant(row.createdAt), updatedAt: toInstant(row.updatedAt) }
+  return {
+    ...row,
+    props: row.props.map(serializeProp),
+    createdAt: toInstant(row.createdAt),
+    updatedAt: toInstant(row.updatedAt),
+  }
 }
 
 function serializeDetail(row: Awaited<ReturnType<typeof getRecording>>) {
@@ -456,5 +482,183 @@ export const deleteContinuityRoute = defineRoute({
       params.continuityId,
     )
     return c.body(null, 204)
+  },
+})
+
+export const deleteRecordingRoute = defineRoute({
+  access: REQUIRES("productions.recordings.delete"),
+  config: {
+    method: "delete",
+    path: "/companies/{companyId}/productions/{productionId}/recordings/{recordingId}",
+    summary: "Dar de baja una jornada de rodaje",
+    tags: ["Continuidad"],
+    request: { params: recordingParams },
+    responses: {
+      204: {
+        description: "Dada de baja, con sus continuidades. Los artículos y videos siguen ahí",
+      },
+      404: { description: "No existe, o está fuera del alcance del solicitante" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    await deleteRecording(actorOf(c), params.companyId, params.productionId, params.recordingId)
+    return c.body(null, 204)
+  },
+})
+
+// ─── La utilería de una continuidad ──────────────────────────────────────────
+
+/**
+ * Los cuatro caminos de la utilería, dos por tipo.
+ *
+ * `POST` cuelga una pieza; `PUT` establece el conjunto entero. Y hay **un camino por tipo**, no uno
+ * que reciba los dos y decida: así «artículo o video, nunca ambos ni ninguno» no es una
+ * comprobación que se pueda olvidar, sino una forma que no se puede escribir.
+ *
+ * Es además lo que hace ejercibles las dos claves que el catálogo separa: quien lleva el vestuario
+ * cuelga artículos, y quien documenta con referencias visuales cuelga videos.
+ */
+export const addContinuityItemRoute = defineRoute({
+  access: REQUIRES("productions.continuities.products"),
+  config: {
+    method: "post",
+    path: "/companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities/{continuityId}/items",
+    summary: "Colgar un artículo de una continuidad",
+    tags: ["Continuidad"],
+    request: {
+      params: continuityParams,
+      body: {
+        content: { "application/json": { schema: z.object({ itemId: z.string() }) } },
+      },
+    },
+    responses: {
+      201: {
+        description: "La pieza de utilería, con el artículo resuelto",
+        content: { "application/json": { schema: propSchema } },
+      },
+      404: { description: "La continuidad no existe, o el artículo no es de esta producción" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const prop = await addContinuityItem(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.recordingId,
+      params.continuityId,
+      c.req.valid("json").itemId,
+    )
+    return c.json(serializeProp(prop), 201)
+  },
+})
+
+export const setContinuityItemsRoute = defineRoute({
+  access: REQUIRES("productions.continuities.products"),
+  config: {
+    method: "put",
+    path: "/companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities/{continuityId}/items",
+    summary: "Establecer el conjunto de artículos de una continuidad",
+    tags: ["Continuidad"],
+    request: {
+      params: continuityParams,
+      body: {
+        content: {
+          "application/json": { schema: z.object({ itemIds: z.array(z.string()).max(500) }) },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "La continuidad. Las piezas de video siguen donde estaban",
+        content: { "application/json": { schema: continuitySchema } },
+      },
+      404: { description: "No existe, o alguno de los artículos no es de esta producción" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const continuity = await setContinuityItems(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.recordingId,
+      params.continuityId,
+      c.req.valid("json").itemIds,
+    )
+    return c.json(serializeContinuity(continuity), 200)
+  },
+})
+
+export const addContinuityVideoRoute = defineRoute({
+  access: REQUIRES("productions.continuities.videos"),
+  config: {
+    method: "post",
+    path: "/companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities/{continuityId}/videos",
+    summary: "Colgar un video de referencia de una continuidad",
+    tags: ["Continuidad"],
+    request: {
+      params: continuityParams,
+      body: {
+        content: { "application/json": { schema: z.object({ videoId: z.string() }) } },
+      },
+    },
+    responses: {
+      201: {
+        description: "La pieza de utilería, con el video resuelto",
+        content: { "application/json": { schema: propSchema } },
+      },
+      404: { description: "La continuidad no existe, o el video no es de esta producción" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const prop = await addContinuityVideo(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.recordingId,
+      params.continuityId,
+      c.req.valid("json").videoId,
+    )
+    return c.json(serializeProp(prop), 201)
+  },
+})
+
+export const setContinuityVideosRoute = defineRoute({
+  access: REQUIRES("productions.continuities.videos"),
+  config: {
+    method: "put",
+    path: "/companies/{companyId}/productions/{productionId}/recordings/{recordingId}/continuities/{continuityId}/videos",
+    summary: "Establecer el conjunto de videos de una continuidad",
+    tags: ["Continuidad"],
+    request: {
+      params: continuityParams,
+      body: {
+        content: {
+          "application/json": { schema: z.object({ videoIds: z.array(z.string()).max(500) }) },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "La continuidad. Las piezas de artículo siguen donde estaban",
+        content: { "application/json": { schema: continuitySchema } },
+      },
+      404: { description: "No existe, o alguno de los videos no es de esta producción" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const continuity = await setContinuityVideos(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.recordingId,
+      params.continuityId,
+      c.req.valid("json").videoIds,
+    )
+    return c.json(serializeContinuity(continuity), 200)
   },
 })

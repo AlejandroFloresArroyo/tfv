@@ -104,15 +104,20 @@ import {
   updateRoleRoute,
 } from "./companies.ts"
 import {
+  addContinuityItemRoute,
+  addContinuityVideoRoute,
   assignCharactersRoute,
   closeRecordingRoute,
   createContinuityRoute,
   createRecordingRoute,
   deleteContinuityRoute,
+  deleteRecordingRoute,
   getRecordingRoute,
   listRecordingsRoute,
   openRecordingRoute,
   setContinuityCharacterRoute,
+  setContinuityItemsRoute,
+  setContinuityVideosRoute,
   updateRecordingRoute,
 } from "./continuity.ts"
 import {
@@ -579,9 +584,14 @@ export const routes: readonly RegisteredRoute[] = [
   assignCharactersRoute,
   closeRecordingRoute,
   openRecordingRoute,
+  deleteRecordingRoute,
 
   createContinuityRoute,
   setContinuityCharacterRoute,
+  addContinuityItemRoute,
+  setContinuityItemsRoute,
+  addContinuityVideoRoute,
+  setContinuityVideosRoute,
   deleteContinuityRoute,
 
   // Pendiente: guion, capítulos y escenas (21); inventario, entregas y presupuesto (22); compras
