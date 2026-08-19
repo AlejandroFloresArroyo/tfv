@@ -206,6 +206,7 @@ import {
   updateQuoteRoute,
 } from "./quotes.ts"
 import {
+  chapterIndicesRoute,
   chapterScopeRoute,
   createChapterRoute,
   createSceneRoute,
@@ -220,6 +221,8 @@ import {
   listProductionScenesRoute,
   listScenesRoute,
   listScriptsRoute,
+  productionBreakdownRoute,
+  sceneIndicesRoute,
   sceneScopeRoute,
   scriptScopeRoute,
   updateChapterRoute,
@@ -580,6 +583,14 @@ export const routes: readonly RegisteredRoute[] = [
   deleteWorkflowRoute,
 
   // El desglose del guion: guiones, capítulos y escenas.
+  //
+  // Las dos consultas de índice y la estructura completa van **antes** que las fichas con
+  // parámetro, por el mismo motivo que el panel: nada garantiza que un identificador no se parezca
+  // a «indices» o a «breakdown».
+  productionBreakdownRoute,
+  chapterIndicesRoute,
+  sceneIndicesRoute,
+
   listScriptsRoute,
   createScriptRoute,
   getScriptRoute,

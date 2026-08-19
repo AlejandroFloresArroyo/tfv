@@ -21,10 +21,12 @@
  */
 
 import { z } from "@hono/zod-openapi"
-import { toInstant, toNullableInstant } from "@tfv/contracts"
+import { missingPermission, toInstant, toNullableInstant } from "@tfv/contracts"
+import { allows } from "../auth/authorization.ts"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import {
+  chapterIndexHint,
   chapterQuery,
   chapterScope,
   createChapter,
@@ -40,7 +42,9 @@ import {
   listProductionScenes,
   listScenes,
   listScripts,
+  productionBreakdown,
   SYNC_STATUSES,
+  sceneIndexHint,
   sceneQuery,
   sceneScope,
   scriptQuery,
@@ -782,5 +786,137 @@ export const deleteSceneRoute = defineRoute({
       params.sceneId,
     )
     return c.body(null, 204)
+  },
+})
+
+// ─── El siguiente índice libre ───────────────────────────────────────────────
+
+const hintSchema = z.object({
+  lastIndex: z.number().int().nullable(),
+  nextIndex: z.number().int(),
+  available: z.boolean().nullable(),
+})
+
+/** `?index=` es opcional: sin él la respuesta informa del último y no comprueba nada. */
+const hintQuery = z.object({
+  index: z
+    .string()
+    .regex(/^\d+$/, "El índice es un entero no negativo")
+    .optional()
+    .openapi({ description: "Comprobar si este índice concreto está libre" }),
+})
+
+function askedIndex(raw: string | undefined): number | null {
+  return raw === undefined ? null : Number(raw)
+}
+
+export const chapterIndicesRoute = defineRoute({
+  access: REQUIRES("productions.chapters.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/productions/{productionId}/chapters/indices",
+    summary: "Último índice de capítulo usado, y si uno concreto está libre",
+    tags: ["Producciones"],
+    request: { params: productionParams, query: hintQuery },
+    responses: {
+      200: {
+        description:
+          "El último índice vivo y el que se propone. Los huecos que deja borrar no se rellenan solos",
+        content: { "application/json": { schema: hintSchema } },
+      },
+      404: { description: "La producción no existe, o está fuera del alcance del solicitante" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const hint = await chapterIndexHint(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      askedIndex(c.req.valid("query").index),
+    )
+    return c.json(hint, 200)
+  },
+})
+
+export const sceneIndicesRoute = defineRoute({
+  access: REQUIRES("productions.scenes.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes/indices",
+    summary: "Último índice de escena usado en el capítulo, y si uno concreto está libre",
+    tags: ["Producciones"],
+    request: { params: chapterParams, query: hintQuery },
+    responses: {
+      200: {
+        description: "El último índice vivo del capítulo y el que se propone",
+        content: { "application/json": { schema: hintSchema } },
+      },
+      404: { description: "El capítulo no existe, o está fuera del alcance del solicitante" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const hint = await sceneIndexHint(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.chapterId,
+      askedIndex(c.req.valid("query").index),
+    )
+    return c.json(hint, 200)
+  },
+})
+
+// ─── La estructura completa ──────────────────────────────────────────────────
+
+/**
+ * El índice navegable de una producción.
+ *
+ * **Exige las dos claves.** La ruta declara la de capítulos porque la estructura es una lista de
+ * capítulos, y el manejador exige además la de escenas porque la respuesta **las contiene**:
+ * declarar sólo la primera ampliaría en silencio la autoridad de quien la tiene, que es el defecto
+ * que cerró H-07 en las cotizaciones. Es la misma forma de resolverlo.
+ */
+export const productionBreakdownRoute = defineRoute({
+  access: REQUIRES("productions.chapters.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/productions/{productionId}/breakdown",
+    summary: "La estructura completa de la producción, como índice navegable",
+    tags: ["Producciones"],
+    request: { params: productionParams },
+    responses: {
+      200: {
+        description: "Capítulos por índice, cada uno con sus escenas por índice",
+        content: {
+          "application/json": {
+            schema: z.object({
+              chapters: z.array(chapterSchema.extend({ scenes: z.array(sceneSchema) })),
+            }),
+          },
+        },
+      },
+      403: { description: "Falta la clave de escenas, que la estructura también devuelve" },
+      404: { description: "La producción no existe, o está fuera del alcance del solicitante" },
+    },
+  },
+  handler: async (c) => {
+    if (!allows(c.get("authorization"), "productions.scenes.view")) {
+      throw missingPermission("productions.scenes.view")
+    }
+
+    const params = c.req.valid("param")
+    const chapters = await productionBreakdown(actorOf(c), params.companyId, params.productionId)
+
+    return c.json(
+      {
+        chapters: chapters.map((chapter) => ({
+          ...serializeChapter(chapter),
+          scenes: chapter.scenes.map(serializeScene),
+        })),
+      },
+      200,
+    )
   },
 })

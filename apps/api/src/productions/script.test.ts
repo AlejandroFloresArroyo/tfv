@@ -90,6 +90,16 @@ interface Scene {
   missingFromLastSync: boolean
 }
 
+interface IndexHint {
+  lastIndex: number | null
+  nextIndex: number
+  available: boolean | null
+}
+
+interface Breakdown {
+  chapters: (Chapter & { scenes: Scene[] })[]
+}
+
 function request(method: string, path: string, body?: unknown, cookie?: string) {
   return app.request(path, {
     method,
@@ -1225,5 +1235,198 @@ describe("las escenas de un capítulo", () => {
     )
 
     expect(response.status).toBe(403)
+  })
+})
+
+// ─── El siguiente índice libre ───────────────────────────────────────────────
+
+describe("la consulta del siguiente índice libre", () => {
+  it("una producción sin capítulos propone el uno", async () => {
+    const session = await signUp("primer-indice@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+
+    const hint = await json<IndexHint>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters/indices`,
+        undefined,
+        session.cookie,
+      ),
+    )
+
+    expect(hint.lastIndex).toBeNull()
+    expect(hint.nextIndex).toBe(1)
+    expect(hint.available).toBeNull()
+  })
+
+  it("un capítulo cuya última escena es la siete propone la ocho", async () => {
+    // Escenario: «GIVEN un capítulo cuya última escena es la número siete, WHEN se consulta su
+    // último índice, THEN se obtiene 7 AND la interfaz propone 8».
+    const session = await signUp("siguiente-escena@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const chapter = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+
+    for (const index of [1, 2, 7]) {
+      await newScene(session, company.id, production.id, chapter.id, {
+        name: `Escena ${index}`,
+        index,
+      })
+    }
+
+    const hint = await json<IndexHint>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scenes/indices`,
+        undefined,
+        session.cookie,
+      ),
+    )
+
+    expect(hint.lastIndex).toBe(7)
+    expect(hint.nextIndex).toBe(8)
+  })
+
+  it("se comprueba si un índice concreto está libre", async () => {
+    // Escenario: «WHEN se consulta si un índice está libre en un capítulo, THEN se obtiene una
+    // respuesta booleana».
+    const session = await signUp("indice-libre@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const chapter = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+
+    await newScene(session, company.id, production.id, chapter.id, { name: "Cinco", index: 5 })
+
+    const taken = await json<IndexHint>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scenes/indices?index=5`,
+        undefined,
+        session.cookie,
+      ),
+    )
+    expect(taken.available).toBe(false)
+
+    const free = await json<IndexHint>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scenes/indices?index=6`,
+        undefined,
+        session.cookie,
+      ),
+    )
+    expect(free.available).toBe(true)
+  })
+
+  it("los huecos que deja borrar **no** se rellenan solos", async () => {
+    // La otra cara de que los índices no se renumeren: con 1, 2 y 3, borrar el 2 deja el siguiente
+    // libre en 4 y **no** en 2. Rellenar el hueco reutilizaría un número que el equipo ya usó en su
+    // papeleo, que es la misma confusión que renumerar, por la puerta de atrás.
+    const session = await signUp("hueco-no-relleno@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+
+    await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+    const middle = await newChapter(session, company.id, production.id, { name: "Dos", index: 2 })
+    await newChapter(session, company.id, production.id, { name: "Tres", index: 3 })
+
+    await request(
+      "DELETE",
+      `/companies/${company.id}/productions/${production.id}/chapters/${middle.id}`,
+      undefined,
+      session.cookie,
+    )
+
+    const hint = await json<IndexHint>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters/indices?index=2`,
+        undefined,
+        session.cookie,
+      ),
+    )
+
+    expect(hint.lastIndex).toBe(3)
+    expect(hint.nextIndex).toBe(4)
+    // El hueco está libre —se puede pedir a mano, que es el «12A»—, pero no se propone.
+    expect(hint.available).toBe(true)
+  })
+})
+
+// ─── La estructura completa ──────────────────────────────────────────────────
+
+describe("la estructura de una producción", () => {
+  it("se obtiene como índice navegable, por índice y con sus escenas", async () => {
+    // Escenario: «WHEN se solicita la estructura de una producción, THEN se obtienen sus capítulos
+    // ordenados por índice AND cada uno con sus escenas ordenadas por índice».
+    const session = await signUp("estructura@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+
+    // Creados a propósito **fuera de orden**: si la consulta no ordenara, saldrían así.
+    const second = await newChapter(session, company.id, production.id, { name: "Dos", index: 2 })
+    const first = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+
+    await newScene(session, company.id, production.id, first.id, { name: "B", index: 3 })
+    await newScene(session, company.id, production.id, first.id, { name: "A", index: 1 })
+    await newScene(session, company.id, production.id, second.id, { name: "C", index: 2 })
+
+    const structure = await json<Breakdown>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/breakdown`,
+        undefined,
+        session.cookie,
+      ),
+    )
+
+    expect(structure.chapters.map((row) => row.index)).toEqual([1, 2])
+    expect(structure.chapters[0]?.scenes.map((row) => row.index)).toEqual([1, 3])
+    expect(structure.chapters[0]?.scenes.map((row) => row.label)).toEqual(["1.1", "1.3"])
+    expect(structure.chapters[0]?.sceneCount).toBe(2)
+    expect(structure.chapters[1]?.scenes.map((row) => row.label)).toEqual(["2.2"])
+  })
+
+  it("un capítulo sin escenas aparece con su lista vacía", async () => {
+    const session = await signUp("estructura-vacia@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+
+    const structure = await json<Breakdown>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/breakdown`,
+        undefined,
+        session.cookie,
+      ),
+    )
+
+    expect(structure.chapters).toHaveLength(1)
+    expect(structure.chapters[0]?.scenes).toEqual([])
+    expect(structure.chapters[0]?.sceneCount).toBe(0)
+  })
+
+  it("quien puede ver capítulos pero no escenas no obtiene la estructura", async () => {
+    // La estructura **contiene escenas**. Declarar sólo la clave de capítulos ampliaría en silencio
+    // la autoridad de quien la tiene, que es el defecto que cerró H-07 en las cotizaciones.
+    const session = await signUp("estructura-acotada@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const cookie = await memberWith(company.id, [
+      "productions.productions.view",
+      "productions.chapters.view",
+    ])
+
+    const response = await request(
+      "GET",
+      `/companies/${company.id}/productions/${production.id}/breakdown`,
+      undefined,
+      cookie,
+    )
+
+    expect(response.status).toBe(403)
+    expect(await response.text()).toContain("productions.scenes.view")
   })
 })

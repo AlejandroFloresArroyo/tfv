@@ -58,7 +58,7 @@ import {
   uploads,
   users,
 } from "@tfv/db/schema"
-import { and, count, eq, inArray, isNull, ne } from "drizzle-orm"
+import { and, asc, count, eq, inArray, isNull, max, ne } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { releaseUploads, sweepObjects } from "../media/collections.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
@@ -874,6 +874,178 @@ export async function deleteScene(
       .update(productionScenes)
       .set({ deletedAt: new Date() })
       .where(eq(productionScenes.id, sceneId))
+  })
+}
+
+// ─── El siguiente índice libre ───────────────────────────────────────────────
+
+/**
+ * Qué números hay usados, para que la interfaz proponga el siguiente.
+ *
+ * `nextIndex` es **el último más uno**, no el primer hueco. Con 1, 2 y 3, borrar el 2 propone el 4
+ * y no el 2: reutilizar un número que el equipo ya usó en su papeleo es la misma confusión que
+ * renumerar, entrando por la puerta de atrás. El hueco sigue estando libre y se puede pedir a mano
+ * —es el «12A» de toda la vida—, que es justo para lo que sirve `available`.
+ */
+export interface IndexHint {
+  /** El mayor índice **vivo**. Nulo cuando no hay ninguno. */
+  readonly lastIndex: number | null
+  readonly nextIndex: number
+  /** Sólo cuando se pregunta por un índice concreto. Nulo cuando no se preguntó. */
+  readonly available: boolean | null
+}
+
+/**
+ * Se cuenta sobre lo vivo, no sobre lo que hubo.
+ *
+ * Un capítulo dado de baja deja su número libre —el único es parcial, `where deleted_at is null`—,
+ * así que decir que sigue «usado» sería informar de una ocupación que el motor no respalda: la
+ * interfaz propondría un número, el usuario lo aceptaría y el alta funcionaría igual.
+ */
+export async function chapterIndexHint(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  index: number | null,
+): Promise<IndexHint> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+
+    const [row] = await tx
+      .select({ last: max(productionChapters.index) })
+      .from(productionChapters)
+      .where(
+        and(
+          eq(productionChapters.productionId, productionId),
+          isNull(productionChapters.deletedAt),
+        ),
+      )
+
+    return hintOf(row?.last ?? null, index, async (wanted) => {
+      const [taken] = await tx
+        .select({ id: productionChapters.id })
+        .from(productionChapters)
+        .where(
+          and(
+            eq(productionChapters.productionId, productionId),
+            eq(productionChapters.index, wanted),
+            isNull(productionChapters.deletedAt),
+          ),
+        )
+        .limit(1)
+
+      return taken === undefined
+    })
+  })
+}
+
+export async function sceneIndexHint(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  chapterId: string,
+  index: number | null,
+): Promise<IndexHint> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadChapter(tx, productionId, chapterId)
+
+    const [row] = await tx
+      .select({ last: max(productionScenes.index) })
+      .from(productionScenes)
+      .where(and(eq(productionScenes.chapterId, chapterId), isNull(productionScenes.deletedAt)))
+
+    return hintOf(row?.last ?? null, index, async (wanted) => {
+      const [taken] = await tx
+        .select({ id: productionScenes.id })
+        .from(productionScenes)
+        .where(
+          and(
+            eq(productionScenes.chapterId, chapterId),
+            eq(productionScenes.index, wanted),
+            isNull(productionScenes.deletedAt),
+          ),
+        )
+        .limit(1)
+
+      return taken === undefined
+    })
+  })
+}
+
+async function hintOf(
+  lastIndex: number | null,
+  asked: number | null,
+  isFree: (index: number) => Promise<boolean>,
+): Promise<IndexHint> {
+  return {
+    lastIndex,
+    // Sin nada numerado se propone el **uno** y no el cero: es el número con el que empieza un
+    // guion, y `index` admite el cero sólo porque hay quien numera un prólogo así.
+    nextIndex: lastIndex === null ? 1 : lastIndex + 1,
+    available: asked === null ? null : await isFree(asked),
+  }
+}
+
+// ─── La estructura completa ──────────────────────────────────────────────────
+
+export interface BreakdownChapter extends ChapterRecord {
+  readonly scenes: readonly SceneRecord[]
+}
+
+/**
+ * La producción entera como índice navegable: capítulos por índice, cada uno con sus escenas.
+ *
+ * **No pagina, y es deliberado.** Es el árbol con el que se navega el desglose —el mismo papel que
+ * el listado de la taxonomía—, y paginarlo haría que la mitad de un guion apareciera en la segunda
+ * página de un menú. Se paga con **dos consultas**, no con una por capítulo: la de las escenas trae
+ * todas las de la producción de una vez y se reparten en memoria.
+ */
+export async function productionBreakdown(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+): Promise<BreakdownChapter[]> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+
+    const chapters = await tx
+      .select()
+      .from(productionChapters)
+      .where(
+        and(
+          eq(productionChapters.productionId, productionId),
+          isNull(productionChapters.deletedAt),
+        ),
+      )
+      .orderBy(asc(productionChapters.index), asc(productionChapters.id))
+
+    const decorated = await decorateChapters(tx, chapters)
+    if (chapters.length === 0) return []
+
+    const indices = new Map(chapters.map((row) => [row.id, row.index]))
+    const scenes = await tx
+      .select()
+      .from(productionScenes)
+      .where(
+        and(
+          inArray(
+            productionScenes.chapterId,
+            chapters.map((row) => row.id),
+          ),
+          isNull(productionScenes.deletedAt),
+        ),
+      )
+      .orderBy(asc(productionScenes.index), asc(productionScenes.id))
+
+    const byChapter = new Map<string, SceneRecord[]>()
+    for (const scene of await decorateScenes(tx, scenes, indices)) {
+      const bucket = byChapter.get(scene.chapterId) ?? []
+      bucket.push(scene)
+      byChapter.set(scene.chapterId, bucket)
+    }
+
+    return decorated.map((chapter) => ({ ...chapter, scenes: byChapter.get(chapter.id) ?? [] }))
   })
 }
 

@@ -1216,6 +1216,43 @@ export interface ApiEndpoints {
     response: undefined
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/breakdown": {
+    /** La estructura completa de la producción, como índice navegable */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    response: {
+      chapters: Array<{
+        id: string
+        productionId: string
+        scriptId: string | null
+        name: string
+        synopsis: string
+        index: number
+        responsibleId: string | null
+        responsibleName: string | null
+        sceneCount: number
+        createdAt: string
+        updatedAt: string
+        scenes: Array<{
+          id: string
+          chapterId: string
+          chapterIndex: number
+          name: string
+          synopsis: string
+          index: number
+          label: string
+          workflowCount: number
+          synopsisEditedAt: string | null
+          missingFromLastSync: boolean
+          createdAt: string
+          updatedAt: string
+        }>
+      }>
+    }
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/categories": {
     /** Listar categorías; sin «parentId», las raíces */
     params: {
@@ -1452,6 +1489,22 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/chapters/indices": {
+    /** Último índice de capítulo usado, y si uno concreto está libre */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      index?: string
+    }
+    response: {
+      lastIndex: number | null
+      nextIndex: number
+      available: boolean | null
+    }
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}": {
     /** Ver un capítulo */
     params: {
@@ -1581,6 +1634,23 @@ export interface ApiEndpoints {
       missingFromLastSync: boolean
       createdAt: string
       updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes/indices": {
+    /** Último índice de escena usado en el capítulo, y si uno concreto está libre */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    query?: {
+      index?: string
+    }
+    response: {
+      lastIndex: number | null
+      nextIndex: number
+      available: boolean | null
     }
   }
 
