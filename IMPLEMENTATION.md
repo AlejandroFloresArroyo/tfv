@@ -130,10 +130,10 @@ Lo construido hasta ahora, medido y no estimado:
 | Tareas | **784 de 1228**, el 63,8 %. Contadas sobre los `tasks.md`, no estimadas. Otras 29 están marcadas **no aplicables** con su razón escrita: apuntan a la pila vieja, que la regla 1 deja intacta |
 | Código sin pruebas | 100 871 líneas |
 | Código de prueba | 39 084 líneas |
-| Pruebas | **1660** de vitest — 406 contratos, 90 datos, 936 API, 109 web, 119 interfaz — y **83 de extremo a extremo** con Playwright sobre un build de producción |
+| Pruebas | **1664** de vitest — 406 contratos, 94 datos, 936 API, 109 web, 119 interfaz — y **83 de extremo a extremo** con Playwright sobre un build de producción. Corren en **integración continua** desde el 2026-08-19, y la suite entera se comprobó **sin `.env`**, sólo con variables de entorno |
 | Esquema | 97 tablas · 295 índices · 50 enumerados · 8 comprobaciones · 42 únicos parciales · 238 claves foráneas |
 | Aislamiento | 215 políticas · 97/97 tablas · 0 con identidad cruda |
-| Migraciones | 28, replicadas desde cero en cada verificación |
+| Migraciones | 28, replicadas desde cero en cada verificación, y **comprobadas contra la base** después de aplicarlas (H-169) |
 | Rutas | **295** registradas, 232 con permiso declarado, 43 sólo autenticadas y 20 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
 | Pantallas | 62, en español e inglés (1656 mensajes, sin desalinear) |
@@ -154,6 +154,14 @@ ahora tiene un sitio propio desde el que ejercerlo: la bandeja de prospectos que
 implementada y sin pantalla, y dos padrones de sólo lectura. Cada ruta del área niega a un usuario
 corriente con `403`, y cada acción que se hace desde ella queda escrita en una bitácora que ni
 siquiera quien la protagoniza puede reescribir.
+
+**La verificación deja de depender de que alguien se acuerde.** Hay integración continua escrita:
+análisis y tipos sin base, la suite entera sobre la pila de Supabase levantada en el runner, y la de
+navegador aparte y **sin bloquear** mientras H-146 siga vivo. La suite se comprobó corriendo **sin
+`.env`**, sólo con variables de entorno, que es lo único que demuestra que vale fuera de la máquina
+de quien la escribió — y eso destapó que `turbo` filtraba las nueve variables de almacenamiento, con
+lo que la API ni arrancaba en un runner. Falta una sola cosa para verla verde, y no es código:
+**la cuenta de GitHub está bloqueada por facturación** y ninguna ejecución llega a empezar.
 
 **Y una producción ya se puede desglosar entera.** Sube su guion, se parte en capítulos y escenas
 —con índices que **no se renumeran nunca**, porque en un rodaje los números los referencia el
@@ -209,7 +217,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 |---|---|---|---|---|
 | 00 | Andamiaje del espacio de trabajo | ✅ | — | Raíz, herramientas, base local |
 | 01 | `add-platform-contracts` | 🟡 | 27/37 | Dinero, errores, consulta, paginación, identificadores, **idempotencia**, **campos calculados** y **el cliente tipado generado**. Falta el registro de búsqueda y los esquemas de entrada y salida compartidos |
-| 02 | `add-postgres-data-model` | 🟡 | 30/34 | 91 tablas, 229 claves foráneas, 48 únicos parciales. Falta medir el volcado real, la siembra y el desfase en integración continua |
+| 02 | `add-postgres-data-model` | 🟡 | 31/34 | 91 tablas, 229 claves foráneas, 48 únicos parciales. Falta medir el volcado real, la siembra y el desfase en integración continua |
 | 03 | `add-hono-api-runtime` | ✅ | 26/26 | Registro explícito, validación, contrato de error, contrato publicado con su cliente tipado y su candado de desfase, salud, límite de cuerpo y limitación de frecuencia. **La primera rebanada cerrada del todo** |
 
 > **La 09 se cierra el 2026-08-19**, la segunda. Al cerrarla salieron las dos cosas que nadie había
