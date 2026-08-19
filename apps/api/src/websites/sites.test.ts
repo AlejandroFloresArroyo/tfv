@@ -188,7 +188,12 @@ describe("un sitio pertenece a una empresa", () => {
       sinServicio,
     )
 
-    expect(response.status).toBe(422)
+    // `403`, no `422`, y el cambio es de la rebanada 11: la habilitación del servicio dejó de
+    // comprobarse dentro de cada manejador y pasó a la compuerta central, que la **deriva de la
+    // clave de permiso** —`websites.websites.create` exige el servicio `websites`—. Así no hay
+    // forma de escribir una operación de servicio que se olvide de la compuerta, y todos los
+    // servicios responden lo mismo en vez de uno por manejador. Ver `auth/middleware.ts`.
+    expect(response.status).toBe(403)
   })
 })
 

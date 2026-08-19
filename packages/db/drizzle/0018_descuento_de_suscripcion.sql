@@ -19,7 +19,7 @@
 -- Como las 0004, 0005, 0008, 0009, 0014 y 0015. `drizzle-kit generate` **no puede correr en este
 -- árbol**: los instantáneos 0016 y 0017 apuntan los dos al mismo padre —los generaron dos ramas en
 -- paralelo desde 0013 y la fusión conservó los dos SQL sin rehacer la cadena—, y la herramienta se
--- detiene con «pointing to a parent snapshot … which is a collision». Ver `HALLAZGOS.md` H-84.
+-- detiene con «pointing to a parent snapshot … which is a collision». Ver `HALLAZGOS.md` H-87.
 
 ALTER TABLE "company_subscriptions" ADD COLUMN "discount_percent" numeric(7, 4);--> statement-breakpoint
 ALTER TABLE "company_subscriptions" ADD COLUMN "promotion_code" varchar(60);--> statement-breakpoint
