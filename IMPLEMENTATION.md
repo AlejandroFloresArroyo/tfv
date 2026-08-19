@@ -265,16 +265,15 @@ de la 05, que necesita tráfico real de la pila anterior, y la **medición de im
 
 Lo que queda, sin orden acordado todavía:
 
-- **Llevar el almacenamiento de objetos a S3** (2026-08-19, pedido por el propietario). Hoy los
-  bytes ya viven **fuera de la base** —almacenamiento de objetos, un objeto por variante, con la
-  clave `empresa/archivo/variante.ext`—, así que esto no es sacarlos de ninguna tabla: es cambiar
-  de proveedor. Lo que hay que reescribir son tres funciones de `apps/api/src/media/storage.ts`
-  —`authorizeWrite`, `publicUrl` y `removeObjects`—, y el motivo de que hoy no haya cliente de S3
-  está escrito ahí: se usa el punto de firma del proveedor en vez de calcular una firma SigV4 a
-  mano. Lo que **no** es gratis es el resto: las direcciones públicas ya persistidas están
-  incrustadas en documentos generados y en enlaces repartidos, y la spec lo exige explícitamente
-  («Un cambio de proveedor SHALL contemplar la actualización de las direcciones ya persistidas»).
-  Su sitio natural es junto a la rebanada 30, con el corte.
+- **Llevar el almacenamiento de objetos a S3** (2026-08-19, pedido por el propietario). **El código
+  ya está**: hay una interfaz de proveedor, el de hoy detrás de ella, un segundo que habla S3 con su
+  firma SigV4 —ejercido contra la pila local, que expone su punto S3— y el guion que reescribe las
+  direcciones ya persistidas. `STORAGE_PROVIDER` elige, y llega valiendo el de siempre.
+  Lo que falta es **infraestructura, no código**, y no se puede hacer desde aquí: depósito de AWS con
+  lectura pública y CORS, una credencial de escritura acotada al prefijo, y copiar los objetos con
+  `aws s3 sync` —el guion mueve direcciones, no bytes—. Hoy el depósito local existe porque alguien
+  lo creó a mano y no hay nada en el repositorio que lo deje puesto (H-136). Su sitio natural sigue
+  siendo junto a la rebanada 30, con el corte.
 
 - **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04). Es lo
   único de la lista anterior que quedó sin hacer, y a propósito: reescribe el camino de
@@ -2992,3 +2991,92 @@ máquina de estados en contratos, 7 de aislamiento en datos —incluida la polí
 en los tres lados— y 19 de extremo a extremo en la API. `pnpm check` y `pnpm lint` limpios. La
 pantalla, ejercitada en un navegador: bajar la base local de `99` a `49` y ver el cálculo siguiente
 pasar de `119.00` a `69.00` es el requisito «se cambia una tarifa sin desplegar», mirado.
+### 2026-08-19 · Los marcadores que faltaban, y la puerta a S3
+
+Dos cosas, y la segunda la pidió el propietario: cerrar lo que le faltaba a la rebanada 08 y dejar
+que el almacenamiento se pueda cambiar sin reescribir nada.
+
+**Un marcador de posición que sólo existía en la salvaguarda**
+
+La `0017` trae un disparador que se niega a borrar un marcador, y `collections.ts` lo respeta con su
+prueba. No había ninguno. La protección llevaba semanas cuidando de una fila que nadie había
+escrito, y el escenario «una entidad sin imagen recibe el marcador» no se podía cumplir desde
+ninguna parte.
+
+Ahora los tres son **archivos de este repositorio** —dos vectores dibujados a mano, un PDF vectorial
+de 736 bytes y dos segundos de video— y no direcciones de terceros como en la pila anterior, donde
+la imagen que se enseñaba cuando faltaba otra dependía de que `w3.org` siguiera sirviéndola (O-06).
+Se siembran **pidiendo autorización como la pide el navegador**: así sembrar funciona con cualquier
+proveedor sin una segunda forma de subir. Y se comprueba objeto por objeto en vez de fiarse de la
+fila, porque las dos mitades se separan: un depósito recreado deja la fila apuntando a bytes que ya
+no están, y ahí «ya está sembrado» significaría «la imagen queda rota para siempre».
+
+Referenciarlos obligó a una excepción que no se veía sin uno delante: el archivo se acota a una
+empresa por el prefijo de la clave de su objeto, y el marcador **es de todas**, así que no cuelga
+del prefijo de ninguna. La comprobación lo declaraba inexistente para todas a la vez (H-133). Lo que
+sigue abierto es quién se lo asigna: hoy ninguna entidad **exige** archivo, así que el escenario no
+tiene dónde ocurrir (H-134).
+
+**Una costura, y detrás de ella dos proveedores**
+
+Las tres funciones que hablaban la API HTTP del proveedor —firmar la escritura, componer la
+dirección pública, retirar objetos— son ahora una interfaz. `uploads.ts` y `collections.ts` no
+cambiaron ni una línea: siguen llamando a las mismas tres funciones.
+
+El segundo proveedor habla S3, con la firma calculada a mano y sin cliente oficial. De todo lo que
+hace `@aws-sdk/client-s3` aquí se usan tres cosas —una dirección prefirmada de `PUT`, un listado por
+prefijo y un borrado por clave—, y los bytes no pasan por el servicio, así que no hace falta nada de
+lo que ese paquete pesa: ni multiparte, ni reanudación, ni cadena de credenciales. La firma son
+ciento y pico líneas de aritmética contra vectores publicados, y el protocolo lleva congelado desde
+2012. El intercambio se invierte el día que haga falta subida multiparte o credenciales por rol.
+
+**Ejercido, no supuesto**
+
+La pila local ya tenía `[storage.s3_protocol] enabled = true`, así que el proveedor de S3 se prueba
+**contra un servidor de verdad y sin credenciales de AWS**. La prueba de contrato no conoce a ningún
+proveedor: recorre los que haya y les exige las mismas cinco propiedades. Y las pruebas de subida de
+extremo a extremo pasan enteras con `STORAGE_PROVIDER=s3`.
+
+En el navegador, los dos: se sube una foto de producto, se escriben los cinco objetos, la miniatura
+se pinta en la ficha, y la autorización de un objeto sobre otro se rechaza —`400` con el proveedor de
+hoy, `403 SignatureDoesNotMatch` con S3— sin dejar nada escrito.
+
+**El defecto que apareció por el camino**
+
+El reintento por objeto no funcionaba en el único caso para el que existe. El proveedor se niega a
+**firmar** una clave ya ocupada, y la máquina de subida reintenta pidiendo autorización para el
+archivo entero porque no sabe pedir cuatro de cinco: escrito el original y caída la miniatura,
+reintentar respondía `500`. Es decir, en cuanto algo se escribía bien, recuperar lo que faltaba era
+imposible. Se pide el permiso de sobrescritura al firmar, que no ensancha nada —la autorización
+sigue acotada a una clave que inventa la API— y además hace que los dos proveedores digan lo mismo
+(H-132).
+
+**Mudarse no es cambiar una variable**
+
+`STORAGE_PROVIDER` cambia dónde se escribe de ahora en adelante y no toca ni una de las direcciones
+ya repartidas. Se recorrió el esquema buscando cuáles son: hoy **una sola tabla**, no lo que dice la
+justificación de la spec —los documentos generados todavía no incrustan direcciones— y eso hace la
+mudanza mucho más barata de lo que parecía (H-135). El requisito gana el escenario que le faltaba, y
+la reescritura tiene guion: por prefijo, idempotente y sin aplicar por omisión, porque antes de mover
+mil filas hay que poder contar cuántas se mueven.
+
+**Lo que hace falta para apuntar a AWS de verdad**
+
+Está en `.env.example` y se resume en cinco pasos: depósito con lectura pública y CORS, credencial
+de escritura acotada al prefijo, copiar los objetos con `aws s3 sync` —este guion mueve direcciones,
+no bytes—, poner las variables, reescribir las direcciones y volver a dejar los marcadores. El paso
+que hoy no está escrito en ninguna parte es el primero: **el depósito lo creó alguien a mano** y no
+hay migración ni guion que lo deje puesto (H-136).
+
+**Verificación**
+
+`pnpm test` en verde con **1132** pruebas, 35 más que las 1097 de partida: 11 de contrato contra los
+dos proveedores, 9 de la reescritura, 7 de la firma sin red, 7 de los marcadores sembrados de verdad
+y una del reintento que faltaba. `pnpm check` y `pnpm lint` limpios. El proveedor por omisión no
+cambia, y hay una prueba que lo fija.
+
+**Lo que hay que poner en el `.env` para que pasen.** Las dos credenciales del punto S3 local, que
+imprime `pnpm db:status` como `S3_PROTOCOL_ACCESS_KEY_ID` y `S3_PROTOCOL_ACCESS_KEY_SECRET`. La
+prueba de contrato **falla** si faltan en vez de saltarse: saltar el segundo proveedor sería decir
+que sí sin haber mirado. Es la misma exigencia que ya tenía `STORAGE_SERVICE_KEY`, y está escrita en
+`.env.example`.
