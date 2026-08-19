@@ -147,6 +147,13 @@
       "when": 1787180200000,
       "tag": "0020_tarifas_de_envio",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1787180600000,
+      "tag": "0024_bitacora_de_plataforma",
+      "breakpoints": true
     }
   ]
 }
