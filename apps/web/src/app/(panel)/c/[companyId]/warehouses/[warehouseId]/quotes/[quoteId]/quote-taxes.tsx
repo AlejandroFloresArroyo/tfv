@@ -162,7 +162,7 @@ export function QuoteTaxesPanel({
         ) : null}
 
         {shown.map((key) => (
-          <div key={key} className="grid gap-3 rounded-sm border border-field p-3">
+          <div key={key} className="grid gap-3 rounded-sm border border-edge-control p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-body2 font-bold text-content">{t(`taxOf.${key}`)}</h3>
               {editable ? (
@@ -241,7 +241,7 @@ export function QuoteTaxesPanel({
             !(row.type === "percent" ? RATE : AMOUNT).test(row.value.trim())
 
           return (
-            <div key={row.key} className="grid gap-3 rounded-sm border border-field p-3">
+            <div key={row.key} className="grid gap-3 rounded-sm border border-edge-control p-3">
               <div className="flex flex-wrap items-end gap-3">
                 <Field label={t("contributionName")} className="min-w-40 flex-1">
                   {(ids) => (

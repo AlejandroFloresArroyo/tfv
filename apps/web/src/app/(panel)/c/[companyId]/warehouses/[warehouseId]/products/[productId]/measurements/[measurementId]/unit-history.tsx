@@ -104,7 +104,7 @@ export function UnitHistory({
           ) : (
             <ol className="flex flex-col gap-3">
               {load.items.map((event) => (
-                <li key={event.id} className="border-l-2 border-line pl-3">
+                <li key={event.id} className="border-l-2 border-edge pl-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone="neutral">{t(`stock.reasons.${event.reason}`)}</Badge>
                     <span className="text-body2 font-semibold text-content">

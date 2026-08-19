@@ -42,10 +42,11 @@ fi
 
 echo "reconstruyendo con el anfitrión $IP:$PUERTO…"
 cd "$RAIZ"
-NEXT_PUBLIC_SITES_DOMAIN="$IP:$PUERTO" pnpm --filter @tfv/web build >"$LOG" 2>&1
+# `NEXT_PUBLIC_SISTEMA` enciende la referencia `/sistema`, que en producción va apagada.
+NEXT_PUBLIC_SITES_DOMAIN="$IP:$PUERTO" NEXT_PUBLIC_SISTEMA=1 pnpm --filter @tfv/web build >"$LOG" 2>&1
 
 cd "$RAIZ/apps/web"
-NEXT_PUBLIC_SITES_DOMAIN="$IP:$PUERTO" setsid nohup \
+NEXT_PUBLIC_SITES_DOMAIN="$IP:$PUERTO" NEXT_PUBLIC_SISTEMA=1 setsid nohup \
   pnpm exec next start --port "$PUERTO" --hostname 0.0.0.0 >>"$LOG" 2>&1 </dev/null &
 
 disown || true

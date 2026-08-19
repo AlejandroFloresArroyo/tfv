@@ -274,7 +274,7 @@ export function ChildWizard({
           )
 
           return (
-            <Panel className="flex flex-col gap-2 border border-line p-4">
+            <Panel className="flex flex-col gap-2 p-4">
               <ul className="flex flex-col gap-1 text-body2 text-content-muted">
                 <li>{t("warehouses.wizard.summaryProduct", { name: values.name || "—" })}</li>
                 <li>{t("warehouses.wizard.summaryParent", { name: parentName })}</li>

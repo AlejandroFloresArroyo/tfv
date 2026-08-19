@@ -146,7 +146,7 @@ export function EditMember({
             )}
           </Field>
 
-          <div className="flex flex-col gap-3 rounded-sm border border-line bg-panel-sunken p-3">
+          <div className="flex flex-col gap-3 rounded-sm border border-edge bg-panel-sunken p-3">
             <Switch
               id={activeId}
               checked={isActive}
@@ -157,7 +157,7 @@ export function EditMember({
 
             {canMoveOwnership ? (
               <>
-                <hr className="border-0 border-t border-line" />
+                <hr className="border-0 border-t border-edge" />
                 <Checkbox
                   id={ownerId}
                   checked={isOwner}

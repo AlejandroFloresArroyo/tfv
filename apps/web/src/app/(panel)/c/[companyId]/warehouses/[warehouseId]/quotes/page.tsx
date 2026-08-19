@@ -134,7 +134,7 @@ export default async function QuotesPage({
               title={
                 <Link
                   href={`/c/${companyId}/warehouses/${warehouseId}/quotes/${quote.id}`}
-                  className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                  className="rounded-xs hover:underline"
                 >
                   {quote.name || quote.folio}
                 </Link>

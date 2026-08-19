@@ -728,7 +728,7 @@ function Summary({ values }: { values: Values }) {
   const units = measurements.reduce((total, row) => total + (size(row.initialQuantity) ?? 0), 0)
 
   return (
-    <Panel className="flex flex-col gap-2 border border-line p-4">
+    <Panel className="flex flex-col gap-2 p-4">
       <h2 className="text-body1 font-semibold text-content">{t("warehouses.wizard.summary")}</h2>
 
       <ul className="flex flex-col gap-1 text-body2 text-content-muted">

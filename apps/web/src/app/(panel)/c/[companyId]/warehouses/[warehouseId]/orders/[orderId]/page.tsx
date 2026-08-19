@@ -116,7 +116,7 @@ export default async function OrderPage({
                 <Separator className="my-4" />
                 <Link
                   href={`/c/${companyId}/warehouses/${warehouseId}/quotes/${order.quoteId}`}
-                  className="inline-flex items-center gap-2 rounded-xs text-body2 font-semibold text-content hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                  className="inline-flex items-center gap-2 rounded-xs text-body2 font-semibold text-content hover:underline"
                 >
                   <FileText className="size-4 text-content-faint" aria-hidden="true" />
                   {t("warehouses.orders.goToQuote")}
@@ -144,7 +144,7 @@ export default async function OrderPage({
                           <h3 className="truncate text-body1 font-bold text-content">
                             <Link
                               href={`/c/${companyId}/warehouses/${warehouseId}/products/${line.productId}`}
-                              className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                              className="rounded-xs hover:underline"
                             >
                               {line.productName}
                             </Link>

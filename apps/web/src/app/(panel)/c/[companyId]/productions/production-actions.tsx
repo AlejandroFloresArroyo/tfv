@@ -433,7 +433,7 @@ function Fields({
 
       <SinglePhotoField photo={photo} label={t("image")} />
 
-      <div className="flex flex-col gap-3 rounded-sm border border-line bg-panel-sunken p-3">
+      <div className="flex flex-col gap-3 rounded-sm border border-edge bg-panel-sunken p-3">
         <Switch checked={isPublished} onCheckedChange={onPublishedChange} label={t("publish")} />
         <p className="text-body3 text-content-faint">
           {production ? t("publishHint") : t("publishHintNew")}

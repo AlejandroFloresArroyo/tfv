@@ -220,7 +220,7 @@ export default async function ProductPage({
                         href={image.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="block size-20 overflow-hidden rounded-sm border border-line focus-visible:outline-2 focus-visible:outline-focus/40"
+                        className="block size-20 overflow-hidden rounded-sm border border-edge"
                       >
                         <Photo
                           src={image.thumbnailUrl ?? image.url}
@@ -243,7 +243,7 @@ export default async function ProductPage({
                   <dd className="text-body2 text-content-muted">
                     <Link
                       href={`/c/${companyId}/warehouses/${warehouseId}/storages/${location.id}`}
-                      className="font-semibold text-content underline decoration-line-strong underline-offset-2 hover:decoration-content"
+                      className="font-semibold text-content underline decoration-edge-control underline-offset-2 hover:decoration-content"
                     >
                       {location.code} · {location.name}
                     </Link>
@@ -440,10 +440,7 @@ async function MeasurementCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-body1 font-bold text-content">
-            <Link
-              href={href}
-              className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
-            >
+            <Link href={href} className="rounded-xs hover:underline">
               {measurement.name}
             </Link>
           </h3>
@@ -553,7 +550,7 @@ async function RelatedProducts({
             <li key={product.id}>
               <Link
                 href={`/c/${companyId}/warehouses/${warehouseId}/products/${product.id}`}
-                className="flex items-center gap-3 rounded-md border border-line bg-panel p-3 transition-colors hover:bg-panel-hover"
+                className="flex items-center gap-3 rounded-lg border border-edge bg-panel-raised p-3 transition-colors hover:bg-panel-hover"
               >
                 <Box className="size-4 shrink-0 text-content-faint" aria-hidden="true" />
                 <span className="min-w-0">

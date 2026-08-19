@@ -71,13 +71,13 @@ export function ProductionNav({
         <>
           <Link
             href={`/c/${companyId}/productions`}
-            className="inline-flex h-9 items-center gap-2 rounded-sm border border-field bg-panel px-3 text-body2 font-semibold text-content-muted transition-colors hover:bg-panel-hover hover:text-content"
+            className="inline-flex h-9 items-center gap-2 rounded-sm border border-edge-control bg-panel px-3 text-body2 font-semibold text-content-muted transition-colors hover:bg-panel-hover hover:text-content"
           >
             <Clapperboard className="size-4" aria-hidden="true" />
             {t("all")}
           </Link>
 
-          <span className="h-6 border-l border-line" aria-hidden="true" />
+          <span className="h-6 border-l border-edge" aria-hidden="true" />
         </>
       ) : null}
 

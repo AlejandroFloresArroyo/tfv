@@ -70,7 +70,7 @@ export function ChannelPreferences({
       <div className="overflow-x-auto">
         <table className="w-full min-w-96 text-body2">
           <thead>
-            <tr className="border-b border-line text-left">
+            <tr className="border-b border-edge text-left">
               <th scope="col" className="py-2 pr-4 font-semibold text-content">
                 {t("notifications.preferences.category")}
               </th>
@@ -84,7 +84,7 @@ export function ChannelPreferences({
 
           <tbody>
             {categories.map((category) => (
-              <tr key={category} className="border-b border-line last:border-0">
+              <tr key={category} className="border-b border-edge last:border-0">
                 <th scope="row" className="py-3 pr-4 text-left font-medium text-content">
                   {t(`notifications.categories.${category}`)}
                 </th>

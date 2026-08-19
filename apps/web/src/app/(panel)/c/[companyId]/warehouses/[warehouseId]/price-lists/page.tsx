@@ -109,7 +109,7 @@ export default async function PriceListsPage({
               title={
                 <Link
                   href={`${base}/price-lists/${list.id}`}
-                  className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                  className="rounded-xs hover:underline"
                 >
                   {list.name}
                 </Link>

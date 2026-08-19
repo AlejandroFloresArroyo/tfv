@@ -192,7 +192,7 @@ export default async function WarehousePanelPage({
             </h2>
             <Link
               href={`${screen}/quotes`}
-              className="rounded-xs text-body3 font-semibold text-content-muted hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+              className="rounded-xs text-body3 font-semibold text-content-muted hover:underline"
             >
               {t("seeAll")}
             </Link>
@@ -208,7 +208,7 @@ export default async function WarehousePanelPage({
                     <div className="min-w-0">
                       <Link
                         href={`${screen}/quotes/${quote.id}`}
-                        className="rounded-xs text-body1 font-bold text-content hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                        className="rounded-xs text-body1 font-bold text-content hover:underline"
                       >
                         {quote.name || quote.folio}
                       </Link>
@@ -241,7 +241,7 @@ export default async function WarehousePanelPage({
             </h2>
             <Link
               href={`${screen}/orders`}
-              className="rounded-xs text-body3 font-semibold text-content-muted hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+              className="rounded-xs text-body3 font-semibold text-content-muted hover:underline"
             >
               {t("seeAll")}
             </Link>
@@ -257,7 +257,7 @@ export default async function WarehousePanelPage({
                     <div className="min-w-0">
                       <Link
                         href={`${screen}/orders/${order.id}`}
-                        className="rounded-xs text-body1 font-bold text-content hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                        className="rounded-xs text-body1 font-bold text-content hover:underline"
                       >
                         {order.name || order.code}
                       </Link>
@@ -308,7 +308,7 @@ function Stat({
 }) {
   return (
     <Link href={href} className="group block rounded-md">
-      <Panel className="flex h-full flex-col gap-2 p-5 transition-colors group-hover:border-line-strong group-hover:bg-panel-hover">
+      <Panel className="flex h-full flex-col gap-2 p-5 transition-colors group-hover:border-edge-control group-hover:bg-panel-hover">
         <span className="flex items-center gap-2 text-body3 font-semibold text-content-faint">
           <Icon className="size-4" aria-hidden="true" />
           {label}

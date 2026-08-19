@@ -50,7 +50,7 @@ export default async function CompaniesPage() {
               href={`/c/${company.id}`}
               className="group block h-full rounded-md focus-visible:outline-2"
             >
-              <Panel className="flex h-full flex-col gap-4 p-5 transition-colors group-hover:border-line-strong group-hover:bg-panel-hover">
+              <Panel className="flex h-full flex-col gap-4 p-5 transition-colors group-hover:border-edge-control group-hover:bg-panel-hover">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="grid size-10 shrink-0 place-items-center rounded-sm bg-panel-hover text-content-muted">

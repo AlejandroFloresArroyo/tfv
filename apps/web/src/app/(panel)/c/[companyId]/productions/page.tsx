@@ -92,7 +92,7 @@ export default async function ProductionsPage({
               title={
                 <Link
                   href={`/c/${companyId}/productions/${production.id}`}
-                  className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                  className="rounded-xs hover:underline"
                 >
                   {production.name}
                 </Link>

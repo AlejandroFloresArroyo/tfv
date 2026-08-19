@@ -65,7 +65,7 @@ export default async function QuoteDocumentPage({
       <div className="documento-fuera-de-la-hoja mb-4 flex flex-wrap items-center justify-between gap-3">
         <Link
           href={back}
-          className="inline-flex items-center gap-1.5 rounded-xs text-body2 text-content-muted hover:text-content focus-visible:outline-2 focus-visible:outline-focus/40"
+          className="inline-flex items-center gap-1.5 rounded-xs text-body2 text-content-muted hover:text-content"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
           {t("backToQuote")}

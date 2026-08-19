@@ -99,7 +99,7 @@ export function PermissionMatrix({
         aria-label={t("roles.searchPlaceholder")}
       />
 
-      <div className="max-h-90 overflow-y-auto rounded-sm border border-line">
+      <div className="max-h-90 overflow-y-auto rounded-sm border border-edge">
         {groups.length === 0 ? (
           <p className="p-4 text-body2 text-content-faint">{t("roles.noMatches")}</p>
         ) : (
@@ -110,7 +110,7 @@ export function PermissionMatrix({
             return (
               <fieldset
                 key={`${group.service}.${group.resource}`}
-                className="border-0 border-b border-line p-3 last:border-0"
+                className="border-0 border-b border-edge p-3 last:border-0"
               >
                 <legend className="sr-only">{`${group.service}.${group.resource}`}</legend>
 

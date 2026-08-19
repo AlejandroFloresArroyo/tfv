@@ -130,7 +130,7 @@ export default async function OrdersPage({
               title={
                 <Link
                   href={`/c/${companyId}/warehouses/${warehouseId}/orders/${order.id}`}
-                  className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                  className="rounded-xs hover:underline"
                 >
                   {order.name || order.code}
                 </Link>

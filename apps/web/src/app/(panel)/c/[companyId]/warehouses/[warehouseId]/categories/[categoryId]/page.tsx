@@ -130,7 +130,7 @@ export default async function CategoryPage({
                   title={
                     <Link
                       href={`/c/${companyId}/warehouses/${warehouseId}/products/${product.id}`}
-                      className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                      className="rounded-xs hover:underline"
                     >
                       {product.name}
                     </Link>

@@ -199,7 +199,7 @@ export function AssignProducts({
             </p>
           ) : (
             <>
-              <ul className="max-h-80 space-y-1 overflow-y-auto rounded-sm border border-line p-2">
+              <ul className="max-h-80 space-y-1 overflow-y-auto rounded-sm border border-edge p-2">
                 {matching.slice(0, SHOWN).map((product) => (
                   <li key={product.id} className="rounded-xs px-1 py-1.5 hover:bg-panel-hover">
                     <Checkbox

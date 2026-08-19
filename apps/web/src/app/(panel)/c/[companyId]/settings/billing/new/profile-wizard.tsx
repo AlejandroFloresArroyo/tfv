@@ -592,7 +592,7 @@ export function ProfileWizard({ companyId }: { companyId: string }) {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-1.5">
+    <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-edge pb-1.5">
       <dt className="text-content-muted">{label}</dt>
       <dd className="font-medium text-content">{value || "—"}</dd>
     </div>

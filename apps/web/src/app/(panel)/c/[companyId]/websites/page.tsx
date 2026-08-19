@@ -90,7 +90,7 @@ export default async function WebsitesPage({ params }: { params: Promise<{ compa
                     {canBuild ? (
                       <Link
                         href={`/c/${companyId}/websites/${site.id}`}
-                        className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                        className="rounded-xs hover:underline"
                       >
                         {site.name}
                       </Link>

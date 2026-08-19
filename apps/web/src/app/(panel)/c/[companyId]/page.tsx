@@ -65,7 +65,7 @@ export default async function CompanyHomePage({
                   href={`/c/${company.id}/${service.keycode}`}
                   className="group block h-full rounded-md"
                 >
-                  <Panel className="flex h-full flex-col gap-3 p-5 transition-colors group-hover:border-line-strong group-hover:bg-panel-hover">
+                  <Panel className="flex h-full flex-col gap-3 p-5 transition-colors group-hover:border-edge-control group-hover:bg-panel-hover">
                     <span className="grid size-10 place-items-center rounded-sm bg-panel-hover text-content">
                       <Icon className="size-5" aria-hidden="true" />
                     </span>

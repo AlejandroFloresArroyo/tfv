@@ -201,7 +201,7 @@ export default async function MeasurementPage({
             <div className="min-w-0">
               <Link
                 href={`/c/${companyId}/warehouses/${warehouseId}/products/${productId}`}
-                className="text-body1 font-semibold text-content underline decoration-line-strong underline-offset-2 hover:decoration-content"
+                className="text-body1 font-semibold text-content underline decoration-edge-control underline-offset-2 hover:decoration-content"
               >
                 {product.name}
               </Link>

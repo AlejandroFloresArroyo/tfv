@@ -74,7 +74,7 @@ export function CreateWebsite({
               <select
                 {...ids}
                 name="warehouseId"
-                className="h-10 w-full rounded-sm border border-field bg-panel px-3 text-body2 text-content"
+                className="h-10 w-full rounded-sm border border-edge-control bg-panel px-3 text-body2 text-content"
               >
                 <option value="">{t("noSource")}</option>
                 {warehouses.map((warehouse) => (

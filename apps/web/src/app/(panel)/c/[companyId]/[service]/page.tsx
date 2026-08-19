@@ -50,7 +50,7 @@ export default async function ServicePage({
   return (
     <PageShell title={label} subtitle={company.name}>
       <Panel className="flex flex-col items-start gap-3 border-dashed p-6">
-        <span className="rounded-xs bg-panel-hover px-2 py-0.5 text-body3 font-semibold tracking-wide text-content-faint uppercase">
+        <span className="legend rounded-sm bg-panel-hover px-2 py-0.5 text-content-faint">
           {t("dashboard.pendingSlice")}
         </span>
         <p className="text-body1 text-content-muted">

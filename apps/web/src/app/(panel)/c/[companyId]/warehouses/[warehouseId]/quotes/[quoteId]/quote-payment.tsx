@@ -483,7 +483,7 @@ function Additionals({
             const incomplete = row.name.trim() === "" || !AMOUNT.test(row.amount.trim())
 
             return (
-              <li key={row.key} className="grid gap-2 rounded-sm border border-field p-3">
+              <li key={row.key} className="grid gap-2 rounded-sm border border-edge-control p-3">
                 <div className="flex flex-wrap items-end gap-3">
                   <Field label={t("conceptName")} className="min-w-40 flex-1">
                     {(ids) => (

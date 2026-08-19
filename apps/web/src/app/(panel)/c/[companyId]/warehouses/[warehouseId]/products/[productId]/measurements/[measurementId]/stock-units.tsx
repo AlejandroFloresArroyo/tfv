@@ -167,7 +167,7 @@ export function StockUnits({
               location ? (
                 <Link
                   href={`/c/${companyId}/warehouses/${warehouseId}/storages/${location.id}`}
-                  className="underline decoration-line-strong underline-offset-2 hover:decoration-content"
+                  className="underline decoration-edge-control underline-offset-2 hover:decoration-content"
                 >
                   {location.code} · {location.name}
                 </Link>
@@ -280,7 +280,7 @@ export function StockUnits({
                 <ConfirmDestructive
                   trigger={
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-danger">
+                      <Button variant="ghost" size="sm" className="text-tinta-alto">
                         {t("stock.delete")}
                       </Button>
                     </DialogTrigger>

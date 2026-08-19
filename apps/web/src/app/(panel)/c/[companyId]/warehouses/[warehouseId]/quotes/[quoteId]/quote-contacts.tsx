@@ -213,7 +213,7 @@ function SideList({
 
       {rows.map((row) =>
         editable ? (
-          <div key={row.key} className="grid gap-3 rounded-sm border border-field p-3">
+          <div key={row.key} className="grid gap-3 rounded-sm border border-edge-control p-3">
             <div className="flex flex-wrap items-end gap-3">
               <Field label={t("contactName")} className="min-w-40 flex-1">
                 {(ids) => (

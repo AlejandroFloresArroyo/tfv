@@ -108,7 +108,7 @@ export function QuotePayments({
             {payments.map((payment) => (
               <li
                 key={payment.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-field p-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-edge-control p-3"
               >
                 <div className="min-w-0">
                   <p className="text-body1 font-semibold text-content tabular-nums">

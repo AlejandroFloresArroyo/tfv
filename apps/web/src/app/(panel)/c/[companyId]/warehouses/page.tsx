@@ -92,10 +92,7 @@ export default async function WarehousesPage({
                 }
                 title={
                   target ? (
-                    <Link
-                      href={target}
-                      className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
-                    >
+                    <Link href={target} className="rounded-xs hover:underline">
                       {warehouse.name}
                     </Link>
                   ) : (

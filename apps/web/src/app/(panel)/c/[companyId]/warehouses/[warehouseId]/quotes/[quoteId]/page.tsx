@@ -153,7 +153,7 @@ export default async function QuotePage({
                   {quote.extendsQuoteId ? (
                     <Link
                       href={`/c/${companyId}/warehouses/${warehouseId}/quotes/${quote.extendsQuoteId}`}
-                      className="rounded-xs text-body3 text-content-muted hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                      className="rounded-xs text-body3 text-content-muted hover:underline"
                     >
                       ↗ {t("warehouses.quotes.extends")}
                     </Link>
@@ -225,7 +225,7 @@ export default async function QuotePage({
                               <h3 className="truncate text-body1 font-bold text-content">
                                 <Link
                                   href={`/c/${companyId}/warehouses/${warehouseId}/products/${line.productId}`}
-                                  className="rounded-xs hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+                                  className="rounded-xs hover:underline"
                                 >
                                   {line.productName}
                                 </Link>

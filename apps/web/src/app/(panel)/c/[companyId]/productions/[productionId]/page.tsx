@@ -249,7 +249,7 @@ function Stat({
   href?: string | undefined
 }) {
   const body = (
-    <Panel className="flex h-full flex-col gap-2 p-5 transition-colors group-hover:border-line-strong group-hover:bg-panel-hover">
+    <Panel className="flex h-full flex-col gap-2 p-5 transition-colors group-hover:border-edge-control group-hover:bg-panel-hover">
       <span className="flex items-center gap-2 text-body3 font-semibold text-content-faint">
         <Icon className="size-4" aria-hidden="true" />
         {label}

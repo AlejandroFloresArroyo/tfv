@@ -432,7 +432,7 @@ export function QuoteEditor({
                   </div>
 
                   {over ? (
-                    <p className="mt-3 inline-flex items-center gap-1.5 text-body3 text-danger">
+                    <p className="mt-3 inline-flex items-center gap-1.5 text-body3 text-tinta-alto">
                       <TriangleAlert className="size-4" aria-hidden="true" />
                       {t("notEnough", { count: ceiling })}
                     </p>
@@ -457,7 +457,7 @@ export function QuoteEditor({
             type="checkbox"
             checked={mint}
             onChange={(event) => setMint(event.target.checked)}
-            className="mt-0.5 size-4 rounded-xs border-field"
+            className="mt-0.5 size-4 rounded-xs border-edge-control"
           />
           <span>{t("allowMinting")}</span>
         </label>
@@ -603,7 +603,7 @@ function Picker({
                   type="button"
                   onClick={() => onAdd(candidate)}
                   disabled={candidate.available === 0 && !chosen.includes(candidate.measurementId)}
-                  className="flex w-full items-center gap-3 rounded-sm px-2 py-2 text-left transition-colors hover:bg-panel-hover disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-focus/40"
+                  className="flex w-full items-center gap-3 rounded-sm px-2 py-2 text-left transition-colors hover:bg-panel-hover disabled:opacity-50"
                 >
                   <Plus className="size-4 shrink-0 text-content-faint" aria-hidden="true" />
                   <span className="min-w-0 flex-1">

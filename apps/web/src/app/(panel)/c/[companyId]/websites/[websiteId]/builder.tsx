@@ -241,7 +241,7 @@ export function Builder({
           secciones sin guardar. Lo que cambia fuera es el borde; dentro no cambia nada, y por eso
           «lo que se ve es lo que se sirve» no depende de que nadie se acuerde de mantenerlo.
         */}
-        <div className="overflow-hidden rounded-xl border border-line bg-canvas">
+        <div className="overflow-hidden rounded-xl border border-edge bg-canvas">
           {shown.length === 0 ? (
             <p className="px-4 py-16 text-center text-body2 text-content-muted">
               {t("noSections")}
@@ -309,7 +309,7 @@ function Themes({
               )}
             >
               <span
-                className="size-3 shrink-0 rounded-full border border-line"
+                className="size-3 shrink-0 rounded-full border border-edge"
                 style={{ backgroundColor: entry.color }}
                 aria-hidden="true"
               />
@@ -358,7 +358,7 @@ function AddSection({
           if (isSectionKind(kind)) onAdd(kind)
           event.currentTarget.value = ""
         }}
-        className="h-8 rounded-sm border border-field bg-panel px-2 text-body3 text-content"
+        className="h-8 rounded-sm border border-edge-control bg-panel px-2 text-body3 text-content"
       >
         <option value="">{label}</option>
         {SECTION_KINDS.map((kind) => (
@@ -442,7 +442,7 @@ function SectionEditor({
       </div>
 
       {!open || spec === undefined || readOnly ? null : (
-        <div className="flex flex-col gap-2 border-t border-line pt-2">
+        <div className="flex flex-col gap-2 border-t border-edge pt-2">
           {spec.fields.includes("title") ? (
             <Input
               value={section.title ?? ""}
@@ -591,7 +591,7 @@ function Buttons({
               // una dirección. Se limpia en vez de arrastrarlo y que el guardado lo rechace.
               patch(index, { action, value: action === "scroll" ? (targets[0] ?? "") : "" })
             }}
-            className="h-9 rounded-sm border border-field bg-panel px-2 text-body3 text-content"
+            className="h-9 rounded-sm border border-edge-control bg-panel px-2 text-body3 text-content"
           >
             <option value="link">{t("actions.link")}</option>
             <option value="scroll">{t("actions.scroll")}</option>
@@ -603,7 +603,7 @@ function Buttons({
               value={button.value ?? ""}
               aria-label={t("buttonTarget")}
               onChange={(event) => patch(index, { value: event.currentTarget.value })}
-              className="h-9 rounded-sm border border-field bg-panel px-2 text-body3 text-content"
+              className="h-9 rounded-sm border border-edge-control bg-panel px-2 text-body3 text-content"
             >
               {targets.map((target) => (
                 <option key={target} value={target}>

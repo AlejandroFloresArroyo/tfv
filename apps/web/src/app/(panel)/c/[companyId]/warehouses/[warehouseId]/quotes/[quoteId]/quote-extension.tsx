@@ -160,7 +160,7 @@ export function QuoteExtension({
                     <label className="flex cursor-pointer items-center gap-3 rounded-sm px-2 py-1.5 hover:bg-panel-hover">
                       <input
                         type="checkbox"
-                        className="size-4 rounded-xs border-field"
+                        className="size-4 rounded-xs border-edge-control"
                         checked={chosen.includes(unit.id)}
                         disabled={busy}
                         onChange={(event) =>

@@ -101,7 +101,7 @@ export function EditPhotos({
               {gallery.photos.map((photo, index) => (
                 <li
                   key={photo.uploadId}
-                  className="flex items-center gap-3 rounded-sm border border-line bg-panel p-2"
+                  className="flex items-center gap-3 rounded-sm border border-edge bg-panel p-2"
                 >
                   <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xs bg-panel-sunken">
                     {/* Sin texto alternativo: el nombre no lo tiene la galería, y repetir «foto

@@ -121,7 +121,7 @@ export function QuoteReturns({
                       return { ...current, [unit.id]: "available" as StockStatus }
                     })
                   }
-                  className="size-4 shrink-0 rounded-xs border-field"
+                  className="size-4 shrink-0 rounded-xs border-edge-control"
                 />
                 <span className="min-w-0">
                   <span className="block truncate font-mono text-body3 font-semibold text-content">

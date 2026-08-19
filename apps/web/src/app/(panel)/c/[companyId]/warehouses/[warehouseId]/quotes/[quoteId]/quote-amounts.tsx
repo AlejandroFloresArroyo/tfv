@@ -78,9 +78,7 @@ export function QuoteAmounts({
 
       <dl className="grid gap-1">
         <dt className="text-body3 font-semibold text-content-faint">{t("total")}</dt>
-        <dd className="text-title1 font-bold text-content tabular-nums">
-          {amount(breakdown.total)}
-        </dd>
+        <dd className="display font-mono text-h2 text-content tnum">{amount(breakdown.total)}</dd>
       </dl>
 
       {breakdown.collected !== "0.00" ? (
@@ -130,7 +128,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="grid gap-0.5">
       <dt className="text-body3 font-semibold text-content-faint">{label}</dt>
-      <dd className="text-body2 text-content-muted tabular-nums">{value}</dd>
+      <dd className="font-mono text-body2 text-content-muted tnum">{value}</dd>
     </div>
   )
 }

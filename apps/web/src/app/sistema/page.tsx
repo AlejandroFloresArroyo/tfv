@@ -45,6 +45,7 @@ import {
   Wizard,
   wizard,
 } from "@tfv/ui"
+import { notFound } from "next/navigation"
 import { useState } from "react"
 
 /**
@@ -257,6 +258,12 @@ const FONDOS = [
 ] as const
 
 export default function SistemaPage() {
+  // Referencia permanente del sistema, pero sólo en desarrollo: en producción sería una página
+  // pública con datos inventados y el nombre de la empresa sembrada. La llave lleva el prefijo
+  // público porque esto es un componente de cliente y una variable sin él no llega al empaquetado
+  // — el guard fallaría cerrado incluso con la variable puesta.
+  if (process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_SISTEMA !== "1") notFound()
+
   const [fondo, setFondo] = useState<(typeof FONDOS)[number]["id"]>("nada")
   const [importe, setImporte] = useState("1850.00")
   const [busqueda, setBusqueda] = useState("")
