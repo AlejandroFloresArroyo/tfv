@@ -1076,6 +1076,36 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /companies/{companyId}/production-items/by-code/{code}": {
+    /** Localizar un artículo por el código de su etiqueta */
+    params: {
+      companyId: string
+      code: string
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      shoppingId: string | null
+      name: string
+      description: string
+      code: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      isInventoriable: boolean
+      allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+      images: Array<{
+        uploadId: string
+        url: string
+        thumbnailUrl: string | null
+        position: number
+      }>
+      createdAt: string
+      updatedAt: string
+      productionName: string
+    }
+  }
+
   "GET /companies/{companyId}/productions": {
     /** Listar las producciones de una empresa */
     params: {
@@ -1382,6 +1412,408 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/characters": {
+    /** Listar los personajes de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      responsibleId?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        name: string
+        description: string
+        imageUploadId: string | null
+        imageUrl: string | null
+        imageThumbnailUrl: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        continuityCount: number
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/characters": {
+    /** Registrar un personaje */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      description?: string
+      imageUploadId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      continuityCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/characters/{characterId}": {
+    /** Ver un personaje */
+    params: {
+      companyId: string
+      productionId: string
+      characterId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      continuityCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/characters/{characterId}": {
+    /** Editar un personaje */
+    params: {
+      companyId: string
+      productionId: string
+      characterId: string
+    }
+    body: {
+      name?: string
+      description?: string
+      imageUploadId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      continuityCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/characters/{characterId}": {
+    /** Dar de baja un personaje */
+    params: {
+      companyId: string
+      productionId: string
+      characterId: string
+    }
+    response: undefined
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/items": {
+    /** Listar el inventario de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_code?: string | Array<string>
+      sort_status?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      status?: string | Array<string>
+      categoryId?: string | Array<string>
+      shoppingId?: string | Array<string>
+      isInventoriable?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        categoryId: string | null
+        categoryName: string | null
+        shoppingId: string | null
+        name: string
+        description: string
+        code: string
+        status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+        isInventoriable: boolean
+        allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+        images: Array<{
+          uploadId: string
+          url: string
+          thumbnailUrl: string | null
+          position: number
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/items": {
+    /** Dar de alta un artículo */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      description?: string
+      categoryId?: string | null
+      shoppingId?: string | null
+      isInventoriable?: boolean
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      shoppingId: string | null
+      name: string
+      description: string
+      code: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      isInventoriable: boolean
+      allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+      images: Array<{
+        uploadId: string
+        url: string
+        thumbnailUrl: string | null
+        position: number
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/items/{itemId}": {
+    /** Ver un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      shoppingId: string | null
+      name: string
+      description: string
+      code: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      isInventoriable: boolean
+      allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+      images: Array<{
+        uploadId: string
+        url: string
+        thumbnailUrl: string | null
+        position: number
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/items/{itemId}": {
+    /** Editar un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    body: {
+      name?: string
+      description?: string
+      categoryId?: string | null
+      shoppingId?: string | null
+      isInventoriable?: boolean
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      shoppingId: string | null
+      name: string
+      description: string
+      code: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      isInventoriable: boolean
+      allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+      images: Array<{
+        uploadId: string
+        url: string
+        thumbnailUrl: string | null
+        position: number
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/items/{itemId}": {
+    /** Dar de baja un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    response: undefined
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/items/{itemId}/images": {
+    /** Sustituir la galería de un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    body: {
+      uploadIds: Array<string>
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      shoppingId: string | null
+      name: string
+      description: string
+      code: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      isInventoriable: boolean
+      allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+      images: Array<{
+        uploadId: string
+        url: string
+        thumbnailUrl: string | null
+        position: number
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/items/{itemId}/label": {
+    /** La etiqueta imprimible de un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    response: {
+      itemId: string
+      code: string
+      payload: string
+      name: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      productionId: string
+    }
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/items/{itemId}/status": {
+    /** Cambiar el estado de un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    body: {
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      shoppingId: string | null
+      name: string
+      description: string
+      code: string
+      status: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      isInventoriable: boolean
+      allowedStatuses: Array<"available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed">
+      images: Array<{
+        uploadId: string
+        url: string
+        thumbnailUrl: string | null
+        position: number
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/items/{itemId}/usage": {
+    /** Dónde se está usando un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    response: {
+      sets: Array<{
+        id: string
+        name: string
+      }>
+      recordings: Array<{
+        id: string
+        name: string
+        continuityId: string
+      }>
+    }
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/panel": {
     /** Resumen de la producción: desglose y presupuesto */
     params: {
@@ -1431,6 +1863,327 @@ export interface ApiEndpoints {
       openPurchaseOrders: number
       unreturnedOrders: number
     }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/sets": {
+    /** Listar los sets de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      responsibleId?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        name: string
+        description: string
+        imageUploadId: string | null
+        imageUrl: string | null
+        imageThumbnailUrl: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        itemCount: number
+        items?: Array<{
+          itemId: string
+          name: string
+          code: string
+          status: string
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/sets": {
+    /** Registrar un set */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      description?: string
+      imageUploadId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      itemCount: number
+      items?: Array<{
+        itemId: string
+        name: string
+        code: string
+        status: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/sets/{setId}": {
+    /** Ver un set con su composición */
+    params: {
+      companyId: string
+      productionId: string
+      setId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      itemCount: number
+      items?: Array<{
+        itemId: string
+        name: string
+        code: string
+        status: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/sets/{setId}": {
+    /** Editar un set */
+    params: {
+      companyId: string
+      productionId: string
+      setId: string
+    }
+    body: {
+      name?: string
+      description?: string
+      imageUploadId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      itemCount: number
+      items?: Array<{
+        itemId: string
+        name: string
+        code: string
+        status: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/sets/{setId}": {
+    /** Dar de baja un set */
+    params: {
+      companyId: string
+      productionId: string
+      setId: string
+    }
+    response: undefined
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/sets/{setId}/items": {
+    /** Componer un set: establecer de una vez sus artículos */
+    params: {
+      companyId: string
+      productionId: string
+      setId: string
+    }
+    body: {
+      itemIds: Array<string>
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      itemCount: number
+      items?: Array<{
+        itemId: string
+        name: string
+        code: string
+        status: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/videos": {
+    /** Listar la biblioteca de videos de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      categoryId?: string | Array<string>
+      responsibleId?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        categoryId: string | null
+        categoryName: string | null
+        name: string
+        videoUploadId: string | null
+        videoUrl: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        propCount: number
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/videos": {
+    /** Registrar un video en la biblioteca */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      videoUploadId?: string | null
+      categoryId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      name: string
+      videoUploadId: string | null
+      videoUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      propCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/videos/{videoId}": {
+    /** Ver un video y obtener su dirección de reproducción */
+    params: {
+      companyId: string
+      productionId: string
+      videoId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      name: string
+      videoUploadId: string | null
+      videoUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      propCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/videos/{videoId}": {
+    /** Editar un video */
+    params: {
+      companyId: string
+      productionId: string
+      videoId: string
+    }
+    body: {
+      name?: string
+      videoUploadId?: string | null
+      categoryId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      categoryId: string | null
+      categoryName: string | null
+      name: string
+      videoUploadId: string | null
+      videoUrl: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      propCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/videos/{videoId}": {
+    /** Dar de baja un video */
+    params: {
+      companyId: string
+      productionId: string
+      videoId: string
+    }
+    response: undefined
   }
 
   "GET /companies/{companyId}/productions/{productionId}/workflows": {

@@ -154,6 +154,34 @@ import {
   platformUsersRoute,
 } from "./platform.ts"
 import {
+  changeItemStatusRoute,
+  createCharacterRoute,
+  createItemRoute,
+  createSetRoute,
+  createVideoRoute,
+  deleteCharacterRoute,
+  deleteItemRoute,
+  deleteSetRoute,
+  deleteVideoRoute,
+  findItemByCodeRoute,
+  getCharacterRoute,
+  getItemRoute,
+  getSetRoute,
+  getVideoRoute,
+  itemLabelRoute,
+  itemUsageRoute,
+  listCharactersRoute,
+  listItemsRoute,
+  listSetsRoute,
+  listVideosRoute,
+  setItemImagesRoute,
+  setSetItemsRoute,
+  updateCharacterRoute,
+  updateItemRoute,
+  updateSetRoute,
+  updateVideoRoute,
+} from "./production-catalog.ts"
+import {
   createProductionCategoryRoute,
   createProductionRoute,
   createWorkflowRoute,
@@ -558,8 +586,42 @@ export const routes: readonly RegisteredRoute[] = [
   workflowScopeRoute,
   deleteWorkflowRoute,
 
-  // Pendiente: guion, capítulos y escenas (21); inventario, entregas y presupuesto (22); compras
-  // a almacenes (23). Las tablas existen desde la `0002` y el panel ya las cuenta.
+  // Los catálogos del rodaje: quién aparece, con qué se viste un decorado y cómo debía verse algo.
+  listCharactersRoute,
+  createCharacterRoute,
+  getCharacterRoute,
+  updateCharacterRoute,
+  deleteCharacterRoute,
+
+  listSetsRoute,
+  createSetRoute,
+  getSetRoute,
+  updateSetRoute,
+  setSetItemsRoute,
+  deleteSetRoute,
+
+  listVideosRoute,
+  createVideoRoute,
+  getVideoRoute,
+  updateVideoRoute,
+  deleteVideoRoute,
+
+  // El inventario. La localización por código va **antes** que la ficha con parámetro y cuelga de la
+  // empresa, no de la producción: quien lee una etiqueta no sabe de qué rodaje es.
+  findItemByCodeRoute,
+
+  listItemsRoute,
+  createItemRoute,
+  itemLabelRoute,
+  itemUsageRoute,
+  getItemRoute,
+  updateItemRoute,
+  changeItemStatusRoute,
+  setItemImagesRoute,
+  deleteItemRoute,
+
+  // Pendiente: guion, capítulos y escenas (21); notas de entrega y presupuesto (22); compras a
+  // almacenes (23). Las tablas existen desde la `0002` y el panel ya las cuenta.
 
   // ─── Pixit ─────────────────────────────────────────────────────────────────
   // Pendiente: rebanada 24.
