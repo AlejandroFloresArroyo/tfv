@@ -48,12 +48,22 @@ test.describe("crear un rol", () => {
 
     // Y no sólo en la pantalla: en la base, con sus ocho claves. `context.request` comparte las
     // cookies del navegador, así que pregunta como la misma persona.
-    const listed = await context.request.get(`/api/companies/${companyId}/roles`)
+    //
+    // **Se busca por nombre en vez de pedir el listado a secas.** Sin el filtro, esto dependía de
+    // que el rol recién creado cayera en la primera página, y la base de esta suite es de larga
+    // vida: cada pasada que se cae deja el suyo sin retirar, así que el listado crece y un día el
+    // recién creado deja de estar en la primera página. Entonces `saved` es `undefined` y el fallo
+    // —«received value must have a length property»— no se parece en nada a la causa. Ver
+    // `HALLAZGOS.md` H-195.
+    const listed = await context.request.get(
+      `/api/companies/${companyId}/roles?search=${encodeURIComponent(name)}`,
+    )
     const body = (await listed.json()) as {
       items: { id: string; name: string; permissions: string[] }[]
     }
     const saved = body.items.find((role) => role.name === name)
 
+    expect(saved, `el rol «${name}» no aparece en el listado`).toBeTruthy()
     expect(saved?.permissions).toHaveLength(8)
 
     if (saved) await context.request.delete(`/api/companies/${companyId}/roles/${saved.id}`)

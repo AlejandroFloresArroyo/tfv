@@ -131,14 +131,28 @@ test("de la nave vacía a la cotización, sin tocar nada sembrado", async ({ as,
     // Fotos. El paso entró con la rebanada 08 y no se puede rodear: el asistente es uno solo, así
     // que quien recorre el alta pasa por aquí aunque no suba nada. Se cruza vacío a propósito — la
     // subida se recorre en `fotos.spec.ts`, donde se comprueba dónde acaba la imagen.
-    // Se espera **al contenido del paso**, no al contador. El contador cambia un instante antes de
-    // que React acabe de montar el selector de fotos, y un clic despachado en ese hueco cae sobre un
-    // botón que ya no está en el árbol: se pierde sin error y el asistente se queda donde estaba.
+    //
+    // **Este paso es la mitad grande de H-146**, y esperar al contenido no bastaba.
+    //
+    // El contador cambia un instante antes de que React acabe de montar el selector de fotos, así
+    // que se esperaba al zócalo de arrastre en lugar de al contador. Pero el selector sigue
+    // montándose **después** de aparecer, y ese último asentamiento vuelve a rehacer el pie del
+    // asistente: un clic despachado en ese hueco cae sobre un botón que ya no está en el árbol, se
+    // pierde sin error, y el asistente se queda en el paso 5 mientras la prueba espera el 6.
+    //
+    // No hay ninguna espera que cierre el hueco del todo, porque no hay ninguna señal que diga «ya
+    // no me vuelvo a montar». Lo que sí se puede afirmar es el **efecto**: se pulsa hasta que el
+    // paso avance. Se comprueba antes de pulsar que seguimos en el 5, así que un clic que sí llegó
+    // no se repite nunca sobre el paso siguiente.
     await expect(page.getByText("Paso 5 de 6")).toBeVisible()
     await expect(page.getByText(/Arrastra las fotos aquí/)).toBeVisible()
-    await page.getByRole("button", { name: "Siguiente" }).click()
 
-    await expect(page.getByText("Paso 6 de 6")).toBeVisible()
+    await expect(async () => {
+      if (await page.getByText("Paso 5 de 6").isVisible()) {
+        await page.getByRole("button", { name: "Siguiente" }).click()
+      }
+      await expect(page.getByText("Paso 6 de 6")).toBeVisible({ timeout: 3_000 })
+    }).toPass({ timeout: 30_000 })
     await expect(page.getByText(/3 unidades físicas/)).toBeVisible()
     await page.getByRole("button", { name: "Crear producto" }).click()
 
