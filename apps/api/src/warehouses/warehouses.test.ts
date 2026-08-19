@@ -203,7 +203,7 @@ describe("un almacén pertenece a una empresa", () => {
       session.cookie,
     )
 
-    expect(response.status).toBe(403)
+    expect(response.status).toBe(404)
   })
 })
 

@@ -229,7 +229,7 @@ describe("la conversación pertenece al pedido", () => {
     // El permiso se resuelve contra la empresa del camino, y no es la suya.
     const orderId = await newOrder()
     const response = await request("GET", chat(orderId), undefined, ajeno.cookie)
-    expect(response.status).toBe(403)
+    expect(response.status).toBe(404)
   })
 
   it("ni pidiéndola desde su propio almacén", async () => {

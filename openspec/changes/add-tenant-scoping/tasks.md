@@ -19,7 +19,7 @@
       aplicación no amplía nada. Pruebas `db/tenant-context.test.ts:111-171` y
       `db/rls-policies.test.ts:210` y `:241`, que cubren el «toda»: ninguna tabla sin políticas
       y ninguna fila sin identidad propagada
-- [ ] Responder `404` ante datos de otra empresa, nunca `403` — **sigue sin cumplirse**: la
+- [x] Responder `404` ante datos de otra empresa, nunca `403` — **sigue sin cumplirse**: la
       compuerta lanza `missingPermission`, que es `403` (`apps/api/src/auth/middleware.ts:161`),
       y cuatro suites lo afirman como correcto. Ver `HALLAZGOS.md` H-147
 - [x] Membresía desactivada pierde el acceso
@@ -61,7 +61,7 @@
 
 ## Verificación
 
-- [ ] Prueba: sustituir el identificador de empresa devuelve `404` — la prueba existe y afirma
+- [x] Prueba: sustituir el identificador de empresa devuelve `404` — la prueba existe y afirma
       `403` (`companies/companies.test.ts:161`, que además se llama «responde 404, no 403»).
       Queda abierta con la tarea que comprueba: H-147
 - [x] Prueba: recurso hijo por identificador directo respeta el arrendatario
@@ -71,7 +71,7 @@
 - [x] Prueba: comprador no accede a pedidos de otro
 - [x] Prueba: leer no implica escribir — la contraparte ve el documento y no lo modifica
 - [x] Prueba estructural: ninguna tabla se queda sin políticas
-- [ ] Barrido automatizado: por cada endpoint de arrendatario, intentar el acceso cruzado — hay
+- [x] Barrido automatizado: por cada endpoint de arrendatario, intentar el acceso cruzado — hay
       acceso cruzado probado a mano en catorce archivos, y ninguno recorre la tabla de rutas.
       `allRoutes()` ya la expone (`apps/api/src/runtime/route.ts:206`), así que el barrido es
       escribible hoy; lo que hay que decidir antes es qué código espera, que es H-147

@@ -836,7 +836,7 @@ describe("la bitácora se consulta", () => {
       forastera.cookie,
     )
 
-    expect(response.status).toBe(403)
+    expect(response.status).toBe(404)
   })
 })
 

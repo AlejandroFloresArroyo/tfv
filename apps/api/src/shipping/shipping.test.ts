@@ -224,7 +224,7 @@ describe("el cuadro de tarifas", () => {
       cookie,
     )
 
-    expect(response.status).toBe(403)
+    expect(response.status).toBe(404)
   })
 })
 
@@ -282,7 +282,10 @@ describe("cambiar una tarifa surte efecto sin desplegar", () => {
     )
   })
 
-  it("cambiar la tarifa exige el permiso de edición, no el de lectura", async () => {
+  it("el cuadro de otra empresa no se puede cambiar, ni existe para quien lo intenta", async () => {
+    // Se llamaba «exige el permiso de edición, no el de lectura» y **no probaba eso**: usa la
+    // empresa ajena, no un rol sin la clave. La granularidad entre ver y editar sigue sin prueba
+    // propia aquí, y queda dicho para quien venga (`HALLAZGOS.md` H-147).
     const response = await request(
       "PATCH",
       `/companies/${otherCompanyId}/shipping/rates`,
@@ -290,7 +293,7 @@ describe("cambiar una tarifa surte efecto sin desplegar", () => {
       cookie,
     )
 
-    expect(response.status).toBe(403)
+    expect(response.status).toBe(404)
   })
 })
 

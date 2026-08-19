@@ -168,6 +168,58 @@ describe("un identificador con la forma equivocada", () => {
   })
 })
 
+/**
+ * Toda ruta de arrendatario, probada contra una empresa ajena.
+ *
+ * `access-control` lo exige con esas palabras: quien pide datos de una empresa a la que no
+ * pertenece recibe `404`, «de modo que no pueda inferir la existencia de esa empresa ni de sus
+ * recursos». Un `403` responde «existe, pero no es tuya», y con eso se enumera.
+ *
+ * Se barre en vez de escribir un caso por ruta porque **una ruta nueva entra sola**: la lista sale
+ * de la tabla registrada. Es el mismo motivo por el que el barrido de identificadores existe, y es
+ * la tarea de la rebanada 06 que decía «por cada endpoint de arrendatario, intentar el acceso
+ * cruzado».
+ *
+ * Los demás parámetros reciben identificadores **bien formados** y de nadie: con basura respondería
+ * `400` la capa de forma, que corre antes, y el barrido no llegaría a la compuerta.
+ */
+const deArrendatario = routes.filter(
+  (route) =>
+    pathParamsOf(route.config.path).includes("companyId") && route.access.kind === "permission",
+)
+
+function urlAjena(path: string): string {
+  return path.replace(/\{(\w+)\}/g, (_, name: string) => {
+    if (name === "companyId") return AJENO
+    return isIdentifierParam(name) ? "01a018e5-51bd-7cfc-9394-a8924c970463" : "algo-plausible"
+  })
+}
+
+describe("una empresa ajena", () => {
+  it("hay rutas de arrendatario que barrer", () => {
+    expect(deArrendatario.length).toBeGreaterThan(100)
+  })
+
+  it("responde 404 en todas, nunca 403", async () => {
+    const delatoras: string[] = []
+
+    for (const route of deArrendatario) {
+      const method = route.config.method.toUpperCase()
+      const response = await app.request(urlAjena(route.config.path), {
+        method,
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        ...(method === "GET" || method === "DELETE" ? {} : { body: "{}" }),
+      })
+
+      if (response.status === 403) {
+        delatoras.push(`${method} ${route.config.path}`)
+      }
+    }
+
+    expect(delatoras).toEqual([])
+  })
+})
+
 describe("un identificador con la forma correcta", () => {
   it("sigue su curso y responde 404, sin distinguir inexistente de ajeno", async () => {
     // La comprobación de forma **no puede** convertirse en una vía para saber si algo existe: lo
@@ -177,7 +229,8 @@ describe("un identificador con la forma correcta", () => {
     })
 
     expect(response.status).not.toBe(400)
-    expect([403, 404]).toContain(response.status)
+    // `404` exacto y no «403 o 404»: aceptar las dos es lo que dejó pasar H-147 durante meses.
+    expect(response.status).toBe(404)
   })
 
   it("admite también los identificadores de la pila anterior", async () => {

@@ -12,7 +12,12 @@
  * acabaron sin autenticación (`DEFECTS.md` S-05).
  */
 
-import { missingPermission, type PermissionKey, UnauthenticatedError } from "@tfv/contracts"
+import {
+  missingPermission,
+  NotFoundError,
+  type PermissionKey,
+  UnauthenticatedError,
+} from "@tfv/contracts"
 import type { Context, MiddlewareHandler } from "hono"
 import {
   assertServiceEnabled,
@@ -158,6 +163,30 @@ function requirePermission(permission: PermissionKey): MiddlewareHandler {
     }
 
     const authorization = await resolveAuthorization(session.userId, companyId)
+
+    /**
+     * No pertenecer a la empresa es `404`, no `403`.
+     *
+     * Lo exige `access-control` con esas palabras: «un solicitante autenticado que pida datos de
+     * una empresa a la que no pertenece SHALL recibir `404`, de modo que no pueda inferir la
+     * existencia de esa empresa ni de sus recursos». Un `403` responde «existe, pero no es tuya»,
+     * y con eso se descubre qué empresas hay probando identificadores.
+     *
+     * Es distinto de no tener la clave: **quien sí es miembro y no puede hacer algo recibe `403`**,
+     * porque ahí no se revela nada que no supiera. Las dos respuestas dicen cosas distintas y por
+     * eso son dos comprobaciones y no una.
+     *
+     * La administración de plataforma no pasa por aquí: elude la membresía por diseño, y `allows`
+     * la resuelve antes que nada.
+     *
+     * Estuvo respondiendo `403` durante meses, con cuatro suites dándolo por bueno — una de ellas
+     * llamada «una empresa ajena responde 404, no 403» y afirmando `403` dos líneas más abajo. Ver
+     * `HALLAZGOS.md` H-147.
+     */
+    if (!authorization.isMember && !authorization.isPlatformAdmin) {
+      throw new NotFoundError("No existe")
+    }
+
     if (!allows(authorization, permission)) throw missingPermission(permission)
 
     /**

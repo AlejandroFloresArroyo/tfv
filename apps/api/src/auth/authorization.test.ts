@@ -311,7 +311,7 @@ describe("elusión del propietario", () => {
       isActive: false,
     })
 
-    expect((await probe(companyId, cookie)).status).toBe(403)
+    expect((await probe(companyId, cookie)).status).toBe(404)
     expect(effects).toEqual([])
   })
 })
@@ -337,9 +337,12 @@ describe("administración de plataforma", () => {
 })
 
 describe("pertenencia", () => {
-  it("sin membresía en la empresa, 403", async () => {
+  it("sin membresía en la empresa, 404", async () => {
     // Es el defecto S-06: el parámetro de ruta concedía acceso a cualquier arrendatario porque
     // ningún manejador comprobaba pertenencia. Aquí el parámetro no concede nada.
+    //
+    // Y responde `404` y no `403` a propósito: un `403` diría «existe, pero no es tuya», y con eso
+    // se descubre qué empresas hay probando identificadores. Ver `HALLAZGOS.md` H-147.
     const { cookie } = await scenario("ajeno@ejemplo.mx", { withoutMembership: true })
 
     const otherCompanyId = newId()
@@ -348,7 +351,7 @@ describe("pertenencia", () => {
     // el servicio contratado igual que cualquier otra. Es la misma acotación que la del propietario.
     await enableWarehouses(otherCompanyId)
 
-    expect((await probe(otherCompanyId, cookie)).status).toBe(403)
+    expect((await probe(otherCompanyId, cookie)).status).toBe(404)
     expect(effects).toEqual([])
   })
 
@@ -358,7 +361,7 @@ describe("pertenencia", () => {
       isActive: false,
     })
 
-    expect((await probe(companyId, cookie)).status).toBe(403)
+    expect((await probe(companyId, cookie)).status).toBe(404)
   })
 
   it("sin sesión, 401 y no 403", async () => {

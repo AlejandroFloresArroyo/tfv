@@ -166,7 +166,7 @@ describe("alcance entre arrendatarios", () => {
     const company = await newCompany(founder)
 
     const response = await request("GET", `/companies/${company.id}`, undefined, stranger.cookie)
-    expect(response.status).toBe(403)
+    expect(response.status).toBe(404)
 
     // Y la lista tampoco la revela.
     const listed = await json<{ items: Company[] }>(
