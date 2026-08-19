@@ -1382,6 +1382,151 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/chapters": {
+    /** Listar los capítulos de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_index?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      scriptId?: string | Array<string>
+      responsibleId?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        scriptId: string | null
+        name: string
+        synopsis: string
+        index: number
+        responsibleId: string | null
+        responsibleName: string | null
+        sceneCount: number
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/chapters": {
+    /** Crear un capítulo */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      index: number
+      synopsis?: string
+      scriptId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      scriptId: string | null
+      name: string
+      synopsis: string
+      index: number
+      responsibleId: string | null
+      responsibleName: string | null
+      sceneCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}": {
+    /** Ver un capítulo */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      scriptId: string | null
+      name: string
+      synopsis: string
+      index: number
+      responsibleId: string | null
+      responsibleName: string | null
+      sceneCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/chapters/{chapterId}": {
+    /** Editar un capítulo */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    body: {
+      name?: string
+      index?: number
+      synopsis?: string
+      scriptId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      scriptId: string | null
+      name: string
+      synopsis: string
+      index: number
+      responsibleId: string | null
+      responsibleName: string | null
+      sceneCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/chapters/{chapterId}": {
+    /** Dar de baja un capítulo y sus escenas */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    response: undefined
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scope": {
+    /** Qué se lleva por delante dar de baja el capítulo */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    response: {
+      scenes: number
+      recordings: number
+      workflows: number
+    }
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/panel": {
     /** Resumen de la producción: desglose y presupuesto */
     params: {

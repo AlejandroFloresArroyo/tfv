@@ -206,11 +206,17 @@ import {
   updateQuoteRoute,
 } from "./quotes.ts"
 import {
+  chapterScopeRoute,
+  createChapterRoute,
   createScriptRoute,
+  deleteChapterRoute,
   deleteScriptRoute,
+  getChapterRoute,
   getScriptRoute,
+  listChaptersRoute,
   listScriptsRoute,
   scriptScopeRoute,
+  updateChapterRoute,
   updateScriptRoute,
 } from "./script.ts"
 import {
@@ -573,6 +579,13 @@ export const routes: readonly RegisteredRoute[] = [
   updateScriptRoute,
   scriptScopeRoute,
   deleteScriptRoute,
+
+  listChaptersRoute,
+  createChapterRoute,
+  getChapterRoute,
+  updateChapterRoute,
+  chapterScopeRoute,
+  deleteChapterRoute,
 
   // Pendiente: la extracción asistida del guion (21); inventario, entregas y presupuesto (22);
   // compras a almacenes (23). Las tablas existen desde la `0002` y el panel ya las cuenta.

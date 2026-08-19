@@ -39,6 +39,7 @@
 
 import {
   buildPage,
+  ConflictError,
   NotFoundError,
   newId,
   type Page,
@@ -47,8 +48,16 @@ import {
   UnprocessableError,
 } from "@tfv/contracts"
 import { type Transaction, withRequester } from "@tfv/db"
-import { productionChapters, productionScripts, uploads, users } from "@tfv/db/schema"
-import { and, count, eq, inArray, isNull } from "drizzle-orm"
+import {
+  productionChapters,
+  productionRecordings,
+  productionScenes,
+  productionScripts,
+  productionWorkflows,
+  uploads,
+  users,
+} from "@tfv/db/schema"
+import { and, count, eq, inArray, isNull, ne } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { releaseUploads, sweepObjects } from "../media/collections.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
@@ -82,6 +91,21 @@ export interface ScriptRecord {
   readonly updatedAt: Date
 }
 
+export interface ChapterRecord {
+  readonly id: string
+  readonly productionId: string
+  readonly scriptId: string | null
+  readonly name: string
+  readonly synopsis: string
+  readonly index: number
+  readonly responsibleId: string | null
+  readonly responsibleName: string | null
+  /** `computed-fields`, «Escenas de un capítulo». Siempre presente, y `0` cuando no hay ninguna. */
+  readonly sceneCount: number
+  readonly createdAt: Date
+  readonly updatedAt: Date
+}
+
 // ─── Lenguaje de consulta ────────────────────────────────────────────────────
 
 export const scriptQuery: QuerySchema = {
@@ -97,6 +121,23 @@ export const scriptQuery: QuerySchema = {
   ],
 }
 
+/**
+ * Qué se puede pedir de la colección de capítulos.
+ *
+ * La búsqueda va sobre **nombre y sinopsis**. El requisito «Búsqueda en el desglose» dice «por
+ * nombre y descripción» y el requisito del capítulo dice «su nombre, su sinopsis»: es el mismo
+ * campo con dos nombres dentro de la misma spec, y el modelo lo llama `synopsis`.
+ */
+export const chapterQuery: QuerySchema = {
+  filters: {
+    scriptId: { type: "id", label: "Guion" },
+    responsibleId: { type: "id", label: "Responsable" },
+  },
+  searchable: ["name", "synopsis"],
+  sortable: ["index", "name", "createdAt"],
+  defaultSort: [{ field: "index", direction: "asc" }],
+}
+
 const scriptMapping = {
   fields: {
     syncStatus: productionScripts.syncStatus,
@@ -107,6 +148,18 @@ const scriptMapping = {
   },
   searchable: [productionScripts.name],
   tiebreak: productionScripts.id,
+}
+
+const chapterMapping = {
+  fields: {
+    scriptId: productionChapters.scriptId,
+    responsibleId: productionChapters.responsibleId,
+    index: productionChapters.index,
+    name: productionChapters.name,
+    createdAt: productionChapters.createdAt,
+  },
+  searchable: [productionChapters.name, productionChapters.synopsis],
+  tiebreak: productionChapters.id,
 }
 
 // ─── Guiones ─────────────────────────────────────────────────────────────────
@@ -322,7 +375,394 @@ export async function deleteScript(
   })
 }
 
+// ─── Capítulos ───────────────────────────────────────────────────────────────
+
+export async function listChapters(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  query: ParsedQuery,
+): Promise<Page<ChapterRecord>> {
+  const { limit, offset, page } = windowOf(query)
+
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+
+    const where = and(
+      eq(productionChapters.productionId, productionId),
+      isNull(productionChapters.deletedAt),
+      ...collectionConditions(query, chapterMapping),
+    )
+
+    const [total] = await tx.select({ value: count() }).from(productionChapters).where(where)
+
+    const rows = await tx
+      .select()
+      .from(productionChapters)
+      .where(where)
+      .orderBy(...collectionOrder(query, chapterMapping))
+      .limit(limit)
+      .offset(offset)
+
+    return buildPage(await decorateChapters(tx, rows), total?.value ?? 0, page, limit)
+  })
+}
+
+export async function getChapter(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  chapterId: string,
+): Promise<ChapterRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    const row = await loadChapter(tx, productionId, chapterId)
+    return (await decorateChapters(tx, [row]))[0] as ChapterRecord
+  })
+}
+
+export interface CreateChapterInput {
+  readonly name: string
+  readonly index: number
+  readonly synopsis?: string | undefined
+  readonly scriptId?: string | null | undefined
+  readonly responsibleId?: string | null | undefined
+}
+
+export async function createChapter(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  input: CreateChapterInput,
+): Promise<ChapterRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+
+    const scriptId = input.scriptId ?? null
+    // Un capítulo sólo puede proceder de un guion **de su propia producción**. La clave foránea no
+    // lo dice —apunta a la tabla, no a la producción—, así que sin esto un desglose podría declarar
+    // que sale de un guion de otra serie.
+    if (scriptId !== null) await loadScript(tx, productionId, scriptId)
+
+    await assertChapterIndexFree(tx, productionId, input.index, null)
+
+    const [created] = await tx
+      .insert(productionChapters)
+      .values({
+        id: newId(),
+        productionId,
+        scriptId,
+        name: input.name.trim(),
+        synopsis: input.synopsis?.trim() ?? "",
+        index: input.index,
+        responsibleId: input.responsibleId ?? null,
+      })
+      .returning()
+      .catch(rethrowChapterIndexTaken)
+
+    if (!created) throw new Error("la inserción del capítulo no devolvió fila")
+    return (await decorateChapters(tx, [created]))[0] as ChapterRecord
+  })
+}
+
+export interface UpdateChapterInput {
+  readonly name?: string | undefined
+  readonly index?: number | undefined
+  readonly synopsis?: string | undefined
+  readonly scriptId?: string | null | undefined
+  readonly responsibleId?: string | null | undefined
+}
+
+export async function updateChapter(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  chapterId: string,
+  input: UpdateChapterInput,
+): Promise<ChapterRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    const current = await loadChapter(tx, productionId, chapterId)
+
+    const patch: Record<string, unknown> = {}
+    if (input.name !== undefined) patch.name = input.name.trim()
+    if (input.synopsis !== undefined) patch.synopsis = input.synopsis.trim()
+    if (input.responsibleId !== undefined) patch.responsibleId = input.responsibleId
+
+    if (input.scriptId !== undefined) {
+      if (input.scriptId !== null) await loadScript(tx, productionId, input.scriptId)
+      patch.scriptId = input.scriptId
+    }
+
+    if (input.index !== undefined && input.index !== current.index) {
+      await assertChapterIndexFree(tx, productionId, input.index, chapterId)
+      patch.index = input.index
+    }
+
+    if (Object.keys(patch).length === 0) {
+      return (await decorateChapters(tx, [current]))[0] as ChapterRecord
+    }
+
+    const [updated] = await tx
+      .update(productionChapters)
+      .set(patch)
+      .where(eq(productionChapters.id, chapterId))
+      .returning()
+      .catch(rethrowChapterIndexTaken)
+
+    if (!updated) throw new NotFoundError("El capítulo no existe")
+    return (await decorateChapters(tx, [updated]))[0] as ChapterRecord
+  })
+}
+
+/** Lo que se lleva por delante dar de baja un capítulo. La spec exige enumerarlo antes. */
+export interface ChapterScope {
+  readonly scenes: number
+  /** Jornadas de rodaje que se quedarán sin escena. Sobreviven, en su estado inicial. */
+  readonly recordings: number
+  /** Planes de trabajo que se quedarán sin escena. Sobreviven, en su estado inicial. */
+  readonly workflows: number
+}
+
+export async function chapterScope(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  chapterId: string,
+): Promise<ChapterScope> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadChapter(tx, productionId, chapterId)
+
+    const sceneIds = await liveSceneIds(tx, chapterId)
+    return {
+      scenes: sceneIds.length,
+      ...(await detachableCounts(tx, sceneIds)),
+    }
+  })
+}
+
+/**
+ * Da de baja un capítulo y **se lleva sus escenas**.
+ *
+ * «Eliminar un capítulo SHALL eliminar todas sus escenas.» La clave foránea declara la cascada
+ * física, que aquí no actúa: la baja es lógica y la fila del capítulo no se retira. Así que la
+ * cascada la escribe este manejador, y con ella **todo lo que la baja de una escena arrastra** —las
+ * jornadas y los planes se quedan sin escena y vuelven a su estado inicial—. Que el borrado sea de
+ * una escena o de un capítulo entero no cambia lo que le pasa a la programación: si aquí no se
+ * llamara a `detachFromScenes`, borrar el capítulo dejaría jornadas apuntando a escenas muertas.
+ *
+ * Los índices de los capítulos que quedan **no se tocan**. Ver la cabecera del módulo.
+ */
+export async function deleteChapter(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  chapterId: string,
+): Promise<void> {
+  await withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadChapter(tx, productionId, chapterId)
+
+    const sceneIds = await liveSceneIds(tx, chapterId)
+    await detachFromScenes(tx, sceneIds)
+
+    const now = new Date()
+    if (sceneIds.length > 0) {
+      await tx
+        .update(productionScenes)
+        .set({ deletedAt: now })
+        .where(inArray(productionScenes.id, sceneIds))
+    }
+
+    await tx
+      .update(productionChapters)
+      .set({ deletedAt: now })
+      .where(eq(productionChapters.id, chapterId))
+  })
+}
+
 // ─── Ayuda ───────────────────────────────────────────────────────────────────
+
+/**
+ * El índice pedido está libre en la producción.
+ *
+ * Dos capas, y las dos hacen falta. La consulta previa da el mensaje bueno en el caso normal —dos
+ * personas desglosando el mismo guion a la vez, separadas por segundos—; el índice único parcial
+ * resuelve la carrera de dos peticiones **simultáneas**, que atraviesan la consulta las dos. Lo que
+ * no se puede es dejar sólo la segunda: el error del motor no distingue qué restricción falló para
+ * quien lee la respuesta.
+ *
+ * `exceptId` es el propio capítulo al editarlo: guardarlo con el índice que ya tenía no choca
+ * consigo mismo.
+ */
+async function assertChapterIndexFree(
+  tx: Transaction,
+  productionId: string,
+  index: number,
+  exceptId: string | null,
+): Promise<void> {
+  const [taken] = await tx
+    .select({ id: productionChapters.id })
+    .from(productionChapters)
+    .where(
+      and(
+        eq(productionChapters.productionId, productionId),
+        eq(productionChapters.index, index),
+        isNull(productionChapters.deletedAt),
+        ...(exceptId === null ? [] : [ne(productionChapters.id, exceptId)]),
+      ),
+    )
+    .limit(1)
+
+  if (taken) throw new ConflictError(`El capítulo número ${index} ya existe en esta producción`)
+}
+
+function rethrowChapterIndexTaken(failure: unknown): never {
+  const cause = (failure as { cause?: { code?: string; constraint_name?: string } }).cause
+  if (cause?.code === "23505" && cause.constraint_name === "production_chapters_index_unique") {
+    throw new ConflictError("Ese número de capítulo ya existe en esta producción")
+  }
+  throw failure
+}
+
+/** Los identificadores de las escenas vivas de un capítulo. */
+async function liveSceneIds(tx: Transaction, chapterId: string): Promise<string[]> {
+  const rows = await tx
+    .select({ id: productionScenes.id })
+    .from(productionScenes)
+    .where(and(eq(productionScenes.chapterId, chapterId), isNull(productionScenes.deletedAt)))
+
+  return rows.map((row) => row.id)
+}
+
+/** Cuántas jornadas y cuántos planes se quedarían sin escena. */
+async function detachableCounts(
+  tx: Transaction,
+  sceneIds: readonly string[],
+): Promise<{ recordings: number; workflows: number }> {
+  if (sceneIds.length === 0) return { recordings: 0, workflows: 0 }
+
+  const [recordings] = await tx
+    .select({ value: count() })
+    .from(productionRecordings)
+    .where(
+      and(inArray(productionRecordings.sceneId, sceneIds), isNull(productionRecordings.deletedAt)),
+    )
+
+  const [workflows] = await tx
+    .select({ value: count() })
+    .from(productionWorkflows)
+    .where(
+      and(inArray(productionWorkflows.sceneId, sceneIds), isNull(productionWorkflows.deletedAt)),
+    )
+
+  return { recordings: recordings?.value ?? 0, workflows: workflows?.value ?? 0 }
+}
+
+/**
+ * Suelta las jornadas y los planes que apuntaban a estas escenas, y **los devuelve a su estado
+ * inicial**.
+ *
+ * «Eliminar una escena SHALL dejar sin escena las jornadas de rodaje y los planes de trabajo que la
+ * referenciaban, y SHALL devolverlos a su estado inicial, sin eliminarlos.» Es la tarea con más
+ * filo del desglose: lo que se borra es la escena, y lo que **sobrevive** es el trabajo de
+ * programación que colgaba de ella —una jornada con su equipo convocado, un plan con sus tareas—.
+ * Llevárselos por delante destruiría días de organización por corregir una numeración.
+ *
+ * La clave foránea declara `set null`, que cubre la mitad: el vínculo. La otra mitad —volver a
+ * `draft` y a `pending`— no la puede hacer una clave foránea, y sin ella una jornada se quedaría en
+ * curso sin escena que grabar, que es un estado que no significa nada.
+ *
+ * Sólo se tocan las vivas. Una jornada ya dada de baja no «sobrevive» a nada, y devolverla a su
+ * estado inicial sería reescribir el pasado de algo que ya nadie mira.
+ *
+ * **Las dos tablas son de otro encargo.** Se escriben por sus columnas y no por su servicio: es lo
+ * que permite que el desglose y las jornadas se construyan a la vez sin pisarse.
+ */
+async function detachFromScenes(tx: Transaction, sceneIds: readonly string[]): Promise<void> {
+  if (sceneIds.length === 0) return
+
+  await tx
+    .update(productionRecordings)
+    .set({ sceneId: null, status: "draft" })
+    .where(
+      and(inArray(productionRecordings.sceneId, sceneIds), isNull(productionRecordings.deletedAt)),
+    )
+
+  await tx
+    .update(productionWorkflows)
+    .set({ sceneId: null, status: "pending" })
+    .where(
+      and(inArray(productionWorkflows.sceneId, sceneIds), isNull(productionWorkflows.deletedAt)),
+    )
+}
+
+/** Recuento de escenas y nombre del responsable, en dos consultas para todo el lote. */
+async function decorateChapters(
+  tx: Transaction,
+  rows: readonly (typeof productionChapters.$inferSelect)[],
+): Promise<ChapterRecord[]> {
+  if (rows.length === 0) return []
+
+  const names = await responsibleNames(
+    tx,
+    rows.map((row) => row.responsibleId),
+  )
+  const counts = await sceneCounts(
+    tx,
+    rows.map((row) => row.id),
+  )
+
+  return rows.map((row) => ({
+    id: row.id,
+    productionId: row.productionId,
+    scriptId: row.scriptId,
+    name: row.name,
+    synopsis: row.synopsis,
+    index: row.index,
+    responsibleId: row.responsibleId,
+    responsibleName: row.responsibleId === null ? null : (names.get(row.responsibleId) ?? null),
+    sceneCount: counts.get(row.id) ?? 0,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }))
+}
+
+/** Escenas por capítulo, en **una** consulta para todo el lote. */
+async function sceneCounts(
+  tx: Transaction,
+  chapterIds: readonly string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>()
+  if (chapterIds.length === 0) return counts
+
+  const rows = await tx
+    .select({ chapterId: productionScenes.chapterId, value: count() })
+    .from(productionScenes)
+    .where(and(inArray(productionScenes.chapterId, chapterIds), isNull(productionScenes.deletedAt)))
+    .groupBy(productionScenes.chapterId)
+
+  for (const row of rows) counts.set(row.chapterId, row.value)
+  return counts
+}
+
+export async function loadChapter(tx: Transaction, productionId: string, chapterId: string) {
+  const [row] = await tx
+    .select()
+    .from(productionChapters)
+    .where(
+      and(
+        eq(productionChapters.id, chapterId),
+        eq(productionChapters.productionId, productionId),
+        isNull(productionChapters.deletedAt),
+      ),
+    )
+    .limit(1)
+
+  if (!row) throw new NotFoundError("El capítulo no existe")
+  return row
+}
 
 /**
  * Que el archivo exista, sea de esta empresa, esté subido y sea un documento.

@@ -25,13 +25,20 @@ import { toInstant, toNullableInstant } from "@tfv/contracts"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import {
+  chapterQuery,
+  chapterScope,
+  createChapter,
   createScript,
+  deleteChapter,
   deleteScript,
+  getChapter,
   getScript,
+  listChapters,
   listScripts,
   SYNC_STATUSES,
   scriptQuery,
   scriptScope,
+  updateChapter,
   updateScript,
 } from "../productions/script.ts"
 import { defineRoute, REQUIRES } from "../runtime/route.ts"
@@ -58,8 +65,23 @@ const scriptSchema = z.object({
   updatedAt: z.string(),
 })
 
+const chapterSchema = z.object({
+  id: z.string(),
+  productionId: z.string(),
+  scriptId: z.string().nullable(),
+  name: z.string(),
+  synopsis: z.string(),
+  index: z.number().int(),
+  responsibleId: z.string().nullable(),
+  responsibleName: z.string().nullable(),
+  sceneCount: z.number().int(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
 const productionParams = z.object({ companyId: z.string(), productionId: z.string() })
 const scriptParams = productionParams.extend({ scriptId: z.string() })
+const chapterParams = productionParams.extend({ chapterId: z.string() })
 
 const nameField = z.string().trim().min(1, "El nombre es obligatorio").max(250)
 
@@ -86,6 +108,10 @@ function serializeScript(row: Awaited<ReturnType<typeof getScript>>) {
     createdAt: toInstant(row.createdAt),
     updatedAt: toInstant(row.updatedAt),
   }
+}
+
+function serializeChapter(row: Awaited<ReturnType<typeof getChapter>>) {
+  return { ...row, createdAt: toInstant(row.createdAt), updatedAt: toInstant(row.updatedAt) }
 }
 
 // ─── Guiones ─────────────────────────────────────────────────────────────────
@@ -277,6 +303,213 @@ export const deleteScriptRoute = defineRoute({
   handler: async (c) => {
     const params = c.req.valid("param")
     await deleteScript(actorOf(c), params.companyId, params.productionId, params.scriptId)
+    return c.body(null, 204)
+  },
+})
+
+// ─── Capítulos ───────────────────────────────────────────────────────────────
+
+export const listChaptersRoute = defineRoute({
+  access: REQUIRES("productions.chapters.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/productions/{productionId}/chapters",
+    summary: "Listar los capítulos de una producción",
+    tags: ["Producciones"],
+    request: { params: productionParams, query: collectionQuery(chapterQuery) },
+    responses: {
+      200: {
+        description: "Capítulos, por índice",
+        content: { "application/json": { schema: pageSchema(chapterSchema) } },
+      },
+      404: { description: "La producción no existe, o está fuera del alcance del solicitante" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const page = await listChapters(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      queryOf(c, chapterQuery),
+    )
+    return c.json(serializePage(page, serializeChapter), 200)
+  },
+})
+
+export const createChapterRoute = defineRoute({
+  access: REQUIRES("productions.chapters.create"),
+  config: {
+    method: "post",
+    path: "/companies/{companyId}/productions/{productionId}/chapters",
+    summary: "Crear un capítulo",
+    tags: ["Producciones"],
+    request: {
+      params: productionParams,
+      body: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              name: nameField,
+              index: indexField,
+              synopsis: z.string().max(4000).optional(),
+              scriptId: z.string().nullable().optional(),
+              responsibleId: z.string().nullable().optional(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "Capítulo creado",
+        content: { "application/json": { schema: chapterSchema } },
+      },
+      404: { description: "La producción o el guion no existen" },
+      409: { description: "Ese número de capítulo ya existe en la producción" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const chapter = await createChapter(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      c.req.valid("json"),
+    )
+    return c.json(serializeChapter(chapter), 201)
+  },
+})
+
+export const getChapterRoute = defineRoute({
+  access: REQUIRES("productions.chapters.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/productions/{productionId}/chapters/{chapterId}",
+    summary: "Ver un capítulo",
+    tags: ["Producciones"],
+    request: { params: chapterParams },
+    responses: {
+      200: {
+        description: "El capítulo, con su recuento de escenas",
+        content: { "application/json": { schema: chapterSchema } },
+      },
+      404: { description: "No existe, o está fuera del alcance del solicitante" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const chapter = await getChapter(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.chapterId,
+    )
+    return c.json(serializeChapter(chapter), 200)
+  },
+})
+
+export const updateChapterRoute = defineRoute({
+  access: REQUIRES("productions.chapters.edit"),
+  config: {
+    method: "patch",
+    path: "/companies/{companyId}/productions/{productionId}/chapters/{chapterId}",
+    summary: "Editar un capítulo",
+    tags: ["Producciones"],
+    request: {
+      params: chapterParams,
+      body: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              name: nameField.optional(),
+              index: indexField.optional(),
+              synopsis: z.string().max(4000).optional(),
+              scriptId: z.string().nullable().optional(),
+              responsibleId: z.string().nullable().optional(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Capítulo actualizado",
+        content: { "application/json": { schema: chapterSchema } },
+      },
+      404: { description: "El capítulo o el guion no existen" },
+      409: { description: "Ese número de capítulo ya existe en la producción" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const chapter = await updateChapter(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.chapterId,
+      c.req.valid("json"),
+    )
+    return c.json(serializeChapter(chapter), 200)
+  },
+})
+
+export const chapterScopeRoute = defineRoute({
+  access: REQUIRES("productions.chapters.delete"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scope",
+    summary: "Qué se lleva por delante dar de baja el capítulo",
+    tags: ["Producciones"],
+    request: { params: chapterParams },
+    responses: {
+      200: {
+        description:
+          "Las escenas se van con él; las jornadas y los planes sobreviven, sin escena y en su estado inicial",
+        content: {
+          "application/json": {
+            schema: z.object({
+              scenes: z.number().int(),
+              recordings: z.number().int(),
+              workflows: z.number().int(),
+            }),
+          },
+        },
+      },
+      404: { description: "No existe, o está fuera del alcance del solicitante" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const scope = await chapterScope(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.chapterId,
+    )
+    return c.json(scope, 200)
+  },
+})
+
+export const deleteChapterRoute = defineRoute({
+  access: REQUIRES("productions.chapters.delete"),
+  config: {
+    method: "delete",
+    path: "/companies/{companyId}/productions/{productionId}/chapters/{chapterId}",
+    summary: "Dar de baja un capítulo y sus escenas",
+    tags: ["Producciones"],
+    request: { params: chapterParams },
+    responses: {
+      204: {
+        description:
+          "Dado de baja con sus escenas. Los índices de los demás capítulos no se mueven",
+      },
+      404: { description: "No existe, o está fuera del alcance del solicitante" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    await deleteChapter(actorOf(c), params.companyId, params.productionId, params.chapterId)
     return c.body(null, 204)
   },
 })

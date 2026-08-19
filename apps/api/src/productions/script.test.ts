@@ -65,6 +65,16 @@ interface Script {
   chapterCount: number
 }
 
+interface Chapter {
+  id: string
+  productionId: string
+  scriptId: string | null
+  name: string
+  synopsis: string
+  index: number
+  sceneCount: number
+}
+
 function request(method: string, path: string, body?: unknown, cookie?: string) {
   return app.request(path, {
     method,
@@ -165,6 +175,22 @@ async function newScript(
   )
   expect(response.status).toBe(201)
   return json<Script>(response)
+}
+
+async function newChapter(
+  session: Session,
+  companyId: string,
+  productionId: string,
+  body: Record<string, unknown>,
+) {
+  const response = await request(
+    "POST",
+    `/companies/${companyId}/productions/${productionId}/chapters`,
+    body,
+    session.cookie,
+  )
+  expect(response.status).toBe(201)
+  return json<Chapter>(response)
 }
 
 let scopedAccounts = 0
@@ -470,5 +496,270 @@ describe("los guiones de una producción", () => {
 
     expect(response.status).toBe(404)
     expect(await response.text()).toContain("producción")
+  })
+})
+
+// ─── Capítulos ───────────────────────────────────────────────────────────────
+
+describe("los capítulos de una producción", () => {
+  it("un capítulo se registra con el índice que se le da", async () => {
+    // Escenario: «Se crea un capítulo → queda registrado en la producción».
+    const session = await signUp("capitulos@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+
+    const chapter = await newChapter(session, company.id, production.id, {
+      name: "El regreso",
+      synopsis: "Vuelve al pueblo",
+      index: 3,
+    })
+
+    expect(chapter.name).toBe("El regreso")
+    expect(chapter.index).toBe(3)
+    expect(chapter.scriptId).toBeNull()
+    // Escenario de `computed-fields`: «una colección vacía cuenta cero».
+    expect(chapter.sceneCount).toBe(0)
+  })
+
+  it("un índice de capítulo repetido se rechaza", async () => {
+    // Escenario: «GIVEN una producción con el capítulo número tres, WHEN se intenta crear otro con
+    // el mismo número, THEN la respuesta es 409».
+    const session = await signUp("indice-repetido@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+
+    await newChapter(session, company.id, production.id, { name: "Tres", index: 3 })
+
+    const response = await request(
+      "POST",
+      `/companies/${company.id}/productions/${production.id}/chapters`,
+      { name: "Otro tres", index: 3 },
+      session.cookie,
+    )
+
+    expect(response.status).toBe(409)
+  })
+
+  it("el mismo índice en otra producción sí vale", async () => {
+    const session = await signUp("indice-otra@ejemplo.mx")
+    const company = await newCompany(session)
+    const one = await newProduction(session, company.id)
+    const other = await newProduction(session, company.id)
+
+    await newChapter(session, company.id, one.id, { name: "Tres", index: 3 })
+    const twin = await newChapter(session, company.id, other.id, { name: "Tres", index: 3 })
+
+    expect(twin.index).toBe(3)
+  })
+
+  it("editar un capítulo hacia un índice ocupado se rechaza", async () => {
+    const session = await signUp("mueve-indice@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+
+    await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+    const second = await newChapter(session, company.id, production.id, { name: "Dos", index: 2 })
+
+    const response = await request(
+      "PATCH",
+      `/companies/${company.id}/productions/${production.id}/chapters/${second.id}`,
+      { index: 1 },
+      session.cookie,
+    )
+
+    expect(response.status).toBe(409)
+
+    // Y guardarlo con el índice que ya tenía no choca consigo mismo.
+    const same = await request(
+      "PATCH",
+      `/companies/${company.id}/productions/${production.id}/chapters/${second.id}`,
+      { index: 2, name: "Dos corregido" },
+      session.cookie,
+    )
+    expect(same.status).toBe(200)
+  })
+
+  it("dar de baja el capítulo de en medio no mueve los índices de los demás", async () => {
+    // **La decisión central del módulo.** En un guion real los números son la referencia de todo el
+    // papeleo del equipo: renumerar al borrar dejaría a media producción hablando de un capítulo
+    // que ya es otro. Esta prueba existe para que nadie lo «arregle».
+    const session = await signUp("sin-renumerar@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+
+    const first = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+    const middle = await newChapter(session, company.id, production.id, { name: "Dos", index: 2 })
+    const last = await newChapter(session, company.id, production.id, { name: "Tres", index: 3 })
+
+    const removed = await request(
+      "DELETE",
+      `/companies/${company.id}/productions/${production.id}/chapters/${middle.id}`,
+      undefined,
+      session.cookie,
+    )
+    expect(removed.status).toBe(204)
+
+    const listed = await json<{ items: Chapter[] }>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters`,
+        undefined,
+        session.cookie,
+      ),
+    )
+
+    expect(listed.items.map((row) => row.id)).toEqual([first.id, last.id])
+    expect(listed.items.map((row) => row.index)).toEqual([1, 3])
+  })
+
+  it("el índice de un capítulo dado de baja vuelve a estar libre", async () => {
+    // El único es parcial —«where deleted_at is null»—, así que el hueco se puede volver a ocupar.
+    // Es lo contrario de renumerar: el número se reutiliza porque alguien lo pide, no solo.
+    const session = await signUp("hueco-libre@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+
+    const chapter = await newChapter(session, company.id, production.id, { name: "Dos", index: 2 })
+    await request(
+      "DELETE",
+      `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}`,
+      undefined,
+      session.cookie,
+    )
+
+    const reused = await newChapter(session, company.id, production.id, {
+      name: "Dos, otra vez",
+      index: 2,
+    })
+    expect(reused.index).toBe(2)
+    expect(reused.id).not.toBe(chapter.id)
+  })
+
+  it("un capítulo declara de qué guion procede, y no vale uno de otra producción", async () => {
+    const session = await signUp("capitulo-guion@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const other = await newProduction(session, company.id)
+
+    const script = await newScript(session, company.id, production.id, { name: "Guion" })
+    const chapter = await newChapter(session, company.id, production.id, {
+      name: "Uno",
+      index: 1,
+      scriptId: script.id,
+    })
+    expect(chapter.scriptId).toBe(script.id)
+
+    const foreign = await request(
+      "POST",
+      `/companies/${company.id}/productions/${other.id}/chapters`,
+      { name: "Uno", index: 1, scriptId: script.id },
+      session.cookie,
+    )
+    expect(foreign.status).toBe(404)
+    expect(await foreign.text()).toContain("guion")
+  })
+
+  it("los capítulos sobreviven al guion del que se extrajeron", async () => {
+    // Escenario: «GIVEN un guion del que se extrajeron tres capítulos, WHEN se elimina el guion,
+    // THEN los tres capítulos y sus escenas siguen existiendo».
+    const session = await signUp("guion-baja@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const script = await newScript(session, company.id, production.id, { name: "Guion" })
+
+    for (const index of [1, 2, 3]) {
+      await newChapter(session, company.id, production.id, {
+        name: `Capítulo ${index}`,
+        index,
+        scriptId: script.id,
+      })
+    }
+
+    const scope = await json<{ chapters: number }>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/scripts/${script.id}/scope`,
+        undefined,
+        session.cookie,
+      ),
+    )
+    expect(scope.chapters).toBe(3)
+
+    await request(
+      "DELETE",
+      `/companies/${company.id}/productions/${production.id}/scripts/${script.id}`,
+      undefined,
+      session.cookie,
+    )
+
+    const listed = await json<{ items: Chapter[]; totalItems: number }>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters`,
+        undefined,
+        session.cookie,
+      ),
+    )
+
+    expect(listed.totalItems).toBe(3)
+    expect(listed.items.every((row) => row.scriptId === null)).toBe(true)
+    expect(listed.items.map((row) => row.index)).toEqual([1, 2, 3])
+  })
+
+  it("los capítulos se buscan por nombre y por sinopsis", async () => {
+    // Requisito «Búsqueda en el desglose».
+    const session = await signUp("busca-capitulos@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+
+    await newChapter(session, company.id, production.id, {
+      name: "El regreso",
+      synopsis: "Vuelve al pueblo en autobús",
+      index: 1,
+    })
+    await newChapter(session, company.id, production.id, {
+      name: "La despedida",
+      synopsis: "Se marcha de madrugada",
+      index: 2,
+    })
+
+    const byName = await json<{ items: Chapter[] }>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters?search=regreso`,
+        undefined,
+        session.cookie,
+      ),
+    )
+    expect(byName.items.map((row) => row.name)).toEqual(["El regreso"])
+
+    const bySynopsis = await json<{ items: Chapter[] }>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters?search=madrugada`,
+        undefined,
+        session.cookie,
+      ),
+    )
+    expect(bySynopsis.items.map((row) => row.name)).toEqual(["La despedida"])
+  })
+
+  it("sin la clave de capítulos no se crea ninguno", async () => {
+    const session = await signUp("acota-capitulos@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const cookie = await memberWith(company.id, [
+      "productions.productions.view",
+      "productions.chapters.view",
+    ])
+
+    const response = await request(
+      "POST",
+      `/companies/${company.id}/productions/${production.id}/chapters`,
+      { name: "Uno", index: 1 },
+      cookie,
+    )
+
+    expect(response.status).toBe(403)
   })
 })
