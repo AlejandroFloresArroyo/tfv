@@ -1,5 +1,5 @@
 import { isClosed, linesFrozen } from "@tfv/contracts/quote-status"
-import { Badge, Callout, Panel, Separator } from "@tfv/ui"
+import { Badge, Button, Callout, Panel, Separator } from "@tfv/ui"
 import { CalendarRange, FileText, Package, Users } from "lucide-react"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
@@ -112,7 +112,20 @@ export default async function QuotePage({
       : (breakdown?.lines.find((line) => line.lineId === lineId) ?? null)
 
   return (
-    <PageShell title={quote.name || quote.folio} subtitle={quote.description || quote.code}>
+    <PageShell
+      title={quote.name || quote.folio}
+      subtitle={quote.description || quote.code}
+      actions={
+        // El documento es una pantalla aparte y no un botón que descarga: se previsualiza antes de
+        // mandarlo, que es lo que evita enterarse de un descuadre por el cliente.
+        <Button asChild variant="secondary" size="sm">
+          <Link href={`/c/${companyId}/warehouses/${warehouseId}/quotes/${quoteId}/document`}>
+            <FileText className="size-4" aria-hidden="true" />
+            {t("documents.quoteDocument")}
+          </Link>
+        </Button>
+      }
+    >
       {nav}
 
       {quote.alert ? (
