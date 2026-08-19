@@ -208,15 +208,22 @@ import {
 import {
   chapterScopeRoute,
   createChapterRoute,
+  createSceneRoute,
   createScriptRoute,
   deleteChapterRoute,
+  deleteSceneRoute,
   deleteScriptRoute,
   getChapterRoute,
+  getSceneRoute,
   getScriptRoute,
   listChaptersRoute,
+  listProductionScenesRoute,
+  listScenesRoute,
   listScriptsRoute,
+  sceneScopeRoute,
   scriptScopeRoute,
   updateChapterRoute,
+  updateSceneRoute,
   updateScriptRoute,
 } from "./script.ts"
 import {
@@ -586,6 +593,16 @@ export const routes: readonly RegisteredRoute[] = [
   updateChapterRoute,
   chapterScopeRoute,
   deleteChapterRoute,
+
+  // Las escenas de la producción entera van **antes** que la ficha del capítulo con parámetro:
+  // comparten el prefijo `/productions/{id}/`, y el orden de la tabla es el que resuelve.
+  listProductionScenesRoute,
+  listScenesRoute,
+  createSceneRoute,
+  getSceneRoute,
+  updateSceneRoute,
+  sceneScopeRoute,
+  deleteSceneRoute,
 
   // Pendiente: la extracción asistida del guion (21); inventario, entregas y presupuesto (22);
   // compras a almacenes (23). Las tablas existen desde la `0002` y el panel ya las cuenta.

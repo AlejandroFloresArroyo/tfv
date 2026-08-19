@@ -45,6 +45,7 @@ import {
   type Page,
   type ParsedQuery,
   type QuerySchema,
+  sceneLabel,
   UnprocessableError,
 } from "@tfv/contracts"
 import { type Transaction, withRequester } from "@tfv/db"
@@ -106,6 +107,24 @@ export interface ChapterRecord {
   readonly updatedAt: Date
 }
 
+export interface SceneRecord {
+  readonly id: string
+  readonly chapterId: string
+  /** `computed-fields` lo exige junto a la etiqueta: la escena se sitúa en la producción entera. */
+  readonly chapterIndex: number
+  readonly name: string
+  readonly synopsis: string
+  readonly index: number
+  /** `sceneLabel(chapterIndex, index)`. No se compone aquí. */
+  readonly label: string
+  /** `computed-fields`, «Planes de una escena». */
+  readonly workflowCount: number
+  readonly synopsisEditedAt: Date | null
+  readonly missingFromLastSync: boolean
+  readonly createdAt: Date
+  readonly updatedAt: Date
+}
+
 // ─── Lenguaje de consulta ────────────────────────────────────────────────────
 
 export const scriptQuery: QuerySchema = {
@@ -160,6 +179,26 @@ const chapterMapping = {
   },
   searchable: [productionChapters.name, productionChapters.synopsis],
   tiebreak: productionChapters.id,
+}
+
+export const sceneQuery: QuerySchema = {
+  filters: {
+    missingFromLastSync: { type: "boolean", label: "Ausente en la última extracción" },
+  },
+  searchable: ["name", "synopsis"],
+  sortable: ["index", "name", "createdAt"],
+  defaultSort: [{ field: "index", direction: "asc" }],
+}
+
+const sceneMapping = {
+  fields: {
+    missingFromLastSync: productionScenes.missingFromLastSync,
+    index: productionScenes.index,
+    name: productionScenes.name,
+    createdAt: productionScenes.createdAt,
+  },
+  searchable: [productionScenes.name, productionScenes.synopsis],
+  tiebreak: productionScenes.id,
 }
 
 // ─── Guiones ─────────────────────────────────────────────────────────────────
@@ -582,6 +621,262 @@ export async function deleteChapter(
   })
 }
 
+// ─── Escenas ─────────────────────────────────────────────────────────────────
+
+export async function listScenes(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  chapterId: string,
+  query: ParsedQuery,
+): Promise<Page<SceneRecord>> {
+  const { limit, offset, page } = windowOf(query)
+
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    const chapter = await loadChapter(tx, productionId, chapterId)
+
+    const where = and(
+      eq(productionScenes.chapterId, chapterId),
+      isNull(productionScenes.deletedAt),
+      ...collectionConditions(query, sceneMapping),
+    )
+
+    const [total] = await tx.select({ value: count() }).from(productionScenes).where(where)
+
+    const rows = await tx
+      .select()
+      .from(productionScenes)
+      .where(where)
+      .orderBy(...collectionOrder(query, sceneMapping))
+      .limit(limit)
+      .offset(offset)
+
+    const decorated = await decorateScenes(tx, rows, new Map([[chapter.id, chapter.index]]))
+    return buildPage(decorated, total?.value ?? 0, page, limit)
+  })
+}
+
+/**
+ * Todas las escenas de una producción, **atravesando sus capítulos**.
+ *
+ * La spec lo pide aparte de la estructura: «SHALL poder además devolver todas las escenas de una
+ * producción atravesando sus capítulos». Es la lista plana con la que se rellena un selector de
+ * escena —el de un plan de trabajo, el de una jornada— sin obligar a elegir capítulo primero, y por
+ * eso cada escena viaja con su etiqueta compuesta: es lo único que la distingue fuera de su
+ * capítulo.
+ */
+export async function listProductionScenes(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  query: ParsedQuery,
+): Promise<Page<SceneRecord>> {
+  const { limit, offset, page } = windowOf(query)
+
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+
+    const where = and(
+      eq(productionChapters.productionId, productionId),
+      isNull(productionChapters.deletedAt),
+      isNull(productionScenes.deletedAt),
+      ...collectionConditions(query, sceneMapping),
+    )
+
+    const [total] = await tx
+      .select({ value: count() })
+      .from(productionScenes)
+      .innerJoin(productionChapters, eq(productionChapters.id, productionScenes.chapterId))
+      .where(where)
+
+    const joined = await tx
+      .select({ scene: productionScenes, chapterIndex: productionChapters.index })
+      .from(productionScenes)
+      .innerJoin(productionChapters, eq(productionChapters.id, productionScenes.chapterId))
+      .where(where)
+      // El orden es el del guion leído de principio a fin: capítulo y, dentro, escena. El de la
+      // colección se aplica después, sobre la escena, para que un orden pedido siga valiendo.
+      .orderBy(productionChapters.index, ...collectionOrder(query, sceneMapping))
+      .limit(limit)
+      .offset(offset)
+
+    const indices = new Map(joined.map((row) => [row.scene.chapterId, row.chapterIndex]))
+    const decorated = await decorateScenes(
+      tx,
+      joined.map((row) => row.scene),
+      indices,
+    )
+
+    return buildPage(decorated, total?.value ?? 0, page, limit)
+  })
+}
+
+export async function getScene(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  chapterId: string,
+  sceneId: string,
+): Promise<SceneRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    const chapter = await loadChapter(tx, productionId, chapterId)
+    const row = await loadScene(tx, chapterId, sceneId)
+
+    const decorated = await decorateScenes(tx, [row], new Map([[chapter.id, chapter.index]]))
+    return decorated[0] as SceneRecord
+  })
+}
+
+export interface CreateSceneInput {
+  readonly name: string
+  readonly index: number
+  readonly synopsis?: string | undefined
+}
+
+export async function createScene(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  chapterId: string,
+  input: CreateSceneInput,
+): Promise<SceneRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    const chapter = await loadChapter(tx, productionId, chapterId)
+
+    await assertSceneIndexFree(tx, chapterId, input.index, null)
+
+    const [created] = await tx
+      .insert(productionScenes)
+      .values({
+        id: newId(),
+        chapterId,
+        name: input.name.trim(),
+        synopsis: input.synopsis?.trim() ?? "",
+        index: input.index,
+      })
+      .returning()
+      .catch(rethrowSceneIndexTaken)
+
+    if (!created) throw new Error("la inserción de la escena no devolvió fila")
+
+    const decorated = await decorateScenes(tx, [created], new Map([[chapter.id, chapter.index]]))
+    return decorated[0] as SceneRecord
+  })
+}
+
+export interface UpdateSceneInput {
+  readonly name?: string | undefined
+  readonly index?: number | undefined
+  readonly synopsis?: string | undefined
+}
+
+/**
+ * Edita una escena, y **marca la sinopsis cuando la escribe una persona**.
+ *
+ * `synopsisEditedAt` existe para que la extracción no pise lo que alguien escribió a mano: compara
+ * ese instante con el de la última extracción para decidir. Quien lo escribe es esta ruta — si aquí
+ * no se pusiera, la marca no la pondría nadie y la columna sería decorativa.
+ *
+ * Sólo la marca la sinopsis. Corregir el nombre de una escena no dice nada sobre quién escribió su
+ * texto, y marcarlo entonces protegería de la extracción una sinopsis que nadie ha tocado.
+ */
+export async function updateScene(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  chapterId: string,
+  sceneId: string,
+  input: UpdateSceneInput,
+): Promise<SceneRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    const chapter = await loadChapter(tx, productionId, chapterId)
+    const current = await loadScene(tx, chapterId, sceneId)
+
+    const patch: Record<string, unknown> = {}
+    if (input.name !== undefined) patch.name = input.name.trim()
+
+    if (input.synopsis !== undefined) {
+      patch.synopsis = input.synopsis.trim()
+      patch.synopsisEditedAt = new Date()
+    }
+
+    if (input.index !== undefined && input.index !== current.index) {
+      await assertSceneIndexFree(tx, chapterId, input.index, sceneId)
+      patch.index = input.index
+    }
+
+    if (Object.keys(patch).length === 0) {
+      const same = await decorateScenes(tx, [current], new Map([[chapter.id, chapter.index]]))
+      return same[0] as SceneRecord
+    }
+
+    const [updated] = await tx
+      .update(productionScenes)
+      .set(patch)
+      .where(eq(productionScenes.id, sceneId))
+      .returning()
+      .catch(rethrowSceneIndexTaken)
+
+    if (!updated) throw new NotFoundError("La escena no existe")
+
+    const decorated = await decorateScenes(tx, [updated], new Map([[chapter.id, chapter.index]]))
+    return decorated[0] as SceneRecord
+  })
+}
+
+/** Lo que se queda sin escena al dar de baja una. Nada de esto se elimina. */
+export interface SceneScope {
+  readonly recordings: number
+  readonly workflows: number
+}
+
+export async function sceneScope(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  chapterId: string,
+  sceneId: string,
+): Promise<SceneScope> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadChapter(tx, productionId, chapterId)
+    await loadScene(tx, chapterId, sceneId)
+
+    return detachableCounts(tx, [sceneId])
+  })
+}
+
+/**
+ * Da de baja una escena y **suelta lo que la referenciaba**.
+ *
+ * La mitad delicada está en `detachFromScenes`, que es donde se explica. Los índices de las escenas
+ * que quedan no se tocan: ver la cabecera del módulo.
+ */
+export async function deleteScene(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  chapterId: string,
+  sceneId: string,
+): Promise<void> {
+  await withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadChapter(tx, productionId, chapterId)
+    await loadScene(tx, chapterId, sceneId)
+
+    await detachFromScenes(tx, [sceneId])
+
+    await tx
+      .update(productionScenes)
+      .set({ deletedAt: new Date() })
+      .where(eq(productionScenes.id, sceneId))
+  })
+}
+
 // ─── Ayuda ───────────────────────────────────────────────────────────────────
 
 /**
@@ -622,6 +917,43 @@ function rethrowChapterIndexTaken(failure: unknown): never {
   const cause = (failure as { cause?: { code?: string; constraint_name?: string } }).cause
   if (cause?.code === "23505" && cause.constraint_name === "production_chapters_index_unique") {
     throw new ConflictError("Ese número de capítulo ya existe en esta producción")
+  }
+  throw failure
+}
+
+/**
+ * El índice pedido está libre **dentro del capítulo**, no de la producción.
+ *
+ * «El índice de una escena SHALL ser único dentro de su capítulo»: la escena 5 del capítulo 1 y la
+ * 5 del capítulo 2 son escenas distintas y las dos son legítimas. Es justamente por eso que existe
+ * la etiqueta compuesta.
+ */
+async function assertSceneIndexFree(
+  tx: Transaction,
+  chapterId: string,
+  index: number,
+  exceptId: string | null,
+): Promise<void> {
+  const [taken] = await tx
+    .select({ id: productionScenes.id })
+    .from(productionScenes)
+    .where(
+      and(
+        eq(productionScenes.chapterId, chapterId),
+        eq(productionScenes.index, index),
+        isNull(productionScenes.deletedAt),
+        ...(exceptId === null ? [] : [ne(productionScenes.id, exceptId)]),
+      ),
+    )
+    .limit(1)
+
+  if (taken) throw new ConflictError(`La escena número ${index} ya existe en este capítulo`)
+}
+
+function rethrowSceneIndexTaken(failure: unknown): never {
+  const cause = (failure as { cause?: { code?: string; constraint_name?: string } }).cause
+  if (cause?.code === "23505" && cause.constraint_name === "production_scenes_index_unique") {
+    throw new ConflictError("Ese número de escena ya existe en este capítulo")
   }
   throw failure
 }
@@ -745,6 +1077,82 @@ async function sceneCounts(
 
   for (const row of rows) counts.set(row.chapterId, row.value)
   return counts
+}
+
+/**
+ * Etiqueta y recuento de planes, en una consulta para todo el lote.
+ *
+ * `chapterIndices` llega desde arriba porque quien lee las escenas ya tiene el capítulo delante:
+ * volver a consultarlo aquí sería una consulta por lote para un dato que el llamador acaba de
+ * cargar. La etiqueta sale de `sceneLabel`, no de una plantilla escrita aquí.
+ */
+async function decorateScenes(
+  tx: Transaction,
+  rows: readonly (typeof productionScenes.$inferSelect)[],
+  chapterIndices: ReadonlyMap<string, number>,
+): Promise<SceneRecord[]> {
+  if (rows.length === 0) return []
+
+  const counts = await workflowCounts(
+    tx,
+    rows.map((row) => row.id),
+  )
+
+  return rows.map((row) => {
+    const chapterIndex = chapterIndices.get(row.chapterId) ?? 0
+
+    return {
+      id: row.id,
+      chapterId: row.chapterId,
+      chapterIndex,
+      name: row.name,
+      synopsis: row.synopsis,
+      index: row.index,
+      label: sceneLabel(chapterIndex, row.index),
+      workflowCount: counts.get(row.id) ?? 0,
+      synopsisEditedAt: row.synopsisEditedAt,
+      missingFromLastSync: row.missingFromLastSync,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }
+  })
+}
+
+/** Planes por escena, en **una** consulta para todo el lote. */
+async function workflowCounts(
+  tx: Transaction,
+  sceneIds: readonly string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>()
+  if (sceneIds.length === 0) return counts
+
+  const rows = await tx
+    .select({ sceneId: productionWorkflows.sceneId, value: count() })
+    .from(productionWorkflows)
+    .where(
+      and(inArray(productionWorkflows.sceneId, sceneIds), isNull(productionWorkflows.deletedAt)),
+    )
+    .groupBy(productionWorkflows.sceneId)
+
+  for (const row of rows) if (row.sceneId !== null) counts.set(row.sceneId, row.value)
+  return counts
+}
+
+export async function loadScene(tx: Transaction, chapterId: string, sceneId: string) {
+  const [row] = await tx
+    .select()
+    .from(productionScenes)
+    .where(
+      and(
+        eq(productionScenes.id, sceneId),
+        eq(productionScenes.chapterId, chapterId),
+        isNull(productionScenes.deletedAt),
+      ),
+    )
+    .limit(1)
+
+  if (!row) throw new NotFoundError("La escena no existe")
+  return row
 }
 
 export async function loadChapter(tx: Transaction, productionId: string, chapterId: string) {

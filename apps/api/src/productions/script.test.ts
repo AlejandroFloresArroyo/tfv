@@ -15,8 +15,10 @@ import {
   companyServices,
   loginAttempts,
   notificationDeliveries,
+  productionRecordings,
   productionScripts,
   productions,
+  productionWorkflows,
   roles,
   services,
   sessions,
@@ -73,6 +75,19 @@ interface Chapter {
   synopsis: string
   index: number
   sceneCount: number
+}
+
+interface Scene {
+  id: string
+  chapterId: string
+  chapterIndex: number
+  name: string
+  synopsis: string
+  index: number
+  label: string
+  workflowCount: number
+  synopsisEditedAt: string | null
+  missingFromLastSync: boolean
 }
 
 function request(method: string, path: string, body?: unknown, cookie?: string) {
@@ -191,6 +206,23 @@ async function newChapter(
   )
   expect(response.status).toBe(201)
   return json<Chapter>(response)
+}
+
+async function newScene(
+  session: Session,
+  companyId: string,
+  productionId: string,
+  chapterId: string,
+  body: Record<string, unknown>,
+) {
+  const response = await request(
+    "POST",
+    `/companies/${companyId}/productions/${productionId}/chapters/${chapterId}/scenes`,
+    body,
+    session.cookie,
+  )
+  expect(response.status).toBe(201)
+  return json<Scene>(response)
 }
 
 let scopedAccounts = 0
@@ -757,6 +789,438 @@ describe("los capítulos de una producción", () => {
       "POST",
       `/companies/${company.id}/productions/${production.id}/chapters`,
       { name: "Uno", index: 1 },
+      cookie,
+    )
+
+    expect(response.status).toBe(403)
+  })
+})
+
+// ─── Escenas ─────────────────────────────────────────────────────────────────
+
+describe("las escenas de un capítulo", () => {
+  it("una escena se registra en su capítulo, con su etiqueta compuesta", async () => {
+    // Escenario: «Se crea una escena en un capítulo». Y el de `computed-fields`: «GIVEN la escena
+    // número 4 del capítulo número 2, THEN su índice de capítulo es 2 y su etiqueta compuesta
+    // distingue esta escena de la escena 4 de cualquier otro capítulo».
+    const session = await signUp("escenas@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const chapter = await newChapter(session, company.id, production.id, { name: "Dos", index: 2 })
+
+    const scene = await newScene(session, company.id, production.id, chapter.id, {
+      name: "Interior día",
+      synopsis: "Discuten en la cocina",
+      index: 4,
+    })
+
+    expect(scene.chapterId).toBe(chapter.id)
+    expect(scene.chapterIndex).toBe(2)
+    expect(scene.index).toBe(4)
+    expect(scene.label).toBe("2.4")
+    expect(scene.workflowCount).toBe(0)
+  })
+
+  it("el mismo índice de escena en otro capítulo sí vale, y las etiquetas las distinguen", async () => {
+    // Escenario: «GIVEN la escena número cinco del capítulo uno, WHEN se crea la escena número
+    // cinco del capítulo dos, THEN la operación se completa».
+    const session = await signUp("escena-gemela@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const one = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+    const two = await newChapter(session, company.id, production.id, { name: "Dos", index: 2 })
+
+    const first = await newScene(session, company.id, production.id, one.id, {
+      name: "Cinco",
+      index: 5,
+    })
+    const second = await newScene(session, company.id, production.id, two.id, {
+      name: "Cinco",
+      index: 5,
+    })
+
+    expect(first.label).toBe("1.5")
+    expect(second.label).toBe("2.5")
+    expect(first.label).not.toBe(second.label)
+  })
+
+  it("un índice de escena repetido en el mismo capítulo se rechaza", async () => {
+    const session = await signUp("escena-repetida@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const chapter = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+
+    await newScene(session, company.id, production.id, chapter.id, { name: "Cinco", index: 5 })
+
+    const response = await request(
+      "POST",
+      `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scenes`,
+      { name: "Otra cinco", index: 5 },
+      session.cookie,
+    )
+
+    expect(response.status).toBe(409)
+  })
+
+  it("un capítulo con seis escenas indica seis", async () => {
+    // Escenario de `computed-fields`: «GIVEN un capítulo con seis escenas, THEN indica seis».
+    const session = await signUp("seis-escenas@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const chapter = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+
+    for (const index of [1, 2, 3, 4, 5, 6]) {
+      await newScene(session, company.id, production.id, chapter.id, {
+        name: `Escena ${index}`,
+        index,
+      })
+    }
+
+    const read = await json<Chapter>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}`,
+        undefined,
+        session.cookie,
+      ),
+    )
+
+    expect(read.sceneCount).toBe(6)
+  })
+
+  it("dar de baja el capítulo arrastra sus seis escenas, y lo dice antes", async () => {
+    // Escenario: «GIVEN un capítulo con seis escenas, WHEN se elimina el capítulo, THEN las seis
+    // escenas desaparecen con él». Y «SHALL enumerar previamente cuántas son».
+    const session = await signUp("arrastra@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const chapter = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+
+    for (const index of [1, 2, 3, 4, 5, 6]) {
+      await newScene(session, company.id, production.id, chapter.id, {
+        name: `Escena ${index}`,
+        index,
+      })
+    }
+
+    const scope = await json<{ scenes: number; recordings: number; workflows: number }>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scope`,
+        undefined,
+        session.cookie,
+      ),
+    )
+    expect(scope.scenes).toBe(6)
+
+    await request(
+      "DELETE",
+      `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}`,
+      undefined,
+      session.cookie,
+    )
+
+    // Se van con él: ninguna sobrevive suelta en la producción.
+    const remaining = await json<{ totalItems: number }>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/scenes`,
+        undefined,
+        session.cookie,
+      ),
+    )
+    expect(remaining.totalItems).toBe(0)
+  })
+
+  it("las jornadas de rodaje sobreviven a la escena, sin escena y en su estado inicial", async () => {
+    // Escenario: «GIVEN una escena con una jornada de rodaje en curso, WHEN se elimina la escena,
+    // THEN la jornada sigue existiendo sin escena asignada AND vuelve a su estado inicial».
+    //
+    // Las jornadas son de otro encargo: se escriben directamente contra su tabla, que es lo que
+    // permite construir las dos cosas a la vez sin pisarse.
+    const session = await signUp("jornadas@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const chapter = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+    const scene = await newScene(session, company.id, production.id, chapter.id, {
+      name: "Interior día",
+      index: 1,
+    })
+
+    const recordingId = newId()
+    await db.insert(productionRecordings).values({
+      id: recordingId,
+      productionId: production.id,
+      sceneId: scene.id,
+      name: "Jornada del martes",
+      kind: "record",
+      status: "ongoing",
+    })
+
+    const removed = await request(
+      "DELETE",
+      `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scenes/${scene.id}`,
+      undefined,
+      session.cookie,
+    )
+    expect(removed.status).toBe(204)
+
+    const [survivor] = await db
+      .select()
+      .from(productionRecordings)
+      .where(eq(productionRecordings.id, recordingId))
+
+    expect(survivor).toBeDefined()
+    expect(survivor?.deletedAt).toBeNull()
+    expect(survivor?.sceneId).toBeNull()
+    expect(survivor?.status).toBe("draft")
+  })
+
+  it("los planes de trabajo sobreviven a la escena, y vuelven a pendiente", async () => {
+    // Escenario: «GIVEN una escena con dos planes de trabajo asociados, WHEN se elimina la escena,
+    // THEN los dos planes siguen existiendo sin escena asignada AND vuelven a su estado inicial».
+    const session = await signUp("planes@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const chapter = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+    const scene = await newScene(session, company.id, production.id, chapter.id, {
+      name: "Interior día",
+      index: 1,
+    })
+
+    // Los planes nacen por su propia ruta, que ya existe; asociarlos a una escena no está en ella,
+    // así que el vínculo y el estado se escriben contra la tabla.
+    const plans: string[] = []
+    for (const observations of ["Arte", "Vestuario"]) {
+      const plan = await json<{ id: string }>(
+        await request(
+          "POST",
+          `/companies/${company.id}/productions/${production.id}/workflows`,
+          { scheduledFor: "2026-09-01T08:00:00.000Z", observations },
+          session.cookie,
+        ),
+      )
+      plans.push(plan.id)
+      await db
+        .update(productionWorkflows)
+        .set({ sceneId: scene.id, status: "in_progress" })
+        .where(eq(productionWorkflows.id, plan.id))
+    }
+
+    const counted = await json<Scene>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scenes/${scene.id}`,
+        undefined,
+        session.cookie,
+      ),
+    )
+    // `computed-fields`, «Planes de una escena».
+    expect(counted.workflowCount).toBe(2)
+
+    await request(
+      "DELETE",
+      `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scenes/${scene.id}`,
+      undefined,
+      session.cookie,
+    )
+
+    for (const planId of plans) {
+      const read = await json<{ sceneId: string | null; status: string }>(
+        await request(
+          "GET",
+          `/companies/${company.id}/productions/${production.id}/workflows/${planId}`,
+          undefined,
+          session.cookie,
+        ),
+      )
+      expect(read.sceneId).toBeNull()
+      expect(read.status).toBe("pending")
+    }
+  })
+
+  it("dar de baja el capítulo suelta también las jornadas de sus escenas", async () => {
+    // La composición que la spec no enuncia y que sin embargo se deduce de sus dos requisitos: si
+    // eliminar el capítulo elimina sus escenas, y eliminar una escena suelta lo que la referencia,
+    // eliminar el capítulo tiene que soltar lo que referenciaba a sus escenas. Sin esto quedan
+    // jornadas apuntando a escenas muertas.
+    const session = await signUp("capitulo-suelta@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const chapter = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+    const scene = await newScene(session, company.id, production.id, chapter.id, {
+      name: "Interior día",
+      index: 1,
+    })
+
+    const recordingId = newId()
+    await db.insert(productionRecordings).values({
+      id: recordingId,
+      productionId: production.id,
+      sceneId: scene.id,
+      name: "Jornada del martes",
+      status: "ongoing",
+    })
+
+    const scope = await json<{ scenes: number; recordings: number }>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scope`,
+        undefined,
+        session.cookie,
+      ),
+    )
+    expect(scope.scenes).toBe(1)
+    expect(scope.recordings).toBe(1)
+
+    await request(
+      "DELETE",
+      `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}`,
+      undefined,
+      session.cookie,
+    )
+
+    const [survivor] = await db
+      .select()
+      .from(productionRecordings)
+      .where(eq(productionRecordings.id, recordingId))
+
+    expect(survivor?.sceneId).toBeNull()
+    expect(survivor?.status).toBe("draft")
+  })
+
+  it("dar de baja la escena de en medio no mueve los índices de las demás", async () => {
+    const session = await signUp("escenas-sin-renumerar@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const chapter = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+
+    await newScene(session, company.id, production.id, chapter.id, { name: "Una", index: 1 })
+    const middle = await newScene(session, company.id, production.id, chapter.id, {
+      name: "Dos",
+      index: 2,
+    })
+    await newScene(session, company.id, production.id, chapter.id, { name: "Tres", index: 3 })
+
+    await request(
+      "DELETE",
+      `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scenes/${middle.id}`,
+      undefined,
+      session.cookie,
+    )
+
+    const listed = await json<{ items: Scene[] }>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scenes`,
+        undefined,
+        session.cookie,
+      ),
+    )
+
+    expect(listed.items.map((row) => row.index)).toEqual([1, 3])
+    expect(listed.items.map((row) => row.label)).toEqual(["1.1", "1.3"])
+  })
+
+  it("corregir la sinopsis a mano deja marca, y cambiar el nombre no", async () => {
+    // La columna existe para que la extracción no sobrescriba lo que una persona escribió: quien
+    // la escribe es esta ruta, y sin ella la marca no la pondría nadie.
+    const session = await signUp("sinopsis@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const chapter = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+    const scene = await newScene(session, company.id, production.id, chapter.id, {
+      name: "Interior día",
+      index: 1,
+    })
+    expect(scene.synopsisEditedAt).toBeNull()
+
+    const renamed = await json<Scene>(
+      await request(
+        "PATCH",
+        `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scenes/${scene.id}`,
+        { name: "Interior noche" },
+        session.cookie,
+      ),
+    )
+    expect(renamed.synopsisEditedAt).toBeNull()
+
+    const edited = await json<Scene>(
+      await request(
+        "PATCH",
+        `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scenes/${scene.id}`,
+        { synopsis: "Lo escribo yo" },
+        session.cookie,
+      ),
+    )
+    expect(edited.synopsis).toBe("Lo escribo yo")
+    expect(edited.synopsisEditedAt).not.toBeNull()
+  })
+
+  it("las escenas se buscan por nombre y por sinopsis", async () => {
+    const session = await signUp("busca-escenas@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const chapter = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+
+    await newScene(session, company.id, production.id, chapter.id, {
+      name: "Interior día",
+      synopsis: "Discuten en la cocina",
+      index: 1,
+    })
+    await newScene(session, company.id, production.id, chapter.id, {
+      name: "Exterior noche",
+      synopsis: "Corre bajo la lluvia",
+      index: 2,
+    })
+
+    const found = await json<{ items: Scene[] }>(
+      await request(
+        "GET",
+        `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scenes?search=lluvia`,
+        undefined,
+        session.cookie,
+      ),
+    )
+    expect(found.items.map((row) => row.name)).toEqual(["Exterior noche"])
+  })
+
+  it("una escena de otro capítulo responde que no existe", async () => {
+    const session = await signUp("escena-ajena@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const one = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+    const two = await newChapter(session, company.id, production.id, { name: "Dos", index: 2 })
+
+    const scene = await newScene(session, company.id, production.id, one.id, {
+      name: "Una",
+      index: 1,
+    })
+
+    const response = await request(
+      "GET",
+      `/companies/${company.id}/productions/${production.id}/chapters/${two.id}/scenes/${scene.id}`,
+      undefined,
+      session.cookie,
+    )
+    expect(response.status).toBe(404)
+  })
+
+  it("sin la clave de escenas no se crea ninguna", async () => {
+    const session = await signUp("acota-escenas@ejemplo.mx")
+    const company = await newCompany(session)
+    const production = await newProduction(session, company.id)
+    const chapter = await newChapter(session, company.id, production.id, { name: "Uno", index: 1 })
+    const cookie = await memberWith(company.id, [
+      "productions.productions.view",
+      "productions.chapters.view",
+      "productions.scenes.view",
+    ])
+
+    const response = await request(
+      "POST",
+      `/companies/${company.id}/productions/${production.id}/chapters/${chapter.id}/scenes`,
+      { name: "Una", index: 1 },
       cookie,
     )
 

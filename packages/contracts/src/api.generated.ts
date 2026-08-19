@@ -1513,6 +1513,155 @@ export interface ApiEndpoints {
     response: undefined
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes": {
+    /** Listar las escenas de un capítulo */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_index?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      missingFromLastSync?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        chapterId: string
+        chapterIndex: number
+        name: string
+        synopsis: string
+        index: number
+        label: string
+        workflowCount: number
+        synopsisEditedAt: string | null
+        missingFromLastSync: boolean
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes": {
+    /** Crear una escena en un capítulo */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+    }
+    body: {
+      name: string
+      index: number
+      synopsis?: string
+    }
+    response: {
+      id: string
+      chapterId: string
+      chapterIndex: number
+      name: string
+      synopsis: string
+      index: number
+      label: string
+      workflowCount: number
+      synopsisEditedAt: string | null
+      missingFromLastSync: boolean
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes/{sceneId}": {
+    /** Ver una escena */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+      sceneId: string
+    }
+    response: {
+      id: string
+      chapterId: string
+      chapterIndex: number
+      name: string
+      synopsis: string
+      index: number
+      label: string
+      workflowCount: number
+      synopsisEditedAt: string | null
+      missingFromLastSync: boolean
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes/{sceneId}": {
+    /** Editar una escena */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+      sceneId: string
+    }
+    body: {
+      name?: string
+      index?: number
+      synopsis?: string
+    }
+    response: {
+      id: string
+      chapterId: string
+      chapterIndex: number
+      name: string
+      synopsis: string
+      index: number
+      label: string
+      workflowCount: number
+      synopsisEditedAt: string | null
+      missingFromLastSync: boolean
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes/{sceneId}": {
+    /** Dar de baja una escena */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+      sceneId: string
+    }
+    response: undefined
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scenes/{sceneId}/scope": {
+    /** Qué se queda sin escena al dar de baja ésta */
+    params: {
+      companyId: string
+      productionId: string
+      chapterId: string
+      sceneId: string
+    }
+    response: {
+      recordings: number
+      workflows: number
+    }
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/chapters/{chapterId}/scope": {
     /** Qué se lleva por delante dar de baja el capítulo */
     params: {
@@ -1553,6 +1702,48 @@ export interface ApiEndpoints {
         spent: string
         difference: string
       }
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/scenes": {
+    /** Listar todas las escenas de una producción, atravesando sus capítulos */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_index?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      missingFromLastSync?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        chapterId: string
+        chapterIndex: number
+        name: string
+        synopsis: string
+        index: number
+        label: string
+        workflowCount: number
+        synopsisEditedAt: string | null
+        missingFromLastSync: boolean
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
     }
   }
 
