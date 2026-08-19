@@ -210,7 +210,7 @@ describe("cobertura", () => {
     // El número es una alarma a propósito: añadir una tabla obliga a pasar por aquí, y por aquí es
     // donde se recuerda que una tabla nueva **no hereda** la política de plataforma —la 0005 la
     // repartió con un bucle que corrió una sola vez—. Así se descubrió que faltaba en `prospects`.
-    expect(tablas.length).toBe(92)
+    expect(tablas.length).toBe(93)
     expect(tablas.filter((t) => !t.rls).map((t) => t.relname)).toEqual([])
     expect(tablas.filter((t) => t.politicas === 0).map((t) => t.relname)).toEqual([])
   })
@@ -456,5 +456,139 @@ describe("revocación inmediata", () => {
     const visible = await withSystem("prueba", [seed.companyA], (tx) => count(tx, "productions"))
 
     expect(visible).toBe(1)
+  })
+})
+
+// ─── Rebanada 09 ─────────────────────────────────────────────────────────────
+
+describe("la bitácora es de sólo anexado", () => {
+  const asiento = newId()
+
+  it("un miembro anexa el asiento de su empresa", async () => {
+    await withRequester(identity(seed.ana), (tx) =>
+      tx.execute(
+        sql.raw(`insert into company_activities (id, company_id, action, entity, title)
+                 values ('${asiento}', '${seed.companyA}', 'create', 'warehouse_products', 'Cámara')`),
+      ),
+    )
+
+    expect(await countAs(seed.ana, "company_activities")).toBe(1)
+    expect(await countAs(seed.beto, "company_activities")).toBe(0)
+  })
+
+  it("y no lo puede modificar ni borrar", async () => {
+    // El requisito dice «se rechaza», así que el rechazo tiene que oírse: el permiso está retirado
+    // sobre la tabla, de modo que el motor responde en lugar de no encontrar filas.
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.ana), (tx) =>
+        tx.execute(sql.raw("update company_activities set title = 'Otra cosa'")),
+      ),
+    )
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.ana), (tx) =>
+        tx.execute(sql.raw("delete from company_activities")),
+      ),
+    )
+  })
+
+  it("tampoco la administración de plataforma", async () => {
+    // Su papel es el de propietario **de una empresa**, y una propietaria tampoco reescribe su
+    // bitácora. Si pudiera, dejaría de servir para lo único que sirve.
+    expect(await countAs(seed.admin, "company_activities")).toBe(1)
+
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.admin), (tx) =>
+        tx.execute(sql.raw("delete from company_activities")),
+      ),
+    )
+  })
+})
+
+describe("la cola de trabajos", () => {
+  beforeAll(async () => {
+    await db.execute(
+      sql.raw(`insert into background_jobs (id, kind, payload)
+               values ('${newId()}', 'prueba.trabajo', '{}'::jsonb)`),
+    )
+  })
+
+  it("no la ve ninguna sesión de usuario", async () => {
+    // No es dato de arrendatario, y tampoco es de todos: encolar el recolector con plazo cero
+    // borraría las subidas en curso de todo el mundo.
+    expect(await countAs(seed.ana, "background_jobs")).toBe(0)
+    expect(await countAs(seed.beto, "background_jobs")).toBe(0)
+  })
+
+  it("ni la escribe", async () => {
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.ana), (tx) =>
+        tx.execute(
+          sql.raw(`insert into background_jobs (id, kind) values ('${newId()}', 'inventado')`),
+        ),
+      ),
+    )
+  })
+
+  it("la ve la operación de sistema, que es por donde corre el despachador", async () => {
+    // Sin declarar ninguna empresa: un trabajo global no tiene alcance de arrendatario, y la
+    // operación queda declarada igual.
+    const visibles = await withSystem("trabajos.despachador", [], (tx) =>
+      count(tx, "background_jobs"),
+    )
+
+    expect(visibles).toBe(1)
+  })
+
+  it("y la ve la administración de plataforma, que es quien mira por qué se rindió", async () => {
+    expect(await countAs(seed.admin, "background_jobs")).toBe(1)
+  })
+})
+
+describe("un archivo referenciado", () => {
+  it("no se borra, aunque lleve pendiente más del plazo", async () => {
+    // El recolector de subidas abandonadas borraba por antigüedad y estado, sin mirar si alguien
+    // apuntaba al archivo. Cinco claves foráneas propagan el borrado —una de ellas la del
+    // comprobante de un pago—, así que lo que se perdía no era la foto: era la fila.
+    const archivo = newId()
+    const imagen = newId()
+
+    await db.execute(
+      sql.raw(`
+        insert into uploads (id, kind, status, url, file_name, extension, content_type,
+                             byte_size, storage_path, created_at)
+        values ('${archivo}', 'image', 'pending', 'u', 'a.jpg', 'jpg', 'image/jpeg', 10,
+                '${seed.companyB}/${archivo}', now() - interval '48 hours');
+        insert into location_images (id, location_id, upload_id)
+        values ('${imagen}', '${seed.locationB}', '${archivo}');
+      `),
+    )
+
+    await db.execute(sql.raw(`delete from uploads where id = '${archivo}'`))
+
+    expect(
+      await readElevated(`select count(*)::int as total from uploads where id = '${archivo}'`),
+    ).toEqual({ total: 1 })
+    expect(
+      await readElevated(
+        `select count(*)::int as total from location_images where id = '${imagen}'`,
+      ),
+    ).toEqual({ total: 1 })
+  })
+
+  it("y el que no lo está sí se borra, que es para lo que existe el recolector", async () => {
+    const archivo = newId()
+
+    await db.execute(
+      sql.raw(`insert into uploads (id, kind, status, url, file_name, extension, content_type,
+                                    byte_size, storage_path, created_at)
+               values ('${archivo}', 'image', 'pending', 'u', 'b.jpg', 'jpg', 'image/jpeg', 10,
+                       '${seed.companyB}/${archivo}', now() - interval '48 hours')`),
+    )
+
+    await db.execute(sql.raw(`delete from uploads where id = '${archivo}'`))
+
+    expect(
+      await readElevated(`select count(*)::int as total from uploads where id = '${archivo}'`),
+    ).toEqual({ total: 0 })
   })
 })

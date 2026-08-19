@@ -65,6 +65,16 @@ export const users = pgTable(
     lastLoginAt: timestamp("last_login_at", { withTimezone: true, mode: "date" }),
     lastActivityAt: timestamp("last_activity_at", { withTimezone: true, mode: "date" }),
 
+    /**
+     * Cuándo abrió la bandeja por última vez.
+     *
+     * De aquí sale el aviso de novedades —«han llegado tres desde que la cerraste»—, que no es lo
+     * mismo que el contador de no leídas: una notificación leída hace un mes sigue sin ser una
+     * novedad, y una sin leer de ayer tampoco lo es si ya la vio pasar. Ver
+     * `activity-and-notifications`, requisito «Contador de no leídas y aviso de novedades».
+     */
+    inboxOpenedAt: timestamp("inbox_opened_at", { withTimezone: true, mode: "date" }),
+
     ...timestamps,
     ...softDelete,
   },
