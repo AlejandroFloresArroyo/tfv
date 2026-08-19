@@ -276,6 +276,45 @@ describe("volver a autorizar", () => {
 
     expect(response.status).toBe(409)
   })
+
+  it("reemite sobre un objeto que ya se había escrito, y la nueva firma sirve", async () => {
+    // Es **el** caso del reintento por objeto: el original entró y la miniatura no. La máquina de
+    // subida vuelve a pedir autorización para el archivo entero —no sabe pedir cuatro de cinco—,
+    // así que si firmar una clave ya ocupada falla, el único camino de reintento que existe se
+    // cierra justo en el escenario para el que se escribió. Ver `HALLAZGOS.md` H-132.
+    const { upload, targets } = await json<Authorization>(await authorize(FOTO))
+    const original = targets[0]
+    if (!original) throw new Error("sin autorización que probar")
+
+    expect(
+      (
+        await fetch(original.url, {
+          method: "PUT",
+          headers: original.headers,
+          body: new Uint8Array([1]),
+        })
+      ).ok,
+    ).toBe(true)
+
+    const response = await request(
+      "POST",
+      `/companies/${companyId}/uploads/${upload.id}/targets`,
+      {},
+      cookie,
+    )
+    expect(response.status).toBe(200)
+
+    const again = (await json<Authorization>(response)).targets[0]
+    if (!again) throw new Error("la reemisión no trajo el original")
+
+    const rewritten = await fetch(again.url, {
+      method: "PUT",
+      headers: again.headers,
+      body: new Uint8Array([1, 2, 3, 4, 5, 6]),
+    })
+
+    expect(rewritten.ok).toBe(true)
+  })
 })
 
 describe("el aislamiento entre arrendatarios", () => {
