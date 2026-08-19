@@ -32,6 +32,8 @@ export * from "./jobs.ts"
 export * from "./locations.ts"
 export * from "./media.ts"
 export * from "./pixit.ts"
+// ─── Administración de plataforma ────────────────────────────────────────────
+export * from "./platform.ts"
 export * from "./productions.ts"
 export * from "./productions-ops.ts"
 export * from "./services.ts"
