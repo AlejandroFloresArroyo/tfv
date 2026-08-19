@@ -17,7 +17,10 @@ import {
 import { cors } from "hono/cors"
 import type { ZodError } from "zod"
 import { guardFor } from "../auth/middleware.ts"
-import { env, exposeErrorDetails } from "../env.ts"
+import { env, exposeErrorDetails, rateLimitEnabled } from "../env.ts"
+import { idempotencyFor } from "./idempotency.ts"
+import { identifierShapeFor } from "./identifiers.ts"
+import { bodyLimitFor, createRateLimiter, type RateLimitOptions } from "./limits.ts"
 import { createLogger, type Logger } from "./logger.ts"
 import { mountRoutes, type RegisteredRoute } from "./route.ts"
 
@@ -35,7 +38,23 @@ function toFieldIssues(error: ZodError): FieldIssue[] {
   }))
 }
 
-export function createApp(routes: readonly RegisteredRoute[]): OpenAPIHono {
+/**
+ * Lo que se puede cambiar al ensamblar.
+ *
+ * Existe para las pruebas de los propios límites, que necesitan un cupo pequeño y un reloj que
+ * puedan mover. **Todo lo demás sale de la configuración**: una aplicación que se arma distinta
+ * según quién la llame acaba probándose en una forma que no es la que corre.
+ */
+export interface AppOptions {
+  /** `null` la apaga. Ausente toma la de la configuración. */
+  readonly rateLimit?: RateLimitOptions | null | undefined
+  readonly maxBodyBytes?: number | undefined
+}
+
+export function createApp(
+  routes: readonly RegisteredRoute[],
+  options: AppOptions = {},
+): OpenAPIHono {
   const app = new OpenAPIHono({
     // Toda entrada que no cumpla su esquema se rechaza aquí, antes de llegar al manejador.
     defaultHook: (result) => {
@@ -78,6 +97,18 @@ export function createApp(routes: readonly RegisteredRoute[]): OpenAPIHono {
     }),
   )
 
+  // ─── Frecuencia ────────────────────────────────────────────────────────────
+
+  // Antes que nada: lo que se rechaza por frecuencia no debe costar ni una consulta.
+  const rateLimit =
+    options.rateLimit === undefined
+      ? rateLimitEnabled
+        ? { max: env.RATE_LIMIT_MAX, windowMs: env.RATE_LIMIT_WINDOW_MS }
+        : null
+      : options.rateLimit
+
+  if (rateLimit) app.use("*", createRateLimiter(rateLimit))
+
   // ─── Contrato de error ─────────────────────────────────────────────────────
 
   app.onError((error, c) => {
@@ -104,7 +135,25 @@ export function createApp(routes: readonly RegisteredRoute[]): OpenAPIHono {
 
   // ─── Rutas ─────────────────────────────────────────────────────────────────
 
-  mountRoutes(app, routes, guardFor)
+  /**
+   * El orden de las capas es el contrato, no una casualidad.
+   *
+   * El límite de cuerpo primero: rechazar por tamaño antes de resolver la sesión es lo que impide
+   * que una petición desproporcionada cueste una consulta a la base antes de que nadie la mire.
+   *
+   * La forma de los identificadores **antes que el guardián**, y no es un detalle de orden: el
+   * guardián resuelve la membresía contra la empresa del camino, así que con un `companyId`
+   * inválido el fallo ocurría dentro del propio guardián, antes de que corriera ningún manejador.
+   *
+   * Después el guardián, porque nada debe correr sin credencial. Y por último la idempotencia, que
+   * necesita saber quién es el actor para acotarle la clave y sin sesión no lo sabría.
+   */
+  mountRoutes(app, routes, [
+    bodyLimitFor(options.maxBodyBytes ?? env.BODY_LIMIT_BYTES),
+    identifierShapeFor,
+    (route) => guardFor(route.access),
+    idempotencyFor,
+  ])
 
   // ─── Contrato publicado ────────────────────────────────────────────────────
 

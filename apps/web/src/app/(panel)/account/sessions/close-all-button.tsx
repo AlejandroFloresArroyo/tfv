@@ -4,7 +4,7 @@ import { Button } from "@tfv/ui"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { api } from "~/lib/api.client.ts"
+import { apiTypedWithoutRefresh } from "~/lib/api.client.ts"
 
 /**
  * Cierra todas las sesiones, incluida ésta.
@@ -23,7 +23,8 @@ export function CloseAllButton() {
     setPending(true)
 
     try {
-      await api("/auth/logout-all", { method: "POST", withoutRefresh: true })
+      // Sin renovación: aquí un 401 significa que ya no queda sesión que cerrar.
+      await apiTypedWithoutRefresh("POST /auth/logout-all")
     } catch {
       // Aunque falle, el servidor decide: la guarda del panel devuelve a acceder si ya no hay
       // sesión, y deja la pantalla en pie si la sigue habiendo.

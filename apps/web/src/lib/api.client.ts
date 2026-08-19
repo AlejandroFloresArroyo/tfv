@@ -26,6 +26,8 @@
  * el cliente deje de dispararla solo.
  */
 
+import { createApiClient } from "@tfv/contracts/api-client"
+
 export class ApiError extends Error {
   readonly status: number
   /** Errores por campo, cuando la API los devuelve con la forma del contrato. */
@@ -174,4 +176,44 @@ async function toError(response: Response): Promise<ApiError> {
   }
 
   return new ApiError(response.status, payload.message ?? response.statusText, fields)
+}
+
+/**
+ * El mismo transporte, con el contrato publicado delante.
+ *
+ * `api()` sigue siendo lo que habla con la red —con su renovación serializada, que es la parte que
+ * no se puede improvisar—. Esto sólo pone tipos encima: el endpoint es una clave del contrato, los
+ * parámetros del camino se sustituyen escapados, y el cuerpo y la respuesta llevan la forma que el
+ * servidor declara.
+ *
+ * ```ts
+ * await apiTyped("POST /auth/logout-all")
+ * ```
+ *
+ * Convive con `api()` a propósito. Pasar las cuarenta y ocho pantallas es una ronda entera y
+ * hacerlo mientras otros las están escribiendo sólo produciría conflictos: ver `HALLAZGOS.md` H-128.
+ */
+export const apiTyped = typedClient()
+
+/**
+ * El mismo, sin intentar renovar ante un `401`.
+ *
+ * Lo necesitan las rutas de acceso y las de cierre de sesión, donde un `401` **no** significa
+ * «sesión caducada»: en `login` significa contraseña incorrecta, y en `logout-all` que ya no queda
+ * nada que cerrar. Renovar ahí enmascara el mensaje real y, en el cierre, rota una credencial que
+ * se está tratando de invalidar.
+ *
+ * Es opción del **transporte**, no del contrato: qué hacer ante un `401` no es algo que la API
+ * declare, así que no cabe en el mapa generado y se elige aquí, al atar el cliente a su transporte.
+ */
+export const apiTypedWithoutRefresh = typedClient({ withoutRefresh: true })
+
+function typedClient(options: { withoutRefresh?: boolean } = {}) {
+  return createApiClient((request) =>
+    api(request.path, {
+      method: request.method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+      ...(request.body === undefined ? {} : { body: request.body }),
+      ...(options.withoutRefresh ? { withoutRefresh: true } : {}),
+    }),
+  )
 }

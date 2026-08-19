@@ -1,0 +1,178 @@
+/**
+ * Idempotencia de las mutaciones.
+ *
+ * Ver `openspec/specs/api-conventions/spec.md`, requisito «Las mutaciones de dinero son
+ * idempotentes».
+ *
+ * ## Qué problema es éste
+ *
+ * Una petición de escritura que mueve dinero o materializa un pedido puede llegar dos veces sin que
+ * nadie haga nada raro: el navegador reintenta lo que parece un tiempo agotado, alguien pulsa dos
+ * veces, un proxy repite. La primera llegó y surtió efecto; la respuesta se perdió por el camino.
+ * Sin nada que las relacione, el servidor ve dos peticiones legítimas y cobra dos veces.
+ *
+ * La solución es que el cliente ponga nombre a su intención —una clave que repite en el reintento—
+ * y que el servidor recuerde qué contestó a esa clave.
+ *
+ * ## Lo que vive aquí
+ *
+ * Sólo la parte **pura y compartida**: cómo se compara un cuerpo con el que se envió la primera
+ * vez, y qué se decide con lo que se guardó. El almacén, la restricción de unicidad que lo hace
+ * resistente a la concurrencia y el enganche HTTP están en `apps/api/src/runtime/idempotency.ts`.
+ *
+ * Está aquí y no allí porque **el navegador también decide**: al reintentar tiene que reenviar la
+ * misma clave con el mismo cuerpo, y saber que un `409` con este código significa «cambiaste el
+ * cuerpo», no «el recurso ya existe».
+ */
+
+import { z } from "zod"
+import { DomainError } from "./errors.ts"
+
+/**
+ * El encabezado que transporta la clave, en minúsculas.
+ *
+ * Los nombres de encabezado no distinguen mayúsculas y el motor los normaliza a minúsculas al
+ * leerlos; la constante se declara ya normalizada para que nadie compare contra la forma capitalizada
+ * y no encuentre nada.
+ */
+export const IDEMPOTENCY_HEADER = "idempotency-key"
+
+/**
+ * Código con el que se rechaza una clave reutilizada con otro cuerpo.
+ *
+ * Distinto del conflicto genérico a propósito: el cliente tiene que poder distinguir «esto ya
+ * existe» —donde reintentar no arregla nada— de «reutilizaste una clave», donde lo que hay que
+ * hacer es generar una nueva.
+ */
+export const IDEMPOTENCY_MISMATCH = "idempotency_key_reused"
+
+/**
+ * Código con el que se contesta a una repetición que llega antes de que la primera termine.
+ *
+ * Separado del anterior porque **lo que el cliente debe hacer es lo contrario**: aquí reintentar la
+ * misma clave es exactamente lo correcto, y generar una nueva sería lo que duplica el cobro.
+ */
+export const IDEMPOTENCY_IN_FLIGHT = "idempotency_in_flight"
+
+/** La clave ya se usó con otro cuerpo. Reintentarla no arregla nada: hay que generar otra. */
+export class IdempotencyKeyReusedError extends DomainError {
+  readonly status = 409 as const
+  readonly code: string = IDEMPOTENCY_MISMATCH
+
+  constructor() {
+    super(
+      "Esa clave de idempotencia ya se usó con una petición distinta. Genera una nueva para esta " +
+        "operación.",
+    )
+  }
+}
+
+/** La primera petición con esa clave sigue en curso. Reintentar la misma clave es lo correcto. */
+export class IdempotencyInFlightError extends DomainError {
+  readonly status = 409 as const
+  readonly code: string = IDEMPOTENCY_IN_FLIGHT
+
+  constructor() {
+    super("La operación anterior con esa clave todavía está en curso. Inténtalo en un momento.")
+  }
+}
+
+/**
+ * La clave, tal y como se acepta del cliente.
+ *
+ * Es **opaca**: el servidor no deriva nada de ella, sólo la compara. Las dos restricciones tienen
+ * motivo:
+ *
+ * - **Ocho caracteres como mínimo.** La clave acota un espacio de respuestas guardadas; una clave
+ *   corta se repite por azar entre dos peticiones distintas del mismo actor, y la segunda recibiría
+ *   la respuesta de la primera. No es seguridad —el alcance ya lo da el actor— sino evitar una
+ *   colisión honesta.
+ * - **Sin espacios ni caracteres de control.** Viaja en un encabezado, donde un salto de línea no
+ *   es un carácter más.
+ */
+export const idempotencyKeySchema = z
+  .string()
+  .min(8, "La clave de idempotencia necesita al menos 8 caracteres")
+  .max(200, "La clave de idempotencia no puede pasar de 200 caracteres")
+  .regex(/^[\x21-\x7e]+$/, "La clave de idempotencia no admite espacios ni caracteres de control")
+
+/** Lo que se recuerda de la primera petición. Ver el módulo del motor para qué se guarda y por qué. */
+export interface IdempotencyRecord {
+  /** Huella del cuerpo con el que se reclamó la clave. Nunca el cuerpo. */
+  readonly fingerprint: string
+  /** Nulo mientras la primera petición sigue en curso. */
+  readonly completedAt: Date | null
+  readonly responseStatus: number | null
+  readonly responseBody: unknown
+}
+
+export type IdempotentDecision =
+  /** No hay nada guardado con esa clave: la petición sigue su curso. */
+  | { readonly kind: "proceed" }
+  /** Ya se contestó: se devuelve lo mismo, no un error. */
+  | { readonly kind: "replay"; readonly status: number; readonly body: unknown }
+  /** La clave se reutilizó con otro cuerpo. */
+  | { readonly kind: "mismatch" }
+  /** La primera petición todavía no ha terminado. */
+  | { readonly kind: "in_flight" }
+
+/**
+ * Qué hacer con una petición que trae una clave ya vista.
+ *
+ * **El orden de las comprobaciones es la parte que importa.** La huella se compara *antes* que el
+ * estado: si se mirara primero si la primera petición terminó, reutilizar una clave viva con otro
+ * cuerpo respondería «todavía en curso, vuelve a intentarlo» — y el cliente, obediente, volvería a
+ * intentarlo hasta que la primera terminase y entonces sí cobraría de más. El escenario de la spec
+ * dice `409` para toda petición distinta con esa clave, sin condicionarlo a que la primera haya
+ * acabado.
+ */
+export function decideIdempotency(
+  record: IdempotencyRecord | null,
+  fingerprint: string,
+): IdempotentDecision {
+  if (!record) return { kind: "proceed" }
+  if (record.fingerprint !== fingerprint) return { kind: "mismatch" }
+  if (record.completedAt === null || record.responseStatus === null) return { kind: "in_flight" }
+
+  return { kind: "replay", status: record.responseStatus, body: record.responseBody }
+}
+
+/**
+ * Serialización estable de un cuerpo, para poder compararlo consigo mismo más tarde.
+ *
+ * Es lo que hace que «el mismo cuerpo» signifique algo. `JSON.stringify` **no sirve**: conserva el
+ * orden en que las claves se insertaron, y ese orden depende de cómo el cliente construyó el objeto.
+ * Dos reintentos idénticos del mismo formulario pueden salir con las claves en distinto orden, y con
+ * `JSON.stringify` el segundo se leería como «otro cuerpo» y recibiría un `409` justo cuando debe
+ * recibir la respuesta original.
+ *
+ * Las listas **sí** conservan su orden: dos líneas de cotización intercambiadas son otro documento,
+ * no el mismo escrito de otra forma.
+ *
+ * Un cuerpo ausente y un cuerpo nulo se distinguen: `PATCH` sin cuerpo no es `PATCH` con `null`.
+ *
+ * El centinela del cuerpo ausente empieza por un paréntesis, que es lo que garantiza que no colisione
+ * con ningún cuerpo real: la forma canónica de cualquier valor JSON empieza por `{`, `[`, `"`, un
+ * dígito, `-`, `t`, `f` o `n`.
+ */
+export function canonicalize(value: unknown): string {
+  if (value === undefined) return "(sin cuerpo)"
+  return stable(value)
+}
+
+function stable(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null"
+
+  if (Array.isArray(value)) {
+    // `undefined` dentro de una lista se serializa como `null`, igual que en JSON: la posición
+    // cuenta, así que no se puede omitir el hueco.
+    return `[${value.map((item) => (item === undefined ? "null" : stable(item))).join(",")}]`
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, item]) => item !== undefined)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([key, item]) => `${JSON.stringify(key)}:${stable(item)}`)
+
+  return `{${entries.join(",")}}`
+}

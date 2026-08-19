@@ -8,10 +8,14 @@
  */
 
 export * from "./checkout.ts"
+export * from "./api-client.ts"
+export * from "./computed.ts"
 export * from "./document.ts"
 export * from "./errors.ts"
+export * from "./idempotency.ts"
 export * from "./ids.ts"
 export * from "./money.ts"
+export * from "./openapi-types.ts"
 export * from "./order-chat.ts"
 export * from "./order-status.ts"
 export * from "./pagination.ts"

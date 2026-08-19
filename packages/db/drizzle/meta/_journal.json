@@ -168,6 +168,13 @@
       "when": 1787180600000,
       "tag": "0024_bitacora_de_plataforma",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1787180800000,
+      "tag": "0026_claves_de_idempotencia",
+      "breakpoints": true
     }
   ]
 }

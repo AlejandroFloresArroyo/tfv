@@ -226,7 +226,10 @@ describe("cobertura", () => {
     // 96 desde la 0024, que añade `platform_activities`. Es la única tabla del esquema **sin
     // política de arrendatario**, y su ausencia es la decisión: no pertenece a ninguna empresa, así
     // que o la lee la administración de plataforma o no la lee nadie.
-    expect(tablas.length).toBe(96)
+    // 95 desde la 0020, que añade `shipping_rates` con sus dos políticas.
+    // 96 desde la 0026, que añade `idempotency_keys` con **tres**: la de su dueño, la de sistema
+    // —para que el barrido de caducadas alcance las de todo el mundo— y la de plataforma.
+    expect(tablas.length).toBe(97)
     expect(tablas.filter((t) => !t.rls).map((t) => t.relname)).toEqual([])
     expect(tablas.filter((t) => t.politicas === 0).map((t) => t.relname)).toEqual([])
   })
