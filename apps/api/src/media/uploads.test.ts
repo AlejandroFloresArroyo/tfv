@@ -301,7 +301,7 @@ describe("retirar los objetos", () => {
     // El endpoint de borrado del proveedor recibe un campo llamado `prefixes` y **borra por clave
     // exacta**: pasarle `empresa/archivo` responde `200` sin tocar `empresa/archivo/original.jpg`.
     // Sin esta prueba, sustituir una foto seguía dejando sus cinco objetos ocupando almacenamiento
-    // para siempre, y la base sin fila que los reclamara. Ver `HALLAZGOS.md` H-67.
+    // para siempre, y la base sin fila que los reclamara. Ver `HALLAZGOS.md` H-71.
     const { upload, targets } = await json<Authorization>(await authorize(FOTO))
 
     for (const target of targets) {

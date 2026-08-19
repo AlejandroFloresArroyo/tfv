@@ -37,9 +37,9 @@
 
 ## Enlaces compartidos
 
-- [ ] Acceso de sólo lectura, acotado al documento
-- [ ] Referencia impredecible
-- [ ] Alterar la referencia responde `404`
+- [x] Acceso de sólo lectura, acotado al documento
+- [x] Referencia impredecible
+- [x] Alterar la referencia responde `404`
 
 > Los enlaces compartidos no tienen identidad que propagar, así que no se resuelven con políticas
 > sino en la capa de aplicación. Van con `pdf-documents`.

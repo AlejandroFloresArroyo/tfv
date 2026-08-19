@@ -128,7 +128,7 @@ export default async function WarehouseCatalogPage({
           : t("warehouses.catalogSubtitle")
       }
       // La entrada al asistente de alta. Hasta ahora sólo se llegaba escribiendo la dirección a
-      // mano: la pantalla existía y no la enlazaba nadie (`HALLAZGOS.md` H-66).
+      // mano: la pantalla existía y no la enlazaba nadie (`HALLAZGOS.md` H-70).
       actions={
         canCreateProducts ? (
           <Button asChild>

@@ -56,7 +56,7 @@ export interface ProductOptions {
 
 export interface ProductPermissions {
   readonly canEditInfo: boolean
-  /** Las fotos van con la información: es la clave más cercana del catálogo cerrado. Ver H-69. */
+  /** Las fotos van con la información: es la clave más cercana del catálogo cerrado. Ver H-73. */
   readonly canSelectCategory: boolean
   readonly canEditLocation: boolean
   readonly canEditPayment: boolean
