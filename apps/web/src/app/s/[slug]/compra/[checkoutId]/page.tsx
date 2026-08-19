@@ -76,10 +76,10 @@ export default async function PurchasePage({
 
   return (
     <main className="mx-auto w-full max-w-140 flex-1 px-4 py-10 tablet:px-6">
-      <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-6">
+      <div className="flex flex-col gap-4 rounded-xl border border-edge bg-surface p-6">
         <div className="flex items-center gap-3">
           {paid ? (
-            <CircleCheck className="size-8 text-success" aria-hidden />
+            <CircleCheck className="size-8 text-tinta-firme" aria-hidden />
           ) : (
             <Clock className="size-8 text-content-muted" aria-hidden />
           )}
@@ -98,7 +98,7 @@ export default async function PurchasePage({
           <Badge tone={paid ? "success" : "neutral"}>{t(`checkout_${checkout.status}`)}</Badge>
         </span>
 
-        <ul className="flex flex-col gap-2 border-line border-y py-3">
+        <ul className="flex flex-col gap-2 border-edge border-y py-3">
           {checkout.lines.map((line) => (
             <li key={line.name} className="flex justify-between gap-3 text-body2 text-content">
               <span className="min-w-0 truncate">

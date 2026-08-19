@@ -58,7 +58,7 @@ export function AddToCart({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4">
+    <div className="flex flex-col gap-3 rounded-xl border border-edge bg-surface p-4">
       <div className="flex flex-wrap items-end gap-3">
         {measurements.length > 1 ? (
           <Field label={t("measurement")}>
@@ -99,7 +99,7 @@ export function AddToCart({
 
       {added ? (
         <p className="flex items-center gap-2 text-body2 text-content-muted">
-          <Check className="size-4 text-success" aria-hidden />
+          <Check className="size-4 text-tinta-firme" aria-hidden />
           {t("addedToCart")}
           <Link href={`/s/${slug}/carrito`} className="font-semibold text-content underline">
             {t("goToCart")}

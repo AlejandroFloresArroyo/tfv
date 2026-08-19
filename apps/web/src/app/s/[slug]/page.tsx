@@ -113,7 +113,7 @@ export default async function StorefrontCatalogPage({
             defaultValue={search}
             placeholder={t("searchPlaceholder")}
             aria-label={t("search")}
-            className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-body1 text-content placeholder:text-content-faint"
+            className="min-w-0 flex-1 rounded-lg border border-edge bg-surface px-3 py-2 text-body1 text-content placeholder:text-content-faint"
           />
           <button
             type="submit"
@@ -134,7 +134,7 @@ export default async function StorefrontCatalogPage({
         ) : null}
 
         {page === null || page.items.length === 0 ? (
-          <p className="rounded-xl border border-line bg-surface px-4 py-10 text-center text-body1 text-content-muted">
+          <p className="rounded-xl border border-edge bg-surface px-4 py-10 text-center text-body1 text-content-muted">
             {t("empty")}
           </p>
         ) : (
@@ -204,7 +204,7 @@ function Categories({
       "rounded-full border px-3 py-1 text-body2",
       active
         ? "border-brand bg-brand text-ink-6 font-semibold"
-        : "border-line bg-surface text-content-muted",
+        : "border-edge bg-surface text-content-muted",
     )
 
   return (
@@ -235,7 +235,7 @@ function Card({
   return (
     <Link
       href={productPath(slug, product)}
-      className="group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface"
+      className="group flex h-full flex-col overflow-hidden rounded-xl border border-edge bg-surface"
     >
       <span className="flex aspect-square w-full items-center justify-center overflow-hidden bg-canvas">
         {product.coverUrl ? (
@@ -287,7 +287,7 @@ function Pager({
     return `?${next.toString()}`
   }
 
-  const button = "rounded-lg border border-line bg-surface px-3 py-2 text-body2 text-content"
+  const button = "rounded-lg border border-edge bg-surface px-3 py-2 text-body2 text-content"
 
   return (
     <nav className="mt-6 flex items-center justify-center gap-3">

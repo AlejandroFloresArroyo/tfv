@@ -472,14 +472,6 @@
      del tema —en claro el hover baja hacia el hundido, en oscuro sube hacia el elevado— y ninguna
      de las dos superficies fijas sirve para ambos. */
   --panel-hover: var(--panel-sunken);
-
-  /* Vocabulario anterior, mientras las pantallas migran. */
-  --line: var(--edge);
-  --line-strong: var(--edge-control);
-  --field: var(--edge-control);
-  --danger: var(--tinta-alto);
-  --success: var(--tinta-firme);
-  --warning: var(--tinta-cuida);
 }
 
 :root.dark {
@@ -527,14 +519,6 @@
   --tinta-leido: #ff8fbc;
 
   --panel-hover: var(--panel-raised);
-
-  /* Vocabulario anterior, mientras las pantallas migran. */
-  --line: var(--edge);
-  --line-strong: var(--edge-control);
-  --field: var(--edge-control);
-  --danger: var(--tinta-alto);
-  --success: var(--tinta-firme);
-  --warning: var(--tinta-cuida);
 }
 
 /*
@@ -594,14 +578,6 @@
   --color-tinta-cuida: var(--tinta-cuida);
   --color-tinta-alto: var(--tinta-alto);
   --color-tinta-leido: var(--tinta-leido);
-
-  /* Vocabulario anterior, mientras las pantallas migran. */
-  --color-line: var(--line);
-  --color-line-strong: var(--line-strong);
-  --color-field: var(--field);
-  --color-danger: var(--danger);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
 }
 
 /* ═══ Las dos calibraciones ═══════════════════════════════════════════════════

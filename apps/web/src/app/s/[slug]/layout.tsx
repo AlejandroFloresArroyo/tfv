@@ -80,7 +80,7 @@ export default async function StorefrontLayout({
 
   return (
     <div className="flex min-h-dvh flex-col bg-canvas">
-      <header className="border-b border-line bg-surface">
+      <header className="border-b border-edge bg-surface">
         <div className="mx-auto flex w-full max-w-(--breakpoint-desktop) items-center gap-3 px-4 py-4 tablet:px-6">
           <Link href={`/s/${slug}`} className="flex min-w-0 items-center gap-3">
             {site.logoUrl ? (
@@ -109,7 +109,7 @@ export default async function StorefrontLayout({
           */}
           <Link
             href={`/s/${slug}/carrito`}
-            className="ml-auto flex shrink-0 items-center gap-2 rounded-lg border border-line px-3 py-2 text-body2 text-content"
+            className="ml-auto flex shrink-0 items-center gap-2 rounded-lg border border-edge px-3 py-2 text-body2 text-content"
           >
             <ShoppingCart className="size-4" aria-hidden />
             {t("cart")}
@@ -119,7 +119,7 @@ export default async function StorefrontLayout({
 
       {children}
 
-      <footer className="mt-auto border-t border-line bg-surface">
+      <footer className="mt-auto border-t border-edge bg-surface">
         <div className="mx-auto w-full max-w-(--breakpoint-desktop) px-4 py-6 text-body3 text-content-faint tablet:px-6">
           {t("footer", { name: site.name })}
         </div>

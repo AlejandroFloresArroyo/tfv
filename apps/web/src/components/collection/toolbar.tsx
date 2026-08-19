@@ -110,7 +110,7 @@ export function CollectionToolbar({
         {filters.length > 0 ? <FilterDialog filters={filters} /> : null}
 
         {views ? (
-          <div className="flex items-center gap-1 rounded-sm border border-field bg-panel p-0.5">
+          <div className="flex items-center gap-1 rounded-sm border border-edge-control bg-panel p-0.5">
             <ViewButton
               active={view === "list"}
               label={t("collection.viewList")}

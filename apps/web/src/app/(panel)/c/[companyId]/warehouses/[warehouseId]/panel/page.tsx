@@ -289,7 +289,7 @@ export default async function WarehousePanelPage({
  * decidir está bien; con cuatro, hay cuatro personas esperando respuesta.
  *
  * El color va con la pareja cruda de la paleta, la misma que usa `Badge` en su tono de aviso, y no
- * con `text-warning`: ese nombre no existe en los tokens. Ver H-57.
+ * con `text-tinta-cuida`: ese nombre no existe en los tokens. Ver H-57.
  */
 function Stat({
   icon: Icon,
@@ -316,7 +316,7 @@ function Stat({
         <p
           className={
             alert
-              ? "text-h3 font-bold tabular-nums text-warning"
+              ? "text-h3 font-bold tabular-nums text-tinta-cuida"
               : "text-h3 font-bold tabular-nums text-content"
           }
         >

@@ -73,7 +73,7 @@ export function SiteSections({ sections, color, bannerUrl, catalog }: SiteSectio
           // El ancla a la que baja un botón de desplazamiento. Se deriva del tipo, que es la única
           // identidad estable de una sección: la posición cambia con cada arrastre.
           id={sectionAnchor(section.kind)}
-          className="scroll-mt-4 border-b border-line last:border-b-0"
+          className="scroll-mt-4 border-b border-edge last:border-b-0"
         >
           <div className="mx-auto w-full max-w-(--breakpoint-desktop) px-4 py-10 tablet:px-6">
             <Body section={section} color={color} bannerUrl={bannerUrl} catalog={catalog} />
@@ -168,7 +168,7 @@ function Categories({
             <li key={category.id}>
               <a
                 href={category.href}
-                className="inline-flex rounded-full border border-line bg-surface px-4 py-2 text-body2 text-content"
+                className="inline-flex rounded-full border border-edge bg-surface px-4 py-2 text-body2 text-content"
               >
                 {category.name}
               </a>
@@ -202,7 +202,7 @@ function Products({
             <li key={product.id}>
               <a
                 href={product.href}
-                className="flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface"
+                className="flex h-full flex-col overflow-hidden rounded-xl border border-edge bg-surface"
               >
                 <span className="flex aspect-square w-full items-center justify-center overflow-hidden bg-canvas">
                   {product.coverUrl ? (
@@ -245,7 +245,7 @@ function About({ section, color }: { section: RenderableSection; color: string }
       {image ? (
         <Photo src={image} alt="" className="w-full rounded-xl object-cover" />
       ) : (
-        <div className="hidden rounded-xl border border-dashed border-line tablet:block" />
+        <div className="hidden rounded-xl border border-dashed border-edge tablet:block" />
       )}
     </div>
   )
@@ -257,7 +257,7 @@ function Features({ section }: { section: RenderableSection }) {
       <Heading section={section} />
       <ul className="grid gap-4 tablet:grid-cols-3">
         {(section.items ?? []).map((item) => (
-          <li key={item.code} className="rounded-xl border border-line bg-surface p-5">
+          <li key={item.code} className="rounded-xl border border-edge bg-surface p-5">
             {item.title ? (
               <p className="text-body1 font-semibold text-content">{item.title}</p>
             ) : null}
@@ -277,7 +277,7 @@ function Testimonials({ section }: { section: RenderableSection }) {
       <Heading section={section} />
       <ul className="grid gap-4 tablet:grid-cols-2">
         {(section.items ?? []).map((item) => (
-          <li key={item.code} className="rounded-xl border border-line bg-surface p-5">
+          <li key={item.code} className="rounded-xl border border-edge bg-surface p-5">
             {item.description ? (
               <p className="text-body1 text-content">“{item.description}”</p>
             ) : null}
@@ -310,7 +310,7 @@ function Faq({ section }: { section: RenderableSection }) {
       <ul className="flex flex-col gap-2">
         {(section.items ?? []).map((item) => (
           <li key={item.code}>
-            <details className="rounded-xl border border-line bg-surface px-4 py-3">
+            <details className="rounded-xl border border-edge bg-surface px-4 py-3">
               <summary className="cursor-pointer text-body1 font-semibold text-content">
                 {item.title}
               </summary>
@@ -353,7 +353,7 @@ function Heading({ section }: { section: RenderableSection }) {
 
 function Empty({ label }: { label: string }) {
   return (
-    <p className="rounded-xl border border-dashed border-line px-4 py-8 text-center text-body2 text-content-muted">
+    <p className="rounded-xl border border-dashed border-edge px-4 py-8 text-center text-body2 text-content-muted">
       {label}
     </p>
   )
@@ -391,7 +391,7 @@ function Buttons({
             "inline-flex items-center rounded-lg px-4 py-2 text-body2 font-semibold",
             button.variant === "filled" && "text-white",
             button.variant === "outline" &&
-              (onDark ? "border border-white/70 text-white" : "border border-line text-content"),
+              (onDark ? "border border-white/70 text-white" : "border border-edge text-content"),
             button.variant === "light" &&
               (onDark ? "bg-white/15 text-white" : "bg-panel-hover text-content"),
           )}

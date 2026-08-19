@@ -280,7 +280,7 @@ function Amount({ label, value, alert }: { label: string; value: string; alert?:
       <dd
         className={
           alert
-            ? "mt-1 text-title1 font-bold tabular-nums text-warning"
+            ? "mt-1 text-title1 font-bold tabular-nums text-tinta-cuida"
             : "mt-1 text-title1 font-bold tabular-nums text-content"
         }
       >

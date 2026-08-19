@@ -184,7 +184,9 @@ Cada estado tiene dos valores: `luz-*`, el tono puro del que sale el degradado d
 | `leido` | Extraído por el modelo, sin revisar | `#ff6fa8` | hora mágica |
 
 ### Neutral
-Lienzo, panel, panel elevado y hundido forman cuatro escalones. En oscuro el lienzo es
+Lienzo, panel, panel elevado y hundido forman cuatro escalones, más **panel-hover**: la superficie
+de paso del puntero, que en claro baja hacia el hundido y en oscuro sube hacia el elevado — ninguna
+superficie fija sirve para ambos temas. En oscuro el lienzo es
 `#08090c` —negro azulado, no negro puro, para que las tarjetas tengan de dónde despegarse—. El
 borde vivo separa capas; el borde de control delimita algo que se puede tocar y llega a 3:1.
 
@@ -199,6 +201,13 @@ su `tinta` medidas. Nunca un color suelto de una rampa.
 
 **La regla del relleno medido aparte.** Una luz se mide contra el lienzo que la rodea; un relleno
 contra el texto que lleva encima. Por eso `danger-fill` existe separado de `luz-alto`.
+
+### La rúbrica en la navegación
+
+La sección activa lleva el oro **en su versión de tinta** (`tinta-aparta`): el icono de la entrada
+actual, la página actual de la paginación, el paso activo del asistente, la vista elegida. El oro
+puro sobre panel claro da 1.6:1, así que como señal de posición siempre viaja en la tinta o como
+relleno con tinta encima — nunca como trazo fino sobre claro.
 
 ## Typography
 

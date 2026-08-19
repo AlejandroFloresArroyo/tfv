@@ -69,7 +69,7 @@ export default async function StorefrontProductPage({
         <p className="mt-2 text-body1 text-content-muted">{t("productNotFoundBody")}</p>
         <Link
           href={`/s/${slug}`}
-          className="mt-6 inline-block rounded-lg border border-line bg-surface px-4 py-2 text-body1 text-content"
+          className="mt-6 inline-block rounded-lg border border-edge bg-surface px-4 py-2 text-body1 text-content"
         >
           {t("backToCatalog")}
         </Link>
@@ -99,7 +99,7 @@ export default async function StorefrontProductPage({
 
       <div className="mt-4 grid gap-6 desktop:grid-cols-2">
         <div className="flex flex-col gap-3">
-          <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl border border-line bg-surface">
+          <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl border border-edge bg-surface">
             {gallery[0] ? (
               <Photo src={gallery[0].url} alt={product.name} className="size-full object-cover" />
             ) : (
@@ -112,7 +112,7 @@ export default async function StorefrontProductPage({
               {gallery.slice(1).map((image) => (
                 <li
                   key={image.url}
-                  className="aspect-square overflow-hidden rounded-lg border border-line bg-surface"
+                  className="aspect-square overflow-hidden rounded-lg border border-edge bg-surface"
                 >
                   <Photo
                     src={image.thumbnailUrl ?? image.url}
@@ -154,7 +154,7 @@ export default async function StorefrontProductPage({
                 {product.measurements.map((measurement) => (
                   <li
                     key={measurement.id}
-                    className="rounded-full border border-line bg-surface px-3 py-1 text-body2 text-content-muted"
+                    className="rounded-full border border-edge bg-surface px-3 py-1 text-body2 text-content-muted"
                   >
                     {measurement.name}
                   </li>
@@ -219,7 +219,7 @@ function Related({
           <li key={product.id}>
             <Link
               href={productPath(slug, product)}
-              className="flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface"
+              className="flex h-full flex-col overflow-hidden rounded-xl border border-edge bg-surface"
             >
               <span className="flex aspect-square w-full items-center justify-center overflow-hidden bg-canvas">
                 {product.coverUrl ? (

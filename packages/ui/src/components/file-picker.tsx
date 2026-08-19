@@ -328,7 +328,7 @@ function Row({
             aria-valuemin={0}
             aria-valuemax={total}
             aria-valuenow={written}
-            className="h-1 overflow-hidden rounded-xl bg-line"
+            className="h-1 overflow-hidden rounded-xl bg-edge"
           >
             <div
               className="h-full bg-accent transition-[width] duration-200"

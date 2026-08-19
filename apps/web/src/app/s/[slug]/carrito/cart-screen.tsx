@@ -249,7 +249,7 @@ export function CartScreen({ slug, signedIn }: { slug: string; signedIn: boolean
           return (
             <li
               key={item.refId}
-              className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3"
+              className="flex items-center gap-3 rounded-xl border border-edge bg-surface p-3"
             >
               <span className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-canvas">
                 {item.coverUrl ? (
@@ -267,7 +267,7 @@ export function CartScreen({ slug, signedIn }: { slug: string; signedIn: boolean
                   {money(line?.unitPrice ?? item.unitPrice)}
                 </span>
                 {short ? (
-                  <span className="text-body3 text-danger">
+                  <span className="text-body3 text-tinta-alto">
                     {t("onlyLeft", { count: line?.available ?? 0 })}
                   </span>
                 ) : null}
@@ -310,7 +310,7 @@ export function CartScreen({ slug, signedIn }: { slug: string; signedIn: boolean
         })}
       </ul>
 
-      <aside className="flex h-fit flex-col gap-4 rounded-xl border border-line bg-surface p-4">
+      <aside className="flex h-fit flex-col gap-4 rounded-xl border border-edge bg-surface p-4">
         <p className="flex items-baseline justify-between text-body1 text-content">
           <span className="text-content-muted">{t("subtotal")}</span>
           <span className="text-title1 font-bold">{money(priced?.subtotal ?? "0.00")}</span>
@@ -393,11 +393,11 @@ function Summary({
   labels: Record<string, string>
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-140 flex-col gap-4 rounded-xl border border-line bg-surface p-5">
+    <div className="mx-auto flex w-full max-w-140 flex-col gap-4 rounded-xl border border-edge bg-surface p-5">
       <h2 className="text-title1 font-bold text-content">{labels.title}</h2>
       <p className="text-body2 text-content-muted">{labels.held}</p>
 
-      <ul className="flex flex-col gap-2 border-line border-y py-3">
+      <ul className="flex flex-col gap-2 border-edge border-y py-3">
         {checkout.lines.map((line) => (
           <li key={line.name} className="flex justify-between gap-3 text-body2 text-content">
             <span className="min-w-0 truncate">

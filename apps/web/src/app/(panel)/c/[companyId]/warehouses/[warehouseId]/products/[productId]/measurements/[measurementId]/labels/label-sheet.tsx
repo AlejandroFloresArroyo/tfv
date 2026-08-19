@@ -229,7 +229,7 @@ export function LabelSheet({
               key={label.id}
               // Papel: negro sobre blanco siempre, también con el tema oscuro puesto. Lo que se ve
               // en pantalla es la etiqueta que va a salir, no una tarjeta de la aplicación.
-              className="etiqueta flex flex-col items-center gap-2 rounded-xs border border-line bg-white p-3 text-black"
+              className="etiqueta flex flex-col items-center gap-2 rounded-xs border border-gray-3 bg-white p-3 text-black"
             >
               <p className="w-full truncate text-center text-[9pt] font-semibold">
                 {productName} · {measurementName}
