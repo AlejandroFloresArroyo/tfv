@@ -60,6 +60,13 @@ export {
   MenuSeparator,
   MenuTrigger,
 } from "./components/menu.tsx"
+export {
+  type ChatEntry,
+  type ChatEntrySide,
+  OrderChat,
+  type OrderChatLabels,
+  type OrderChatProps,
+} from "./components/order-chat.tsx"
 export { PasswordInput, type PasswordInputProps } from "./components/password-input.tsx"
 export { Spinner, type SpinnerProps } from "./components/spinner.tsx"
 export {
