@@ -17,6 +17,7 @@ import {
   History,
   LayoutDashboard,
   MapPin,
+  Package,
   Receipt,
   ShieldCheck,
   Sparkles,
@@ -125,6 +126,15 @@ export function CompanyNav({
       label: t("billing.payments.nav"),
       icon: <Receipt className="size-4" aria-hidden="true" />,
       permission: "companies.billings.view",
+    },
+    {
+      // Las tarifas de envío tampoco tienen clave propia entre las 255 (H-96): se exige la de ver
+      // la empresa, que es de lo que son —configuración suya, del mismo rango que su comisión—.
+      section: "settings/shipping",
+      href: `/c/${company.id}/settings/shipping`,
+      label: t("shipping.nav"),
+      icon: <Package className="size-4" aria-hidden="true" />,
+      permission: "companies.companies.view",
     },
     {
       // La bitácora no tiene clave propia en el catálogo —está cerrado en las 255 migradas— y se

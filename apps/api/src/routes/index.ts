@@ -169,6 +169,14 @@ import {
   updateQuoteRoute,
 } from "./quotes.ts"
 import {
+  changeShipmentStatusRoute,
+  estimateShippingRoute,
+  getShipmentRoute,
+  getShippingRatesRoute,
+  updateShipmentRoute,
+  updateShippingRatesRoute,
+} from "./shipping.ts"
+import {
   changeUnitStatusRoute,
   createPriceListRoute,
   createUnitsRoute,
@@ -187,6 +195,11 @@ import {
   unitHistoryRoute,
   updatePriceListRoute,
 } from "./stock.ts"
+import {
+  storefrontProductRoute,
+  storefrontProductsRoute,
+  storefrontSiteRoute,
+} from "./storefront.ts"
 import { authorizeUploadRoute, confirmUploadRoute, reissueTargetsRoute } from "./uploads.ts"
 import {
   createStorageRoute,
@@ -202,6 +215,14 @@ import {
   updateWarehouseRoute,
   warehouseScopeRoute,
 } from "./warehouses.ts"
+import {
+  createWebsiteRoute,
+  deleteWebsiteRoute,
+  getWebsiteRoute,
+  listWebsitesRoute,
+  updateWebsiteRoute,
+  websiteSlugAvailableRoute,
+} from "./websites.ts"
 
 export const routes: readonly RegisteredRoute[] = [
   // ─── Sistema ───────────────────────────────────────────────────────────────
@@ -433,6 +454,18 @@ export const routes: readonly RegisteredRoute[] = [
   registerDeviceRoute,
   revokeDeviceRoute,
 
+  // ─── Envíos ────────────────────────────────────────────────────────────────
+  // El cuadro de tarifas de la empresa, la estimación —el mismo cálculo con el que se cobra— y el
+  // seguimiento de la entrega. Ver `shipping-rates` y `order-fulfillment`.
+
+  getShippingRatesRoute,
+  updateShippingRatesRoute,
+  estimateShippingRoute,
+
+  getShipmentRoute,
+  updateShipmentRoute,
+  changeShipmentStatusRoute,
+
   // ─── Producciones ──────────────────────────────────────────────────────────
   // Pendiente: rebanada 20.
 
@@ -440,5 +473,19 @@ export const routes: readonly RegisteredRoute[] = [
   // Pendiente: rebanada 24.
 
   // ─── Sitios ────────────────────────────────────────────────────────────────
-  // Pendiente: rebanada 19.
+  // La gestión, con permiso. La tienda pública que cuelga de ellos va más abajo, aparte, porque es
+  // la única superficie de este servicio que atiende a quien no tiene cuenta.
+
+  listWebsitesRoute,
+  websiteSlugAvailableRoute,
+  createWebsiteRoute,
+  getWebsiteRoute,
+  updateWebsiteRoute,
+  deleteWebsiteRoute,
+
+  // La tienda pública que cuelga de un sitio. Las tres son públicas, y su motivo está escrito en
+  // cada una: es la superficie que se sirve a quien no tiene cuenta.
+  storefrontSiteRoute,
+  storefrontProductsRoute,
+  storefrontProductRoute,
 ]

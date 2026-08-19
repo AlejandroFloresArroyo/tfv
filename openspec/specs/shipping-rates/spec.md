@@ -159,11 +159,23 @@ Los dos recargos SHALL ser excluyentes: se aplica sólo el que corresponda al tr
 El envío SHALL llevar un recargo cuando supere los tres artículos y uno mayor cuando supere los
 diez, y ambos SHALL ser excluyentes entre sí.
 
+El número de artículos SHALL ser la suma de las cantidades de las líneas, no el número de líneas:
+una línea de cinco piezas son cinco bultos que ocupan sitio en el camión.
+
+Este recargo, como el de distancia, **no SHALL aplicarse a la recolección en tienda**, cuyo costo
+es cero por definición.
+
 #### Scenario: Un pedido grande lleva el recargo mayor
 
 - **GIVEN** un envío de `15` artículos
 - **WHEN** se calcula
 - **THEN** se aplica únicamente el recargo correspondiente a más de diez
+
+#### Scenario: La recolección no lleva recargo por cantidad
+
+- **GIVEN** una recolección en tienda de `15` artículos
+- **WHEN** se calcula
+- **THEN** el costo es cero
 
 ### Requirement: Distancia entre origen y destino
 

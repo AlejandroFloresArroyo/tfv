@@ -16,7 +16,8 @@
     "./rate": "./src/rate.ts",
     "./quote-status": "./src/quote-status.ts",
     "./order-status": "./src/order-status.ts",
-    "./order-chat": "./src/order-chat.ts"
+    "./order-chat": "./src/order-chat.ts",
+    "./storefront": "./src/storefront.ts"
   },
   "scripts": {
     "check": "tsc --noEmit",

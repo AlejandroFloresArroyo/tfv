@@ -151,6 +151,19 @@ const schema = z
     STORAGE_SERVICE_KEY: z.string().min(1).optional(),
 
     /**
+     * El dominio bajo el que se sirven las tiendas públicas.
+     *
+     * De él sale la **dirección completa** de un sitio, que es un campo calculado: el identificador
+     * legible más este dominio. No se almacena junto al sitio porque no es suyo — es de la
+     * instalación, y cambia entre desarrollo, la máquina de alguien y producción. Guardarlo con
+     * cada sitio dejaría mil filas apuntando a un dominio que ya no existe el día que se mueva.
+     *
+     * El valor por defecto es el de desarrollo, donde la aplicación web escucha en el 3000 y
+     * cualquier navegador resuelve `loquesea.localhost` sin tocar el sistema de nombres.
+     */
+    SITES_DOMAIN: z.string().min(1).default("localhost:3000"),
+
+    /**
      * El despachador de trabajos en segundo plano.
      *
      * Se puede apagar —`JOBS_ENABLED=false`— y hace falta que se pueda: con varias instancias del

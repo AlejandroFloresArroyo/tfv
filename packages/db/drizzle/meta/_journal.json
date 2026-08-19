@@ -134,6 +134,19 @@
       "when": 1787180000000,
       "tag": "0018_descuento_de_suscripcion",
       "breakpoints": true
+    },
+    {
+      "when": 1787180100000,
+      "tag": "0019_resolucion_de_sitio_publico",
+      "breakpoints": true,
+      "idx": 19
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787180200000,
+      "tag": "0020_tarifas_de_envio",
+      "breakpoints": true
     }
   ]
 }
