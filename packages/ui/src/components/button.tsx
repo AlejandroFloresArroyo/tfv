@@ -80,8 +80,23 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       )}
       {...rest}
     >
-      {loading ? <Spinner className="size-4" /> : null}
-      {children}
+      {/*
+        Con `asChild` va el hijo **solo**: `Slot` exige exactamente uno, y la ranura del indicador
+        de espera —aunque esté vacía— cuenta como un segundo. Con los dos, `Slot` lanza y se lleva
+        por delante la página entera; así es como una dirección inexistente respondía `500` en vez
+        de `404`.
+
+        No pierde nada: `asChild` existe para los enlaces con aspecto de botón, y un enlace no
+        tiene envío en curso que anunciar.
+      */}
+      {asChild ? (
+        children
+      ) : (
+        <>
+          {loading ? <Spinner className="size-4" /> : null}
+          {children}
+        </>
+      )}
     </Component>
   )
 })

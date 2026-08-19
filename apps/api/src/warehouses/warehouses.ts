@@ -27,17 +27,22 @@ import {
   slugify,
   UnprocessableError,
 } from "@tfv/contracts"
+import { isOrderClosed, ORDER_STATUSES } from "@tfv/contracts/order-status"
+import { isClosed, QUOTE_STATUSES } from "@tfv/contracts/quote-status"
 import { type Transaction, withRequester } from "@tfv/db"
 import {
   companies,
   companyServices,
   services,
   warehouseCategories,
+  warehouseOrders,
+  warehousePriceLists,
   warehouseProducts,
+  warehouseQuotes,
   warehouseStorages,
   warehouses,
 } from "@tfv/db/schema"
-import { and, count, eq, isNull } from "drizzle-orm"
+import { and, count, eq, inArray, isNull } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 
@@ -217,11 +222,79 @@ export async function updateWarehouse(
   })
 }
 
+/**
+ * Los estados que cuentan como trabajo en curso.
+ *
+ * Derivados, no copiados: lo que no está cerrado está abierto. Una lista escrita a mano aquí se
+ * quedaría vieja el día que se añada un estado, y lo haría en silencio — de menos, dejando dar de
+ * baja un almacén con equipo fuera.
+ */
+const OPEN_QUOTES = QUOTE_STATUSES.filter((status) => !isClosed(status))
+const OPEN_ORDERS = ORDER_STATUSES.filter((status) => !isOrderClosed(status))
+
 /** Lo que se lleva por delante dar de baja un almacén, para poder enumerarlo antes. */
 export interface DeletionScope {
   readonly storages: number
   readonly categories: number
   readonly products: number
+  readonly priceLists: number
+  /** Todas, para enumerar lo que deja de estar accesible. */
+  readonly quotes: number
+  readonly orders: number
+  /** Las que además **impiden** la baja, para poder decirlo antes de que nadie confirme. */
+  readonly openQuotes: number
+  readonly openOrders: number
+}
+
+/**
+ * Cotizaciones y pedidos del almacén, en total y en curso.
+ *
+ * Los cuenta la misma función que enumera y la que decide si se puede dar de baja: si fueran dos
+ * consultas parecidas, el día que una cambie el diálogo enseñaría un número y la baja aplicaría
+ * otro.
+ */
+async function commerceCounts(
+  tx: Transaction,
+  warehouseId: string,
+): Promise<{ quotes: number; orders: number; openQuotes: number; openOrders: number }> {
+  const [quotes] = await tx
+    .select({ value: count() })
+    .from(warehouseQuotes)
+    .where(and(eq(warehouseQuotes.warehouseId, warehouseId), isNull(warehouseQuotes.deletedAt)))
+
+  const [openQuotes] = await tx
+    .select({ value: count() })
+    .from(warehouseQuotes)
+    .where(
+      and(
+        eq(warehouseQuotes.warehouseId, warehouseId),
+        isNull(warehouseQuotes.deletedAt),
+        inArray(warehouseQuotes.status, OPEN_QUOTES),
+      ),
+    )
+
+  const [orders] = await tx
+    .select({ value: count() })
+    .from(warehouseOrders)
+    .where(and(eq(warehouseOrders.warehouseId, warehouseId), isNull(warehouseOrders.deletedAt)))
+
+  const [openOrders] = await tx
+    .select({ value: count() })
+    .from(warehouseOrders)
+    .where(
+      and(
+        eq(warehouseOrders.warehouseId, warehouseId),
+        isNull(warehouseOrders.deletedAt),
+        inArray(warehouseOrders.status, OPEN_ORDERS),
+      ),
+    )
+
+  return {
+    quotes: quotes?.value ?? 0,
+    orders: orders?.value ?? 0,
+    openQuotes: openQuotes?.value ?? 0,
+    openOrders: openOrders?.value ?? 0,
+  }
 }
 
 export async function deletionScope(
@@ -256,10 +329,22 @@ export async function deletionScope(
         ),
       )
 
+    const [priceLists] = await tx
+      .select({ value: count() })
+      .from(warehousePriceLists)
+      .where(
+        and(
+          eq(warehousePriceLists.warehouseId, warehouseId),
+          isNull(warehousePriceLists.deletedAt),
+        ),
+      )
+
     return {
+      ...(await commerceCounts(tx, warehouseId)),
       storages: storages?.value ?? 0,
       categories: categories?.value ?? 0,
       products: products?.value ?? 0,
+      priceLists: priceLists?.value ?? 0,
     }
   })
 }
@@ -284,6 +369,27 @@ export async function deleteWarehouse(
   await withRequester(actor, async (tx) => {
     await assertCompany(tx, companyId)
     await loadWarehouse(tx, companyId, warehouseId)
+
+    /**
+     * La baja no se lleva por delante trabajo en curso.
+     *
+     * Sin esta comprobación se podía dar de baja un almacén con una renta y el equipo en la calle:
+     * el documento que dice quién lo tiene deja de ser accesible, y con él la única forma de
+     * reclamarlo. La rebanada 12 la dejó anotada esperando a que existieran cotizaciones y pedidos;
+     * ya existen.
+     */
+    const { openQuotes, openOrders } = await commerceCounts(tx, warehouseId)
+
+    if (openQuotes > 0 || openOrders > 0) {
+      const pending = [
+        openQuotes > 0 ? `${openQuotes} cotización${openQuotes === 1 ? "" : "es"} en curso` : null,
+        openOrders > 0 ? `${openOrders} pedido${openOrders === 1 ? "" : "s"} en curso` : null,
+      ].filter((part) => part !== null)
+
+      throw new ConflictError(
+        `Este almacén tiene ${pending.join(" y ")}. Ciérralos o cancélalos antes de darlo de baja.`,
+      )
+    }
 
     await tx.update(warehouses).set({ deletedAt: new Date() }).where(eq(warehouses.id, warehouseId))
   })

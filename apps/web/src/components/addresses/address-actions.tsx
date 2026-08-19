@@ -25,7 +25,7 @@ export function CreateAddress({ book }: { book: Book }) {
       }
       action={(data) => api(book.base, { method: "POST", body: bodyOf(data) })}
     >
-      {(state) => <Fields state={state} />}
+      {(state) => <Fields state={state} book={book} />}
     </FormDialog>
   )
 }
@@ -51,7 +51,7 @@ function EditAddress({
       onOpenChange={onOpenChange}
       action={(data) => api(`${book.base}/${address.id}`, { method: "PATCH", body: bodyOf(data) })}
     >
-      {(state) => <Fields state={state} address={address} />}
+      {(state) => <Fields state={state} book={book} address={address} />}
     </FormDialog>
   )
 }
@@ -171,9 +171,11 @@ export function AddressActions({
 
 function Fields({
   state,
+  book,
   address,
 }: {
   state: { fieldErrors: ReadonlyMap<string, string> }
+  book: Book
   address?: AddressSummary
 }) {
   const t = useTranslations()
@@ -199,7 +201,11 @@ function Fields({
             name="label"
             autoFocus
             defaultValue={address?.label ?? ""}
-            placeholder={t("addresses.labelPlaceholder")}
+            placeholder={
+              book.kind === "user"
+                ? t("addresses.labelPlaceholderMine")
+                : t("addresses.labelPlaceholder")
+            }
           />
         )}
       </Field>

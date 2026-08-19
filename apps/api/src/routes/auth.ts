@@ -28,6 +28,7 @@ import {
   resetPassword,
   verifyEmail,
 } from "../auth/accounts.ts"
+import { announceDevLink } from "../auth/dev-links.ts"
 import {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
@@ -108,6 +109,10 @@ async function enqueueLink(userId: string, kind: string, token: string): Promise
     kind,
     payload: { token },
   })
+
+  // En desarrollo, además, al registro: sin despachador de correo el enlace se queda encolado y no
+  // hay manera de completar un registro sin abrir la base.
+  announceDevLink(kind, token)
 }
 
 // ─── Esquemas ────────────────────────────────────────────────────────────────

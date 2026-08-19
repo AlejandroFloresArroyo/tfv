@@ -11,6 +11,7 @@ import { apiGet } from "~/lib/api.server.ts"
 import { can } from "~/lib/can.ts"
 import { requireCompany, requireProfile } from "~/lib/session.ts"
 import type { CategorySummary, ItemsEnvelope, ProductRow, WarehouseRow } from "../warehouse.ts"
+import { canViewPanel } from "./panel/access.ts"
 import { WarehouseNav } from "./warehouse-nav.tsx"
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -128,11 +129,14 @@ export default async function WarehouseCatalogPage({
       <WarehouseNav
         companyId={companyId}
         warehouseId={warehouseId}
+        canViewPanel={canViewPanel(company)}
         canViewWarehouses={canViewWarehouses}
         canViewProducts={canViewProducts}
+        canViewCategories={can(company, "warehouses.categories.view")}
         canViewStorages={canViewStorages}
         canViewQuotes={can(company, "warehouses.quotes.view")}
         canViewOrders={can(company, "warehouses.orders.view")}
+        canViewPrices={can(company, "warehouses.prices.view")}
       />
 
       <Collection

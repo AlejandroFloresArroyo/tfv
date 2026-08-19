@@ -27,6 +27,7 @@ import {
   verifyEmailRoute,
 } from "./auth.ts"
 import {
+  addChildRoute,
   addMeasurementRoute,
   createProductRoute,
   createWarehouseCategoryRoute,
@@ -34,11 +35,15 @@ import {
   deleteProductRoute,
   deleteWarehouseCategoryRoute,
   getProductRoute,
+  getWarehouseCategoryRoute,
   listProductsRoute,
   listWarehouseCategoriesRoute,
   productScopeRoute,
+  updateMeasurementRoute,
   updateProductRoute,
   updateWarehouseCategoryRoute,
+  warehouseCategoryPathRoute,
+  warehouseCategoryScopeRoute,
 } from "./catalog.ts"
 import {
   addMemberRoute,
@@ -129,9 +134,11 @@ import {
   deletePriceListRoute,
   deleteUnitsRoute,
   findUnitByCodeRoute,
+  getPriceListRoute,
   listPriceListsRoute,
   listPricesRoute,
   listUnitsRoute,
+  priceListScopeRoute,
   removePriceRoute,
   resolvePriceRoute,
   setPriceListProductsRoute,
@@ -139,6 +146,7 @@ import {
   unitHistoryRoute,
   updatePriceListRoute,
 } from "./stock.ts"
+import { authorizeUploadRoute, confirmUploadRoute, reissueTargetsRoute } from "./uploads.ts"
 import {
   createStorageRoute,
   createWarehouseRoute,
@@ -247,8 +255,11 @@ export const routes: readonly RegisteredRoute[] = [
   deleteStorageRoute,
 
   listWarehouseCategoriesRoute,
+  getWarehouseCategoryRoute,
+  warehouseCategoryPathRoute,
   createWarehouseCategoryRoute,
   updateWarehouseCategoryRoute,
+  warehouseCategoryScopeRoute,
   deleteWarehouseCategoryRoute,
 
   listProductsRoute,
@@ -258,12 +269,16 @@ export const routes: readonly RegisteredRoute[] = [
   productScopeRoute,
   deleteProductRoute,
 
+  addChildRoute,
   addMeasurementRoute,
+  updateMeasurementRoute,
   deleteMeasurementRoute,
 
   listPriceListsRoute,
+  getPriceListRoute,
   createPriceListRoute,
   updatePriceListRoute,
+  priceListScopeRoute,
   deletePriceListRoute,
   listPricesRoute,
   setPriceRoute,
@@ -313,6 +328,12 @@ export const routes: readonly RegisteredRoute[] = [
   rejectOrderRoute,
   changeOrderStatusRoute,
   deleteOrderRoute,
+
+  // ─── Archivos ──────────────────────────────────────────────────────────────
+
+  authorizeUploadRoute,
+  reissueTargetsRoute,
+  confirmUploadRoute,
 
   // ─── Producciones ──────────────────────────────────────────────────────────
   // Pendiente: rebanada 20.

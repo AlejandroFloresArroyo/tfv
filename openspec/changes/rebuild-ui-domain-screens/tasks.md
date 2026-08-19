@@ -10,13 +10,24 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 ## 29a · Núcleo y administración
 
 - [x] Acceso, registro, recuperación y verificación — llegaron con la 28
-- [~] Perfil y sesiones abiertas. **Faltan** el cambio de contraseña y el de correo, que necesita
-      verificar la dirección nueva (rebanada 10)
-- [~] Selector de empresa y alta. **Falta la gestión**: editar y dar de baja desde la pantalla
+- [~] Perfil, sesiones abiertas, **cambio de contraseña** y cambio de correo. La contraseña
+      advierte antes de confirmar que el cambio cierra **todas** las sesiones, incluida aquella
+      desde la que se cambia — que es lo que hace el servicio, y no lo que decía la spec (H-45).
+      **Falta** canjear el enlace del correo nuevo de extremo a extremo: se emite y nadie lo
+      entrega todavía (rebanada 09)
+- [~] Selector de empresa, alta, y **gestión** —editar y dar de baja— en configuración, al lado
+      de miembros, roles y direcciones: quien tiene una sola empresa se salta el selector y ahí no
+      habría encontrado nunca dónde editarla. La comisión sólo se ofrece a la administración de
+      plataforma. La baja enumera los **servicios** que dejan de estar accesibles, y no cuántos
+      almacenes o cotizaciones se lleva: la empresa no tiene alcance que preguntar como sí lo tiene
+      un almacén, ni el servicio comprueba la suscripción activa que la spec exige (H-47). **Falta**
+      además editar la imagen y los sectores: no hay ruta para una ni modelo para los otros (H-48)
 - [x] Miembros: incorporación, retirada, activación, rol y propiedad
 - [x] Roles con su matriz de permisos, construida desde el catálogo del servidor
-- [~] Direcciones **de empresa**, con su libreta explorable y la regla de la primaria en la
-      pantalla. Faltan las **de usuario** —misma libreta, otro dueño— y el selector en mapa (28e)
+- [~] Direcciones **de empresa y de usuario**, con su libreta explorable y la regla de la primaria
+      en la pantalla. Son la misma pantalla con otro dueño, de verdad: el camino de la API y quién
+      puede qué viajan como dato, y la de la persona no consulta permisos porque su libreta cuelga
+      de ella. **Falta** el selector en mapa y las sugerencias al escribir (28e)
 - [x] Clientes y proveedores, **con permisos separados**: son dos colecciones distintas y no la
       misma con un parámetro, porque un parámetro no se puede autorizar por separado
 - [ ] Perfiles de facturación, con su asistente
@@ -27,20 +38,37 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 
 ## 29b · Almacenes
 
-- [ ] Almacenes y su panel
+- [~] Almacenes: listado, alta, edición y baja desde la pantalla, con el identificador legible
+      editable sólo donde el servicio respeta lo escrito y la baja enumerando su alcance. **El
+      panel ya existe**, como primera pestaña y no como portada —el porqué, en su commit—: cuenta
+      productos y altas por completar, las cotizaciones por estado y los pedidos por decidir, y
+      lista lo que pide atención. Le falta **el recuento de unidades por estado**, que la API de
+      hoy no permite componer sin una petición por medida (H-58)
 - [x] Catálogo con rejilla, filtros y paginación
-- [ ] **Asistente de producto de cinco pasos**
-- [ ] **Asistente de variante de cuatro pasos**
-- [ ] Detalle de producto: información, medidas, precios, unidades
-- [ ] Unidades con etiquetas individuales y en lote
-- [ ] Listas de precios
-- [ ] Categorías anidadas
-- [x] **Ubicaciones como organigrama navegable**
+- [x] **Asistente de producto de cinco pasos**, con validación por paso contra el esquema del
+      servidor y el paso en la dirección
+- [x] **Asistente de variante de cuatro pasos**. Son cuatro y no cinco por el modelo: un hijo
+      hereda la clasificación del padre, así que ese paso no existe
+- [x] Detalle de producto: información, medidas, precios, unidades. Un diálogo por bloque, porque
+      cada bloque tiene su clave y un panel que se guarda solo mandaría peticiones que el
+      servidor rechaza a medias
+- [x] Unidades con etiquetas individuales y en lote. Pantalla de la medida con la tabla, el alta
+      masiva, el cambio de estado en lote con motivo y la baja, el historial por unidad, y la hoja
+      imprimible en los dos formatos de máquina
+- [~] **Listas de precios**: listado con cuántos productos tienen tarifa en cada una, alta, edición
+      y baja con la cascada contada por el servidor, ficha con las tarifas —venta, renta y
+      penalización, fija o por periodicidad— y **asignación masiva** en las dos direcciones. Falta
+      la advertencia que la spec pide cuando la lista está **referenciada por cotizaciones en
+      curso**: no hay dato en la API con el que darla (H-37)
+- [x] Categorías anidadas
+- [x] **Ubicaciones como organigrama navegable**, y editable sobre él: crear dentro, renombrar,
+      cambiar de padre y eliminar
 - [x] Bandeja de cotizaciones y ficha, con su equipo apartado y sus importes
-- [~] **Constructor de cotizaciones**: el editor de líneas con la disponibilidad delante, el cambio
-      de estado, el registro del retorno, y los bloques de condiciones de pago e impuestos, que se
-      guardan solos. Faltan los de identidad y contactos, que tienen su ruta y su permiso pero
-      todavía no su formulario
+- [x] Alta de cotización desde la bandeja: tipo, cliente y ventana, y de ahí al constructor
+- [x] **Constructor de cotizaciones**: el editor de líneas con la disponibilidad delante, el cambio
+      de estado, el registro del retorno, y **los cuatro bloques que se guardan solos** —identidad,
+      contactos, condiciones de pago e impuestos—. La ventana de fechas entra en el punto de
+      composición, así que mover el fin rehace los días que cobra cada línea antes de guardar
 - [x] **Documento de cotización y su enlace público**
 - [x] Pedidos con aceptación y rechazo
 - [ ] **Conversación en tiempo real del pedido**

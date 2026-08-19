@@ -29,6 +29,10 @@ export function formatAmount(
  * Se pregunta formateando un número que sólo tiene unos: lo que quede al quitarlos es la marca. Es
  * preferible a mantener una tabla por idioma, que se queda corta el día que se añada uno.
  */
-function decimalSeparator(format: { number: (value: number | bigint) => string }): string {
-  return format.number(1.1).replace(/1/g, "")
+export function decimalSeparator(format: {
+  number: (value: number | bigint) => string
+}): "." | "," {
+  // Cualquier otra cosa —un espacio estrecho, un apóstrofo— no puede ser el decimal de un idioma
+  // que este sistema sirva; ante la duda, el punto, que es la forma en que el importe viaja.
+  return format.number(1.1).replace(/1/g, "") === "," ? "," : "."
 }

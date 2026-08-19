@@ -69,6 +69,12 @@ Todo lo que difiere entre ellas difiere a propósito: las dos empresas tienen se
 —sin eso no se puede ver fallar la guarda de habilitación ni la equivalencia al cambiar de
 empresa—, y las cuatro cuentas cubren las cuatro vías por las que se concede o se niega.
 
+> **No hay envío de correo todavía.** El despachador es la rebanada 09, que no está empezada: el
+> enlace de verificación, el de recuperación y el de invitación se encolan y se quedan ahí. En
+> desarrollo se escriben además **en el registro del servicio**, con su dirección completa, así que
+> registrarse se completa pegando esa dirección en el navegador. Las cuentas sembradas ya vienen
+> verificadas y no necesitan nada de esto.
+
 > `pnpm test` corre contra **`tfv_test`**, una base aparte del mismo servidor local que se crea y se
 > migra sola la primera vez. Las suites truncan sus tablas, y ahora eso no toca los datos con los
 > que se está mirando la aplicación. `pnpm test:e2e` sí usa la de desarrollo —conduce la aplicación
@@ -179,7 +185,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 08 | `migrate-media-storage` | ⬜ | |
+| 08 | `migrate-media-storage` | 🟡 | **Subida directa entera**: autorización de escritura acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión sobre el mismo registro, confirmación que dice qué se escribió, y validación de nombre, tipo y coherencia. Del lado del cliente, el selector con vista previa, reducción y reintento por objeto. Falta que las pantallas lo usen, y el recolector espera al despachador de trabajos (09) |
 | 09 | `migrate-activity-and-notifications` | ⬜ | |
 | 10 | `migrate-identity-and-companies` | 🟡 | Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen, y las pantallas de prospecto —el formulario público es de la 19 y la bandeja necesita un área de administración de plataforma |
 | 11 | `migrate-subscriptions-and-billing` | ⬜ | |
@@ -219,8 +225,8 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 28 | `rebuild-ui-foundation` | 🟡 | Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial). Falta la exploración de colecciones (28d) y, de la 28e, el asistente por pasos y los controles ricos |
-| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, contrapartes y direcciones (29a); catálogo, árbol de ubicaciones, **constructor de cotizaciones entero** —líneas, condiciones de pago, impuestos, cobros, retorno, extensión— y **pedidos con aceptación y rechazo** (29b). **El documento de cotización y su enlace público ya están.** Faltan el detalle de producto y sus asistentes, y los bloques de identidad y contactos. 29c–29e esperan a sus rebanadas de servidor |
+| 28 | `rebuild-ui-foundation` | 🟡 | Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial), con el **asistente por pasos**, el área de texto, el campo de importe y el selector con búsqueda. De la 28e faltan el selector de archivos, el editor enriquecido, la firma y el mapa; de la 28d, la exploración de colecciones |
+| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, contrapartes y direcciones (29a). La 29b **cierra el flujo del almacén**: alta y baja de almacén, los dos árboles editables, los **dos asistentes** de producto y de variante, la ficha corregible, existencias con etiquetas imprimibles, listas de precios con asignación masiva, **el panel del almacén** y el constructor de cotizaciones entero —sus cuatro bloques se guardan solos, y la ventana de fechas rehace los días que cobra cada línea antes de guardar—. Faltan el documento público y la conversación del pedido. 29c–29e esperan a sus rebanadas de servidor |
 | 30 | `add-data-migration-and-cutover` | ⬜ | |
 
 ## Lo siguiente
@@ -2401,6 +2407,137 @@ Once tareas de la rebanada hechas; las veintisiete que quedan esperan a esas dos
 **339 pruebas** de la API, doce de ellas nuevas. No comprueban una función: comprueban que un
 tercero no pueda activar suscripciones ni materializar pedidos.
 
+### 2026-08-18 · El flujo del almacén, cerrado por los dos extremos
+
+Cuatro árboles de trabajo a la vez y un tronco. Lo que se cierra no es una pantalla: es que **el
+módulo de almacenes se puede usar sin sembrar la base**. Hasta hoy no se podía crear nada desde la
+pantalla —ni un almacén, ni una ubicación, ni una categoría, ni un producto, ni una unidad, ni una
+lista de precios, ni siquiera una cotización—. El servicio tenía todas las rutas; faltaba la mano.
+
+**Lo que se decidió antes de escribir nada**
+
+Doce preguntas, y dos respuestas que gobiernan el resto:
+
+- **El asistente valida cada paso con el esquema del servidor**, no con una copia. Para eso el
+  cuerpo del producto se mudó a `@tfv/contracts`. Duplicar la regla en el cliente es lo que la 28e
+  ya había anotado como deuda, y la copia que se queda vieja es siempre la del navegador — que es
+  la que decide si el usuario puede seguir.
+- **Un diálogo por bloque en la ficha, y el bloque es la unidad de guardado.** Es lo contrario del
+  constructor de cotizaciones, a propósito: el catálogo reparte la edición de un producto en cinco
+  claves, así que un panel que se guardara solo con campos de tres permisos distintos mandaría
+  peticiones que el servidor rechaza a medias. Una cotización se compone; una ficha se corrige.
+
+**Los primitivos que faltaban**
+
+Asistente por pasos —con su máquina fuera de React, diez pruebas—, área de texto, campo de importe
+y selector con búsqueda. Dos de ellos escondían un defecto que sólo se ve tecleando:
+
+- **El campo de importe se comía su propio separador decimal.** Escribía el decimal con punto y a
+  la tecla siguiente leía ese mismo punto como separador de millar: `12.345,678` acababa en `123`.
+  Tres órdenes de magnitud, sin aviso, en la cifra que el cliente firma. Ahora el idioma dice cuál
+  de los dos signos es el decimal y el campo **escribe con él**; `toDecimalString` traduce al punto,
+  que es como el importe viaja. Es H-22 en la dirección contraria.
+- **`Button asChild` derribaba la página entera.** Le pasaba dos hijos a `Slot`, que exige uno. El
+  síntoma visible no se parecía a la causa: una dirección inexistente respondía `500` en vez de
+  `404`. Lo encontró quien escribía otra pantalla (H-30).
+
+**Lo que el servicio no tenía y hacía falta**
+
+Tres huecos que sólo aparecen cuando alguien intenta usar el sistema de verdad:
+
+- **Corregir una medida no existía** — había alta y baja. Una errata en el nombre sólo se arreglaba
+  borrando la medida, y eso borra sus unidades: objetos físicos con su código impreso en una
+  etiqueta pegada. Requisito nuevo en la spec (H-28).
+- **Añadir una variante a un producto que ya existe tampoco.** Sólo se podían crear hijos en el
+  mismo acto que el padre, y una variante nace casi siempre después. La spec ya lo daba por
+  supuesto.
+- **La baja de un almacén no miraba si había trabajo en curso**, y la spec lo exige con su
+  escenario. Se podía dar de baja un almacén con una renta y el equipo en la calle. La casilla
+  estaba anotada en la rebanada 12 esperando a las cotizaciones y a los pedidos: existían desde
+  hacía dos rebanadas y nadie lo había advertido (H-29).
+
+**Dos barreras nuevas, porque cuatro personas escriben a la vez**
+
+Ninguna comprobaba que los dos idiomas tuvieran las mismas claves, ni que las claves que piden las
+pantallas existieran. `next-intl` no falla cuando una clave falta: **enseña la clave cruda** en
+mitad del formulario, y eso pasa cualquier revisión porque la pantalla se dibuja entera. Me ocurrió
+con dos claves del asistente y lo descubrí tecleando, no leyendo.
+
+**El eslabón que no se puede cerrar todavía**
+
+Crear un almacén exige que la empresa tenga contratado el servicio —y está bien que lo exija—, pero
+**contratarlo no tiene ruta**: la única forma de que una empresa tenga servicios es la siembra. El
+primer eslabón de «de la empresa vacía a la cotización» está cortado, y taparlo aquí regalaría lo
+que la rebanada 11 existe para vender (H-40). El recorrido de extremo a extremo parte de una empresa
+sembrada y crea **todo lo demás**.
+
+**Comprobado**
+
+637 pruebas de la suite, más el recorrido completo en el navegador: almacén → categoría → ubicación
+→ producto por el asistente de cinco pasos → lista de precios con su asignación → cotización con su
+línea y su importe. Y las cuatro pantallas de los árboles de trabajo, cada una verificada por quien
+la escribió con dos cuentas de permisos distintos y en ancho de teléfono.
+
+
+### 2026-08-18 · Los archivos, y cuatro frentes a la vez
+
+Cinco frentes en paralelo: cuatro árboles de trabajo y el tronco. Lo que cierra la sesión es la
+**rebanada 08 entera del lado del servidor** —un archivo se registra, se autoriza su escritura y se
+confirma— más el selector que la usa desde el navegador.
+
+**Cómo se guarda un archivo**
+
+Subida directa: la API firma una autorización acotada a un objeto y con caducidad, y el navegador
+escribe contra el almacenamiento. Los bytes no pasan por el servicio, y por eso ningún endpoint
+necesita aceptar cargas grandes. Comprobado contra el almacenamiento **de verdad**, sin dobles,
+porque lo que se comprueba es una propiedad suya: la autorización escribe su objeto sin credencial
+ninguna, y sobre otro objeto responde que la firma no vale. Si eso no se cumpliera, entregarle la
+autorización al navegador sería entregarle el almacenamiento entero.
+
+Tres decisiones que no estaban en la spec y que salieron de escribir el cliente antes que el
+servidor:
+
+- **Un archivo son cinco objetos** —el original y cuatro derivados— y **los produce el navegador**.
+  La autorización se emite para los cinco de una vez.
+- **La confirmación dice qué se escribió**, no si todo fue bien. Un navegador que no descodifica
+  `heic` sube el original y ningún derivado: no es un fallo, es lo que ese navegador podía hacer.
+  Lo que sí es un fallo es que falte el original.
+- **Se puede volver a autorizar** el mismo registro. Que caduque una firma no puede costar resubir
+  doce megas.
+
+Las tres las pidió quien escribía el selector, antes de que existiera una línea del servidor. Es el
+argumento de escribir el cliente contra un contrato dicho en voz alta: las tres habrían costado
+mucho más descubiertas después.
+
+**Lo que apareció**
+
+- **Confirmar una subida era imposible** (H-55): la tabla de archivos tenía política de lectura, de
+  alta y la de plataforma, y ninguna de actualización. Confirmar *es* actualizar. Leyendo el modelo
+  no se ve; las tres políticas que había parecen las de una tabla terminada.
+- **`text-warning` y `text-success` no existían** (H-57), y se usaban en once sitios: todos los
+  avisos del constructor de cotizaciones eran invisibles. Al repararlos con las rampas crudas
+  pasaron a ilegibles —`yellow.9` da 2.63:1 sobre este lienzo—, así que los papeles entran donde
+  debían, medidos.
+- **`max-w-xl` mide veinte píxeles** en este tema (H-46), y llevaba tiempo encogiendo el formulario
+  de cambio de correo a una palabra por renglón.
+- **El cambio de contraseña cierra también la sesión actual**, y la spec decía lo contrario (H-45).
+  Corregida hacia lo que el sistema hace, con el requisito de que la pantalla lo advierta antes.
+- **La tabla de tipos de archivo estaba escrita dos veces**, en el sistema de diseño y en el
+  contrato. Coincidían —las noventa y siete pruebas del paquete pasando contra la del contrato lo
+  demuestran— y se unificaron antes de que dejaran de coincidir.
+
+**Lo que queda dicho y sin decidir**
+
+Una **firma de entrega** vive hoy en el mismo cubo de lectura abierta que una foto de catálogo
+(H-56), porque el modelo declara la dirección de lectura como pública. Para el catálogo es
+correcto; para una firma, nadie lo ha decidido a conciencia, y separarlo pide un segundo cubo con
+lecturas firmadas y caducas.
+
+**Comprobado**
+
+742 pruebas antes de la última fusión y las cinco suites en verde después. La base de pruebas
+compartida volvió a morder: dos ejecuciones simultáneas se pisan y producen fallos en archivos que
+nadie ha tocado (H-12). Se perdió una vuelta de diagnóstico por eso, en los dos lados.
 ### 2026-08-18 · El documento que el cliente firma
 
 El servicio de documentos, que quedó anotado «para después» cuando se decidió imprimir desde el

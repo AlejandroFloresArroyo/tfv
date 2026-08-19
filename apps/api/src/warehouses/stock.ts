@@ -41,6 +41,7 @@ import {
 } from "@tfv/contracts"
 import { type Transaction, withRequester } from "@tfv/db"
 import {
+  users,
   warehouseMeasurements,
   warehouseProducts,
   warehouseStockEvents,
@@ -134,6 +135,19 @@ export interface StockEventRecord {
   readonly toStatus: StockStatus
   readonly reason: StockReason
   readonly actorId: string | null
+  /**
+   * Quién lo provocó, por su nombre.
+   *
+   * Viaja con el evento porque la alternativa era pedir el padrón de la empresa —`companies.users.
+   * view`, un permiso de otro dominio que no implica el de existencias, y paginado a noventa y
+   * seis— sólo para traducir un identificador (H-33). Es lo mismo que la línea de cotización hace
+   * con su producto.
+   *
+   * **Nulo cuando no hay persona detrás**: lo movió un documento, o la siembra. Y nulo también si
+   * quien lo movió ya no está al alcance de quien mira, que es lo que hace la política de lectura
+   * del padrón: el cambio consta y su responsable no se nombra.
+   */
+  readonly actorName: string | null
   readonly causeId: string | null
   readonly note: string | null
   readonly occurredAt: Date
@@ -270,22 +284,51 @@ export async function unitHistory(
     await loadUnit(tx, warehouseId, unitId)
 
     const rows = await tx
-      .select()
+      .select({
+        event: warehouseStockEvents,
+        actorName: users.name,
+        actorLastname: users.lastname,
+        actorUsername: users.username,
+      })
       .from(warehouseStockEvents)
+      // Externa: un evento sin persona detrás —lo movió un documento— sigue siendo un evento, y
+      // uno cuyo autor ya no se alcanza tampoco puede desaparecer del historial.
+      .leftJoin(users, eq(users.id, warehouseStockEvents.actorId))
       .where(eq(warehouseStockEvents.stockUnitId, unitId))
       .orderBy(desc(warehouseStockEvents.occurredAt))
 
-    return rows.map((row) => ({
-      id: row.id,
-      fromStatus: row.fromStatus,
-      toStatus: row.toStatus,
-      reason: row.reason,
-      actorId: row.actorId,
-      causeId: row.causeId,
-      note: row.note,
-      occurredAt: row.occurredAt,
+    return rows.map(({ event, ...actor }) => ({
+      id: event.id,
+      fromStatus: event.fromStatus,
+      toStatus: event.toStatus,
+      reason: event.reason,
+      actorId: event.actorId,
+      actorName: displayName(actor),
+      causeId: event.causeId,
+      note: event.note,
+      occurredAt: event.occurredAt,
     }))
   })
+}
+
+/**
+ * El nombre con el que se presenta a quien provocó un cambio.
+ *
+ * Nombre y apellido, y el usuario cuando la cuenta no tiene ninguno de los dos —una invitación
+ * aceptada sin completar el perfil—: enseñar un hueco donde va un responsable se lee como si el
+ * cambio no tuviera dueño, que es exactamente lo contrario de lo que dice el dato.
+ */
+function displayName(actor: {
+  actorName: string | null
+  actorLastname: string | null
+  actorUsername: string | null
+}): string | null {
+  const full = [actor.actorName, actor.actorLastname]
+    .filter((part) => part !== null && part.trim() !== "")
+    .join(" ")
+    .trim()
+
+  return full === "" ? (actor.actorUsername ?? null) : full
 }
 
 // ─── Alta ────────────────────────────────────────────────────────────────────

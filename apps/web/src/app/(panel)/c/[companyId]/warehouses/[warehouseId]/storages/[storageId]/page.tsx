@@ -11,6 +11,7 @@ import { apiGet } from "~/lib/api.server.ts"
 import { can } from "~/lib/can.ts"
 import { requireCompany, requireProfile } from "~/lib/session.ts"
 import type { ItemsEnvelope, ProductRow, StorageRow, WarehouseRow } from "../../../warehouse.ts"
+import { canViewPanel } from "../../panel/access.ts"
 import { WarehouseNav } from "../../warehouse-nav.tsx"
 import { StorageBrowser } from "../storage-browser.tsx"
 
@@ -63,11 +64,14 @@ export default async function StoragePage({
         <WarehouseNav
           companyId={companyId}
           warehouseId={warehouseId}
+          canViewPanel={canViewPanel(company)}
           canViewWarehouses={canViewWarehouses}
           canViewProducts={canViewProducts}
+          canViewCategories={can(company, "warehouses.categories.view")}
           canViewStorages={canViewStorages}
           canViewQuotes={can(company, "warehouses.quotes.view")}
           canViewOrders={can(company, "warehouses.orders.view")}
+          canViewPrices={can(company, "warehouses.prices.view")}
         />
         <ApiFailure result={failed} />
       </PageShell>
@@ -91,11 +95,14 @@ export default async function StoragePage({
       <WarehouseNav
         companyId={companyId}
         warehouseId={warehouseId}
+        canViewPanel={canViewPanel(company)}
         canViewWarehouses={canViewWarehouses}
         canViewProducts={canViewProducts}
+        canViewCategories={can(company, "warehouses.categories.view")}
         canViewStorages={canViewStorages}
         canViewQuotes={can(company, "warehouses.quotes.view")}
         canViewOrders={can(company, "warehouses.orders.view")}
+        canViewPrices={can(company, "warehouses.prices.view")}
       />
 
       <StorageBrowser
@@ -104,6 +111,9 @@ export default async function StoragePage({
         roots={rootsResult.data.items}
         path={pathResult.data.items}
         directChildren={childrenResult.data.items}
+        canCreate={can(company, "warehouses.storages.create")}
+        canEdit={can(company, "warehouses.storages.edit")}
+        canDelete={can(company, "warehouses.storages.delete")}
       />
 
       {productsResult ? (

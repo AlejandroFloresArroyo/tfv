@@ -173,6 +173,12 @@ poder imprimirse en lote para varias unidades a la vez.
 El sistema SHALL permitir localizar una unidad a partir de su código, devolviendo su medida, su
 producto, su ubicación física y su estado.
 
+**La ubicación física es la de su producto**, no una suya. Una unidad no se sitúa por separado: el
+modelo cuelga la ubicación del producto, así que las cinco unidades de una medida constan siempre en
+la misma caja. Es lo que hoy se puede afirmar; que una unidad concreta se mueva a otro estante y
+quede registrado pide una ubicación por unidad, que es cambio de modelo y decisión de producto
+(`HALLAZGOS.md`, H-31).
+
 #### Scenario: Se localiza una unidad escaneada
 
 - **WHEN** se busca por el código de una etiqueta
