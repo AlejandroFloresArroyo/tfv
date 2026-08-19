@@ -145,7 +145,8 @@ export const scriptQuery: QuerySchema = {
  *
  * La búsqueda va sobre **nombre y sinopsis**. El requisito «Búsqueda en el desglose» dice «por
  * nombre y descripción» y el requisito del capítulo dice «su nombre, su sinopsis»: es el mismo
- * campo con dos nombres dentro de la misma spec, y el modelo lo llama `synopsis`.
+ * campo con dos nombres dentro de la misma spec, y el modelo lo llama `synopsis`
+ * (`HALLAZGOS.md` H-179).
  */
 export const chapterQuery: QuerySchema = {
   filters: {
@@ -480,7 +481,8 @@ export async function createChapter(
     const scriptId = input.scriptId ?? null
     // Un capítulo sólo puede proceder de un guion **de su propia producción**. La clave foránea no
     // lo dice —apunta a la tabla, no a la producción—, así que sin esto un desglose podría declarar
-    // que sale de un guion de otra serie.
+    // que sale de un guion de otra serie. El mismo agujero sigue abierto en el otro extremo de la
+    // cadena, donde las jornadas y los planes guardan su escena (`HALLAZGOS.md` H-180).
     if (scriptId !== null) await loadScript(tx, productionId, scriptId)
 
     await assertChapterIndexFree(tx, productionId, input.index, null)
