@@ -36,9 +36,13 @@
 - [~] El recolector nunca toca archivos referenciados. Sólo mira los **pendientes**, que por
       definición no los referencia nadie todavía; comprobarlo pide ejecutarlo, y quien lo dispara es
       el despachador de la rebanada 09
-- [ ] Marcadores de posición como activos propios. Sin ninguno sembrado todavía: la salvaguarda que
-      los protege está escrita y probada, pero los tres archivos —imagen, video y documento— y la
-      siembra que los registra siguen sin existir
+- [x] Marcadores de posición como activos propios. Los tres activos viven en
+      `media/assets/` —dos vectores dibujados a mano, un PDF vectorial y dos segundos de video—, y
+      `ensurePlaceholders` los escribe por el mismo camino que el navegador y registra sus filas
+      bajo el prefijo `sistema/`. Idempotente y **reparadora**: repone el objeto que falte sin tocar
+      la fila. La corre la siembra y también `pnpm --filter @tfv/api placeholders`, que es la vía en
+      producción, donde la siembra no corre. Referenciarlos exigió admitirlos en el acotamiento por
+      arrendatario (H-133)
 
 ## Cliente
 
