@@ -234,6 +234,30 @@ import {
   updateQuoteRoute,
 } from "./quotes.ts"
 import {
+  chapterIndicesRoute,
+  chapterScopeRoute,
+  createChapterRoute,
+  createSceneRoute,
+  createScriptRoute,
+  deleteChapterRoute,
+  deleteSceneRoute,
+  deleteScriptRoute,
+  getChapterRoute,
+  getSceneRoute,
+  getScriptRoute,
+  listChaptersRoute,
+  listProductionScenesRoute,
+  listScenesRoute,
+  listScriptsRoute,
+  productionBreakdownRoute,
+  sceneIndicesRoute,
+  sceneScopeRoute,
+  scriptScopeRoute,
+  updateChapterRoute,
+  updateSceneRoute,
+  updateScriptRoute,
+} from "./script.ts"
+import {
   changeShipmentStatusRoute,
   estimateShippingRoute,
   getShipmentRoute,
@@ -620,8 +644,42 @@ export const routes: readonly RegisteredRoute[] = [
   setItemImagesRoute,
   deleteItemRoute,
 
-  // Pendiente: guion, capítulos y escenas (21); notas de entrega y presupuesto (22); compras a
-  // almacenes (23). Las tablas existen desde la `0002` y el panel ya las cuenta.
+  // El desglose del guion: guiones, capítulos y escenas.
+  //
+  // Las dos consultas de índice y la estructura completa van **antes** que las fichas con
+  // parámetro, por el mismo motivo que el panel: nada garantiza que un identificador no se parezca
+  // a «indices» o a «breakdown».
+  productionBreakdownRoute,
+  chapterIndicesRoute,
+  sceneIndicesRoute,
+
+  listScriptsRoute,
+  createScriptRoute,
+  getScriptRoute,
+  updateScriptRoute,
+  scriptScopeRoute,
+  deleteScriptRoute,
+
+  listChaptersRoute,
+  createChapterRoute,
+  getChapterRoute,
+  updateChapterRoute,
+  chapterScopeRoute,
+  deleteChapterRoute,
+
+  // Las escenas de la producción entera van **antes** que la ficha del capítulo con parámetro:
+  // comparten el prefijo `/productions/{id}/`, y el orden de la tabla es el que resuelve.
+  listProductionScenesRoute,
+  listScenesRoute,
+  createSceneRoute,
+  getSceneRoute,
+  updateSceneRoute,
+  sceneScopeRoute,
+  deleteSceneRoute,
+
+  // Pendiente: la continuidad de rodaje —jornadas, continuidades y utilería— y la extracción
+  // asistida del guion (21); notas de entrega, calendario y presupuesto (22); compras a almacenes
+  // (23). Las tablas existen desde la `0002` y el panel ya las cuenta.
 
   // ─── Pixit ─────────────────────────────────────────────────────────────────
   // Pendiente: rebanada 24.
