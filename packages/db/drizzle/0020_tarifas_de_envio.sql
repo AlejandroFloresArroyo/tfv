@@ -60,4 +60,39 @@ drop policy if exists plataforma on public.shipping_rates;--> statement-breakpoi
 create policy plataforma on public.shipping_rates
   for all to authenticated
   using ((select app.is_platform_admin()))
-  with check ((select app.is_platform_admin()));
+  with check ((select app.is_platform_admin()));--> statement-breakpoint
+
+-- ─── El comercio mueve su propio envío ───────────────────────────────────────
+--
+-- La `0005` dejó la escritura de `shipments` **sólo para el sistema**, y era correcto mientras lo
+-- único que ocurría con un envío fuera nacer dentro de la materialización del pedido. Con el
+-- seguimiento de la entrega deja de serlo: marcar un paquete como entregado a la paquetería, en
+-- tránsito o entregado es una operación de quien lo despacha, con su sesión y su permiso, y por la
+-- vía de usuario. Con la política anterior el manejador habría tenido que correr como sistema — es
+-- decir, renunciar a la capa de aislamiento que la spec exige que sean dos.
+--
+-- El predicado **atraviesa hasta `companies`** en lugar de apoyarse en `buyer_orders` a secas, por
+-- el motivo que la `0005` deja escrito: la lectura del pedido es más ancha que su escritura —el
+-- comprador lee el suyo—, así que un `exists` sobre el pedido dejaría al comprador cambiar el
+-- estado de su propio envío. `companies` tiene política simétrica y corta ahí.
+--
+-- El sistema sigue estando: **el alta ocurre antes de que nada apunte al envío** —el pedido lo
+-- enlaza después—, así que en el `insert` el `exists` todavía no puede ser cierto. Sin esa rama, la
+-- materialización no podría crear el envío que ella misma va a enlazar.
+drop policy if exists arrendatario on public.shipments;--> statement-breakpoint
+create policy arrendatario on public.shipments
+  for all to authenticated
+  using (
+        (select app.is_system())
+    or exists (
+      select 1 from buyer_orders o join companies c on c.id = o.company_id
+      where o.shipment_id = shipments.id
+    )
+  )
+  with check (
+        (select app.is_system())
+    or exists (
+      select 1 from buyer_orders o join companies c on c.id = o.company_id
+      where o.shipment_id = shipments.id
+    )
+  );

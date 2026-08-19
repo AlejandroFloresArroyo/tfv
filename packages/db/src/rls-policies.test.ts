@@ -49,6 +49,7 @@ const seed = {
   locationB: newId(),
   categoryG: newId(),
   ratesA: newId(),
+  shipmentA: newId(),
   sessionAna: newId(),
   sessionBeto: newId(),
   sessionCliente: newId(),
@@ -121,8 +122,15 @@ async function sow() {
     insert into warehouse_orders (id, warehouse_id, code, origin, client_id)
       values ('${s.orderA}', '${s.warehouseA}', 'PED-1', 'storefront', '${s.counterpartyA}');
 
-    insert into buyer_orders (id, buyer_id, company_id, reference, subtotal, total)
-      values ('${s.buyerOrderA}', '${s.cliente}', '${s.companyA}', 'REF-1', '100.00', '100.00');
+    -- El envío nace antes que el pedido y éste lo enlaza después, que es el orden real de la
+    -- materialización y el motivo de que su alta siga siendo del sistema.
+    insert into shipments (id, mode, cost) values ('${s.shipmentA}', 'national', '199.00');
+
+    insert into buyer_orders
+      (id, buyer_id, company_id, reference, subtotal, total, shipment_id)
+      values
+      ('${s.buyerOrderA}', '${s.cliente}', '${s.companyA}', 'REF-1', '100.00', '100.00',
+       '${s.shipmentA}');
 
     insert into location_networks (id, company_id, name)
       values ('${s.networkB}', '${s.companyB}', 'Red B');
@@ -297,6 +305,45 @@ describe("el cuadro de tarifas de envío", () => {
     )
 
     expect(visible).toBe(1)
+  })
+})
+
+// ─── Seguimiento del envío ───────────────────────────────────────────────────
+
+describe("el envío lo mueve quien lo despacha", () => {
+  it("el comercio dueño del pedido cambia el estado de su envío", async () => {
+    await withRequester(identity(seed.ana), (tx) =>
+      tx.execute(sql.raw(`update shipments set status = 'shipped' where id = '${seed.shipmentA}'`)),
+    )
+
+    const row = await readElevated(`select status from shipments where id = '${seed.shipmentA}'`)
+    expect(row?.status).toBe("shipped")
+  })
+
+  it("otra empresa no lo toca", async () => {
+    await withRequester(identity(seed.beto), (tx) =>
+      tx.execute(
+        sql.raw(`update shipments set status = 'canceled' where id = '${seed.shipmentA}'`),
+      ),
+    )
+
+    const row = await readElevated(`select status from shipments where id = '${seed.shipmentA}'`)
+    expect(row?.status).toBe("shipped")
+  })
+
+  it("el comprador lo lee pero no lo mueve", async () => {
+    // Es la razón de que el predicado atraviese hasta `companies`: la lectura del pedido es más
+    // ancha que su escritura, y apoyarse en ella dejaría al comprador darse por servido.
+    expect(await countAs(seed.cliente, "shipments")).toBe(1)
+
+    await withRequester(identity(seed.cliente), (tx) =>
+      tx.execute(
+        sql.raw(`update shipments set status = 'delivered' where id = '${seed.shipmentA}'`),
+      ),
+    )
+
+    const row = await readElevated(`select status from shipments where id = '${seed.shipmentA}'`)
+    expect(row?.status).toBe("shipped")
   })
 })
 
