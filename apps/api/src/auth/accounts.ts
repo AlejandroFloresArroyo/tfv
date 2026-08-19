@@ -17,6 +17,7 @@ import { ConflictError, newId, UnprocessableError, ValidationError } from "@tfv/
 import { db, type Transaction } from "@tfv/db"
 import { loginAttempts, notificationDeliveries, oneTimeCredentials, users } from "@tfv/db/schema"
 import { and, count, desc, eq, gt, gte, isNull, sql } from "drizzle-orm"
+import { scheduleRecipientSync } from "../activity/delivery.ts"
 import { announceDevLink } from "./dev-links.ts"
 import { hashPassword, needsRehash, validatePassword, verifyPassword } from "./password.ts"
 import {
@@ -175,7 +176,7 @@ export type ConsumeOutcome =
 /** Confirma la dirección. El enlace es de un solo uso. */
 export async function verifyEmail(token: string): Promise<ConsumeOutcome> {
   try {
-    return await db.transaction(async (tx) => {
+    const outcome = await db.transaction(async (tx): Promise<ConsumeOutcome> => {
       const credential = await consumeCredential(token, "email_verification", tx)
       if (!credential) return { kind: "invalid" }
 
@@ -203,6 +204,15 @@ export async function verifyEmail(token: string): Promise<ConsumeOutcome> {
 
       return { kind: "ok", userId: credential.userId, pendingEmail: credential.pendingEmail }
     })
+
+    // Un correo confirmado que además **sustituye** al anterior es un cambio de perfil, y los
+    // proveedores de aviso se quedarían escribiendo a la dirección vieja. Se encola fuera de la
+    // transacción a propósito: un proveedor que no responde no puede impedir cambiarse el correo.
+    if (outcome.kind === "ok" && outcome.pendingEmail) {
+      await scheduleRecipientSync(outcome.userId)
+    }
+
+    return outcome
   } catch (failure) {
     // La consulta previa mejora el mensaje normal; la restricción resuelve la carrera entre dos
     // confirmaciones concurrentes. Ambas situaciones se presentan como el mismo conflicto.

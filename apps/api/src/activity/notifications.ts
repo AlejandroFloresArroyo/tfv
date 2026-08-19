@@ -15,7 +15,14 @@
  * haga falta guardar cuándo la abrió por última vez, y no baste con contar.
  */
 
-import { buildPage, ForbiddenError, NotFoundError, newId, type Page } from "@tfv/contracts"
+import {
+  buildPage,
+  ForbiddenError,
+  isActivityMessageKey,
+  NotFoundError,
+  newId,
+  type Page,
+} from "@tfv/contracts"
 import { withRequester } from "@tfv/db"
 import { notificationDeliveries, notificationPreferences, pushDevices, users } from "@tfv/db/schema"
 import { and, count, desc, eq, gt, isNotNull, isNull, ne } from "drizzle-orm"
@@ -27,8 +34,16 @@ export type InboxFilter = "unread" | "read" | "archived" | "all"
 export interface InboxItem {
   readonly id: string
   readonly kind: string
+  /** El nombre de la entidad afectada. Es dato, así que viaja escrito. */
   readonly title: string
-  readonly body: string
+  /**
+   * Qué pasó, como clave del catálogo y sus parámetros.
+   *
+   * No viaja redactado: el sobre se pinta en el navegador de quien lo lee, y es allí donde se sabe
+   * en qué idioma (`HALLAZGOS.md` H-153).
+   */
+  readonly bodyKey: string
+  readonly bodyParams: Record<string, string | number>
   readonly url: string
   readonly payload: Record<string, unknown>
   readonly readAt: Date | null
@@ -195,7 +210,8 @@ function toItem(row: typeof notificationDeliveries.$inferSelect): InboxItem {
     id: row.id,
     kind: row.kind,
     title: texto(payload.title),
-    body: texto(payload.body),
+    bodyKey: isActivityMessageKey(payload.bodyKey) ? payload.bodyKey : "",
+    bodyParams: parametros(payload.bodyParams),
     url: typeof payload.url === "string" ? payload.url : "/",
     payload,
     readAt: row.readAt,
@@ -205,11 +221,32 @@ function toItem(row: typeof notificationDeliveries.$inferSelect): InboxItem {
 }
 
 /**
- * El texto de un aviso, sin marcado.
+ * Los parámetros del aviso, saneados uno a uno.
  *
- * «El cuerpo SHALL sanearse de cualquier marcado antes de mostrarse.» Se hace **al leer** y no al
- * escribir: lo escrito es el dato de la entidad, y sanearlo al guardarlo perdería lo que la persona
- * escribió de verdad. Aquí se quitan etiquetas y se compactan los espacios que dejan.
+ * «El cuerpo SHALL sanearse de cualquier marcado antes de mostrarse.» Ahora el cuerpo es una frase
+ * de nuestro catálogo con huecos, así que **el marcado sólo puede entrar por los huecos**: el
+ * nombre de un producto que alguien escribió con negritas, el correo de un miembro. Se sanea aquí,
+ * al leer, y no al escribir: lo guardado es el dato de la entidad tal y como la persona lo escribió.
+ *
+ * Lo que no sea texto ni número se descarta en lugar de convertirse. Un objeto interpolado en una
+ * frase se lee «[object Object]», y prefiero un hueco vacío a esa cadena en la bandeja de alguien.
+ */
+function parametros(value: unknown): Record<string, string | number> {
+  if (typeof value !== "object" || value === null) return {}
+
+  const limpios: Record<string, string | number> = {}
+  for (const [clave, valor] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof valor === "number") limpios[clave] = valor
+    else if (typeof valor === "string") limpios[clave] = texto(valor)
+  }
+
+  return limpios
+}
+
+/**
+ * Un texto sin marcado.
+ *
+ * Se quitan etiquetas y se compactan los espacios que dejan.
  */
 export function texto(value: unknown): string {
   if (typeof value !== "string") return ""

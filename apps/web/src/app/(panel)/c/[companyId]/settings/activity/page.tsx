@@ -13,7 +13,9 @@ interface ActivityRow {
   action: "create" | "update" | "delete"
   entity: string
   entityLabel: string
-  title: string
+  /** Qué se hizo, como clave del catálogo. La frase se arma aquí, en el idioma de quien mira. */
+  messageKey: string
+  messageParams: Record<string, string | number>
   url: string
   performedBy: string
   performedAsPlatformAdmin: boolean
@@ -34,6 +36,11 @@ export async function generateMetadata(): Promise<Metadata> {
  * La marca de administración de plataforma se pinta aparte y a propósito: distinguir lo que hizo
  * soporte de lo que hizo el cliente es la pregunta que se hace cuando algo apareció sin que nadie
  * de la empresa lo recuerde.
+ *
+ * **La frase se arma aquí.** El asiento guarda una clave y sus parámetros, no prosa, así que esta
+ * pantalla es el primer sitio donde se sabe en qué idioma leerla (`HALLAZGOS.md` H-153). Y el
+ * buscador busca por el nombre de la entidad: lo que se hizo ya no es texto, y para eso está el
+ * filtro de acción.
  */
 export default async function ActivityPage({
   params,
@@ -97,8 +104,11 @@ export default async function ActivityPage({
               key={entry.id}
               view={view}
               media={<Avatar name={entry.performedBy || "?"} />}
-              title={entry.title}
-              subtitle={entry.performedBy || undefined}
+              title={t(`activity.messages.${entry.messageKey}`, {
+                actor: entry.performedBy,
+                ...entry.messageParams,
+              })}
+              subtitle={entry.entityLabel || undefined}
               meta={
                 <>
                   <Badge tone={tone[entry.action]}>{t(`activity.actions.${entry.action}`)}</Badge>

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./activity": "./src/activity.ts",
     "./api-client": "./src/api-client.ts",
     "./billing": "./src/billing.ts",
     "./catalog": "./src/catalog.ts",

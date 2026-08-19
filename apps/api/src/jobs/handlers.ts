@@ -16,12 +16,25 @@
  * | `idempotencia.caducar-claves` | Rebanada 01 | Las claves y las respuestas guardadas se acumulan sin plazo |
  * | `suscripciones.vencer-gracia` | Rebanada 11 | Una empresa opera indefinidamente sin pagar |
  * | `tiendas.caducar-compras` | Rebanada 18 | Un carrito abandonado retira inventario del catálogo para siempre (`DEFECTS.md` M-10) |
+ * | `avisos.sincronizar-destinatario` | Ésta | Los proveedores se quedan con el nombre y el correo de antes |
+ *
+ * El de sincronización es el único que **no se programa**: no hay nada que barrer cada tanto, lo
+ * encola el hecho de que un perfil cambie. Programarlo obligaría a recorrer todas las cuentas para
+ * averiguar cuáles cambiaron, que es la pregunta que el propio cambio ya contesta.
  */
 
+import { activityTarget } from "@tfv/contracts"
 import { withElevated, withSystem } from "@tfv/db"
 import { uploads, warehouses } from "@tfv/db/schema"
 import { and, eq, isNull, lt } from "drizzle-orm"
-import { audienceFor, deliverQueued, enqueueInbox, requeueFailed } from "../activity/delivery.ts"
+import {
+  audienceFor,
+  deliverQueued,
+  enqueueInbox,
+  RECIPIENT_SYNC,
+  requeueFailed,
+  syncRecipientEverywhere,
+} from "../activity/delivery.ts"
 import { sweepExpiredGrace } from "../billing/subscriptions.ts"
 import { sweepExpiredCheckouts } from "../checkout/expiry.ts"
 import { env } from "../env.ts"
@@ -137,11 +150,17 @@ async function verifyStockCoherence(): Promise<string> {
         recipients: audiencia,
         kind: "stock_coherence",
         payload: {
+          // Clave y parámetros, como cualquier otro aviso: el plural y el idioma los pone quien lo
+          // lee (`HALLAZGOS.md` H-153). Y la dirección sale del mismo sitio que las demás, que es
+          // lo que la deja apuntando a una pantalla que existe (H-154).
           title: nave.name,
-          body: `La verificación encontró ${resultado.length} ${
-            resultado.length === 1 ? "unidad descuadrada" : "unidades descuadradas"
-          }`,
-          url: `/${nave.companyId}/warehouses/${nave.id}`,
+          bodyKey: "stock.incoherent",
+          bodyParams: { count: resultado.length },
+          url: activityTarget({
+            companyId: nave.companyId,
+            entity: "warehouses",
+            entityId: nave.id,
+          }),
           warehouseId: nave.id,
           discrepancies: resultado.length,
         },
@@ -164,8 +183,23 @@ async function deliverNotifications(): Promise<string> {
   return (
     `${report.sent} entregadas, ${report.failed} fallidas, ${report.skipped} omitidas por ` +
     `preferencia, ${report.waiting} esperando proveedor, ${report.fanned} abiertas hacia fuera, ` +
-    `${reintentadas} reintentadas`
+    `${report.introduced} destinatarios presentados, ${reintentadas} reintentadas`
   )
+}
+
+/**
+ * Cuenta a los proveedores que los datos de una persona cambiaron.
+ *
+ * Va por la cola y no en la petición que guarda el cambio: hablar con un tercero dentro de esa
+ * transacción haría que un proveedor lento impidiera cambiarse el nombre. Aquí, si falla, se
+ * reintenta con la espera creciente de siempre.
+ */
+async function syncNotificationRecipient(payload: Record<string, unknown>): Promise<string> {
+  const userId = typeof payload.userId === "string" ? payload.userId : ""
+  if (!userId) return "sin destinatario que sincronizar"
+
+  const canales = await syncRecipientEverywhere(userId)
+  return `destinatario sincronizado en ${canales} canales`
 }
 
 /**
@@ -222,6 +256,7 @@ export function registerBuiltinJobs(): void {
   registerJob(EXPIRE_GRACE, expireSubscriptionGrace)
   registerJob(EXPIRE_CHECKOUTS, expireAbandonedCheckouts)
   registerJob(EXPIRE_IDEMPOTENCY, expireIdempotencyKeys)
+  registerJob(RECIPIENT_SYNC, syncNotificationRecipient)
 
   scheduleJob({ kind: COLLECT_ABANDONED, everyMs: env.UPLOADS_COLLECT_EVERY_MS })
   scheduleJob({ kind: STOCK_COHERENCE, everyMs: env.STOCK_COHERENCE_EVERY_MS })

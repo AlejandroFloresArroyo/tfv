@@ -36,20 +36,28 @@
  * proveedor, se registra y las entregas que ya están encoladas —las de recuperación de contraseña y
  * verificación de correo llevan encoladas desde la rebanada 04— empiezan a salir sin tocar nada más.
  *
+ * Lo que **sí** está escrito de ese lado es *cuándo* se le habla al proveedor de una persona:
+ * `syncRecipient` se llama antes del primer envío de cada pasada y cuando cambia el perfil. Eso es
+ * decisión nuestra y se prueba con un transporte de mentira; lo que falta es la cuenta del otro lado
+ * (`HALLAZGOS.md` H-155, que corrige el alcance que H-80 daba por bloqueado).
+ *
  * Mientras no lo haya, una entrega de un canal sin transporte **se queda en la cola**. No se marca
  * fallida: no ha fallado nada, falta un proveedor, y llenar la lista de fallos de cosas que no son
  * fallos es la forma de que nadie vuelva a mirarla.
  */
 
 import { newId, type PermissionKey } from "@tfv/contracts"
-import { type Transaction, withSystem } from "@tfv/db"
+import { type Transaction, withElevated, withSystem } from "@tfv/db"
 import {
   companyMembers,
   notificationDeliveries,
   notificationPreferences,
   roles,
+  uploads,
+  users,
 } from "@tfv/db/schema"
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm"
+import { enqueue } from "../jobs/queue.ts"
 import { rootLogger } from "../runtime/logger.ts"
 
 export type Channel = "inbox" | "push" | "email"
@@ -191,9 +199,41 @@ export interface Delivery {
   readonly attempts: number
 }
 
+/**
+ * Los datos del destinatario que el proveedor necesita para poder dirigirse a él.
+ *
+ * Los cuatro que la spec nombra —nombre, correo, teléfono y avatar— y el identificador con el que
+ * los relacionamos. Ni uno más: lo que sale de aquí sale **fuera**, y un campo de más es un campo
+ * que un tercero guarda sin que nadie haya decidido que lo guarde.
+ */
+export interface Recipient {
+  readonly userId: string
+  readonly name: string
+  readonly email: string
+  readonly phone: string
+  readonly avatarUrl: string | null
+}
+
 /** Lo que sabe entregar por un canal. Lanzar es fallar, y fallar se reintenta. */
 export interface Transport {
   send(delivery: Delivery): Promise<void>
+  /**
+   * Da de alta al destinatario, o pone al día lo que el proveedor sabe de él.
+   *
+   * Opcional porque no todo canal tiene destinatarios que dar de alta: la bandeja escribe en una
+   * fila nuestra y no necesita presentar a nadie.
+   *
+   * **Es una sola operación y no dos**, y por eso no se llama `create`. «El destinatario SHALL
+   * crearse la primera vez que se le envíe algo, sin exigir un alta previa» y «los datos SHALL
+   * actualizarse cuando cambien en el perfil» son la misma llamada vista en dos momentos; partirla
+   * obligaría a preguntar antes si existe, que es una carrera y un viaje de más.
+   *
+   * **No guardamos copia de lo que el proveedor ya sabe.** La lista de destinatarios es suya —se
+   * puede tocar desde su panel— y una tabla espejo nuestra empezaría a mentir el primer día que
+   * alguien la tocara. Lo que sí es nuestro es **cuándo** se le cuenta: antes del primer envío de
+   * cada pasada, y al cambiar el perfil.
+   */
+  syncRecipient?(recipient: Recipient): Promise<void>
 }
 
 const transports = new Map<Channel, Transport>()
@@ -229,6 +269,8 @@ export interface DeliveryReport {
   /** Encoladas de un canal sin proveedor. No es un fallo: falta configuración. */
   readonly waiting: number
   readonly fanned: number
+  /** Destinatarios presentados al proveedor en esta pasada, antes de su primer envío. */
+  readonly introduced: number
 }
 
 /**
@@ -262,6 +304,12 @@ export async function deliverQueued(limit = 100): Promise<DeliveryReport> {
   let skipped = 0
   let waiting = 0
   let fanned = 0
+  let introduced = 0
+
+  // A quién se ha presentado ya **en esta pasada**. Sin esto, una tanda de cien avisos para la misma
+  // persona serían cien altas idénticas seguidas. Entre pasadas sí se repite, y está bien que se
+  // repita: quien sabe si el destinatario sigue existiendo es el proveedor, no nosotros.
+  const presentados = new Set<string>()
 
   for (const pendiente of pendientes) {
     const transport = transportFor(pendiente.channel)
@@ -278,6 +326,11 @@ export async function deliverQueued(limit = 100): Promise<DeliveryReport> {
     }
 
     try {
+      // «El primer envío crea al destinatario»: va **antes** del envío y dentro del mismo `try`,
+      // porque un proveedor que no admite al destinatario tampoco va a admitir el aviso, y el modo
+      // de fallo correcto es el mismo — se anota y se reintenta.
+      if (await introduce(transport, pendiente.recipientId, presentados)) introduced++
+
       await transport.send(pendiente as Delivery)
       await mark(pendiente.id, "sent", null)
       sent++
@@ -297,7 +350,115 @@ export async function deliverQueued(limit = 100): Promise<DeliveryReport> {
     }
   }
 
-  return { sent, failed, skipped, waiting, fanned }
+  return { sent, failed, skipped, waiting, fanned, introduced }
+}
+
+// ─── El destinatario, ante el proveedor ──────────────────────────────────────
+
+/** El trabajo que pone al día los datos de una persona. */
+export const RECIPIENT_SYNC = "avisos.sincronizar-destinatario"
+
+/**
+ * Presenta al destinatario antes de enviarle nada, si el canal tiene a quién presentárselo.
+ *
+ * Devuelve si hubo presentación, para poder contarlas. Un aviso sin destinatario con cuenta —el
+ * acuse a quien deja sus datos en el formulario público— no tiene a nadie que dar de alta, y el
+ * destino le viaja en el sobre.
+ */
+async function introduce(
+  transport: Transport,
+  recipientId: string | null,
+  presentados: Set<string>,
+): Promise<boolean> {
+  if (!transport.syncRecipient || !recipientId || presentados.has(recipientId)) return false
+
+  const recipient = await loadRecipient(recipientId)
+  if (!recipient) return false
+
+  await transport.syncRecipient(recipient)
+  presentados.add(recipientId)
+  return true
+}
+
+/**
+ * Cuenta a todos los proveedores cómo se llama ahora esta persona.
+ *
+ * Se llama cuando el perfil cambia, y no en la petición que lo cambia: hablar con un tercero dentro
+ * de la transacción que guarda un nombre haría que el nombre no se guardara porque el proveedor no
+ * contesta. Va por el despachador, con sus reintentos ya escritos.
+ *
+ * Devuelve a cuántos canales se le contó. Cero es la respuesta normal hoy: no hay ninguno con
+ * proveedor (`HALLAZGOS.md` H-80).
+ */
+export async function syncRecipientEverywhere(userId: string): Promise<number> {
+  const recipient = await loadRecipient(userId)
+  if (!recipient) return 0
+
+  let contados = 0
+  for (const channel of CHANNELS) {
+    const transport = transportFor(channel)
+    if (!transport?.syncRecipient) continue
+
+    await transport.syncRecipient(recipient)
+    contados++
+  }
+
+  return contados
+}
+
+/**
+ * Encola la sincronización de una persona.
+ *
+ * La clave de unicidad hace que dos cambios seguidos de perfil no dejen dos trabajos: el que espera
+ * leerá el perfil cuando corra, así que ya lleva el segundo cambio dentro.
+ */
+export async function scheduleRecipientSync(userId: string): Promise<void> {
+  await enqueue({
+    kind: RECIPIENT_SYNC,
+    payload: { userId },
+    dedupeKey: `${RECIPIENT_SYNC}:${userId}`,
+  })
+}
+
+/**
+ * Los cuatro datos que la spec nombra, más con qué relacionarlos.
+ *
+ * Va por la vía elevada, y el motivo es el mismo que en el recorrido de almacenes del despachador:
+ * **no cabe en el alcance de nadie**. La política de lectura de `users` deja ver al que pregunta y a
+ * quien comparte empresa con él, y aquí no pregunta nadie —es un trabajo de fondo— ni hay empresa
+ * que declarar: el destinatario de un aviso de cuenta puede no pertenecer a ninguna.
+ *
+ * La alternativa era abrir `users` a toda operación de sistema, que es estrictamente más ancho: esto
+ * lee **una fila y cinco columnas**, y son justo las que la spec manda sincronizar.
+ */
+async function loadRecipient(userId: string): Promise<Recipient | null> {
+  const [row] = await withElevated(
+    "leer los datos del destinatario para sincronizarlos con el proveedor de avisos",
+    async (tx) =>
+      tx
+        .select({
+          userId: users.id,
+          name: users.name,
+          lastname: users.lastname,
+          email: users.email,
+          phone: users.phone,
+          avatarUrl: uploads.url,
+        })
+        .from(users)
+        .leftJoin(uploads, eq(uploads.id, users.avatarUploadId))
+        .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+        .limit(1),
+  )
+
+  if (!row) return null
+
+  return {
+    userId: row.userId,
+    name: [row.name, row.lastname].filter(Boolean).join(" "),
+    email: row.email,
+    phone: row.phone,
+    avatarUrl: row.avatarUrl ?? null,
+  }
 }
 
 /**

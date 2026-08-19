@@ -22,6 +22,7 @@
  */
 
 import {
+  type ActivityMessage,
   buildPage,
   ConflictError,
   NotFoundError,
@@ -125,7 +126,7 @@ export async function createCompany(
       action: "create",
       entityId: companyId,
       entityLabel: company.name,
-      title: "Creó la empresa",
+      message: { key: "company.created", params: {} },
       permissions: [],
     })
 
@@ -230,7 +231,7 @@ export async function updateCompany(
       action: "update",
       entityId: companyId,
       entityLabel: updated.name,
-      title: "Editó los datos de la empresa",
+      message: { key: "company.updated", params: {} },
       permissions: ["companies.companies.edit"],
     })
 
@@ -261,7 +262,7 @@ export async function deleteCompany(actor: Actor, companyId: string): Promise<vo
       action: "delete",
       entityId: companyId,
       entityLabel: company.name,
-      title: "Dio de baja la empresa",
+      message: { key: "company.deleted", params: {} },
       permissions: ["companies.companies.delete"],
     })
 
@@ -411,8 +412,7 @@ export async function addMember(
       entity: "company_members",
       entityId: member.id,
       entityLabel: member.email,
-      title: `Incorporó a ${member.email}`,
-      url: `/${companyId}/miembros`,
+      message: { key: "member.invited", params: { email: member.email } },
       permissions: ["companies.users.invite"],
     })
 
@@ -494,8 +494,7 @@ export async function updateMember(
         entity: "company_members",
         entityId: memberId,
         entityLabel: updated.email,
-        title: `Cambió la membresía de ${updated.email}`,
-        url: `/${companyId}/miembros`,
+        message: { key: "member.changed", params: { email: updated.email } },
         permissions: ["companies.users.change-role"],
       })
     }
@@ -529,8 +528,7 @@ export async function removeMember(
       entity: "company_members",
       entityId: memberId,
       entityLabel: retirado.email,
-      title: `Retiró a ${retirado.email} de la empresa`,
-      url: `/${companyId}/miembros`,
+      message: { key: "member.removed", params: { email: retirado.email } },
       permissions: ["companies.users.uninvite"],
     })
   })
@@ -551,6 +549,10 @@ export async function removeMember(
  *
  * La clave de permiso que se declara aquí es **la misma que protege la ruta**, y ahí está el
  * vínculo que la spec pide: lo que autoriza la acción selecciona a quién se le cuenta.
+ *
+ * Lo que se anota es una **clave del catálogo con sus parámetros** y no una frase, y la dirección
+ * ya no se pasa: la calcula `activityTarget()` a partir de la entidad. Las que se escribían aquí
+ * —`/${companyId}`, `/${companyId}/miembros`— no eran ninguna pantalla (`HALLAZGOS.md` H-154).
  */
 async function note(
   tx: Transaction,
@@ -561,8 +563,7 @@ async function note(
     entity?: string
     entityId: string
     entityLabel: string
-    title: string
-    url?: string
+    message: ActivityMessage
     permissions: readonly PermissionKey[]
   },
 ): Promise<void> {
@@ -572,8 +573,7 @@ async function note(
     entity: input.entity ?? "companies",
     entityId: input.entityId,
     entityLabel: input.entityLabel,
-    title: input.title,
-    url: input.url ?? `/${companyId}`,
+    message: input.message,
     permissions: input.permissions,
     performedById: actor.userId,
     performedAsPlatformAdmin: actor.asPlatformAdmin ?? false,

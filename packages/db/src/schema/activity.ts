@@ -59,9 +59,22 @@ export const companyActivities = pgTable(
     /** Etiqueta legible que identifica la entidad sin tener que abrirla. */
     entityLabel: varchar("entity_label", { length: 200 }).notNull().default(""),
 
-    title: varchar("title", { length: 200 }).notNull(),
+    /**
+     * Qué se hizo, dicho como **clave del catálogo**, no como frase.
+     *
+     * Antes era `title`, prosa en español, y con ella la bitácora y la bandeja eran las dos únicas
+     * pantallas que no cambiaban de idioma (`HALLAZGOS.md` H-153, que es H-67 otra vez). Guardar la
+     * clave y sus parámetros mueve la redacción a quien la enseña, que es el único sitio donde se
+     * sabe en qué idioma leerla. El catálogo está en `@tfv/contracts/activity` y es cerrado.
+     */
+    messageKey: varchar("message_key", { length: 60 }).notNull(),
+    /** Lo variable de la frase, que son datos: un correo, un nombre, una cantidad. */
+    messageParams: jsonb("message_params")
+      .$type<Record<string, string | number>>()
+      .notNull()
+      .default({}),
     description: text("description").notNull().default(""),
-    /** Referencia navegable a la entidad afectada. */
+    /** Referencia navegable a la entidad afectada. La calcula `activityTarget()`. */
     url: text("url").notNull().default("/"),
 
     origin: activityOrigin("origin").notNull().default("web"),

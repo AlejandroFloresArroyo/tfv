@@ -20,9 +20,23 @@
  * (rebanada 05). Un `403` no llega a ejecutar nada, así que no hay nada que registrar. Si la
  * comprobación viviera dentro del manejador, esta propiedad dependería de que cada uno se acordara
  * de comprobar antes de escribir.
+ *
+ * ## Lo que se guarda no es una frase, y a dónde lleva no se escribe a mano
+ *
+ * Dos correcciones de esta vuelta, y las dos son de forma antes que de código:
+ *
+ * - El asiento guarda **una clave del catálogo y sus parámetros** (`@tfv/contracts/activity`). Con
+ *   un campo de texto libre, lo que se acaba guardando es español —pasó aquí y pasó en la
+ *   conversación del pedido—, y con ello la bitácora y la bandeja eran las dos únicas pantallas que
+ *   no cambiaban de idioma (`HALLAZGOS.md` H-153).
+ * - La referencia navegable sale de `activityTarget()` y **no se puede pasar desde fuera**. Cuando
+ *   cada llamada la escribía, las tres que había apuntaban a pantallas inexistentes y pulsar
+ *   cualquier aviso era caer en un `404` (H-154). Quitar el parámetro es lo que impide que vuelva.
  */
 
 import {
+  type ActivityMessage,
+  activityTarget,
   buildPage,
   newId,
   type Page,
@@ -56,10 +70,15 @@ export interface ActivityInput {
   readonly entityId?: string | undefined
   /** Cómo se llama, para reconocerla sin abrirla. */
   readonly entityLabel?: string | undefined
-  readonly title: string
+  /**
+   * Qué se hizo, como **clave del catálogo y sus parámetros**.
+   *
+   * No admite una frase, y ésa es toda la corrección de H-153: mientras hubo un campo de texto
+   * libre, lo que se guardó fue español. El tipo obliga a que los parámetros sean exactamente los
+   * que la clave declara, así que un aviso que dijera «incorporó a » no llega a compilar.
+   */
+  readonly message: ActivityMessage
   readonly description?: string | undefined
-  /** Referencia navegable a la entidad. Lo que se abre al pulsar el aviso. */
-  readonly url?: string | undefined
   readonly origin?: ActivityOrigin | undefined
   readonly serviceId?: string | undefined
   /**
@@ -81,7 +100,8 @@ export interface ActivityRecord {
   readonly entity: string
   readonly entityId: string | null
   readonly entityLabel: string
-  readonly title: string
+  readonly messageKey: string
+  readonly messageParams: Record<string, string | number>
   readonly description: string
   readonly url: string
   readonly origin: ActivityOrigin
@@ -102,6 +122,7 @@ export interface ActivityRecord {
  */
 export async function recordActivity(tx: Transaction, input: ActivityInput): Promise<string> {
   const id = newId()
+  const url = activityTarget(input)
 
   await tx.insert(companyActivities).values({
     id,
@@ -110,9 +131,10 @@ export async function recordActivity(tx: Transaction, input: ActivityInput): Pro
     entity: input.entity,
     entityId: input.entityId ?? null,
     entityLabel: (input.entityLabel ?? "").slice(0, 200),
-    title: input.title.slice(0, 200),
+    messageKey: input.message.key,
+    messageParams: input.message.params,
     description: input.description ?? "",
-    url: input.url ?? "/",
+    url,
     origin: input.origin ?? "web",
     permission: input.permissions?.join(" ").slice(0, 120) ?? null,
     performedById: input.performedById,
@@ -131,13 +153,17 @@ export async function recordActivity(tx: Transaction, input: ActivityInput): Pro
     kind: "activity",
     activityId: id,
     payload: {
-      // «Un título con el nombre de la entidad afectada, un cuerpo que indique **quién hizo qué**».
-      // El nombre de quien actuó se resuelve aquí y no en la pantalla porque el aviso viaja: el
-      // mismo sobre se enseña en la bandeja y —el día que haya proveedor— sale por empuje, donde no
-      // hay nadie que pueda ir a buscar el perfil.
-      title: input.entityLabel || input.title,
-      body: await describe(tx, input),
-      url: input.url ?? "/",
+      // «Un título con el nombre de la entidad afectada, un cuerpo que indique **quién hizo qué**,
+      // y una referencia que lleve a la entidad al pulsarla». Las tres cosas, en el sobre.
+      //
+      // El cuerpo viaja como clave y parámetros, no redactado: el mismo sobre se pinta en la
+      // bandeja de quien la abre y —el día que haya proveedor— sale por empuje, y no tienen por qué
+      // leerse en el mismo idioma. Lo único que se resuelve aquí es **el nombre de quien actuó**,
+      // porque eso sí es un dato y el sobre viaja lejos de la fila que podría dar el nombre.
+      title: input.entityLabel ?? "",
+      bodyKey: input.message.key,
+      bodyParams: { ...input.message.params, actor: await actorName(tx, input.performedById) },
+      url,
       companyId: input.companyId,
       action: input.action,
       entity: input.entity,
@@ -147,19 +173,15 @@ export async function recordActivity(tx: Transaction, input: ActivityInput): Pro
   return id
 }
 
-/** «Ana Flores editó los datos de la empresa». Sin nombre, la frase se queda con el sujeto tácito. */
-async function describe(tx: Transaction, input: ActivityInput): Promise<string> {
+/** Cómo se llama quien actuó. Sin nombre ni apellidos, su correo; sin nada, la cadena vacía. */
+async function actorName(tx: Transaction, userId: string): Promise<string> {
   const [actor] = await tx
     .select({ name: users.name, lastname: users.lastname, email: users.email })
     .from(users)
-    .where(eq(users.id, input.performedById))
+    .where(eq(users.id, userId))
     .limit(1)
 
-  const nombre = [actor?.name, actor?.lastname].filter(Boolean).join(" ") || actor?.email || ""
-  if (!nombre) return input.title
-
-  const [primera = "", ...resto] = input.title
-  return `${nombre} ${primera.toLocaleLowerCase("es")}${resto.join("")}`
+  return [actor?.name, actor?.lastname].filter(Boolean).join(" ") || actor?.email || ""
 }
 
 // ─── Consulta ────────────────────────────────────────────────────────────────
@@ -171,7 +193,10 @@ async function describe(tx: Transaction, input: ActivityInput): Promise<string> 
  * más. La gramática es cerrada: pedir por un campo que no esté aquí responde `400` nombrándolo.
  */
 export const activityQuery: QuerySchema = {
-  searchable: ["title", "entityLabel"],
+  // Se busca por el **nombre de la entidad**, y no por lo que se hizo con ella: lo que se hizo ya no
+  // es texto sino una clave (H-153), y buscar «company.updated» no es buscar. Para eso está el
+  // filtro de acción, que es la pregunta que esa búsqueda intentaba responder.
+  searchable: ["entityLabel"],
   sortable: ["createdAt"],
   filters: {
     action: { type: "enum", values: ["create", "update", "delete"], label: "acción" },
@@ -227,10 +252,9 @@ const mapping = {
     serviceId: companyActivities.serviceId,
     performedById: companyActivities.performedById,
     createdAt: companyActivities.createdAt,
-    title: companyActivities.title,
     entityLabel: companyActivities.entityLabel,
   },
-  searchable: [companyActivities.title, companyActivities.entityLabel],
+  searchable: [companyActivities.entityLabel],
   tiebreak: companyActivities.id,
 }
 
@@ -274,7 +298,8 @@ function toRecord(row: {
     entity: a.entity,
     entityId: a.entityId,
     entityLabel: a.entityLabel,
-    title: a.title,
+    messageKey: a.messageKey,
+    messageParams: a.messageParams,
     description: a.description,
     url: a.url,
     origin: a.origin,
