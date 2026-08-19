@@ -165,7 +165,10 @@ test("de la nave vacía a la cotización, sin tocar nada sembrado", async ({ as,
     creado.quoteId = new URL(page.url()).pathname.split("/").at(-1)
 
     await page.getByLabel("Añadir equipo").fill(producto.slice(0, 8))
-    await page.getByRole("button", { name: new RegExp(producto) }).first().click()
+    await page
+      .getByRole("button", { name: new RegExp(producto) })
+      .first()
+      .click()
 
     const lineas = page.getByRole("listitem").filter({ has: page.getByLabel("Cantidad") })
     await expect(lineas).toHaveCount(1)
