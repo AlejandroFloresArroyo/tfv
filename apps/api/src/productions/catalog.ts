@@ -585,7 +585,10 @@ export async function deleteSet(
     await loadProduction(tx, companyId, productionId)
     await loadSet(tx, productionId, setId)
 
-    await tx.update(productionSets).set({ deletedAt: new Date() }).where(eq(productionSets.id, setId))
+    await tx
+      .update(productionSets)
+      .set({ deletedAt: new Date() })
+      .where(eq(productionSets.id, setId))
   })
 }
 
@@ -925,11 +928,7 @@ async function assertUsableVideo(
   if (row.kind !== "video") throw new NotFoundError("El archivo no es un video")
 }
 
-export async function loadCharacter(
-  tx: Transaction,
-  productionId: string,
-  characterId: string,
-) {
+export async function loadCharacter(tx: Transaction, productionId: string, characterId: string) {
   const [row] = await tx
     .select()
     .from(productionCharacters)
@@ -1008,11 +1007,7 @@ async function characterDetail(
   return toCharacter(row.character, images, row.continuityCount, row.responsibleName)
 }
 
-async function setDetail(
-  tx: Transaction,
-  productionId: string,
-  setId: string,
-): Promise<SetRecord> {
+async function setDetail(tx: Transaction, productionId: string, setId: string): Promise<SetRecord> {
   const [row] = await tx
     .select({ set: productionSets, itemCount: setItemCount, responsibleName: displayName })
     .from(productionSets)

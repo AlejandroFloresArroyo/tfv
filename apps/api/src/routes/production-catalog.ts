@@ -360,20 +360,14 @@ export const deleteCharacterRoute = defineRoute({
     request: { params: characterParams },
     responses: {
       204: {
-        description:
-          "Dado de baja. Sus continuidades siguen existiendo, sin personaje asignado",
+        description: "Dado de baja. Sus continuidades siguen existiendo, sin personaje asignado",
       },
       404: { description: "No existe, o está fuera del alcance del solicitante" },
     },
   },
   handler: async (c) => {
     const params = c.req.valid("param")
-    await deleteCharacter(
-      actorOf(c),
-      params.companyId,
-      params.productionId,
-      params.characterId,
-    )
+    await deleteCharacter(actorOf(c), params.companyId, params.productionId, params.characterId)
     return c.body(null, 204)
   },
 })
@@ -670,12 +664,7 @@ export const getVideoRoute = defineRoute({
   },
   handler: async (c) => {
     const params = c.req.valid("param")
-    const video = await getVideo(
-      actorOf(c),
-      params.companyId,
-      params.productionId,
-      params.videoId,
-    )
+    const video = await getVideo(actorOf(c), params.companyId, params.productionId, params.videoId)
     return c.json(stamps(video), 200)
   },
 })
@@ -704,7 +693,8 @@ export const updateVideoRoute = defineRoute({
     },
     responses: {
       200: {
-        description: "Video actualizado. Sustituir el archivo suelta el anterior si nadie más lo usa",
+        description:
+          "Video actualizado. Sustituir el archivo suelta el anterior si nadie más lo usa",
         content: { "application/json": { schema: videoSchema } },
       },
       404: { description: "No existe, o el archivo, la categoría o el responsable no existen" },
@@ -1012,12 +1002,7 @@ export const itemUsageRoute = defineRoute({
   },
   handler: async (c) => {
     const params = c.req.valid("param")
-    const usage = await itemUsage(
-      actorOf(c),
-      params.companyId,
-      params.productionId,
-      params.itemId,
-    )
+    const usage = await itemUsage(actorOf(c), params.companyId, params.productionId, params.itemId)
     return c.json(serializeUsage(usage), 200)
   },
 })

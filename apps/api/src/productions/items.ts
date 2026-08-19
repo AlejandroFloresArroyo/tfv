@@ -59,9 +59,9 @@ import {
   productionItems,
   productionProps,
   productionRecordings,
-  productions,
   productionSetItems,
   productionSets,
+  productions,
   uploads,
 } from "@tfv/db/schema"
 import { and, asc, count, eq, inArray, isNull, sql } from "drizzle-orm"
@@ -486,7 +486,7 @@ export async function changeItemStatus(
         allowed.length === 0
           ? `Un artículo ${LABELS[current.status]} ya no cambia de estado: es el final del recorrido.`
           : `Un artículo ${LABELS[current.status]} no puede pasar a ${LABELS[status]}. ` +
-            `Desde donde está sólo cabe: ${allowed.map((one) => LABELS[one]).join(", ")}.`,
+              `Desde donde está sólo cabe: ${allowed.map((one) => LABELS[one]).join(", ")}.`,
       )
     }
 
@@ -571,10 +571,7 @@ export async function setItemImages(
         .update(productionItemImages)
         .set({ position, updatedAt: new Date() })
         .where(
-          and(
-            eq(productionItemImages.itemId, itemId),
-            eq(productionItemImages.uploadId, uploadId),
-          ),
+          and(eq(productionItemImages.itemId, itemId), eq(productionItemImages.uploadId, uploadId)),
         )
     }
 
