@@ -4465,7 +4465,8 @@ por eso «nunca era la misma». Dos se corrigen aquí; dos son estado compartido
    comprobando antes que seguimos en el 5.
 2. `ECONNRESET` en una **recogida** —después de que todo lo que la prueba afirma ya haya pasado—.
    La política de transporte que ya existía estaba escrita en privado dentro de `warehouse.ts`;
-   ahora vive en `setup/transporte.ts` y cubre también las retiradas.
+   ahora vive en `setup/transporte.ts` y cubre también las retiradas. **Sólo donde caía**: veinte
+   vueltas después el mismo fallo salió por `session.spec`, que no la usa.
 3. **La deriva de la base de larga vida** (H-195), que es la que la nota de H-146 sospechaba. Tras
    34 vueltas sobre la misma base: 24 almacenes donde la siembra deja uno, 344 cotizaciones, 118
    pedidos, 40 roles. A partir de cierto punto empiezan a caerse pruebas que nadie tocó. **No afecta
@@ -4492,6 +4493,12 @@ por eso «nunca era la misma». Dos se corrigen aquí; dos son estado compartido
 - **La deriva de H-195**, anotada y no resuelta: o la suite recrea su base al empezar —lo que hoy no
   hace, y cuyo motivo original desapareció cuando H-138 le dio base propia— o cada prueba que lee una
   colección lo hace con filtro.
+
+**Lo que hay que decir sin adornos sobre H-146**: veinte vueltas sobre base limpia con las dos
+correcciones puestas dan **5 rojas de 20 (25 %)**, contra 3 de 14 (21 %) antes. **La frecuencia no
+bajó.** Cambió quién cae —`fotos` desapareció, el clic perdido también— pero el `ECONNRESET` salió
+por otro archivo y las dos causas de estado compartido siguen mandando. Está diagnosticado entero,
+que era lo que faltaba, y corregido a medias.
 
 **Rebanadas**: cierra la casilla de integración continua de la **02**, y corrige la nota de la **01**
 y la **03**, que decían «no hay pipeline en este repositorio».
