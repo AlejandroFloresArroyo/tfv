@@ -1,35 +1,34 @@
 /**
  * Preparación de la suite.
  *
- * Hace dos cosas, en este orden:
+ * **Abre una sesión por papel y la guarda.** Cuatro inicios de sesión en total, no uno por prueba.
  *
- * 1. **Siembra la base.** Las pruebas necesitan las cuatro cuentas y las dos empresas con
- *    servicios distintos. La siembra es idempotente, así que correrla siempre sale más barato que
- *    averiguar si hace falta.
- * 2. **Abre una sesión por papel y la guarda.** Cuatro inicios de sesión en total, no uno por
- *    prueba.
+ * La base ya está creada, migrada y sembrada cuando esto corre: lo hace `setup/prepare-database.ts`
+ * como primer eslabón del comando que arranca la API, porque Playwright levanta los servidores
+ * **antes** que esta preparación y la API abre su conexión al arrancar.
  *
- * No borra la base. Correr las pruebas de extremo a extremo **no debe destruir** con lo que se está
- * mirando la aplicación: las pruebas de la API ya hacen eso, y es justamente lo que estorba. Cada
- * prueba de aquí crea lo suyo con un nombre irrepetible y limpia lo que ensucia.
+ * No borra nada. La siembra es idempotente y cada prueba retira lo suyo **al empezar**, que es la
+ * única limpieza que sobrevive a un tiempo agotado.
  */
 
-import { execFileSync } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
 import { dirname } from "node:path"
-import { fileURLToPath } from "node:url"
 import { type FullConfig, request } from "@playwright/test"
+import { ENTORNO } from "./environment.ts"
 import { FIXTURE_PATH, type Fixture, PASSWORD, ROLES, type Role, stateFor } from "./roles.ts"
-
-const repoRoot = fileURLToPath(new URL("../../../", import.meta.url))
 
 export default async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0]?.use.baseURL
   if (!baseURL) throw new Error("falta baseURL en la configuración")
 
-  mkdirSync(dirname(FIXTURE_PATH), { recursive: true })
+  // Dicho en voz alta: cuando dos árboles de trabajo caen en la misma casilla de puerto, o cuando
+  // alguien se pregunta a qué base se está escribiendo, esto es lo que responde.
+  // biome-ignore lint/suspicious/noConsole: es lo que responde «¿a qué base y a qué puerto?» sin abrir un archivo.
+  console.log(
+    `[e2e] web ${baseURL} · api :${ENTORNO.apiPort} · base ${new URL(ENTORNO.databaseUrl).pathname.slice(1)}`,
+  )
 
-  execFileSync("pnpm", ["db:seed"], { cwd: repoRoot, stdio: "ignore" })
+  mkdirSync(dirname(FIXTURE_PATH), { recursive: true })
 
   const companies: Record<string, string> = {}
 

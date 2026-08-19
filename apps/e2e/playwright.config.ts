@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test"
+import { API_URL, apiEnv, BASE_URL, ENTORNO, MANAGES_SERVERS, webEnv } from "./setup/environment.ts"
 
 /**
  * Pruebas de extremo a extremo.
@@ -9,7 +10,7 @@ import { defineConfig, devices } from "@playwright/test"
  *
  * ## Qué cubren, y por qué no lo cubre Vitest
  *
- * Las 204 pruebas de Vitest llegan hasta la respuesta HTTP. Lo que empieza donde ellas terminan:
+ * Las pruebas de Vitest llegan hasta la respuesta HTTP. Lo que empieza donde ellas terminan:
  *
  * - Que la renovación ante un `401` ocurra **una sola vez** con varias peticiones en vuelo. Dos
  *   renovaciones simultáneas hacen que la API detecte reutilización y **cierre la sesión del
@@ -17,6 +18,9 @@ import { defineConfig, devices } from "@playwright/test"
  * - Que el tema se aplique antes del primer pintado. Necesita un navegador pintando.
  * - Que crear algo lo haga aparecer en su listado **sin recargar**.
  * - Que las guardas del servidor redirijan a donde deben, conservando el destino.
+ * - Que una pantalla terminada **tenga por dónde llegar**. Es lo único que no se ve leyendo código,
+ *   y ya pasó una vez: el asistente de alta de producto estaba entero y no lo enlazaba nadie
+ *   (`HALLAZGOS.md` H-70).
  *
  * ## Contra el build de producción, no contra el servidor de desarrollo
  *
@@ -24,26 +28,24 @@ import { defineConfig, devices } from "@playwright/test"
  * caídas con «This page couldn't load». La causa era el servidor de desarrollo compilando bajo
  * demanda y sirviendo trozos de cliente incoherentes a pestañas recién abiertas.
  *
- * Se compila y se sirve **en su propio puerto**, así que:
+ * Se compila y se sirve **en sus propios puertos**, así que se prueba lo que se despliega y no hay
+ * que compilar cada ruta la primera vez que una prueba la visita.
  *
- * - se prueba lo que se despliega, no una compilación de desarrollo con recarga en caliente;
- * - no hay que compilar cada ruta la primera vez que una prueba la visita;
- * - correr las pruebas **no interfiere con el `pnpm dev` que se tenga abierto** en el 3000.
+ * Para iterar contra una pila que ya está levantada y ahorrarse la compilación:
+ * `E2E_BASE_URL=http://127.0.0.1:3000 pnpm test:e2e`. En ese modo la suite no levanta ni prepara
+ * nada — ver `setup/environment.ts`.
  *
- * Para iterar contra el servidor de desarrollo y ahorrarse la compilación:
- * `E2E_BASE_URL=http://127.0.0.1:3000 pnpm test:e2e`.
+ * ## Su base y sus puertos, no los de nadie
  *
- * ## No borran la base
+ * Antes reutilizaba la API del `5000`, que es **la de desarrollo**: sembrar y borrar desde aquí
+ * destruía los datos con los que otra persona estaba mirando la aplicación, y el `3100` fijo hacía
+ * que dos árboles de trabajo no pudieran correrla a la vez. Ahora levanta su propia API contra su
+ * propia base, en un par de puertos deducidos del árbol desde el que se lanza.
  *
- * A diferencia de las pruebas de la API, que truncan sus tablas. Correr esto no debe destruir los
- * datos con los que se está mirando la aplicación; cada prueba crea lo suyo con nombre irrepetible.
+ * No borra la base al empezar: la siembra es idempotente y **cada prueba retira lo suyo al
+ * principio**, no en un `finally`. Un tiempo agotado se lleva por delante el navegador antes de que
+ * el `finally` corra, así que la limpieza que de verdad funciona es la de la entrada.
  */
-
-/** El puerto propio de las pruebas, para no chocar con el `pnpm dev` del 3000. */
-const PORT = 3100
-const baseURL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`
-const usesOwnServer = !process.env.E2E_BASE_URL
-
 export default defineConfig({
   testDir: "./tests",
   globalSetup: "./setup/global-setup.ts",
@@ -51,7 +53,7 @@ export default defineConfig({
   // Un fallo en una prueba de interfaz suele ser una espera mal puesta, y sin traza se depura a
   // ciegas. Se guarda sólo del reintento, para no llenar el disco en cada ejecución verde.
   use: {
-    baseURL,
+    baseURL: BASE_URL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     locale: "es-MX",
@@ -64,9 +66,9 @@ export default defineConfig({
   // En integración continua, un `test.only` olvidado deja pasar una suite que no se ejecutó entera.
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  // En local decide Playwright según los núcleos; en integración continua se acota, porque la
-  // máquina comparte la base con las dos aplicaciones. La clave se omite en lugar de pasarse como
-  // `undefined`: con `exactOptionalPropertyTypes` no es lo mismo «sin valor» que «valor indefinido».
+  // En integración continua se acota, porque la máquina comparte la base con las dos aplicaciones.
+  // La clave se omite en lugar de pasarse como `undefined`: con `exactOptionalPropertyTypes` no es
+  // lo mismo «sin valor» que «valor indefinido».
   ...(process.env.CI ? { workers: 2 } : {}),
 
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : [["list"]],
@@ -74,30 +76,38 @@ export default defineConfig({
   /**
    * Los servicios.
    *
-   * La API se reutiliza si ya está levantada —es la misma en desarrollo y en pruebas, y arrancar
-   * una segunda fallaría por el puerto ocupado—. La aplicación web, en cambio, se compila y se
-   * sirve aparte, salvo que se apunte a una existente con `E2E_BASE_URL`.
+   * **Ninguno se reutiliza.** Lo que escuche en estos puertos es de una ejecución anterior que no
+   * se apagó, y hablar con ella significa hablar con código viejo o —peor— con otra base. Que falle
+   * el arranque diciendo que el puerto está ocupado es la respuesta correcta.
+   *
+   * La API arranca con `start` y no con `dev`: `dev` recarga al cambiar un archivo y lee el `.env`
+   * de la raíz, que apunta a la base de desarrollo. Aquí el entorno se pasa entero y a mano.
    */
-  webServer: [
-    {
-      command: "pnpm --filter @tfv/api dev",
-      url: "http://127.0.0.1:5000/health",
-      reuseExistingServer: true,
-      timeout: 60_000,
-      cwd: "../..",
-    },
-    ...(usesOwnServer
-      ? [
+  ...(MANAGES_SERVERS
+    ? {
+        webServer: [
           {
-            command: `pnpm --filter @tfv/web build && pnpm --filter @tfv/web start --port ${PORT}`,
-            url: `${baseURL}/login`,
-            // Nunca se reutiliza: si hay algo escuchando en este puerto, es de una ejecución
-            // anterior y podría ser código viejo — que es peor que no tener nada.
+            // La base se crea, se migra y se siembra **antes** de que la API abra su conexión.
+            // Playwright levanta los servidores antes de `globalSetup`, así que no hay otro sitio.
+            command:
+              "node --experimental-strip-types apps/e2e/setup/prepare-database.ts && " +
+              "pnpm --filter @tfv/api start",
+            url: `${API_URL}/health`,
             reuseExistingServer: false,
-            timeout: 240_000,
+            // Migrar una base recién creada y sembrarla es lo que más tarda de aquí.
+            timeout: 180_000,
             cwd: "../..",
+            env: apiEnv(),
           },
-        ]
-      : []),
-  ],
+          {
+            command: `pnpm --filter @tfv/web build && pnpm --filter @tfv/web start --port ${ENTORNO.webPort}`,
+            url: `${BASE_URL}/login`,
+            reuseExistingServer: false,
+            timeout: 300_000,
+            cwd: "../..",
+            env: webEnv(),
+          },
+        ],
+      }
+    : {}),
 })

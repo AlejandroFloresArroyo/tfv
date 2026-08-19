@@ -128,6 +128,12 @@ test("de la nave vacía a la cotización, sin tocar nada sembrado", async ({ as,
     await page.getByRole("textbox", { name: /cantidad inicial/i }).fill("3")
     await page.getByRole("button", { name: "Siguiente" }).click()
 
+    // Fotos. El paso entró con la rebanada 08 y no se puede rodear: el asistente es uno solo, así
+    // que quien recorre el alta pasa por aquí aunque no suba nada. Se cruza vacío a propósito — la
+    // subida se recorre en `fotos.spec.ts`, donde se comprueba dónde acaba la imagen.
+    await expect(page.getByText("Paso 5 de 6")).toBeVisible()
+    await page.getByRole("button", { name: "Siguiente" }).click()
+
     await expect(page.getByText(/3 unidades físicas/)).toBeVisible()
     await page.getByRole("button", { name: "Crear producto" }).click()
 

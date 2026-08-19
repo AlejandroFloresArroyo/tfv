@@ -663,7 +663,13 @@ test.describe("la extensión de renta", () => {
     // Nace en renta, enlazada, con su ventana y sin precio: el periodo es otro.
     await expect(page.getByText("En renta").first()).toBeVisible()
     await expect(page.getByRole("link", { name: /Extiende a/ })).toBeVisible()
-    await expect(page.getByText(/17 sept 2026/)).toBeVisible()
+    // La ventana es la que se pidió en el diálogo. Se lee de los campos y no de una fecha
+    // compuesta: la ficha de una cotización **no imprime la fecha en prosa** en ninguna parte —la
+    // enseña editable—, y afirmarlo contra un formato inventado era comprobar una presentación que
+    // no existe.
+    await expect(page.getByLabel("Empieza")).toHaveValue("2026-09-17")
+    await expect(page.getByLabel("Termina")).toHaveValue("2026-10-01")
+    await expect(page.getByText("14 días")).toBeVisible()
     await expect(page.getByText(/no tiene precio/i)).toBeVisible()
 
     // Dos unidades responden a la extensión, y la que no sigue se quedó en la original.
