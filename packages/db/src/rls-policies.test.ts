@@ -561,8 +561,8 @@ describe("la bitácora es de sólo anexado", () => {
   it("un miembro anexa el asiento de su empresa", async () => {
     await withRequester(identity(seed.ana), (tx) =>
       tx.execute(
-        sql.raw(`insert into company_activities (id, company_id, action, entity, title)
-                 values ('${asiento}', '${seed.companyA}', 'create', 'warehouse_products', 'Cámara')`),
+        sql.raw(`insert into company_activities (id, company_id, action, entity, entity_label, message_key)
+                 values ('${asiento}', '${seed.companyA}', 'create', 'warehouse_products', 'Cámara', 'company.created')`),
       ),
     )
 
@@ -575,7 +575,7 @@ describe("la bitácora es de sólo anexado", () => {
     // sobre la tabla, de modo que el motor responde en lugar de no encontrar filas.
     await expectRejectedByPolicy(
       withRequester(identity(seed.ana), (tx) =>
-        tx.execute(sql.raw("update company_activities set title = 'Otra cosa'")),
+        tx.execute(sql.raw("update company_activities set entity_label = 'Otra cosa'")),
       ),
     )
     await expectRejectedByPolicy(
