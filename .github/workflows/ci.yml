@@ -105,15 +105,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
-    # **No bloquea, y es una decisión con fecha de caducidad.**
+    # **No bloquea todavía, y ya no por falta de diagnóstico.**
     #
-    # `HALLAZGOS.md` H-146: la suite deja caer una prueba de cada tres vueltas, nunca la misma, y la
-    # que cae **pasa aislada**. Con eso puesto como obligatorio, la integración continua estaría en
-    # rojo un tercio del tiempo sin que el rojo signifique nada — y en dos semanas nadie volvería a
-    # mirarla, que es exactamente la enfermedad que este archivo viene a curar.
+    # H-146 está diagnosticado (H-192): no era un parpadeo, eran **al menos cuatro** causas, que es
+    # por lo que «nunca era la misma». Reproducido 3 de 14 vueltas idénticas, y de ahí salieron dos
+    # que se corrigen en `apps/e2e` —un clic perdido en el asistente de producto y un `ECONNRESET` en
+    # una recogida sin reintento de transporte—.
     #
-    # Así que corre, se ve, y no manda. Pasa a bloqueante en cuanto H-146 esté diagnosticado: la
-    # cacería vive en `e2e-parpadeo.yml`, que repite la suite en bucle hasta reproducirlo.
+    # Quedan dos de estado compartido. Una es deriva de la base entre ejecuciones (H-195) y **aquí no
+    # aplica**: en el ejecutor la base nace de cero. La otra sí (H-196): la bandeja de avisos es de
+    # una persona y hay dieciséis pruebas escribiéndole, así que un aviso que llega entre dos
+    # lecturas del contador tumba `avisos.spec`. Observada 1 de 12 vueltas con las otras corregidas.
+    #
+    # Mientras eso viva, obligar aquí sería volver a poner la integración continua en rojo por algo
+    # que no es del producto — la enfermedad que este archivo viene a curar. Así que corre, se ve, y
+    # no manda. Para promoverla: quitar esta línea. La cacería que mide si ya se puede vive en
+    # `e2e-parpadeo.yml`.
     continue-on-error: true
 
     steps:

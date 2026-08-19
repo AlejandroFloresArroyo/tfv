@@ -4456,8 +4456,8 @@ Hasta aquí, «verde» era una afirmación sobre la última vez que alguien se a
 **H-146, que era el encargo de verdad**
 
 Diagnosticado con catorce vueltas idénticas en la misma máquina: **3 de 14 en rojo (21 %)**, y las
-tres caídas repartidas en fallos que no se parecen. No era un parpadeo: eran **tres**, y por eso
-«nunca era la misma».
+tres caídas repartidas en fallos que no se parecen. No era un parpadeo: eran **al menos cuatro**, y
+por eso «nunca era la misma». Dos se corrigen aquí; dos son estado compartido y quedan anotadas.
 
 1. El clic de «Siguiente» del paso 5 del asistente de producto **se pierde**: el selector de fotos
    sigue montándose después de aparecer su zócalo, y ese último asentamiento rehace el pie del
@@ -4470,7 +4470,12 @@ tres caídas repartidas en fallos que no se parecen. No era un parpadeo: eran **
    34 vueltas sobre la misma base: 24 almacenes donde la siembra deja uno, 344 cotizaciones, 118
    pedidos, 40 roles. A partir de cierto punto empiezan a caerse pruebas que nadie tocó. **No afecta
    a la integración continua**, donde la base nace de cero, pero sí a quien la corre repetidamente
-   en su máquina — que es como se observó H-146 en su día.
+   en su máquina — que es como se observó H-146 en su día. Anotada, no resuelta.
+4. **La bandeja de avisos compartida** (H-196), la única que sigue viva en un ejecutor limpio.
+   `avisos.spec` lee el contador de no leídos, marca uno leído y exige que baje; entre las dos
+   lecturas caben otra prueba en paralelo y el despachador, que entrega cada 30 s. Si llega uno
+   nuevo, el contador no baja. Observada 1 de 12 vueltas con las otras tres corregidas, y es lo que
+   impide que la suite pase a obligatoria en esta entrega.
 
 **Lo que queda abierto**
 
@@ -4479,9 +4484,11 @@ tres caídas repartidas en fallos que no se parecen. No era un parpadeo: eran **
   los ejecutores estándar no se cobran, así que el bloqueo es de la cuenta. Es una factura, no un
   archivo, y no se puede resolver desde aquí. Mientras dure, la integración continua está **escrita y
   verificada en local, no vista en verde**, que es media afirmación de las dos que H-150 pedía.
-- **La suite de navegador sigue sin bloquear.** Las dos causas que afectan a un ejecutor limpio están
-  corregidas, pero promoverla a obligatoria es un cambio que no se puede observar mientras H-193 dure.
-  Se flipa el interruptor —una línea en `ci.yml`— en cuanto haya una ejecución verde que mirar.
+- **La suite de navegador sigue sin bloquear**, y ya no por falta de diagnóstico: por H-196, que es
+  del producto de la prueba y no del entorno. Arreglarla no es aflojar la aserción —«que baje **o**
+  que llegue algo nuevo» dejaría de cazar la regresión para la que existe— sino darle destinatario
+  propio al recorrido o mirar un aviso concreto en vez del total. Promoverla es quitar una línea de
+  `ci.yml`.
 - **La deriva de H-195**, anotada y no resuelta: o la suite recrea su base al empezar —lo que hoy no
   hace, y cuyo motivo original desapareció cuando H-138 le dio base propia— o cada prueba que lee una
   colección lo hace con filtro.
@@ -4489,4 +4496,5 @@ tres caídas repartidas en fallos que no se parecen. No era un parpadeo: eran **
 **Rebanadas**: cierra la casilla de integración continua de la **02**, y corrige la nota de la **01**
 y la **03**, que decían «no hay pipeline en este repositorio».
 
-**Hallazgos**: H-190, H-191, H-192, H-193, H-194 y H-195. Cerrados H-150, H-169 y H-146.
+**Hallazgos**: H-190 a H-196. Cerrados H-150 y H-169; H-146 queda **parcial** — diagnosticado
+entero y corregido a medias, con las dos mitades que faltan nombradas.
