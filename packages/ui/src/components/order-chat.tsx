@@ -159,7 +159,7 @@ export function OrderChat({
         ) : null}
 
         {status !== "loading" && entries.length === 0 ? (
-          <p className="m-auto max-w-xs text-center text-body3 text-content-faint">
+          <p className="m-auto max-w-[18rem] text-center text-body3 text-content-faint">
             {labels.empty}
           </p>
         ) : null}
@@ -233,9 +233,15 @@ function SystemLine({
   formatTime: (instant: string) => string
 }) {
   return (
-    <div className="my-1 flex flex-col items-center gap-1">
+    <div className="my-1 flex w-full flex-col items-center gap-1">
       <Badge>{labels.system}</Badge>
-      <p className="max-w-md text-center text-body3 text-content-muted">{entry.body}</p>
+      {/*
+        Ancho propio y en medida explícita, por dos motivos distintos que se sumaban al mismo
+        síntoma —el aviso saliendo en columna, una palabra por línea—: centrado sin ancho, la caja
+        se encoge hasta la palabra más larga; y los nombres de la escala —`md`, `xs`, `xl`— aquí son
+        **espaciado**, así que `max-w-md` no son 28rem sino 0.842rem. Ver `HALLAZGOS.md` H-63.
+      */}
+      <p className="w-full max-w-[24rem] text-center text-body3 text-content-muted">{entry.body}</p>
       <span className="text-body3 text-content-faint">{formatTime(entry.createdAt)}</span>
     </div>
   )
