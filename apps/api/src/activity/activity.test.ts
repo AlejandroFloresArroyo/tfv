@@ -764,6 +764,7 @@ describe("el texto del aviso", () => {
     )
 
     expect(page.items[0]?.title).toBe("Casa de Renta")
-    expect(page.items[0]?.body).toBe("Editó alert(1) la ficha")
+    // El cuerpo dice quién hizo qué, y lo dice sin marcado.
+    expect(page.items[0]?.body).toBe("duena editó alert(1) la ficha")
   })
 })

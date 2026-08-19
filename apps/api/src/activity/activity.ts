@@ -131,8 +131,12 @@ export async function recordActivity(tx: Transaction, input: ActivityInput): Pro
     kind: "activity",
     activityId: id,
     payload: {
+      // «Un título con el nombre de la entidad afectada, un cuerpo que indique **quién hizo qué**».
+      // El nombre de quien actuó se resuelve aquí y no en la pantalla porque el aviso viaja: el
+      // mismo sobre se enseña en la bandeja y —el día que haya proveedor— sale por empuje, donde no
+      // hay nadie que pueda ir a buscar el perfil.
       title: input.entityLabel || input.title,
-      body: input.title,
+      body: await describe(tx, input),
       url: input.url ?? "/",
       companyId: input.companyId,
       action: input.action,
@@ -141,6 +145,21 @@ export async function recordActivity(tx: Transaction, input: ActivityInput): Pro
   })
 
   return id
+}
+
+/** «Ana Flores editó los datos de la empresa». Sin nombre, la frase se queda con el sujeto tácito. */
+async function describe(tx: Transaction, input: ActivityInput): Promise<string> {
+  const [actor] = await tx
+    .select({ name: users.name, lastname: users.lastname, email: users.email })
+    .from(users)
+    .where(eq(users.id, input.performedById))
+    .limit(1)
+
+  const nombre = [actor?.name, actor?.lastname].filter(Boolean).join(" ") || actor?.email || ""
+  if (!nombre) return input.title
+
+  const [primera = "", ...resto] = input.title
+  return `${nombre} ${primera.toLocaleLowerCase("es")}${resto.join("")}`
 }
 
 // ─── Consulta ────────────────────────────────────────────────────────────────

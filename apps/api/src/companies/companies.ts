@@ -123,7 +123,7 @@ export async function createCompany(
       action: "create",
       entityId: companyId,
       entityLabel: company.name,
-      title: `Creó la empresa «${company.name}»`,
+      title: "Creó la empresa",
       permissions: [],
     })
 
@@ -228,7 +228,7 @@ export async function updateCompany(
       action: "update",
       entityId: companyId,
       entityLabel: updated.name,
-      title: `Editó los datos de «${updated.name}»`,
+      title: "Editó los datos de la empresa",
       permissions: ["companies.companies.edit"],
     })
 
@@ -259,7 +259,7 @@ export async function deleteCompany(actor: Actor, companyId: string): Promise<vo
       action: "delete",
       entityId: companyId,
       entityLabel: company.name,
-      title: `Dio de baja la empresa «${company.name}»`,
+      title: "Dio de baja la empresa",
       permissions: ["companies.companies.delete"],
     })
 
