@@ -89,8 +89,20 @@ function actorOf(c: Parameters<Parameters<typeof defineRoute>[0]["handler"]>[0])
 
 // ─── Empresas ────────────────────────────────────────────────────────────────
 
+/**
+ * Primera ruta con clave de idempotencia, de forma deliberada.
+ *
+ * Dar de alta una empresa es la escritura donde repetir hace más daño de las que hoy no cuelgan de
+ * un dominio en obras: no hay unicidad que lo impida —dos empresas pueden llamarse igual— así que un
+ * doble envío deja **dos empresas** con el mismo nombre, las dos con quien las creó de propietario,
+ * y deshacerlo es una baja lógica que alguien tiene que decidir hacer.
+ *
+ * Es también el caso de alcance nulo: esta ruta no cuelga de ninguna empresa, así que la clave se
+ * acota sólo al actor. Ver `apps/api/src/runtime/idempotency.ts`.
+ */
 export const createCompanyRoute = defineRoute({
   access: AUTHENTICATED,
+  idempotent: true,
   config: {
     method: "post",
     path: "/companies",
@@ -391,8 +403,10 @@ export const listRolesRoute = defineRoute({
   },
 })
 
+/** Y el caso con alcance de empresa: dos roles con el mismo nombre y los mismos permisos. */
 export const createRoleRoute = defineRoute({
   access: REQUIRES("companies.roles.create"),
+  idempotent: true,
   config: {
     method: "post",
     path: "/companies/{companyId}/roles",

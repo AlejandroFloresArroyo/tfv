@@ -191,6 +191,26 @@ const schema = z
      */
     UPLOADS_ABANDONED_AFTER_HOURS: z.coerce.number().int().positive().default(24),
     UPLOADS_COLLECT_EVERY_MS: z.coerce.number().int().positive().default(3_600_000),
+    /**
+     * Cuánto se recuerda una clave de idempotencia, y cada cuánto se barre lo vencido.
+     *
+     * No es una constante del dominio: lo que se está comprando es la ventana en la que un
+     * reintento todavía reconoce su propia petición. Un día cubre de sobra el reintento de un
+     * navegador y el de una integración que se cayó por la noche; recordarlas más tiempo sería
+     * guardar cuerpos de respuesta —con sus importes y sus datos personales— sin que nadie los
+     * vaya a pedir.
+     */
+    IDEMPOTENCY_RETENTION_HOURS: z.coerce.number().int().positive().default(24),
+    IDEMPOTENCY_SWEEP_EVERY_MS: z.coerce.number().int().positive().default(3_600_000),
+    /**
+     * A partir de cuándo una clave reclamada y sin terminar se da por abandonada.
+     *
+     * Es el caso del proceso que se cayó entre reclamar y responder. Se mide en minutos y no en
+     * horas a propósito: mientras la clave siga reclamada, su dueño recibe «todavía en curso» y no
+     * puede completar la operación. Mismo criterio que `JOBS_STUCK_AFTER_MS`.
+     */
+    IDEMPOTENCY_ABANDONED_AFTER_MS: z.coerce.number().int().positive().default(300_000),
+
     /** Cada cuánto se comprueba que las reservas y el inventario digan lo mismo. */
     STOCK_COHERENCE_EVERY_MS: z.coerce.number().int().positive().default(21_600_000),
     NOTIFICATIONS_DELIVER_EVERY_MS: z.coerce.number().int().positive().default(60_000),

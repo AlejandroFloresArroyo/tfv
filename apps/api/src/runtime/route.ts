@@ -20,8 +20,8 @@
  */
 
 import type { RouteConfig, RouteHandler } from "@hono/zod-openapi"
-import { createRoute, type OpenAPIHono } from "@hono/zod-openapi"
-import type { PermissionKey } from "@tfv/contracts"
+import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi"
+import { IDEMPOTENCY_HEADER, idempotencyKeySchema, type PermissionKey } from "@tfv/contracts"
 import type { MiddlewareHandler } from "hono"
 
 /**
@@ -61,6 +61,14 @@ export interface RouteDefinition<C extends AnyRouteConfig = AnyRouteConfig> {
   /** Contrato de la ruta, del que se derivan la validación y la descripción publicada. */
   readonly config: C
   readonly handler: RouteHandler<C>
+  /**
+   * La ruta admite clave de idempotencia.
+   *
+   * Se declara aquí y no dentro del manejador porque es una propiedad del contrato: quien lee la
+   * tabla de rutas tiene que poder ver cuáles se pueden reintentar sin miedo. Ver
+   * `openspec/specs/api-conventions/spec.md`, «Las mutaciones de dinero son idempotentes».
+   */
+  readonly idempotent?: boolean | undefined
 }
 
 /**
@@ -75,6 +83,7 @@ export interface RegisteredRoute {
   readonly config: AnyRouteConfig
   // biome-ignore lint/suspicious/noExplicitAny: el manejador concreto es distinto en cada ruta.
   readonly handler: any
+  readonly idempotent?: boolean | undefined
 }
 
 const registry: RegisteredRoute[] = []
@@ -89,16 +98,75 @@ export function defineRoute<C extends AnyRouteConfig>(definition: {
   access: AccessRegime
   config: C
   handler: RouteHandler<C>
+  idempotent?: boolean | undefined
 }): RouteDefinition<C> {
   assertScopedByCompany(definition.access, definition.config.path)
+  assertIdempotencyHasActor(definition.access, definition.config.path, definition.idempotent)
 
   const route: RouteDefinition<C> = {
     access: definition.access,
-    config: createRoute(definition.config) as C,
+    config: createRoute(withIdempotencyHeader(definition.config, definition.idempotent)) as C,
     handler: definition.handler,
+    ...(definition.idempotent === undefined ? {} : { idempotent: definition.idempotent }),
   }
   registry.push(route)
   return route
+}
+
+/**
+ * Declara el encabezado de idempotencia en el contrato publicado.
+ *
+ * Se añade aquí y no ruta por ruta porque **la descripción publicada tiene que salir de los mismos
+ * esquemas que validan en ejecución**: escribirlo a mano en cada ruta es la vía por la que una lo
+ * acepta y no lo dice, o lo dice y no lo acepta. Quien declara `idempotent: true` obtiene las dos
+ * cosas de una vez.
+ *
+ * Opcional en el esquema: el requisito es que la ruta **acepte** una clave, no que la exija. Exigirla
+ * rompería a todo cliente que hoy llama sin ella.
+ */
+function withIdempotencyHeader<C extends AnyRouteConfig>(
+  config: C,
+  idempotent: boolean | undefined,
+): C {
+  if (!idempotent) return config
+
+  const declared = z.object({
+    [IDEMPOTENCY_HEADER]: idempotencyKeySchema
+      .optional()
+      .describe(
+        "Clave de idempotencia: repetir la petición con la misma clave devuelve el resultado de la " +
+          "primera en lugar de volver a ejecutarla.",
+      ),
+  })
+
+  return { ...config, request: { ...config.request, headers: declared } }
+}
+
+/**
+ * Una ruta idempotente tiene actor.
+ *
+ * La clave de idempotencia da acceso a **una respuesta ya calculada**, así que tiene que estar
+ * acotada a quien la puso: en una ruta pública no hay a quién acotarla y la clave volvería a ser un
+ * espacio de nombres global, donde acertar la de otro devuelve la respuesta de otro.
+ *
+ * Falla al **cargar el módulo**, como `assertScopedByCompany` y por lo mismo: una ruta mal declarada
+ * rompe el arranque y las pruebas, en lugar de esperar a la petición en la que importe.
+ *
+ * Cuando llegue la compra pública (rebanada 18), que sí necesita reintentar sin sesión, el alcance
+ * tendrá que salir de otra parte —la sesión de compra— y esta comprobación es el sitio donde se
+ * verá que hace falta decidirlo.
+ */
+function assertIdempotencyHasActor(
+  access: AccessRegime,
+  path: string,
+  idempotent: boolean | undefined,
+): void {
+  if (!idempotent || access.kind !== "public") return
+
+  throw new Error(
+    `La ruta ${path} declara idempotencia y es pública. La clave de idempotencia se acota al ` +
+      `actor que la puso, y una ruta sin credencial no tiene actor contra el que acotarla.`,
+  )
 }
 
 /**
@@ -138,14 +206,26 @@ export function allRoutes(): readonly RegisteredRoute[] {
 export function mountRoutes(
   app: OpenAPIHono,
   routes: readonly RegisteredRoute[],
-  guardFor: (access: AccessRegime) => MiddlewareHandler | null,
+  layers: readonly RouteLayer[],
 ): void {
   for (const route of routes) {
-    const guard = guardFor(route.access)
-    if (guard) app.use(toHonoPath(route.config.path), guard)
+    for (const layer of layers) {
+      const middleware = layer(route)
+      if (middleware) app.use(toHonoPath(route.config.path), middleware)
+    }
     app.openapi(route.config, route.handler)
   }
 }
+
+/**
+ * Una capa que se monta delante de una ruta, si esa ruta la necesita.
+ *
+ * Se inyectan desde fuera y en orden para que este módulo no dependa ni de la autenticación ni de
+ * la base de datos, y siga siendo comprobable por su cuenta. El orden es el de la lista: primero el
+ * límite de cuerpo —rechazar pronto lo desproporcionado—, después el guardián, y sólo entonces la
+ * idempotencia, que necesita saber quién es el actor.
+ */
+export type RouteLayer = (route: RegisteredRoute) => MiddlewareHandler | null
 
 /**
  * Traduce el camino de la forma del contrato publicado a la del enrutador.

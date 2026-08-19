@@ -18,6 +18,7 @@ import { cors } from "hono/cors"
 import type { ZodError } from "zod"
 import { guardFor } from "../auth/middleware.ts"
 import { env, exposeErrorDetails } from "../env.ts"
+import { idempotencyFor } from "./idempotency.ts"
 import { createLogger, type Logger } from "./logger.ts"
 import { mountRoutes, type RegisteredRoute } from "./route.ts"
 
@@ -104,7 +105,13 @@ export function createApp(routes: readonly RegisteredRoute[]): OpenAPIHono {
 
   // ─── Rutas ─────────────────────────────────────────────────────────────────
 
-  mountRoutes(app, routes, guardFor)
+  /**
+   * El orden de las capas es el contrato, no una casualidad.
+   *
+   * El guardián primero porque nada debe correr sin credencial; la idempotencia después porque
+   * necesita saber quién es el actor para acotarle la clave, y sin sesión no lo sabría.
+   */
+  mountRoutes(app, routes, [(route) => guardFor(route.access), idempotencyFor])
 
   // ─── Contrato publicado ────────────────────────────────────────────────────
 
