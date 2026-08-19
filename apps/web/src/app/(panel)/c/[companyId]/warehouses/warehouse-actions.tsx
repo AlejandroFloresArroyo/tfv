@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import { type ItemAction, ItemActions } from "~/components/collection/item-actions.tsx"
 import { ConfirmDestructive } from "~/components/confirm-destructive.tsx"
 import { FormDialog } from "~/components/form-dialog.tsx"
+import { type SinglePhoto, SinglePhotoField, useSinglePhoto } from "~/components/photo-picker.tsx"
 import { optional, text } from "~/components/use-submit.ts"
 import { api } from "~/lib/api.client.ts"
 
@@ -33,6 +34,7 @@ export interface WarehouseSummary {
   description: string
   slug: string | null
   isPublished: boolean
+  imageUrl: string | null
 }
 
 /**
@@ -58,6 +60,8 @@ export function CreateWarehouse({ companyId }: { companyId: string }) {
   const common = useTranslations("common")
   const [open, setOpen] = useState(false)
   const [isPublished, setIsPublished] = useState(false)
+  const photo = useSinglePhoto(companyId, null)
+  const { restore } = photo
 
   return (
     <FormDialog
@@ -75,10 +79,15 @@ export function CreateWarehouse({ companyId }: { companyId: string }) {
       open={open}
       onOpenChange={(next) => {
         setOpen(next)
-        if (next) setIsPublished(false)
+        if (next) {
+          setIsPublished(false)
+          restore()
+        }
       }}
-      action={(data) =>
-        api(`/companies/${companyId}/warehouses`, {
+      // Se crea, **después** se sube, y sólo entonces se asigna la imagen. Al revés, una foto que
+      // se cae por la red se llevaría por delante el formulario entero.
+      action={async (data) => {
+        const created = await api<{ id: string }>(`/companies/${companyId}/warehouses`, {
           method: "POST",
           body: {
             name: text(data, "name"),
@@ -86,10 +95,24 @@ export function CreateWarehouse({ companyId }: { companyId: string }) {
             isPublished,
           },
         })
-      }
+
+        const outcome = await photo.run()
+        const patch = photo.patch(outcome.uploaded)
+        if (patch !== undefined) {
+          await api(`/companies/${companyId}/warehouses/${created.id}`, {
+            method: "PATCH",
+            body: patch,
+          })
+        }
+      }}
     >
       {(state) => (
-        <Fields state={state} isPublished={isPublished} onPublishedChange={setIsPublished} />
+        <Fields
+          state={state}
+          photo={photo}
+          isPublished={isPublished}
+          onPublishedChange={setIsPublished}
+        />
       )}
     </FormDialog>
   )
@@ -109,13 +132,17 @@ function EditWarehouse({
   const t = useTranslations("warehouses.warehouses")
   const common = useTranslations("common")
   const [isPublished, setIsPublished] = useState(warehouse.isPublished)
+  const photo = useSinglePhoto(companyId, warehouse.imageUrl)
+  const { restore } = photo
 
   // Al reabrirlo tiene que volver a enseñar lo guardado, no lo que se dejó a medias la vez
   // anterior. Los campos de texto se reinician solos porque el diálogo los desmonta; el
-  // interruptor no, porque su estado vive aquí fuera.
+  // interruptor y la imagen no, porque su estado vive aquí fuera.
   useEffect(() => {
-    if (open) setIsPublished(warehouse.isPublished)
-  }, [open, warehouse.isPublished])
+    if (!open) return
+    setIsPublished(warehouse.isPublished)
+    restore()
+  }, [open, warehouse.isPublished, restore])
 
   return (
     <FormDialog
@@ -124,8 +151,8 @@ function EditWarehouse({
       size="sm"
       open={open}
       onOpenChange={onOpenChange}
-      action={(data) =>
-        api(`/companies/${companyId}/warehouses/${warehouse.id}`, {
+      action={async (data) => {
+        await api(`/companies/${companyId}/warehouses/${warehouse.id}`, {
           method: "PATCH",
           body: {
             name: text(data, "name"),
@@ -134,12 +161,22 @@ function EditWarehouse({
             isPublished,
           },
         })
-      }
+
+        const outcome = await photo.run()
+        const patch = photo.patch(outcome.uploaded)
+        if (patch !== undefined) {
+          await api(`/companies/${companyId}/warehouses/${warehouse.id}`, {
+            method: "PATCH",
+            body: patch,
+          })
+        }
+      }}
     >
       {(state) => (
         <Fields
           state={state}
           warehouse={warehouse}
+          photo={photo}
           isPublished={isPublished}
           onPublishedChange={setIsPublished}
         />
@@ -308,12 +345,14 @@ export function WarehouseActions({
 function Fields({
   state,
   warehouse,
+  photo,
   isPublished,
   onPublishedChange,
 }: {
   state: { fieldErrors: ReadonlyMap<string, string> }
   /** Ausente al crear. Su presencia es lo que distingue las dos mitades. */
   warehouse?: WarehouseSummary
+  photo: SinglePhoto
   isPublished: boolean
   onPublishedChange: (value: boolean) => void
 }) {
@@ -364,6 +403,8 @@ function Fields({
           )}
         </Field>
       ) : null}
+
+      <SinglePhotoField photo={photo} label={t("image")} />
 
       <div className="flex flex-col gap-3 rounded-sm border border-line bg-panel-sunken p-3">
         <Switch checked={isPublished} onCheckedChange={onPublishedChange} label={t("publish")} />

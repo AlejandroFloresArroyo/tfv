@@ -81,6 +81,7 @@ export function SearchSelect({
 
   // La opción activa vuelve al principio en cuanto cambia la lista: dejarla en el índice cuatro de
   // una lista que ahora tiene dos deja la caja anunciando una opción que no existe.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: la dependencia es el disparador, no una lectura.
   useEffect(() => setActive(0), [shown])
 
   function choose(option: SelectOption | undefined) {
@@ -200,6 +201,9 @@ export function SearchSelect({
             ) : null}
           </div>
 
+          {/* biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: es la lista de un
+              combobox, y el papel es el que su patrón exige. Quitarlo deja la caja sin lista que
+              anunciar. */}
           <ul id={listId} role="listbox" className="max-h-64 overflow-y-auto p-1">
             {shown.length === 0 ? (
               <li className="px-3 py-4 text-center text-body2 text-content-faint">{emptyLabel}</li>

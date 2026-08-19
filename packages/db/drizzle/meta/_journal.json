@@ -115,6 +115,13 @@
       "breakpoints": true
     },
     {
+      "idx": 16,
+      "version": "7",
+      "when": 1787102402504,
+      "tag": "0016_imagenes_de_producto",
+      "breakpoints": true
+    },
+    {
       "idx": 17,
       "version": "7",
       "when": 1787102707630,

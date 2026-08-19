@@ -14,6 +14,7 @@ import { canViewPanel } from "../../panel/access.ts"
 import { QuoteTypeBadge } from "../../quotes/quote-badges.tsx"
 import { WarehouseNav } from "../../warehouse-nav.tsx"
 import { OrderStatusBadge } from "../order-badges.tsx"
+import { OrderConversation } from "./conversation.tsx"
 import { OrderActions } from "./order-actions.tsx"
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -173,6 +174,16 @@ export default async function OrderPage({
         </div>
 
         <aside className="space-y-4">
+          {/* La conversación va con el pedido, no en otra pantalla: se habla de lo que se está
+              mirando, y por eso vive aquí y no en una bandeja de mensajes aparte. */}
+          <OrderConversation
+            companyId={companyId}
+            warehouseId={warehouseId}
+            orderId={orderId}
+            viewerId={profile.id}
+            canWrite={can(company, "warehouses.orders.edit")}
+          />
+
           {open ? (
             <OrderActions
               companyId={companyId}

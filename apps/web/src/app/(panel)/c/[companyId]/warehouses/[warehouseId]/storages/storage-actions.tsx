@@ -3,8 +3,10 @@
 import { Button, DialogTrigger, Field, Input, Select } from "@tfv/ui"
 import { Plus } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { useEffect } from "react"
 import { type ItemAction, ItemActions } from "~/components/collection/item-actions.tsx"
 import { FormDialog } from "~/components/form-dialog.tsx"
+import { type SinglePhoto, SinglePhotoField, useSinglePhoto } from "~/components/photo-picker.tsx"
 import { flattenTree } from "~/components/tree/tree.ts"
 import { TreeDeleteDialog } from "~/components/tree/tree-delete-dialog.tsx"
 import { TreeMoveDialog } from "~/components/tree/tree-move-dialog.tsx"
@@ -40,9 +42,11 @@ function basePath(companyId: string, warehouseId: string) {
 /** Los campos que comparten el alta y la edición. El padre no está: para eso está mover. */
 function StorageFields({
   storage,
+  photo,
   fieldErrors,
 }: {
   storage?: StorageRow
+  photo: SinglePhoto
   fieldErrors: ReadonlyMap<string, string>
 }) {
   const t = useTranslations()
@@ -74,6 +78,8 @@ function StorageFields({
           </Select>
         )}
       </Field>
+
+      <SinglePhotoField photo={photo} label={t("warehouses.storages.image")} />
     </>
   )
 }
@@ -97,6 +103,7 @@ export function CreateStorage({
   parentName?: string
 }) {
   const t = useTranslations()
+  const photo = useSinglePhoto(companyId, null)
 
   return (
     <FormDialog
@@ -116,14 +123,23 @@ export function CreateStorage({
           </Button>
         </DialogTrigger>
       }
-      action={(data) =>
-        api(basePath(companyId, warehouseId), {
+      // Crear, subir, y sólo entonces asignar. Ver la nota de `~/lib/uploads.ts`.
+      action={async (data) => {
+        const created = await api<{ id: string }>(basePath(companyId, warehouseId), {
           method: "POST",
           body: { name: text(data, "name"), kind: optional(data, "kind"), parentId },
         })
-      }
+
+        const patch = photo.patch((await photo.run()).uploaded)
+        if (patch !== undefined) {
+          await api(`${basePath(companyId, warehouseId)}/${created.id}`, {
+            method: "PATCH",
+            body: patch,
+          })
+        }
+      }}
     >
-      {(state) => <StorageFields fieldErrors={state.fieldErrors} />}
+      {(state) => <StorageFields photo={photo} fieldErrors={state.fieldErrors} />}
     </FormDialog>
   )
 }
@@ -142,6 +158,14 @@ export function EditStorage({
   onOpenChange: (open: boolean) => void
 }) {
   const t = useTranslations()
+  const photo = useSinglePhoto(companyId, storage.imageUrl)
+  const { restore } = photo
+
+  // Al reabrirlo tiene que volver a enseñar lo guardado: los campos de texto se reinician porque el
+  // diálogo los desmonta, y el estado de la imagen vive aquí fuera.
+  useEffect(() => {
+    if (open) restore()
+  }, [open, restore])
 
   return (
     <FormDialog
@@ -149,14 +173,18 @@ export function EditStorage({
       submitLabel={t("common.save")}
       open={open}
       onOpenChange={onOpenChange}
-      action={(data) =>
-        api(`${basePath(companyId, warehouseId)}/${storage.id}`, {
+      action={async (data) => {
+        const path = `${basePath(companyId, warehouseId)}/${storage.id}`
+        await api(path, {
           method: "PATCH",
           body: { name: text(data, "name"), kind: optional(data, "kind") },
         })
-      }
+
+        const patch = photo.patch((await photo.run()).uploaded)
+        if (patch !== undefined) await api(path, { method: "PATCH", body: patch })
+      }}
     >
-      {(state) => <StorageFields storage={storage} fieldErrors={state.fieldErrors} />}
+      {(state) => <StorageFields storage={storage} photo={photo} fieldErrors={state.fieldErrors} />}
     </FormDialog>
   )
 }

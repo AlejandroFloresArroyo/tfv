@@ -199,41 +199,10 @@ create policy alta on public.company_activities
 -- Se **omite** el borrado en lugar de fallar. Fallar revertiría la recogida entera y dejaría un
 -- trabajo que se rinde sin haber recogido nada, de modo que un solo archivo referenciado bastaría
 -- para que la limpieza no volviera a ocurrir jamás.
-create or replace function app.is_referenced_upload(archivo uuid)
-returns boolean
-language plpgsql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  r record;
-  existe boolean;
-begin
-  for r in
-    select k.conrelid::regclass as tabla, a.attname as columna
-    from pg_constraint k
-    join lateral unnest(k.conkey) as u(attnum) on true
-    join pg_attribute a on a.attrelid = k.conrelid and a.attnum = u.attnum
-    where k.contype = 'f' and k.confrelid = 'public.uploads'::regclass
-  loop
-    execute format('select exists (select 1 from %s where %I = $1)', r.tabla, r.columna)
-      into existe
-      using archivo;
-    if existe then
-      return true;
-    end if;
-  end loop;
-
-  return false;
-end
-$$;
-
--- `security definer` no es un adorno: quien recoge es una sesión cualquiera, y la fila que
--- referencia el archivo puede ser de otra empresa y quedarle oculta por las políticas. Sin esto, un
--- archivo referenciado desde una empresa ajena parecería libre — y el modo de fallo sería borrar.
-revoke execute on function app.is_referenced_upload(uuid) from public;
-grant execute on function app.is_referenced_upload(uuid) to authenticated, service_role;
+-- La pregunta «¿sigue referenciado este archivo?» ya la contesta `app.upload_is_referenced`,
+-- que llegó con la 0016 y es a la que llama la API al sustituir una colección. Aquí se usa esa,
+-- no una segunda con otro nombre: dos funciones que responden lo mismo son dos respuestas en
+-- cuanto alguien toque una, y la que se quede vieja decide si se borra un archivo.
 
 create or replace function app.skip_referenced_upload()
 returns trigger
@@ -248,7 +217,7 @@ begin
     return null;
   end if;
 
-  if app.is_referenced_upload(old.id) then
+  if app.upload_is_referenced(old.id) then
     return null;
   end if;
 

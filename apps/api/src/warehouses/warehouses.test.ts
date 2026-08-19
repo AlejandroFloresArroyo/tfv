@@ -17,6 +17,7 @@ import {
   roles,
   services,
   sessions,
+  uploads,
   users,
   warehouseProducts,
   warehouseQuotes,
@@ -33,7 +34,7 @@ const PASSWORD = "una-frase-larga-y-buena"
 
 async function reset() {
   await db.execute(
-    sql`truncate table ${notificationDeliveries}, ${sessions}, ${loginAttempts}, ${users}, ${companyMembers}, ${roles}, ${companyServices}, ${warehouseProducts}, ${warehouseStorages}, ${warehouses}, ${services}, ${companies} cascade`,
+    sql`truncate table ${notificationDeliveries}, ${sessions}, ${loginAttempts}, ${users}, ${companyMembers}, ${roles}, ${companyServices}, ${warehouseProducts}, ${warehouseStorages}, ${warehouses}, ${uploads}, ${services}, ${companies} cascade`,
   )
 }
 
@@ -115,6 +116,8 @@ interface Warehouse {
   slug: string | null
   priority: string
   isPublished: boolean
+  imageUploadId: string | null
+  imageUrl: string | null
 }
 
 interface Storage {
@@ -125,6 +128,8 @@ interface Storage {
   parentId: string | null
   childCount: number
   productCount: number
+  imageUploadId: string | null
+  imageUrl: string | null
 }
 
 async function newWarehouse(session: Session, companyId: string, name = "Nave Norte") {
@@ -613,5 +618,129 @@ describe("eliminar una ubicación libera sus productos", () => {
     )
 
     expect(listed.items[0]?.productCount).toBe(1)
+  })
+})
+
+// ─── Imagen ──────────────────────────────────────────────────────────────────
+
+/**
+ * La imagen única del almacén y de la ubicación.
+ *
+ * Transcritas de `openspec/specs/media-storage/spec.md`, requisito «Sustituir un archivo elimina el
+ * anterior». La columna existía desde la 0002 y no la escribía nadie.
+ */
+describe("la imagen de un almacén y de una ubicación", () => {
+  async function seedPhoto(companyId: string): Promise<string> {
+    const id = newId()
+    await db.insert(uploads).values({
+      id,
+      kind: "image",
+      status: "uploaded",
+      url: `http://almacen/${companyId}/${id}/original.jpg`,
+      fileName: "nave.jpg",
+      extension: "jpg",
+      contentType: "image/jpeg",
+      byteSize: 2048,
+      storagePath: `${companyId}/${id}`,
+    })
+    return id
+  }
+
+  async function stillThere(id: string): Promise<boolean> {
+    const [row] = await db.select({ id: uploads.id }).from(uploads).where(eq(uploads.id, id))
+    return row !== undefined
+  }
+
+  it("sustituirla elimina la anterior por completo", async () => {
+    // Escenario: «La imagen anterior se elimina por completo».
+    const session = await signUp("imagen@ejemplo.mx")
+    const company = await newCompany(session)
+    const primera = await seedPhoto(company.id)
+    const segunda = await seedPhoto(company.id)
+
+    const warehouse = await json<Warehouse>(
+      await request(
+        "POST",
+        `/companies/${company.id}/warehouses`,
+        { name: "Nave", imageUploadId: primera },
+        session.cookie,
+      ),
+    )
+    expect(warehouse.imageUrl).toContain(primera)
+
+    const updated = await json<Warehouse>(
+      await request(
+        "PATCH",
+        `/companies/${company.id}/warehouses/${warehouse.id}`,
+        { imageUploadId: segunda },
+        session.cookie,
+      ),
+    )
+
+    expect(updated.imageUploadId).toBe(segunda)
+    expect(await stillThere(primera)).toBe(false)
+    expect(await stillThere(segunda)).toBe(true)
+  })
+
+  it("asignar la misma no la borra", async () => {
+    const session = await signUp("imagen-igual@ejemplo.mx")
+    const company = await newCompany(session)
+    const foto = await seedPhoto(company.id)
+
+    const warehouse = await json<Warehouse>(
+      await request(
+        "POST",
+        `/companies/${company.id}/warehouses`,
+        { name: "Nave", imageUploadId: foto },
+        session.cookie,
+      ),
+    )
+
+    await request(
+      "PATCH",
+      `/companies/${company.id}/warehouses/${warehouse.id}`,
+      { imageUploadId: foto },
+      session.cookie,
+    )
+
+    expect(await stillThere(foto)).toBe(true)
+  })
+
+  it("una ubicación tiene la suya, y quitarla la elimina", async () => {
+    const session = await signUp("imagen-ubicacion@ejemplo.mx")
+    const company = await newCompany(session)
+    const warehouse = await newWarehouse(session, company.id)
+    const foto = await seedPhoto(company.id)
+
+    const storage = await newStorage(session, company.id, warehouse.id, {
+      name: "Estante",
+      kind: "shelf",
+      imageUploadId: foto,
+    })
+    expect(storage.imageUrl).toContain(foto)
+
+    await request(
+      "PATCH",
+      `/companies/${company.id}/warehouses/${warehouse.id}/storages/${storage.id}`,
+      { imageUploadId: null },
+      session.cookie,
+    )
+
+    expect(await stillThere(foto)).toBe(false)
+  })
+
+  it("una foto de otra empresa no existe para ésta", async () => {
+    const session = await signUp("imagen-ajena@ejemplo.mx")
+    const company = await newCompany(session)
+    const ajena = await seedPhoto(newId())
+
+    const response = await request(
+      "POST",
+      `/companies/${company.id}/warehouses`,
+      { name: "Nave", imageUploadId: ajena },
+      session.cookie,
+    )
+
+    expect(response.status).toBe(404)
   })
 })

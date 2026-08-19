@@ -313,6 +313,42 @@
   "language": {
     "label": "Idioma"
   },
+  "media": {
+    "picker": {
+      "label": "Fotos",
+      "browse": "Elegir fotos",
+      "hint": "Arrastra las fotos aquí, o pulsa para elegirlas. Hasta 20 MB cada una.",
+      "remove": "Quitar {fileName}",
+      "retry": "Reintentar {fileName}",
+      "progress": "{done} de {total} subidas",
+      "rejected": {
+        "name": "{fileName}: el nombre necesita nombre y extensión.",
+        "kind": "{fileName}: aquí sólo se admiten imágenes.",
+        "size": "{fileName}: pesa más de lo que se admite.",
+        "count": "{fileName}: no cabe, ya se alcanzó el máximo."
+      },
+      "noPreview": "Este formato no se puede previsualizar aquí; se sube igual.",
+      "noDerivatives": "Se subió el original, pero este navegador no pudo hacer los tamaños pequeños.",
+      "waiting": "En espera",
+      "working": "Subiendo",
+      "done": "Subida",
+      "failed": "Falló"
+    },
+    "gallery": {
+      "empty": "Todavía no hay fotos. Elige las primeras abajo.",
+      "isCover": "Portada",
+      "position": "Posición {position}",
+      "makeCover": "Usar como portada",
+      "moveUp": "Mover antes",
+      "moveDown": "Mover después",
+      "removePhoto": "Quitar esta foto",
+      "someFailed": "Se guardó lo que sí subió. Quedan {count} fotos por reintentar."
+    },
+    "single": {
+      "current": "Imagen actual",
+      "remove": "Quitar la imagen"
+    }
+  },
   "members": {
     "title": "Miembros",
     "subtitle": "Quién puede entrar a {company} y con qué papel.",
@@ -530,6 +566,23 @@
       "originOf": {
         "production": "De producción",
         "storefront": "De tienda"
+      },
+      "chat": {
+        "title": "Conversación",
+        "placeholder": "Escribe un mensaje…",
+        "send": "Enviar",
+        "empty": "Aquí se habla de este pedido: ajustar una cantidad, avisar de un retraso, confirmar una recogida.",
+        "older": "Ver lo anterior",
+        "system": "Sistema",
+        "clientSide": "Cliente",
+        "providerSide": "Almacén",
+        "edited": "editado",
+        "read": "Leído por el otro lado",
+        "sending": "enviando…",
+        "failed": "no se envió",
+        "retry": "Reintentar",
+        "reconnecting": "Reconectando…",
+        "readOnly": "Sin permiso para escribir en esta conversación."
       }
     },
     "products": {
@@ -564,7 +617,10 @@
       "summary": "Resumen",
       "unpublish": "Retirar de la tienda",
       "variants": "Variantes",
-      "yes": "Sí"
+      "yes": "Sí",
+      "create": "Nuevo producto",
+      "editPhotos": "Fotos",
+      "photosBody": "La portada es la que se enseña en el catálogo. Quitar una foto de aquí la elimina del almacenamiento."
     },
     "published": "Publicado",
     "quotes": {
@@ -880,7 +936,8 @@
       "deleteCascade": "{count, plural, one {Elimina # ubicación, contando ésta} other {Elimina # ubicaciones, contando ésta}}",
       "deleteProducts": "{count, plural, =0 {No deja ningún producto sin ubicación} one {Deja # producto sin ubicación, sin eliminarlo} other {Deja # productos sin ubicación, sin eliminarlos}}",
       "counting": "Contando lo que resulta afectado…",
-      "countFailed": "No se pudo contar lo que resulta afectado."
+      "countFailed": "No se pudo contar lo que resulta afectado.",
+      "image": "Imagen"
     },
     "subtitle": "Las naves y bodegas desde las que opera {company}.",
     "title": "Almacenes",
@@ -950,7 +1007,9 @@
       "unclassified": "Sin clasificar",
       "usesPriceLists": "Usa listas de precios",
       "usesPriceListsHint": "Si lo marcas, la tarifa la pone la lista y este precio queda de respaldo.",
-      "variantsHelp": "Lo mismo con otra característica: otro color, otra talla."
+      "variantsHelp": "Lo mismo con otra característica: otro color, otra talla.",
+      "photos": "Fotos",
+      "photosHelp": "Se suben al crear el producto, no antes: así una foto que falle no se lleva por delante lo que ya escribiste. Puedes añadir más luego desde su ficha."
     },
     "warehouses": {
       "create": "Nuevo almacén",
@@ -975,7 +1034,8 @@
       "scopeOrders": "{count, plural, one {# pedido} other {# pedidos}}",
       "scopeOpenQuotes": "{count, plural, one {# cotización en curso} other {# cotizaciones en curso}}",
       "scopeOpenOrders": "{count, plural, one {# pedido en curso} other {# pedidos en curso}}",
-      "scopeBlocked": "No se puede dar de baja: tiene {what}. Ciérralos o cancélalos antes."
+      "scopeBlocked": "No se puede dar de baja: tiene {what}. Ciérralos o cancélalos antes.",
+      "image": "Imagen"
     },
     "stock": {
       "title": "Unidades",
@@ -1192,5 +1252,33 @@
       "noDecisions": "Ningún pedido esperando decisión.",
       "seeAll": "Ver todo"
     }
+  },
+  "documents": {
+    "quote": "Cotización",
+    "quoteDocument": "Documento de cotización",
+    "issuedOn": "Emitida el",
+    "issuer": "Emisor",
+    "client": "Cliente",
+    "noContacts": "Sin contactos registrados",
+    "measurement": "Medida",
+    "groupSubtotal": "Subtotal del producto",
+    "packageGoverns": "El precio pactado es el del paquete completo, así que las líneas no llevan importe.",
+    "message": "Mensaje",
+    "terms": "Términos",
+    "observations": "Observaciones",
+    "clientSignature": "Firma del cliente",
+    "sellerSignature": "Firma de quien entrega",
+    "generatedBy": "Documento generado por {system}",
+    "generatedAt": "Generado el",
+    "print": "Imprimir",
+    "download": "Descargar PDF",
+    "copyLink": "Copiar enlace",
+    "copied": "Enlace copiado",
+    "backToQuote": "Volver a la ficha",
+    "downloadHint": "Para guardarlo como PDF, elige «Guardar como PDF» en el destino del diálogo de impresión.",
+    "shareHint": "Enlace público de sólo lectura, para quien no tiene cuenta:",
+    "doesNotReconcile": "Los importes por línea no suman el total de líneas. Revisa la cotización antes de mandar este documento.",
+    "linkGone": "Este enlace no lleva a ningún documento",
+    "linkGoneBody": "Puede que el documento se haya dado de baja, o que el enlace esté incompleto. Pídele uno nuevo a quien te lo mandó."
   }
 }

@@ -182,7 +182,7 @@ cuántas han llegado desde la última vez que abrió la bandeja.
 El indicador de novedades SHALL reiniciarse **al abrir la bandeja**, no al disminuir el contador de
 no leídas. Son dos preguntas distintas: haberlas visto pasar no es haberlas leído, y con la regla
 anterior —«se reinicia cuando el contador disminuya»— marcar una sola como leída borraba el aviso de
-las otras cuatro que acababan de llegar (ver `HALLAZGOS.md` H-73).
+las otras cuatro que acababan de llegar (ver `HALLAZGOS.md` H-78).
 
 #### Scenario: Llegan avisos mientras la bandeja está cerrada
 
@@ -286,7 +286,7 @@ La bandeja no SHALL poder apagarse. Es el registro de lo ocurrido, no un aviso: 
 si además se avisa hacia fuera. Un requisito anterior la trataba como un canal más y, con ella
 apagada, una actividad de la que alguien forma parte de la audiencia no dejaría rastro **para él**
 en ninguna parte, mientras el resto de la empresa sí la vería — el mismo hecho, visible para unos e
-inexistente para otros (ver `HALLAZGOS.md` H-72).
+inexistente para otros (ver `HALLAZGOS.md` H-77).
 
 Las notificaciones críticas de cuenta —recuperación de contraseña y verificación de correo— SHALL
 entregarse siempre por correo, con independencia de las preferencias.

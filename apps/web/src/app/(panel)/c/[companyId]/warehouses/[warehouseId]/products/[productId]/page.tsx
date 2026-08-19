@@ -7,6 +7,7 @@ import { getFormatter, getTranslations } from "next-intl/server"
 import type { ReactNode } from "react"
 import { ApiFailure } from "~/components/api-failure.tsx"
 import { PageShell } from "~/components/page-shell.tsx"
+import { Photo } from "~/components/photo.tsx"
 import { apiGet } from "~/lib/api.server.ts"
 import { can } from "~/lib/can.ts"
 import { requireCompany, requireProfile } from "~/lib/session.ts"
@@ -177,8 +178,14 @@ export default async function ProductPage({
           <Panel className="p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="grid size-11 shrink-0 place-items-center rounded-sm bg-panel-hover text-content-muted">
-                  <Box className="size-5" aria-hidden="true" />
+                <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-sm bg-panel-hover text-content-muted">
+                  {/* La portada, cuando la hay. El nombre del producto ya está en el título de la
+                      pantalla, así que la imagen es decorativa y no vuelve a decirlo. */}
+                  {product.coverUrl ? (
+                    <Photo src={product.coverUrl} className="size-full object-cover" />
+                  ) : (
+                    <Box className="size-5" aria-hidden="true" />
+                  )}
                 </span>
                 <div className="min-w-0">
                   <p className="font-mono text-body2 font-semibold text-content">{product.code}</p>
@@ -202,6 +209,29 @@ export default async function ProductPage({
                 ) : null}
               </div>
             </div>
+
+            {product.images.length > 0 ? (
+              <>
+                <Separator className="my-4" />
+                <ul className="flex flex-wrap gap-2">
+                  {product.images.map((image) => (
+                    <li key={image.uploadId}>
+                      <a
+                        href={image.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block size-20 overflow-hidden rounded-sm border border-line focus-visible:outline-2 focus-visible:outline-focus/40"
+                      >
+                        <Photo
+                          src={image.thumbnailUrl ?? image.url}
+                          className="size-full object-cover"
+                        />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
 
             {location ? (
               <>

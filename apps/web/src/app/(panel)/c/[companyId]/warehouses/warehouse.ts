@@ -7,7 +7,15 @@ import type {
   RentFrequency,
 } from "@tfv/contracts/quotation"
 
-export interface WarehouseRow {
+/** La imagen única de una entidad, tal y como llega de la API. */
+export interface ImageFields {
+  imageUploadId: string | null
+  imageUrl: string | null
+  /** El derivado de celda. Nulo si el navegador que la subió no supo producirlo. */
+  imageThumbnailUrl: string | null
+}
+
+export interface WarehouseRow extends ImageFields {
   id: string
   companyId: string
   name: string
@@ -19,7 +27,7 @@ export interface WarehouseRow {
   updatedAt: string
 }
 
-export interface StorageRow {
+export interface StorageRow extends ImageFields {
   id: string
   warehouseId: string
   parentId: string | null
@@ -61,8 +69,19 @@ export interface ProductRow {
   isPublished: boolean
   /** Alta hecha a la carrera desde una cotización, pendiente de completarse. */
   isProvisional: boolean
+  /** La portada de su galería, en tamaño de celda. Es lo que enseña la rejilla del catálogo. */
+  coverUrl: string | null
   createdAt: string
   updatedAt: string
+}
+
+/** Una foto de la galería de un producto. */
+export interface ProductImageRow {
+  uploadId: string
+  url: string
+  thumbnailUrl: string | null
+  position: number
+  isCover: boolean
 }
 
 export const STOCK_STATUSES = [
@@ -105,6 +124,7 @@ export interface ProductDetail extends ProductRow {
   measurements: MeasurementRow[]
   variants: ProductRow[]
   accessories: ProductRow[]
+  images: ProductImageRow[]
 }
 
 export interface ItemsEnvelope<T> {

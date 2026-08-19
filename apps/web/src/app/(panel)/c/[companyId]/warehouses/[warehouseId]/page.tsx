@@ -1,5 +1,5 @@
-import { Badge, ItemCard } from "@tfv/ui"
-import { Box } from "lucide-react"
+import { Badge, Button, ItemCard } from "@tfv/ui"
+import { Box, Plus } from "lucide-react"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
 import Link from "next/link"
@@ -7,6 +7,7 @@ import { getTranslations } from "next-intl/server"
 import { Collection, type PageEnvelope } from "~/components/collection/collection.tsx"
 import { type FilterSpec, toApiQuery, toSearchParams } from "~/components/collection/params.ts"
 import { PageShell } from "~/components/page-shell.tsx"
+import { Photo } from "~/components/photo.tsx"
 import { apiGet } from "~/lib/api.server.ts"
 import { can } from "~/lib/can.ts"
 import { requireCompany, requireProfile } from "~/lib/session.ts"
@@ -35,6 +36,7 @@ export default async function WarehouseCatalogPage({
   const canViewProducts = can(company, "warehouses.products.view")
   const canViewCategories = can(company, "warehouses.categories.view")
   const canViewStorages = can(company, "warehouses.storages.view")
+  const canCreateProducts = can(company, "warehouses.products.create")
 
   const [warehouseResult, productsResult, categoriesResult, globalCategoriesResult] =
     await Promise.all([
@@ -125,6 +127,18 @@ export default async function WarehouseCatalogPage({
           ? warehouseResult.data.description
           : t("warehouses.catalogSubtitle")
       }
+      // La entrada al asistente de alta. Hasta ahora sólo se llegaba escribiendo la dirección a
+      // mano: la pantalla existía y no la enlazaba nadie (`HALLAZGOS.md` H-70).
+      actions={
+        canCreateProducts ? (
+          <Button asChild>
+            <Link href={`/c/${companyId}/warehouses/${warehouseId}/products/new`}>
+              <Plus className="size-4" aria-hidden="true" />
+              {t("warehouses.products.create")}
+            </Link>
+          </Button>
+        ) : undefined
+      }
     >
       <WarehouseNav
         companyId={companyId}
@@ -154,8 +168,14 @@ export default async function WarehouseCatalogPage({
               key={product.id}
               view={view}
               media={
-                <span className="grid size-9 shrink-0 place-items-center rounded-sm bg-panel-hover text-content-muted">
-                  <Box className="size-4" aria-hidden="true" />
+                <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-sm bg-panel-hover text-content-muted">
+                  {/* La portada de su galería. El nombre está a la derecha en texto: repetirlo
+                      aquí lo haría sonar dos veces a quien la escucha. */}
+                  {product.coverUrl ? (
+                    <Photo src={product.coverUrl} className="size-full object-cover" />
+                  ) : (
+                    <Box className="size-4" aria-hidden="true" />
+                  )}
                 </span>
               }
               title={

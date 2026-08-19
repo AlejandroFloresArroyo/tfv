@@ -53,6 +53,7 @@ import {
   listProductsRoute,
   listWarehouseCategoriesRoute,
   productScopeRoute,
+  setProductImagesRoute,
   updateMeasurementRoute,
   updateProductRoute,
   updateWarehouseCategoryRoute,
@@ -97,7 +98,15 @@ import {
   updateProviderRoute,
   updateUserAddressRoute,
 } from "./directory.ts"
+import { publicDocumentRoute, quoteDocumentRoute } from "./documents.ts"
 import { health } from "./health.ts"
+import {
+  deleteMessageRoute,
+  editMessageRoute,
+  markConversationReadRoute,
+  readConversationRoute,
+  sendMessageRoute,
+} from "./order-chat.ts"
 import {
   acceptOrderRoute,
   changeOrderStatusRoute,
@@ -279,6 +288,7 @@ export const routes: readonly RegisteredRoute[] = [
   createProductRoute,
   getProductRoute,
   updateProductRoute,
+  setProductImagesRoute,
   productScopeRoute,
   deleteProductRoute,
 
@@ -328,6 +338,10 @@ export const routes: readonly RegisteredRoute[] = [
   reservationCoherenceRoute,
   deleteQuoteRoute,
 
+  // El documento comercial y su enlace público. Ver `pdf-documents`.
+  quoteDocumentRoute,
+  publicDocumentRoute,
+
   // Pedidos de almacén: la bandeja del operador. Aceptar genera la cotización.
   listOrdersRoute,
   createOrderRoute,
@@ -343,6 +357,15 @@ export const routes: readonly RegisteredRoute[] = [
   authorizeUploadRoute,
   reissueTargetsRoute,
   confirmUploadRoute,
+
+  // ─── Conversación del pedido ───────────────────────────────────────────────
+  // Los dos lados del mostrador, dentro del pedido.
+
+  readConversationRoute,
+  sendMessageRoute,
+  markConversationReadRoute,
+  editMessageRoute,
+  deleteMessageRoute,
 
   // ─── Bitácora y notificaciones ─────────────────────────────────────────────
   // La bitácora es de la empresa; la bandeja, las preferencias y los dispositivos son de la persona.

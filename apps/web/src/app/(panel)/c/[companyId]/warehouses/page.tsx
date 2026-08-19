@@ -7,6 +7,7 @@ import { getFormatter, getTranslations } from "next-intl/server"
 import { Collection, type PageEnvelope } from "~/components/collection/collection.tsx"
 import { type FilterSpec, toApiQuery, toSearchParams } from "~/components/collection/params.ts"
 import { PageShell } from "~/components/page-shell.tsx"
+import { Photo } from "~/components/photo.tsx"
 import { apiGet } from "~/lib/api.server.ts"
 import { can } from "~/lib/can.ts"
 import { requireCompany, requireProfile } from "~/lib/session.ts"
@@ -78,8 +79,15 @@ export default async function WarehousesPage({
                 key={warehouse.id}
                 view={view}
                 media={
-                  <span className="grid size-9 shrink-0 place-items-center rounded-sm bg-panel-hover text-content-muted">
-                    <Warehouse className="size-4" aria-hidden="true" />
+                  <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-sm bg-panel-hover text-content-muted">
+                    {(warehouse.imageThumbnailUrl ?? warehouse.imageUrl) ? (
+                      <Photo
+                        src={(warehouse.imageThumbnailUrl ?? warehouse.imageUrl) as string}
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <Warehouse className="size-4" aria-hidden="true" />
+                    )}
                   </span>
                 }
                 title={
@@ -118,6 +126,7 @@ export default async function WarehousesPage({
                       description: warehouse.description,
                       slug: warehouse.slug,
                       isPublished: warehouse.isPublished,
+                      imageUrl: warehouse.imageUrl,
                     }}
                   />
                 }

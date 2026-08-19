@@ -26,6 +26,13 @@ import { type Transaction, withRequester } from "@tfv/db"
 import { warehouseProducts, warehouseStorages } from "@tfv/db/schema"
 import { and, asc, count, eq, inArray, isNull, sql } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
+import {
+  assertUsableImages,
+  diffSingle,
+  imageRefs,
+  releaseUploads,
+  sweepObjects,
+} from "../media/collections.ts"
 import { loadWarehouse } from "./warehouses.ts"
 
 /** Los diez tipos, del más general al más específico. */
@@ -74,6 +81,10 @@ export interface StorageRecord {
   readonly name: string
   readonly color: string | null
   readonly icon: string | null
+  readonly imageUploadId: string | null
+  /** La dirección de la imagen, y su derivado de celda. Nulas cuando no hay imagen. */
+  readonly imageUrl: string | null
+  readonly imageThumbnailUrl: string | null
   /** Cuántas ubicaciones cuelgan directamente de ella. Es lo que dice si es hoja. */
   readonly childCount: number
   /**
@@ -179,6 +190,7 @@ export interface CreateStorageInput {
   readonly parentId?: string | null | undefined
   readonly color?: string | undefined
   readonly icon?: string | undefined
+  readonly imageUploadId?: string | null | undefined
 }
 
 export async function createStorage(
@@ -193,6 +205,9 @@ export async function createStorage(
     const kind = input.kind ?? "box"
     if (input.parentId) await loadStorage(tx, warehouseId, input.parentId)
 
+    const image = input.imageUploadId ?? null
+    if (image !== null) await assertUsableImages(tx, companyId, [image])
+
     const [created] = await tx
       .insert(warehouseStorages)
       .values({
@@ -204,6 +219,7 @@ export async function createStorage(
         name: input.name.trim(),
         color: input.color ?? null,
         icon: input.icon ?? null,
+        imageUploadId: image,
       })
       .returning()
 
@@ -219,6 +235,8 @@ export interface UpdateStorageInput {
   readonly parentId?: string | null | undefined
   readonly color?: string | null | undefined
   readonly icon?: string | null | undefined
+  /** `null` la retira. Sustituirla elimina la anterior, con las salvaguardas de `media/`. */
+  readonly imageUploadId?: string | null | undefined
 }
 
 export async function updateStorage(
@@ -228,7 +246,7 @@ export async function updateStorage(
   storageId: string,
   input: UpdateStorageInput,
 ): Promise<StorageRecord> {
-  return withRequester(actor, async (tx) => {
+  const { record, released } = await withRequester(actor, async (tx) => {
     await loadWarehouse(tx, companyId, warehouseId)
     const current = await loadStorage(tx, warehouseId, storageId)
 
@@ -236,6 +254,17 @@ export async function updateStorage(
     if (input.name !== undefined) patch.name = input.name.trim()
     if (input.color !== undefined) patch.color = input.color
     if (input.icon !== undefined) patch.icon = input.icon
+
+    // Mismo diferencial que una colección de una sola imagen: ver `media/collections.ts`.
+    const image =
+      input.imageUploadId === undefined
+        ? undefined
+        : diffSingle(current.imageUploadId, input.imageUploadId)
+
+    if (image !== undefined) {
+      await assertUsableImages(tx, companyId, image.added)
+      patch.imageUploadId = input.imageUploadId
+    }
 
     if (input.parentId !== undefined) {
       if (input.parentId !== null) {
@@ -253,7 +282,7 @@ export async function updateStorage(
     }
 
     if (Object.keys(patch).length === 0) {
-      return (await withCounts(tx, [current]))[0] as StorageRecord
+      return { record: (await withCounts(tx, [current]))[0] as StorageRecord, released: undefined }
     }
 
     const [updated] = await tx
@@ -263,8 +292,17 @@ export async function updateStorage(
       .returning()
 
     if (!updated) throw new NotFoundError("La ubicación no existe")
-    return (await withCounts(tx, [updated]))[0] as StorageRecord
+
+    return {
+      record: (await withCounts(tx, [updated]))[0] as StorageRecord,
+      // Después de escribir la columna: antes, la comprobación de referencias diría que la imagen
+      // anterior sigue en uso — por la referencia que se está quitando.
+      released: image === undefined ? undefined : await releaseUploads(tx, image.removed),
+    }
   })
+
+  if (released !== undefined) await sweepObjects(released)
+  return record
 }
 
 /** Lo que se lleva por delante eliminar una ubicación, para poder advertirlo antes. */
@@ -428,6 +466,10 @@ async function withCounts(
 
   const childCounts = new Map(children.map((row) => [row.parentId, row.value]))
   const productCounts = new Map(products.map((row) => [row.storageId, row.value]))
+  const images = await imageRefs(
+    tx,
+    rows.map((row) => row.imageUploadId),
+  )
 
   return rows.map((row) => ({
     id: row.id,
@@ -438,6 +480,9 @@ async function withCounts(
     name: row.name,
     color: row.color,
     icon: row.icon,
+    imageUploadId: row.imageUploadId,
+    imageUrl: images.get(row.imageUploadId ?? "")?.url ?? null,
+    imageThumbnailUrl: images.get(row.imageUploadId ?? "")?.thumbnailUrl ?? null,
     childCount: childCounts.get(row.id) ?? 0,
     productCount: productCounts.get(row.id) ?? 0,
     createdAt: row.createdAt,

@@ -121,6 +121,7 @@ Lo construido hasta ahora, medido y no estimado:
 
 | | |
 |---|---|
+<<<<<<< HEAD
 | Rebanadas | 11 de 30 empezadas, **ninguna cerrada del todo** |
 | Pruebas | **793** de vitest — 160 contratos, 97 diseño, 68 datos, 414 API, 54 web — más 63 de extremo a extremo |
 | Esquema | 93 tablas · 279 índices · 50 enumerados |
@@ -129,6 +130,18 @@ Lo construido hasta ahora, medido y no estimado:
 | Rutas | **146** registradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
 | Pantallas | 38, en español e inglés (1 056 mensajes, sin desalinear) |
+=======
+| Rebanadas | 10 de 30 empezadas, **ninguna cerrada del todo** |
+| Código sin pruebas | 31 130 líneas |
+| Código de prueba | 9 973 líneas |
+| Pruebas | **867** de vitest — 183 contratos, 62 datos, 432 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
+| Esquema | 93 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
+| Aislamiento | 200 políticas · 93/93 tablas · 0 con identidad cruda |
+| Migraciones | 17, replicadas desde cero en cada verificación |
+| Rutas | **138** registradas, 105 con permiso declarado, 13 públicas y enumeradas |
+| Permisos | **255** claves, comprobadas antes de cualquier efecto |
+| Pantallas | 38, en español e inglés (1085 mensajes, sin desalinear) |
+>>>>>>> dev
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
@@ -184,8 +197,13 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
+<<<<<<< HEAD
 | 08 | `migrate-media-storage` | 🟡 | **Subida directa entera**: autorización de escritura acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión sobre el mismo registro, confirmación que dice qué se escribió, y validación de nombre, tipo y coherencia. Del lado del cliente, el selector con vista previa, reducción y reintento por objeto. Falta que las pantallas lo usen, y el recolector **ya se ejecuta solo**, con plazo configurable y sin tocar archivos referenciados (09) |
 | 09 | `migrate-activity-and-notifications` | 🟡 | Bitácora transaccional de sólo anexado, audiencia por permiso, bandeja entera con su contador, preferencias y dispositivos. Y el **despachador de trabajos**, que desbloquea la 08 y la 13. Faltan los proveedores de empuje y de correo —configuración externa— y anotar las ~35 rutas de escritura que aún no dejan asiento |
+=======
+| 08 | `migrate-media-storage` | 🟡 | **Subida directa entera y usada**: autorización acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión, confirmación que dice qué se escribió, y el selector con vista previa, reducción y reintento por objeto. La **sustitución de colecciones diferencia** —L-01— y las pantallas del almacén ya suben: galería del producto, e imagen única de almacén y ubicación. Faltan los marcadores de posición como activos propios y la ejecución del recolector, que espera al despachador de trabajos (09) |
+| 09 | `migrate-activity-and-notifications` | ⬜ | |
+>>>>>>> dev
 | 10 | `migrate-identity-and-companies` | 🟡 | Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen, y las pantallas de prospecto —el formulario público es de la 19 y la bandeja necesita un área de administración de plataforma |
 | 11 | `migrate-subscriptions-and-billing` | ⬜ | |
 
@@ -194,10 +212,15 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
 | 12 | `migrate-warehouse-catalog` | 🟡 | Entera salvo el detalle de producto y sus asistentes, que son pantalla (29b). El **alta provisional** y su bandeja ya están |
+<<<<<<< HEAD
 | 13 | `add-transactional-stock-reservation` | 🟡 | Entera, 30/31, con el **agujero de las huérfanas rentadas** tapado. La verificación de coherencia **ya corre programada** y avisa a quien puede arreglarla (09, H-11 cerrado). M-04 sigue sin confirmar: se implementó el criterio de la spec |
 | 14 | `add-server-side-quotation-pricing` | 🟡 | Motor, autoridad del servidor, congelación al cerrar, **precio negociado, precio por paquete, cobros y saldo**. La interfaz consume ya la misma función. Falta el documento comercial, que espera a `pdf-documents`. M-05 sigue sin confirmar |
+=======
+| 13 | `add-transactional-stock-reservation` | 🟡 | Entera, 30/31, con el **agujero de las huérfanas rentadas** tapado. Falta sólo la ejecución programada de la verificación de coherencia, que espera al despachador de la 09. M-04 sigue sin confirmar: se implementó el criterio de la spec |
+| 14 | `add-server-side-quotation-pricing` | 🟡 | Motor, autoridad del servidor, congelación al cerrar, **precio negociado, precio por paquete, cobros y saldo**. La interfaz consume ya la misma función, y **el documento comercial ya se imprime y se comparte por enlace**. Falta la firma capturada en pantalla. M-05 sigue sin confirmar |
+>>>>>>> dev
 | 15 | `migrate-warehouse-orders` | 🟡 | 29/33. Ciclo, **aceptación atómica**, rechazo con motivo, propagación a la orden de compra y su bandeja. Las cuatro que faltan esperan al escaparate (19) y al servicio de producciones (20) |
-| 16 | `migrate-order-chat-realtime` | ⬜ | |
+| 16 | `migrate-order-chat-realtime` | 🟡 | 24/38. Historial con cursor, envío optimista, acuses por lado, editar y borrar lo propio, mensajes del sistema y la pertenencia al pedido, con la pantalla dentro de la ficha. **Sin conexión persistente**: pide configuración externa que no hay, y el transporte queda detrás de una costura (H-60) |
 | 17 | `migrate-shipping-rates` | ⬜ | |
 | 18 | `add-transactional-checkout` | ⬜ | |
 | 19 | `migrate-websites-and-site-builder` | ⬜ | |
@@ -225,7 +248,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
 | 28 | `rebuild-ui-foundation` | 🟡 | Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial), con el **asistente por pasos**, el área de texto, el campo de importe y el selector con búsqueda. De la 28e faltan el selector de archivos, el editor enriquecido, la firma y el mapa; de la 28d, la exploración de colecciones |
-| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, contrapartes y direcciones (29a). La 29b **cierra el flujo del almacén**: alta y baja de almacén, los dos árboles editables, los **dos asistentes** de producto y de variante, la ficha corregible, existencias con etiquetas imprimibles, listas de precios con asignación masiva, **el panel del almacén** y el constructor de cotizaciones entero —sus cuatro bloques se guardan solos, y la ventana de fechas rehace los días que cobra cada línea antes de guardar—. Faltan el documento público y la conversación del pedido. 29c–29e esperan a sus rebanadas de servidor |
+| 29 | `rebuild-ui-domain-screens` | 🟡 | Acceso, miembros, roles, contrapartes y direcciones (29a). La 29b **cierra el flujo del almacén**: alta y baja de almacén, los dos árboles editables, los **dos asistentes** de producto y de variante, la ficha corregible, existencias con etiquetas imprimibles, listas de precios con asignación masiva, **el panel del almacén** y el constructor de cotizaciones entero —sus cuatro bloques se guardan solos, y la ventana de fechas rehace los días que cobra cada línea antes de guardar—. El **documento de cotización y su enlace público** ya están; falta la conversación del pedido. 29c–29e esperan a sus rebanadas de servidor |
 | 30 | `add-data-migration-and-cutover` | ⬜ | |
 
 ## Lo siguiente
@@ -2537,6 +2560,7 @@ lecturas firmadas y caducas.
 742 pruebas antes de la última fusión y las cinco suites en verde después. La base de pruebas
 compartida volvió a morder: dos ejecuciones simultáneas se pisan y producen fallos en archivos que
 nadie ha tocado (H-12). Se perdió una vuelta de diagnóstico por eso, en los dos lados.
+<<<<<<< HEAD
 
 ### 2026-08-18 · La bitácora, la bandeja y el despachador que faltaba
 
@@ -2594,7 +2618,7 @@ La guarda va en el **motor** y no en el recolector, por dos razones: allí es un
 es una garantía que hereda cualquier otro camino que borre un archivo; y la lista de quién
 referencia la lleva el catálogo, así que una tabla nueva con una foto queda protegida el día que se
 crea. Se **omite** el borrado en lugar de fallar: fallar revertiría la recogida entera, y un solo
-archivo referenciado dejaría la limpieza sin ocurrir para siempre. Queda un resto anotado (H-70):
+archivo referenciado dejaría la limpieza sin ocurrir para siempre. Queda un resto anotado (H-75):
 los objetos del almacenamiento se retiran antes del borrado, y eso sólo se arregla dentro de
 `uploads.ts`.
 
@@ -2612,18 +2636,18 @@ desde la rebanada 04 y siguen ahí, esperando la misma cuenta.
 
 **Dos correcciones a la spec**
 
-- **La bandeja no es un canal apagable** (H-72). Con ella apagada, una actividad de cuya audiencia
+- **La bandeja no es un canal apagable** (H-77). Con ella apagada, una actividad de cuya audiencia
   alguien forma parte no le deja rastro en ninguna parte mientras el resto de la empresa sí la ve.
   La elección se acota a los canales salientes; la bandeja es el registro.
-- **El aviso de novedades se reinicia al abrir la bandeja**, no al disminuir el contador (H-73). Con
+- **El aviso de novedades se reinicia al abrir la bandeja**, no al disminuir el contador (H-78). Con
   la regla anterior, marcar una como leída borraba el aviso de las otras cuatro recién llegadas.
 
 **Dos huecos del motor que sólo aparecen con el código delante**
 
 - La política de escritura de las entregas no dejaba al destinatario **marcar la suya como leída**
-  (H-71). El síntoma habría sido una fila que no cambia, sin error: una política que no deja pasar
+  (H-76). El síntoma habría sido una fila que no cambia, sin error: una política que no deja pasar
   no falla, no encuentra la fila.
-- `withSystem(operación, [])` **no es «sistema»** para el motor (H-74): `app.is_system()` pregunta
+- `withSystem(operación, [])` **no es «sistema»** para el motor (H-79): `app.is_system()` pregunta
   por el alcance de empresas, y un trabajo global no declara ninguna. Hizo falta
   `app.declares_operation()`, que distingue lo que de verdad separa una operación de sistema de una
   petición de usuario.
@@ -2648,5 +2672,252 @@ de los cambios **sin una sola notificación** de lo que hizo ella.
 
 **Lo que queda de la rebanada**
 
-Los dos proveedores, las ~35 rutas de escritura que aún no dejan asiento (H-77), y la clave de
-permiso propia de la bitácora, que hoy usa la más cercana porque el catálogo está cerrado (H-76).
+Los dos proveedores, las ~35 rutas de escritura que aún no dejan asiento (H-82), y la clave de
+permiso propia de la bitácora, que hoy usa la más cercana porque el catálogo está cerrado (H-81).
+=======
+### 2026-08-18 · El documento que el cliente firma
+
+El servicio de documentos, que quedó anotado «para después» cuando se decidió imprimir desde el
+navegador. Llega con la primera de sus seis familias hecha —la cotización— y la costura preparada
+para las otras cinco.
+
+**Lo que se decidió y por qué**
+
+Imprimir desde el navegador no es una carencia: es lo que hace que **previsualizar, imprimir y
+descargar no puedan diferir**. Son la misma hoja y el mismo modelo; descargar es el diálogo de
+impresión con el destino «Guardar como PDF». La spec pide que las tres representaciones coincidan, y
+aquí no hay nada que mantener de acuerdo porque no hay dos dibujos.
+
+El reparto queda así: el servidor **compone el documento** —qué dice, con qué importes, en qué
+orden— y el navegador lo dibuja. La composición es una función pura en `@tfv/contracts`, de modo que
+el modelo del documento se declara una vez y no dos.
+
+**Los importes son los de la cotización, no una segunda lectura**
+
+El desglose sale de `breakdownOf`, la misma función que alimenta la ficha: congelado si la
+cotización está cerrada, recalculado si sigue abierta. Volver a resolverlo aquí habría sido repetir
+H-14 en el documento, que es el peor sitio: la hoja que el cliente firma contradiciendo la pantalla
+desde la que se imprimió.
+
+Y el documento **comprueba que cuadra**. Los subtotales de grupo se suman de las filas visibles en
+lugar de copiarse del desglose, y si lo que suman no es el total de líneas, la pantalla lo dice
+antes de mandarlo — un aviso que no se imprime, porque es nuestro y no del cliente.
+
+**El enlace público, sin estado que mantener**
+
+La referencia es un **sobre firmado**: familia, empresa, ámbito y documento en cuarenta y nueve
+bytes, más una firma HMAC. Ochenta y siete caracteres. No hay columna ni tabla que limpiar, el
+enlace es estable —el que se mandó hace un mes sigue sirviendo— y alterarlo un solo carácter
+responde `404` sin decir por qué.
+
+Lo que **sí** cuesta: no se puede revocar uno suelto, sólo rotar el secreto. La spec no lo pide;
+queda anotado (H-64) con el motivo escrito en el propio archivo.
+
+La lectura sin sesión corre bajo `withSystem`, declarando la empresa **que nosotros firmamos**, no
+la que pide quien llama. Las políticas del motor siguen aplicándose: un fallo en el manejador no
+puede enseñar el documento de otra empresa. Y el candado de la superficie pública se amplió a mano,
+con su motivo, que es exactamente para lo que está.
+
+**Tres defectos que sólo se ven en papel**
+
+1. **`max-w-sm` mide doce píxeles** en este tema (H-60): el espaciado llamado `sm` gana a la escala
+   de contenedores. La columna de importes salía con una palabra por línea. En pantalla y en papel.
+2. **La hoja impresa es más estrecha que una tableta** (H-63), así que todo lo maquetado con
+   `tablet:` se apila en el papel. Las dos rejillas del documento se declaran a dos columnas también
+   en la regla de impresión.
+3. **El pie se quedaba solo en una segunda hoja en blanco.** Se probó a repetirlo en cada página
+   sacándolo del flujo, y el navegador lo pintó encima de las firmas. Firmas y pie van ahora en un
+   bloque indivisible: caben los dos, o pasan los dos juntos.
+
+**Lo que queda fuera, a propósito**
+
+Las otras cinco familias —nota de entrega, presupuesto, plan de trabajo, recibo de venta e
+instructivo de armado— y el visor de guiones. Ninguna tiene todavía entidad detrás: esperan a
+producciones (20 y 22) y a Pixit (24 a 26). La costura está puesta: el reparto por familia es un
+`switch` sobre la referencia firmada, y una familia sin manejador responde `404` como cualquier otra
+cosa que no existe.
+
+La **firma capturada en pantalla** tampoco entra: necesita el control de firma (28e) y
+almacenamiento de ficheros (08). El documento imprime el espacio vacío, que es lo que la spec pide
+para un documento sin firmar, y hoy se firma a mano sobre el papel.
+
+Y la **hoja de etiquetas de existencias** no se enchufó a este servicio: no existe todavía en este
+árbol. Cuando exista, lo que puede reutilizar es la regla de impresión.
+
+**Comprobado**
+
+**611 pruebas** de vitest —158 de contratos, 59 de datos, 352 de la API y 42 de web, **treinta
+nuevas**—, `check` y `lint` limpios. Y en el navegador, que es donde se ven los tres defectos de
+arriba: las cinco cotizaciones sembradas abiertas como documento, mandadas a imprimir a PDF, con el
+nombre del archivo
+puesto en el título y devuelto al terminar, y el enlace público abierto en un contexto **sin una
+sola cookie**. Alterar la referencia lleva a «este enlace no lleva a ningún documento».
+### 2026-08-18 · Lo que se habla alrededor del pedido
+
+Un pedido no se resuelve solo con estados. Se resuelve preguntando si la grúa lleva el cabezal,
+avisando de que el camión sale a las ocho y no a las siete, y confirmando que alguien pasará por el
+equipo el jueves. Eso es lo que entra: la conversación del pedido, dentro del pedido.
+
+**Lo que no entra, y por qué se dice antes que lo demás**
+
+La spec pide conexión persistente autenticada con difusión entre instancias. No la hay. El
+transporte que la sostendría —canal de tiempo real gestionado, o notificación entre instancias del
+motor de datos con una conexión dedicada fuera del pozo— pide configuración que este entorno no
+tiene, y media conexión a medio funcionar es peor que ninguna: se ve perfecta en las pruebas y se
+comporta raro en cuanto hay dos personas.
+
+Entra en su lugar **todo lo que no depende del transporte**, que es la mayor parte, y el transporte
+queda detrás de una costura de seis funciones. Sustituirlo el día que haya con qué es escribir otra
+implementación de esa interfaz; la pantalla no se entera. Anotado como H-60.
+
+**Dos cursores, porque son dos preguntas**
+
+Hacia atrás —el historial— se camina por identificador, que en este sistema ya ordena por tiempo: el
+más antiguo que ya tienes es el sitio exacto por donde seguir, sin instantes que redondear.
+
+Hacia adelante no basta con los mensajes nuevos: hay que enterarse de los que se **editaron** y los
+que se **borraron**, y ésos son viejos. Se camina por instante de modificación, y ahí aparece la
+parte que no se ve venir: la base guarda microsegundos y el cursor viaja en milisegundos, así que un
+mensaje con microsegundos distintos de cero queda **siempre por delante de su propio cursor** y se
+entrega en cada consulta, para siempre. Se compara truncado al milisegundo, que es la precisión que
+sobrevive al viaje.
+
+Y al revés: un mensaje que **confirma** en la base después de que la consulta tomó su instante
+quedaría por detrás del cursor y no aparecería nunca en ninguna pantalla. Por eso quien pregunta
+retrocede dos segundos cuando ya no tiene cola. Recibir dos veces lo mismo no cuesta nada —se
+reconcilia por identificador—; perder un mensaje sí.
+
+**Los acuses son del lado, no de la persona**
+
+Si tres personas del almacén están en la conversación y una lee, queda leído para el lado del
+proveedor. Es lo correcto aquí: el cliente quiere saber si *el almacén* lo vio, no quién
+concretamente. El acuse mueve el instante de modificación del mensaje, y por eso el otro lado se
+entera por el mismo cursor con el que se entera de todo lo demás — sin eso, un acuse sería invisible
+hasta que alguien volviera a escribir.
+
+Editar y borrar sí son de la **persona**: reescribir lo que dijo un compañero es ponerle palabras en
+la boca.
+
+**El lado se le pregunta al motor**
+
+Si el almacén se te enseña, eres quien surte; si la contraparte del pedido es tuya, eres quien pidió.
+Las dos respuestas salen de las mismas políticas que gobiernan el aislamiento, así que no pueden
+decir una cosa distinta de la que dice el motor. La pantalla del lado cliente vive en producciones y
+no existe todavía (H-64), pero el lado ya se resuelve y tiene su prueba: cuando llegue, hace falta
+una ruta, no reescribir esto.
+
+**La clave que no existe**
+
+El catálogo cerrado no tiene ninguna para conversar. Mirar va con `warehouses.orders.view` y escribir
+con `warehouses.orders.edit`, que deja fuera a quien sólo mira. Es la elección conservadora, y no
+obviamente la correcta: colapsarlas ampliaría en silencio la autoridad de quien tenía la general, que
+es el error que ya costó una corrección en H-07. Anotado como H-62.
+
+**Dos ventanas, y lo que sólo se ve mirando**
+
+Rosa y Ale, dos cuentas, el mismo pedido. Mandar, editar, borrar, marcar leído, cortar la red y
+devolverla. Todo lo que hacía falta comprobar se comprobó, y apareció lo que ninguna prueba habría
+cazado: **los nombres de la escala de anchura de este sistema de diseño son espaciado**. `max-w-md`
+no son 28rem, son 0.842rem. El aviso del sistema salía en columna, una palabra por línea, y el
+síntoma parecía de centrado. Medido en el navegador, no supuesto — y ya había una pantalla en pie
+con el mismo nombre (H-63).
+
+**Comprobado**
+
+**629 pruebas** de vitest —157 de contratos, 59 de base, 51 de web y 362 de API—, cuarenta y ocho
+de ellas nuevas. Y la comprobación que ninguna de ellas hace: la conversación abierta dos veces, con
+dos cuentas, hablando consigo misma.
+
+La primera prueba del archivo no es de comportamiento: es la frontera. Nadie lee la conversación de
+un pedido ajeno —ni por la ruta del proveedor, ni desde su propio almacén, ni por debajo de la
+aplicación—, y está escrita antes que ninguna otra.
+
+### 2026-08-19 · Las fotos del catálogo, de punta a punta
+
+La rebanada 08 tenía servidor y cliente y **ninguna pantalla los usaba**. Ahora se sube una foto
+desde el asistente de alta, desde la ficha del producto, y desde el alta y la edición de un almacén
+y de una ubicación. Con ellas entra la corrección que faltaba del bloque de correcciones.
+
+**La galería del producto es una tabla, y la portada es una marca**
+
+`warehouse_products` no tenía columna de imagen. El almacén, la ubicación y la categoría sí, pero la
+spec habla de «un producto con las imágenes A, B y C»: una columna no sirve. La forma es la de
+`pixit_product_images` con una marca de portada añadida, porque **reordenar y elegir portada son dos
+decisiones distintas**: atarlas obliga a arrastrar una foto hasta el principio para que sea la que
+se enseña, que es justo lo que nadie quiere hacer con una galería de doce. Una portada por producto,
+garantizada por un índice único parcial y no por quien envía.
+
+**L-01, dicho como lo que es**
+
+Al sustituir una colección, la implementación anterior **intersecaba** en vez de diferenciar:
+borraba los que seguían estando y dejaba huérfanos los retirados. Actualizar de A, B, C a A, D
+borraba A —la que se quería conservar— y dejaba B y C ocupando almacenamiento para siempre. Las dos
+mitades del error se compensan en el recuento, y por eso nadie lo vio: seguían quedando dos
+archivos. La prueba mira **las dos listas**.
+
+Tres razones para no borrar, y las tres se comprueban: sigue en la colección, lo referencia otra
+entidad, o es un marcador de posición. La segunda no la responde una lista escrita a mano de las
+**treinta y dos** columnas que hoy apuntan a `uploads` —esa lista se queda vieja en silencio la
+primera vez que alguien añada una entidad con foto— sino el motor, que tiene las claves foráneas en
+su catálogo. Va `security definer` porque la pregunta cruza tablas de otros arrendatarios: una
+comprobación que no las ve responde «no la referencia nadie» justo antes de borrar la foto de otro.
+
+Vive en `apps/api/src/media/` y no dentro del catálogo, porque lo llaman ya cuatro sitios y copiar
+**esta** regla en concreto es copiar el defecto que corrige.
+
+**Y el defecto que sólo aparece usando la pantalla**
+
+Subir una foto, quitarla, y pedir su dirección: seguía respondiendo. El endpoint de borrado del
+proveedor recibe un campo llamado `prefixes` y **no borra por prefijo**, borra por clave exacta.
+`removeObjects` le pasaba `empresa/archivo`, el almacenamiento respondía `200`, y los cinco objetos
+se quedaban ahí sin fila en la base que los reclamara — así que ni el recolector volvería a mirarlos.
+Afectaba también a la recolección de subidas abandonadas. Ahora se pregunta primero qué hay bajo el
+prefijo y se borra por clave, que además resuelve que las extensiones no se puedan dar por sabidas.
+Es H-71, y leyendo el código era correcto.
+
+Con él, otros dos que tampoco se leen: la ficha pintaba las fotos recién subidas con una dirección
+vacía hasta recargar —ahora la galería se rehace con la respuesta del servidor— y la vista previa
+del selector se rompía al cambiar de paso del asistente, sólo en desarrollo, porque el ciclo de
+comprobación de React revoca las direcciones recién creadas y la marca de «de éste ya me ocupé»
+sobrevive a esa limpieza (H-72).
+
+**Una pantalla terminada a la que no enlazaba nadie**
+
+`products/new` aparecía una sola vez en toda la aplicación: dentro de su propia página. El asistente
+de alta de producto estaba entero —cinco pasos, sus permisos, su guarda— y la única forma de llegar
+era escribir la dirección. Es H-70, y es el mismo motivo por el que este encargo pide abrir el
+navegador: no se ve leyendo código.
+
+**Subir va después de guardar, siempre**
+
+La escritura va directa al almacenamiento y puede fallar por su cuenta. Al revés, una foto caída se
+lleva por delante los cinco pasos que la persona acaba de rellenar; así, lo peor que pasa es un
+producto creado sin fotos, y añadirlas desde su ficha ya funciona. Y una tanda con fallos no se da
+por buena: se guarda lo que sí subió y se dice cuántas quedan por reintentar, porque revertir
+tiraría las que sí llegaron.
+
+**Quitar la imagen y no tocarla no son lo mismo**
+
+Omitir el campo la deja como está; `null` la retira. Confundirlos hace que guardar el nombre de un
+almacén le borre la foto, y nadie relaciona lo uno con lo otro. Es una función pura con sus cuatro
+casos probados, igual que el resto de lo que decide algo: mover una foto, quitarla y saber qué
+portada queda viven en `~/lib/gallery.ts` y el componente sólo cablea eventos.
+
+**El permiso que no inventé**
+
+El catálogo de 255 claves **no tiene ninguna de archivos**. La galería va con
+`warehouses.products.edit_info` —las fotos son la información del producto dicha en imágenes, donde
+ya viven el nombre y la descripción— y las imágenes del almacén y de la ubicación con las de su
+edición, que ya existen. Anotado como H-73: añadir claves propias amplía la superficie de
+autorización y es decisión de producto.
+
+**Comprobado**
+
+Los seis paquetes, Biome, y **789 pruebas** de vitest —160 de contratos, 62 de base, 97 del sistema
+de diseño, 74 de web y 396 de API—, con veinticinco nuevas. Y en el navegador, sobre la base de
+desarrollo y devolviéndola a como estaba: se creó un producto con su foto desde el asistente, se le
+añadieron dos más desde la ficha, se cambió la portada, se reordenó y se quitó una — y el objeto de
+la retirada dejó de responder. La imagen de un almacén y la de una ubicación, lo mismo, incluida la
+retirada. Los cinco objetos por imagen se sirven con su tipo: el original en `png` y sus derivados
+en `jpg`.
+>>>>>>> dev

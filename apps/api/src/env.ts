@@ -74,6 +74,19 @@ const schema = z
     PAYMENTS_WEBHOOK_TOLERANCE: z.coerce.number().int().positive().default(300),
 
     /**
+     * El secreto con el que se firman los enlaces públicos de los documentos.
+     *
+     * Es lo único que hace impredecible la referencia de un enlace compartido: quien la altera
+     * recibe `404`. **Obligatorio en producción**, y sin valor por defecto nunca — un secreto con
+     * valor por defecto es un secreto público (`DEFECTS.md` S-13).
+     *
+     * Fuera de producción, su ausencia hace que el servicio firme con un secreto al azar por
+     * proceso: los enlaces valen mientras el servicio viva. Rotarlo invalida todos los enlaces
+     * repartidos, que es la única forma de revocarlos.
+     */
+    DOCUMENTS_LINK_SECRET: z.string().min(32).optional(),
+
+    /**
      * El almacenamiento de objetos, y la credencial con la que se le pide permiso.
      *
      * Los bytes **no pasan por aquí**: la API firma una autorización de escritura acotada a un
@@ -136,6 +149,16 @@ const schema = z
         message:
           "En producción es obligatorio: sin él, el endpoint de eventos de pago no puede verificar " +
           "nada y queda abierto a cualquiera que publique un evento falso.",
+      })
+    }
+
+    if (value.NODE_ENV === "production" && !value.DOCUMENTS_LINK_SECRET) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["DOCUMENTS_LINK_SECRET"],
+        message:
+          "En producción es obligatorio: firma los enlaces públicos de los documentos, y sin él " +
+          "no sobreviven a un reinicio ni a un segundo proceso sirviendo la misma aplicación.",
       })
     }
   })

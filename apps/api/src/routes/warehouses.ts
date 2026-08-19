@@ -45,6 +45,22 @@ import { collectionQuery, pageSchema, queryOf, serializePage } from "./paginatio
 
 // ─── Esquemas ────────────────────────────────────────────────────────────────
 
+/**
+ * La imagen única de una entidad, tal y como viaja.
+ *
+ * Tres campos y no uno: el identificador es lo que se envía al guardar, y las dos direcciones son
+ * lo que la pantalla pinta sin tener que ir a buscarlas. La de celda puede faltar —un navegador que
+ * no supo producir el derivado sube el original solo—, y entonces se pinta el original.
+ */
+const imageFields = {
+  imageUploadId: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  imageThumbnailUrl: z.string().nullable(),
+}
+
+/** `null` la retira; omitirla la deja como está. */
+const imageInput = z.string().nullable().optional()
+
 const warehouseSchema = z.object({
   id: z.string(),
   companyId: z.string(),
@@ -53,6 +69,7 @@ const warehouseSchema = z.object({
   slug: z.string().nullable(),
   isPublished: z.boolean(),
   priority: z.string(),
+  ...imageFields,
   createdAt: z.string(),
   updatedAt: z.string(),
 })
@@ -66,6 +83,7 @@ const storageSchema = z.object({
   name: z.string(),
   color: z.string().nullable(),
   icon: z.string().nullable(),
+  ...imageFields,
   childCount: z.number().int(),
   productCount: z.number().int(),
   createdAt: z.string(),
@@ -137,6 +155,7 @@ export const createWarehouseRoute = defineRoute({
               description: z.string().max(4000).optional(),
               priority: priorityField.optional(),
               isPublished: z.boolean().optional(),
+              imageUploadId: imageInput,
             }),
           },
         },
@@ -201,6 +220,7 @@ export const updateWarehouseRoute = defineRoute({
               priority: priorityField.optional(),
               isPublished: z.boolean().optional(),
               slug: z.string().trim().min(1).max(220).optional(),
+              imageUploadId: imageInput,
             }),
           },
         },
@@ -358,6 +378,7 @@ export const createStorageRoute = defineRoute({
               parentId: z.string().nullable().optional(),
               color: z.string().max(16).optional(),
               icon: z.string().max(64).optional(),
+              imageUploadId: imageInput,
             }),
           },
         },
@@ -400,6 +421,7 @@ export const updateStorageRoute = defineRoute({
               parentId: z.string().nullable().optional(),
               color: z.string().max(16).nullable().optional(),
               icon: z.string().max(64).nullable().optional(),
+              imageUploadId: imageInput,
             }),
           },
         },

@@ -10,7 +10,7 @@
 
 > **Emiten asiento seis operaciones**, las de empresa y membresía: es donde se probó el mecanismo
 > entero. Las otras ~35 rutas de escritura lo añaden al pasar por su módulo, con la misma clave que
-> protege la ruta (`HALLAZGOS.md` H-77).
+> protege la ruta (`HALLAZGOS.md` H-82).
 
 ## Audiencia
 
@@ -28,7 +28,7 @@
 - [ ] Alta del destinatario en el primer envío
 
 > Las dos últimas sólo significan algo con un proveedor externo al que sincronizar, y no lo hay
-> (`HALLAZGOS.md` H-75). La costura es `registerTransport`.
+> (`HALLAZGOS.md` H-80). La costura es `registerTransport`.
 
 ## Bandeja
 
