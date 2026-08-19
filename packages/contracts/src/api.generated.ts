@@ -7484,6 +7484,22 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /payments/local/checkouts/{session}": {
+    /** Página de cobro del procesador suplente */
+    params: {
+      session: string
+    }
+    response: undefined
+  }
+
+  "POST /payments/local/checkouts/{session}/pay": {
+    /** Pagar en el procesador suplente y emitir su evento firmado */
+    params: {
+      session: string
+    }
+    response: undefined
+  }
+
   "GET /permissions": {
     /** Catálogo de claves de permiso */
     response: {

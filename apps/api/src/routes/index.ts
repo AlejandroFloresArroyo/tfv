@@ -145,7 +145,7 @@ import {
   listOrdersRoute,
   rejectOrderRoute,
 } from "./orders.ts"
-import { paymentWebhookRoute } from "./payments.ts"
+import { localCheckoutPageRoute, localCheckoutPayRoute, paymentWebhookRoute } from "./payments.ts"
 import { permissionCatalogRoute } from "./permissions.ts"
 import {
   platformActivityRoute,
@@ -301,6 +301,11 @@ export const routes: readonly RegisteredRoute[] = [
 
   // Eventos del procesador de pagos. Público y protegido por la firma del remitente.
   paymentWebhookRoute,
+
+  // La página de cobro del procesador **suplente**, y su botón de pagar. Sólo responden con
+  // `PAYMENTS_PROVIDER=local`; con procesador de verdad no existen. Ver `payments/local-processor.ts`.
+  localCheckoutPageRoute,
+  localCheckoutPayRoute,
 
   // ─── Autorización ──────────────────────────────────────────────────────────
   permissionCatalogRoute,

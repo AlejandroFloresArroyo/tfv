@@ -38,12 +38,39 @@
  * se responde con error para provocarlo.
  */
 
-import { createHmac, timingSafeEqual } from "node:crypto"
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto"
 import { newId } from "@tfv/contracts"
 import { db, type Transaction } from "@tfv/db"
 import { paymentEvents } from "@tfv/db/schema"
 import { eq } from "drizzle-orm"
 import { BILLING_HANDLERS } from "../billing/events.ts"
+import { env } from "../env.ts"
+
+/**
+ * El secreto que se comparte con quien firma los eventos.
+ *
+ * Normalmente es el que la configuración declara, y sin él **se rechaza todo**: ésa es la postura
+ * correcta mientras no haya procesador, y es lo contrario de lo que hacía la implementación anterior
+ * (`DEFECTS.md` S-13).
+ *
+ * Con el **suplente** puesto y sin secreto declarado se acuña uno al azar por proceso. No es un
+ * secreto por defecto —eso sería un secreto público, que es justo el defecto que se corrigió—: es
+ * uno que sólo conoce este proceso, y el suplente vive dentro de él. Lo que consigue es que el
+ * ciclo de contratación se pueda recorrer con la configuración de desarrollo tal cual está, sin que
+ * nadie tenga que inventarse una frase y sin abrir el endpoint a nadie más. Es la misma decisión
+ * que ya toma `DOCUMENTS_LINK_SECRET` fuera de producción, y por el mismo motivo.
+ *
+ * En producción el suplente no se pone nunca, y el secreto es obligatorio: ver `env.ts`.
+ */
+let mintedSecret: string | null = null
+
+export function webhookSecret(): string | undefined {
+  if (env.PAYMENTS_WEBHOOK_SECRET !== undefined) return env.PAYMENTS_WEBHOOK_SECRET
+  if (env.PAYMENTS_PROVIDER !== "local") return undefined
+
+  mintedSecret ??= randomBytes(32).toString("hex")
+  return mintedSecret
+}
 
 export type VerificationFailure =
   | "sin_secreto"
