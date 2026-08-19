@@ -89,9 +89,7 @@ async function signUp(email: string): Promise<string> {
 }
 
 async function newCompany(cookie: string, name: string): Promise<string> {
-  const company = await json<{ id: string }>(
-    await request("POST", "/companies", { name }, cookie),
-  )
+  const company = await json<{ id: string }>(await request("POST", "/companies", { name }, cookie))
   return company.id
 }
 
@@ -103,7 +101,8 @@ beforeAll(async () => {
   companyId = await newCompany(cookie, "Casa de Renta")
 })
 
-const authorize = (body: unknown) => request("POST", `/companies/${companyId}/uploads`, body, cookie)
+const authorize = (body: unknown) =>
+  request("POST", `/companies/${companyId}/uploads`, body, cookie)
 
 const FOTO = { fileName: "camara.jpg", contentType: "image/jpeg", byteSize: 120_000 }
 
