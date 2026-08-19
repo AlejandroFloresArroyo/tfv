@@ -12,6 +12,7 @@
     "seed": "node --env-file-if-exists=../../.env --experimental-strip-types src/scripts/seed.ts",
     "bucket": "node --env-file-if-exists=../../.env --experimental-strip-types src/scripts/ensure-bucket.ts",
     "placeholders": "node --env-file-if-exists=../../.env --experimental-strip-types src/scripts/ensure-placeholders.ts",
+    "copy-media-objects": "node --env-file-if-exists=../../.env --experimental-strip-types src/scripts/copy-media-objects.ts",
     "rewrite-media-urls": "node --env-file-if-exists=../../.env --experimental-strip-types src/scripts/rewrite-media-urls.ts"
   },
   "dependencies": {
