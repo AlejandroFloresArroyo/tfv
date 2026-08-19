@@ -77,7 +77,14 @@ const nameField = z.string().trim().min(1, "El nombre es obligatorio").max(200)
 /** El solicitante, en la forma que el motor necesita para resolver su identidad. */
 function actorOf(c: Parameters<Parameters<typeof defineRoute>[0]["handler"]>[0]): Actor {
   const session = requireSession(c)
-  return { userId: session.userId, sessionId: session.sessionId }
+
+  return {
+    userId: session.userId,
+    sessionId: session.sessionId,
+    // Por qué se dejó pasar. La bitácora marca lo ejercido como administración de plataforma, que
+    // es lo que permite distinguir después lo que hizo soporte de lo que hizo el cliente.
+    asPlatformAdmin: c.get("grantReason") === "platform_admin",
+  }
 }
 
 // ─── Empresas ────────────────────────────────────────────────────────────────

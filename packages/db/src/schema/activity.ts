@@ -129,11 +129,26 @@ export const notificationDeliveries = pgTable(
     lastError: text("last_error"),
     sentAt: timestamp("sent_at", { withTimezone: true, mode: "date" }),
 
+    /**
+     * Estado de lectura y de archivo, **sólo del canal de bandeja**.
+     *
+     * Un correo entregado no se marca leído, y un aviso empuje tampoco: la bandeja es la única
+     * entrega que además es una superficie donde la persona vuelve. Guardarlo aquí y no en una
+     * tabla aparte es lo mismo que se decidió con los archivos y su metainformación —se leen
+     * siempre juntos y nadie consulta el estado de lectura por su cuenta—.
+     */
+    readAt: timestamp("read_at", { withTimezone: true, mode: "date" }),
+    archivedAt: timestamp("archived_at", { withTimezone: true, mode: "date" }),
+
     ...timestamps,
   },
   (table) => [
     index("notification_deliveries_pending_idx").on(table.createdAt).where(sql`status = 'queued'`),
     index("notification_deliveries_recipient_idx").on(table.recipientId, table.createdAt),
+    // La bandeja se lee siempre igual: las mías, de más reciente a más antigua.
+    index("notification_deliveries_inbox_idx")
+      .on(table.recipientId, table.createdAt)
+      .where(sql`channel = 'inbox'`),
   ],
 )
 

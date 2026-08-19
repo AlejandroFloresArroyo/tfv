@@ -43,6 +43,21 @@
       "empty": "No active sessions."
     }
   },
+  "activity": {
+    "title": "Activity log",
+    "subtitle": "What has happened inside {company}. Entries cannot be edited or deleted.",
+    "searchPlaceholder": "Search the log",
+    "action": "Action",
+    "when": "When",
+    "byPlatform": "Platform support",
+    "empty": "No activity yet",
+    "emptyBody": "Anything created, edited or removed in this company will show up here.",
+    "actions": {
+      "create": "Created",
+      "update": "Updated",
+      "delete": "Removed"
+    }
+  },
   "addresses": {
     "title": "Addresses",
     "subtitle": "Where {company} ships from and bills to.",
@@ -362,6 +377,52 @@
     "ownership": "Ownership",
     "notOwner": "Member",
     "searchPlaceholder": "Search by name or email…"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "bell": "Notifications",
+    "bellWithCount": "Notifications, {count} unread",
+    "unreadCount": "{count, plural, one {# unread} other {# unread}}",
+    "allRead": "You have no unread notifications.",
+    "news": "{count, plural, one {# new} other {# new}}",
+    "filters": "Inbox filters",
+    "empty": "Nothing here",
+    "emptyBody": "We will let you know when something concerns you.",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "pageOf": "Page {page} of {total}",
+    "filter": {
+      "all": "All",
+      "unread": "Unread",
+      "read": "Read",
+      "archived": "Archived"
+    },
+    "kinds": {
+      "activity": "Activity",
+      "stock_coherence": "Stock mismatch",
+      "other": "Notice"
+    },
+    "channels": {
+      "inbox": "Inbox",
+      "push": "Push",
+      "email": "Email"
+    },
+    "categories": {
+      "account": "Account",
+      "activity": "Activity",
+      "billing": "Billing",
+      "stock": "Stock"
+    },
+    "preferences": {
+      "title": "Where you hear about it",
+      "subtitle": "The inbox always arrives: it is the record of what happened. What you choose is whether we also reach out.",
+      "category": "Category",
+      "toggle": "{channel} for {category}",
+      "noProvider": "Push and email have no provider configured yet, so they cannot be turned on.",
+      "failed": "We could not save the change. Please try again."
+    }
   },
   "roles": {
     "title": "Roles",

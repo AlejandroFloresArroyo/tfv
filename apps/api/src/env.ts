@@ -98,6 +98,38 @@ const schema = z
     STORAGE_BUCKET: z.string().min(1).default("tfv"),
     /** **Obligatoria en producción**, como el secreto del procesador de pagos y por lo mismo. */
     STORAGE_SERVICE_KEY: z.string().min(1).optional(),
+
+    /**
+     * El despachador de trabajos en segundo plano.
+     *
+     * Se puede apagar —`JOBS_ENABLED=false`— y hace falta que se pueda: con varias instancias del
+     * servicio, la cola lo aguanta —el trabajo se toma con bloqueo y salto de lo bloqueado— pero
+     * puede convenir que sólo una lo atienda. Apagarlo **no rompe nada**: los trabajos se siguen
+     * encolando y esperan a que alguien los atienda.
+     */
+    JOBS_ENABLED: z
+      .string()
+      .default("true")
+      .transform((value) => value !== "false" && value !== "0"),
+    /** Cada cuánto se mira la cola. */
+    JOBS_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
+    /** A partir de cuándo se da por caído un trabajo que quedó en curso y se devuelve a la cola. */
+    JOBS_STUCK_AFTER_MS: z.coerce.number().int().positive().default(300_000),
+    /** Espera del primer reintento. Se dobla en cada intento hasta el techo. */
+    JOBS_BACKOFF_MS: z.coerce.number().int().positive().default(30_000),
+    JOBS_MAX_BACKOFF_MS: z.coerce.number().int().positive().default(3_600_000),
+
+    /**
+     * Plazo del recolector de subidas abandonadas.
+     *
+     * No es una constante del dominio: veinticuatro horas son generosas para una foto y cortas para
+     * un video de dos gigas por una conexión mala.
+     */
+    UPLOADS_ABANDONED_AFTER_HOURS: z.coerce.number().int().positive().default(24),
+    UPLOADS_COLLECT_EVERY_MS: z.coerce.number().int().positive().default(3_600_000),
+    /** Cada cuánto se comprueba que las reservas y el inventario digan lo mismo. */
+    STOCK_COHERENCE_EVERY_MS: z.coerce.number().int().positive().default(21_600_000),
+    NOTIFICATIONS_DELIVER_EVERY_MS: z.coerce.number().int().positive().default(60_000),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV === "production" && !value.STORAGE_SERVICE_KEY) {

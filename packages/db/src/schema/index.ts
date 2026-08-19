@@ -27,6 +27,8 @@ export * from "./commerce.ts"
 export * from "./counterparties.ts"
 // ─── Identidad y arrendatarios ───────────────────────────────────────────────
 export * from "./identity.ts"
+// ─── Infraestructura ─────────────────────────────────────────────────────────
+export * from "./jobs.ts"
 export * from "./locations.ts"
 export * from "./media.ts"
 export * from "./pixit.ts"

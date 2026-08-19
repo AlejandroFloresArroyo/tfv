@@ -43,6 +43,21 @@
       "empty": "No hay ninguna sesión activa."
     }
   },
+  "activity": {
+    "title": "Bitácora",
+    "subtitle": "Lo que ha ocurrido dentro de {company}. Los asientos no se pueden modificar ni borrar.",
+    "searchPlaceholder": "Buscar en la bitácora",
+    "action": "Acción",
+    "when": "Cuándo",
+    "byPlatform": "Soporte de plataforma",
+    "empty": "Todavía no hay actividad",
+    "emptyBody": "Aquí aparecerá lo que se cree, se edite o se dé de baja en esta empresa.",
+    "actions": {
+      "create": "Alta",
+      "update": "Cambio",
+      "delete": "Baja"
+    }
+  },
   "addresses": {
     "title": "Direcciones",
     "subtitle": "Desde dónde envía y a dónde factura {company}.",
@@ -362,6 +377,52 @@
     "ownership": "Propiedad",
     "notOwner": "Miembro",
     "searchPlaceholder": "Buscar por nombre o correo…"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "bell": "Notificaciones",
+    "bellWithCount": "Notificaciones, {count} sin leer",
+    "unreadCount": "{count, plural, one {# sin leer} other {# sin leer}}",
+    "allRead": "No tienes notificaciones sin leer.",
+    "news": "{count, plural, one {# nueva} other {# nuevas}}",
+    "filters": "Filtros de la bandeja",
+    "empty": "Nada por aquí",
+    "emptyBody": "Te avisaremos cuando ocurra algo que te toque.",
+    "markRead": "Marcar como leída",
+    "markUnread": "Marcar como no leída",
+    "archive": "Archivar",
+    "unarchive": "Desarchivar",
+    "pageOf": "Página {page} de {total}",
+    "filter": {
+      "all": "Todas",
+      "unread": "Sin leer",
+      "read": "Leídas",
+      "archived": "Archivadas"
+    },
+    "kinds": {
+      "activity": "Actividad",
+      "stock_coherence": "Descuadre de existencias",
+      "other": "Aviso"
+    },
+    "channels": {
+      "inbox": "Bandeja",
+      "push": "Empuje",
+      "email": "Correo"
+    },
+    "categories": {
+      "account": "Cuenta",
+      "activity": "Actividad",
+      "billing": "Facturación",
+      "stock": "Existencias"
+    },
+    "preferences": {
+      "title": "Por dónde quieres enterarte",
+      "subtitle": "La bandeja siempre llega: es el registro de lo que pasó. Lo que eliges es si además te avisamos fuera.",
+      "category": "Categoría",
+      "toggle": "{channel} para {category}",
+      "noProvider": "El aviso por empuje y el correo todavía no tienen proveedor configurado, así que no se pueden encender.",
+      "failed": "No pudimos guardar el cambio. Inténtalo de nuevo."
+    }
   },
   "roles": {
     "title": "Roles",

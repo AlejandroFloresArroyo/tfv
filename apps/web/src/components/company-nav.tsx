@@ -13,6 +13,7 @@ import {
   Building2,
   ChevronsUpDown,
   Handshake,
+  History,
   LayoutDashboard,
   MapPin,
   ShieldCheck,
@@ -97,6 +98,15 @@ export function CompanyNav({
       label: t("addresses.title"),
       icon: <MapPin className="size-4" aria-hidden="true" />,
       permission: "companies.addresses.view",
+    },
+    {
+      // La bitácora no tiene clave propia en el catálogo —está cerrado en las 255 migradas— y se
+      // exige la de ver la empresa, que es exactamente el alcance de lo que enseña.
+      section: "settings/activity",
+      href: `/c/${company.id}/settings/activity`,
+      label: t("activity.title"),
+      icon: <History className="size-4" aria-hidden="true" />,
+      permission: "companies.companies.view",
     },
   ].filter((entry) => can(company, entry.permission))
 
