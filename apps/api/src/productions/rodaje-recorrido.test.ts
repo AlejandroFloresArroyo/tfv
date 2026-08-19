@@ -183,7 +183,12 @@ it("del guion a la continuidad: los tres bloques sostienen la misma cadena", asy
   )
 
   const chapter = await ok<Identificado & { index: number }>(
-    await call("POST", `${base}/chapters`, { name: "Episodio piloto", scriptId: script.id, index: 1 }, cookie),
+    await call(
+      "POST",
+      `${base}/chapters`,
+      { name: "Episodio piloto", scriptId: script.id, index: 1 },
+      cookie,
+    ),
     201,
   )
 

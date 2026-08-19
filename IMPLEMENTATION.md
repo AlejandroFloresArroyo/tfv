@@ -126,24 +126,25 @@ Lo construido hasta ahora, medido y no estimado:
 
 | | |
 |---|---|
-| Rebanadas | 25 de 30 empezadas, **6 cerradas del todo**: 03, 08, 09, 11, 13 y 17 |
-| Tareas | **747 de 1228**, el 60,8 %. Contadas sobre los `tasks.md`, no estimadas. Otras 29 están marcadas **no aplicables** con su razón escrita: apuntan a la pila vieja, que la regla 1 deja intacta |
-| Código sin pruebas | 93 041 líneas |
-| Código de prueba | 33 985 líneas |
-| Pruebas | **1534** de vitest — 406 contratos, 90 datos, 810 API, 109 web, 119 interfaz — y **83 de extremo a extremo** con Playwright sobre un build de producción |
+| Rebanadas | 25 de 30 empezadas, **7 cerradas del todo**: 03, 08, 09, 11, 13, 17 y 20 |
+| Tareas | **783 de 1228**, el 63,8 %. Contadas sobre los `tasks.md`, no estimadas. Otras 29 están marcadas **no aplicables** con su razón escrita: apuntan a la pila vieja, que la regla 1 deja intacta |
+| Código sin pruebas | 100 871 líneas |
+| Código de prueba | 39 084 líneas |
+| Pruebas | **1660** de vitest — 406 contratos, 90 datos, 936 API, 109 web, 119 interfaz — y **83 de extremo a extremo** con Playwright sobre un build de producción |
 | Esquema | 97 tablas · 295 índices · 50 enumerados · 8 comprobaciones · 42 únicos parciales · 238 claves foráneas |
 | Aislamiento | 215 políticas · 97/97 tablas · 0 con identidad cruda |
 | Migraciones | 28, replicadas desde cero en cada verificación |
-| Rutas | **228** registradas, 165 con permiso declarado, 43 sólo autenticadas y 20 públicas y enumeradas |
+| Rutas | **295** registradas, 232 con permiso declarado, 43 sólo autenticadas y 20 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
 | Pantallas | 62, en español e inglés (1656 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
 colecciones explorables**, **el almacén entero, del catálogo a las existencias** y, desde el 19 de
-agosto, **el área de administración de plataforma** y **la contratación de planes**. La parte ancha
-del trabajo que queda son **producciones** (20–23) y **Pixit y locaciones** (24–27, en pausa por
-decisión de producto): entre las dos suman 295 de las 481 tareas abiertas. De los servicios de
+agosto, **el área de administración de plataforma**, **la contratación de planes** y **el núcleo de
+producciones**. La parte ancha del trabajo que queda son las tres rebanadas de producciones que
+siguen a la 20 —guion asistido, operación y compras— y **Pixit y locaciones** (24–27, en pausa por
+decisión de producto): entre las dos suman 259 de las 445 tareas abiertas. De los servicios de
 plataforma sólo sigue en curso la 10, y le faltan dos taxonomías que cuelgan de entidades que aún no
 existen.
 
@@ -153,6 +154,14 @@ ahora tiene un sitio propio desde el que ejercerlo: la bandeja de prospectos que
 implementada y sin pantalla, y dos padrones de sólo lectura. Cada ruta del área niega a un usuario
 corriente con `403`, y cada acción que se hace desde ella queda escrita en una bitácora que ni
 siquiera quien la protagoniza puede reescribir.
+
+**Y una producción ya se puede desglosar entera.** Sube su guion, se parte en capítulos y escenas
+—con índices que **no se renumeran nunca**, porque en un rodaje los números los referencia el
+papeleo de todo el equipo—, se da de alta el reparto y la utilería física, y cada jornada registra
+qué llevaba puesto cada personaje. La utilería es **un artículo del inventario o un video de
+referencia, nunca las dos cosas ni ninguna**, sostenido en tres capas y no en una comprobación del
+manejador. Al final se puede preguntar lo que se pregunta de verdad tres meses después: dónde ha
+estado esta chamarra, en qué jornada y sobre quién.
 
 **Contratar ya cierra el círculo, que era lo que abría todo lo demás.** El plan se contrata de verdad: la
 sesión de pago lleva a la página del procesador —hoy un suplente que no mueve dinero y lo dice—, y
@@ -253,9 +262,9 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 20 | `migrate-productions-core` | 🟡 | 9/41 más lo que no estaba en la lista. **La columna deja de estar en cero**: la producción entera —alta, ficha, fechas, publicación, panel y baja con su alcance—, su taxonomía con el rol que dirige el trabajo al equipo, y el flujo básico de los planes de trabajo. Faltan guion, capítulos y escenas (21), y jornadas, continuidad y catálogos, que son el grueso de la lista |
+| 20 | `migrate-productions-core` | ✅ | 41/41. **Cerrada el 2026-08-19**, en una tanda de tres encargos en paralelo. La producción entera —alta, ficha, fechas, publicación, panel, taxonomía y planes—, los **catálogos del rodaje** —personajes, sets y biblioteca de videos—, el **desglose del guion** —guiones, capítulos y escenas, con índices que no se renumeran— y la **continuidad** —jornadas, reparto, utilería excluyente y el cuaderno del script—. Los dos defectos heredados, R-08 y R-09, comprobados contra el catálogo del motor: no existen en el modelo nuevo. Una prueba encadena los tres bloques hasta «¿dónde ha estado esta chamarra?» |
 | 21 | `add-durable-script-sync` | ⬜ | 0/33 |
-| 22 | `migrate-productions-operations` | ⬜ | 0/44 |
+| 22 | `migrate-productions-operations` | 🟡 | 4/44. El **inventario de artículos** se adelantó con la 20, porque sin objetos no hay ni sets ni utilería que probar: alta con sus ocho estados y su tabla de transiciones, etiqueta legible por máquina con localización por código, fotos y búsqueda. `Entregado` queda **inalcanzable a propósito**: sólo lo pone una nota de entrega verificada, y las notas son de esta rebanada |
 | 23 | `add-transactional-procurement` | ⬜ | 2/43. Converge las dos columnas |
 
 ### Pixit y locaciones
