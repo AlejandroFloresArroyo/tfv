@@ -353,20 +353,23 @@ Ninguna bloquea el trabajo en curso. Por orden de cuándo harán falta:
 
 | Cuándo | Decisión | Quién |
 |---|---|---|
-| Rebanada 13 | Si acuñar inventario inexistente es prestación o defecto (M-04) | Negocio |
-| Rebanada 14 | Convención de signo del ISR directo y alcance fiscal (M-05) | Administración |
 | Rebanada 24 | Anulación de venta por compensación (F-10) | Contabilidad |
 | Rebanada 26 | Cuál indexación del mosaico es la real (F-09) | Comprobación física |
-| Rebanada 10 | Si transferir la propiedad debe poder delegarse a un rol. Hoy no tiene clave en el catálogo y se exige el papel; concederla añadiría una clave que la implementación anterior no tiene | Producto |
 | Rebanada 28e | Si la licencia del editor de imagen es transferible (F-13) | Legal |
-| Rebanada 30 | Qué se hace con las cuentas existentes marcadas como verificadas | Producto |
 
-Las de la 13 y la 14 ya están implementadas con el criterio de la spec y señaladas en el código,
-según la regla 5. Confirmar la de la 14 es cambiar una fila de la tabla de tratamiento; confirmar la
-de la 13, el valor por defecto de un parámetro. Ninguna de las dos toca el modelo, y la marca de
-trazabilidad de las unidades acuñadas se conserva se decida lo que se decida.
+Las tres son de fuera: dos esperan a Pixit, que está en pausa, y la tercera a un contrato. Ninguna
+detiene nada de lo que está en marcha.
 
-Resueltas: **cómo se propaga la identidad al motor** (rebanada 06, ver D-07 y la bitácora del
+**Resueltas el 2026-08-19**, en la sesión de repaso:
+
+| Decisión | Resolución |
+|---|---|
+| **M-04** · si comprometer inventario que no está en la nave es prestación o defecto | **Prestación.** Las bodegas traen de fuera lo que no tienen; para eso existe. Se autoriza **sólo en mostrador** —la tienda pública sigue negándose— y se añadió la **confirmación de llegada** con su bandeja, para que lo comprometido y lo que ya está en la nave dejen de ser la misma cosa. El permiso se queda como está |
+| **M-05** · convención de signo del ISR directo y alcance fiscal | **Sólo calcular bien.** No hay aspiración de cumplimiento formal: el motor tiene que dar el número correcto, y eso ya lo hace |
+| **Rebanada 10** · si transferir la propiedad de una empresa puede delegarse | **Sólo el propietario.** No se añade clave al catálogo, que sigue cerrado en 255 |
+| **Rebanada 30** · qué se hace con las cuentas existentes marcadas como verificadas | **Se les cree.** Una cuenta verificada en la pila anterior entra verificada |
+
+Resueltas antes: **cómo se propaga la identidad al motor** (rebanada 06, ver D-07 y la bitácora del
 2026-08-16), **si se acepta la ventana de revocación** —no se acepta, se paga la consulta— y
 **el alcance de traducción**: español e inglés desde el primer componente, sin prefijo de idioma
 en la dirección.
