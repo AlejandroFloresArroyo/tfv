@@ -4,18 +4,10 @@ import { getFormatter, getTranslations } from "next-intl/server"
 import { ApiFailure } from "~/components/api-failure.tsx"
 import { DataTable } from "~/components/data-table.tsx"
 import { PageShell } from "~/components/page-shell.tsx"
-import { apiGet } from "~/lib/api.server.ts"
+import { apiCall } from "~/lib/api.server.ts"
 import { requireProfile } from "~/lib/session.ts"
 import { CloseAllButton } from "./close-all-button.tsx"
 import { describeUserAgent } from "./user-agent.ts"
-
-interface SessionRow {
-  id: string
-  userAgent: string | null
-  ipAddress: string | null
-  lastUsedAt: string | null
-  createdAt: string
-}
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations())("account.sessions.title") }
@@ -26,6 +18,18 @@ export async function generateMetadata(): Promise<Metadata> {
  *
  * La pantalla existe porque las sesiones son revocables, y una revocación que nadie puede ejercer
  * no sirve de nada. Ver `openspec/specs/user-accounts/spec.md`.
+ *
+ * ## La primera que consume el cliente tipado
+ *
+ * Es la demostración de que el cliente generado sirve para escribir pantallas, no sólo para
+ * compilar. Lo que cambia es pequeño y es exactamente el punto: aquí había una interfaz
+ * `SessionRow` **escrita a mano** que declaraba cinco campos, y nada la ataba a lo que el servidor
+ * devuelve. Renombrar `lastUsedAt` en la API dejaba esta pantalla compilando y pintando «nunca»
+ * para todas las sesiones. Ahora el tipo sale del contrato publicado y ese cambio no compila.
+ *
+ * Es la única pantalla pasada, y no por falta de tiempo: la tarea «toda pantalla consume el cliente
+ * tipado» toca las cuarenta y ocho y hay seis encargos escribiéndolas ahora mismo. Ver
+ * `HALLAZGOS.md` H-128; la tarea queda sin marcar.
  */
 export default async function SessionsPage() {
   const t = await getTranslations()
@@ -34,7 +38,7 @@ export default async function SessionsPage() {
   const path = (await headers()).get("x-pathname") ?? "/account/sessions"
   await requireProfile(path)
 
-  const result = await apiGet<{ items: SessionRow[] }>("/auth/sessions")
+  const result = await apiCall("GET /auth/sessions")
 
   if (!result.ok) {
     return (

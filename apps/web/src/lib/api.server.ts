@@ -1,3 +1,9 @@
+import {
+  type ApiArgs,
+  type ApiEndpoint,
+  type ApiOutput,
+  resolveRequest,
+} from "@tfv/contracts/api-client"
 import { cookies, headers } from "next/headers"
 
 /**
@@ -16,7 +22,38 @@ export type ApiResult<T> =
   | { readonly ok: true; readonly data: T }
   | { readonly ok: false; readonly status: number; readonly message: string }
 
+/**
+ * Llamada **tipada** desde el servidor.
+ *
+ * El endpoint es una clave del contrato publicado, no una cadena: `"GET /auth/sessions"` compila y
+ * `"GET /auth/sesions"` no, y el tipo de lo que devuelve sale del mismo esquema que valida en el
+ * servidor. Ver `packages/contracts/src/api-client.ts`.
+ *
+ * Convive con `apiGet` a propósito: pasar las cuarenta y ocho pantallas es una ronda entera y
+ * hacerlo mientras otros las están escribiendo sólo produciría conflictos. Ver `HALLAZGOS.md`
+ * H-128.
+ */
+export async function apiCall<E extends ApiEndpoint>(
+  endpoint: E,
+  ...args: ApiArgs<E>
+): Promise<ApiResult<ApiOutput<E>>> {
+  const request = resolveRequest(endpoint, args[0] as Parameters<typeof resolveRequest>[1])
+
+  return send(request.path, {
+    method: request.method,
+    ...(request.body === undefined ? {} : { body: request.body }),
+  }) as Promise<ApiResult<ApiOutput<E>>>
+}
+
+/** La forma sin tipar, que siguen usando las pantallas que aún no se han pasado. */
 export async function apiGet<T>(path: string): Promise<ApiResult<T>> {
+  return send(path, { method: "GET" }) as Promise<ApiResult<T>>
+}
+
+async function send(
+  path: string,
+  options: { method: string; body?: unknown },
+): Promise<ApiResult<unknown>> {
   const store = await cookies()
   const cookieHeader = store
     .getAll()
@@ -26,8 +63,11 @@ export async function apiGet<T>(path: string): Promise<ApiResult<T>> {
   let response: Response
   try {
     response = await fetch(`${API_ORIGIN}${path}`, {
+      method: options.method,
+      ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
       headers: {
         cookie: cookieHeader,
+        ...(options.body === undefined ? {} : { "content-type": "application/json" }),
         // La correlación atraviesa el salto: un fallo en la API se puede encontrar partiendo de la
         // página que lo provocó, que es la mitad del trabajo de diagnosticar en producción.
         "x-request-id": (await headers()).get("x-request-id") ?? crypto.randomUUID(),
@@ -49,7 +89,9 @@ export async function apiGet<T>(path: string): Promise<ApiResult<T>> {
     return { ok: false, status: response.status, message }
   }
 
-  return { ok: true, data: (await response.json()) as T }
+  if (response.status === 204) return { ok: true, data: undefined }
+
+  return { ok: true, data: await response.json() }
 }
 
 /**
