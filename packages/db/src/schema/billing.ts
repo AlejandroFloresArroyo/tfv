@@ -309,9 +309,16 @@ export const merchantProfiles = pgTable(
     uniqueIndex("merchant_profiles_primary_unique")
       .on(table.companyId)
       .where(sql`is_primary = true AND deleted_at IS NULL`),
+    /**
+     * Excluye lo dado de baja, como su vecino de arriba.
+     *
+     * Sin `deleted_at IS NULL`, un perfil eliminado se queda con su identificador ocupado para
+     * siempre; con el suplente local, que lo acuña determinista por empresa, la segunda alta de la
+     * misma empresa chocaba siempre y respondía `500` sin salida. Ver la migración `0027`.
+     */
     uniqueIndex("merchant_profiles_external_unique")
       .on(table.externalAccountId)
-      .where(sql`external_account_id IS NOT NULL`),
+      .where(sql`external_account_id IS NOT NULL AND deleted_at IS NULL`),
     index("merchant_profiles_company_idx").on(table.companyId, table.status),
   ],
 )

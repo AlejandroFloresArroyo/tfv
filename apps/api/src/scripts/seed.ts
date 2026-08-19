@@ -27,6 +27,7 @@ import {
   counterparties,
   roles,
   services,
+  subscriptionPlans,
   users,
   warehouseCategories,
   warehouseMeasurements,
@@ -61,6 +62,66 @@ const CATALOG = [
   { keycode: "pixit", name: "Pixit", icon: "grid", color: "#ffd038" },
   { keycode: "websites", name: "Sitios", icon: "globe", color: "#20c997" },
   { keycode: "locations", name: "Locaciones", icon: "map-pin", color: "#ff922b" },
+] as const
+
+/**
+ * El catálogo de planes.
+ *
+ * Sin él **no hay nada que contratar**, y como la tienda pública exige suscripción vigente, sin él
+ * tampoco se sirve ninguna tienda: la aplicación quedaba a medias sin que ningún error lo dijera
+ * (`HALLAZGOS.md` H-141). El nivel cero es el gratuito, con su restricción propia —un solo asiento,
+ * y uno por persona—, que el motor hace cumplir.
+ *
+ * Las prestaciones son **material descriptivo**: sirven para comparar planes en la pantalla y nada
+ * en el sistema las hace cumplir. Lo que de verdad habilita un servicio es la fila de
+ * `company_services`, y eso lo decide la contratación, no esta lista.
+ *
+ * El identificador externo es el del producto en el procesador. Aquí se siembra el del suplente
+ * local, que es con el que se puede recorrer la contratación sin mover dinero.
+ */
+const PLANS = [
+  {
+    tier: 0,
+    title: "Gratuito",
+    description: "Para probar el sistema con una sola persona.",
+    isIndividual: true,
+    isRecommended: false,
+    externalProductId: "local_plan_gratuito",
+    features: [
+      { key: "seats", name: "Asientos", type: "number", value: 1, limited: true },
+      { key: "warehouses", name: "Almacenes", type: "boolean", value: true, limited: true },
+      { key: "storefront", name: "Tienda pública", type: "boolean", value: false },
+    ],
+  },
+  {
+    tier: 1,
+    title: "Casa de renta",
+    description: "Almacén completo, tienda pública y documentos compartibles.",
+    isIndividual: false,
+    isRecommended: true,
+    externalProductId: "local_plan_casa",
+    features: [
+      { key: "seats", name: "Asientos", type: "number", value: 10 },
+      { key: "warehouses", name: "Almacenes", type: "boolean", value: true },
+      { key: "storefront", name: "Tienda pública", type: "boolean", value: true },
+      { key: "shipping", name: "Tarifas de envío", type: "boolean", value: true },
+    ],
+  },
+  {
+    tier: 2,
+    title: "Productora",
+    description: "Todo lo anterior, más producciones y locaciones.",
+    isIndividual: false,
+    isRecommended: false,
+    externalProductId: "local_plan_productora",
+    features: [
+      { key: "seats", name: "Asientos", type: "string", value: "sin límite" },
+      { key: "warehouses", name: "Almacenes", type: "boolean", value: true },
+      { key: "storefront", name: "Tienda pública", type: "boolean", value: true },
+      { key: "productions", name: "Producciones", type: "boolean", value: true },
+      { key: "locations", name: "Locaciones", type: "boolean", value: true },
+    ],
+  },
 ] as const
 
 const COMPANIES = [
@@ -168,14 +229,45 @@ async function main(): Promise<void> {
   const placeholders = await ensurePlaceholders()
 
   const serviceIds = await seedCatalog()
+  const planes = await seedPlans()
   const companyIds = await seedCompanies(serviceIds)
   await seedAccounts(passwordHash, companyIds)
   const volume = await seedVolume(passwordHash, companyIds)
 
-  report(companyIds, volume, placeholders)
+  report(companyIds, volume, placeholders, planes)
 }
 
 // ─── Catálogo ────────────────────────────────────────────────────────────────
+
+/** Siembra el catálogo de planes. Idempotente por su identificador externo, como el de servicios. */
+async function seedPlans(): Promise<number> {
+  let puestos = 0
+
+  for (const plan of PLANS) {
+    const [existente] = await db
+      .select({ id: subscriptionPlans.id })
+      .from(subscriptionPlans)
+      .where(eq(subscriptionPlans.externalProductId, plan.externalProductId))
+      .limit(1)
+
+    if (existente) continue
+
+    await db.insert(subscriptionPlans).values({
+      id: newId(),
+      tier: plan.tier,
+      title: plan.title,
+      description: plan.description,
+      isIndividual: plan.isIndividual,
+      isRecommended: plan.isRecommended,
+      externalProductId: plan.externalProductId,
+      features: [...plan.features],
+    })
+    puestos += 1
+  }
+
+  return puestos
+}
+
 
 async function seedCatalog(): Promise<Map<string, string>> {
   const ids = new Map<string, string>()
@@ -1286,6 +1378,7 @@ function report(
   companyIds: Map<string, string>,
   volume: VolumeReport,
   placeholders: EnsureReport,
+  planes: number,
 ): void {
   const lines = [
     "",
@@ -1299,6 +1392,8 @@ function report(
     "  duena@tfv.dev          Propietaria · sólo Renta Fílmica del Norte",
     `  almacenista@tfv.dev    Rol acotado · ${ROLES["Almacén"]?.length ?? 0} de ${PERMISSION_KEYS.length} permisos`,
     "  compradora@tfv.dev     Sin membresías · padrón único",
+    "",
+    `  Planes contratables: ${PLANS.length} (${planes} sembrados ahora; el nivel cero es el gratuito)`,
     "",
     "  Empresa                      Servicios",
     "  ───────────────────────────  ──────────────────────────────────",
