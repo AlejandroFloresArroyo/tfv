@@ -29,6 +29,7 @@ import {
   boolean,
   foreignKey,
   index,
+  integer,
   jsonb,
   numeric,
   pgEnum,
@@ -235,6 +236,59 @@ export const warehouseProducts = pgTable(
       .where(sql`parent_id IS NULL AND deleted_at IS NULL`),
     index("warehouse_products_storage_idx").on(table.storageId),
     index("warehouse_products_category_idx").on(table.categoryId),
+  ],
+)
+
+// ─── Fotos del producto ──────────────────────────────────────────────────────
+
+/**
+ * Galería de un producto.
+ *
+ * El almacén, la ubicación y la categoría llevan **una** imagen en su propia columna. El producto
+ * no: la spec de almacenamiento habla de «un producto con las imágenes A, B y C», y quien renta
+ * equipo enseña el cuerpo, el lateral, los conectores y lo que trae la maleta. Una columna no
+ * sirve, así que la galería es una tabla. Precedente casi idéntico en el mismo esquema:
+ * `pixit_product_images`.
+ *
+ * **La portada es una marca, no la primera posición.** Reordenar y elegir portada son dos
+ * decisiones distintas —«ésta va antes que aquélla» y «ésta es la que se enseña en el listado»—, y
+ * atarlas obliga a arrastrar una foto hasta el principio para que sea la portada, que es justo lo
+ * que nadie quiere hacer con una galería de doce. Un índice único parcial lo sostiene: **una
+ * portada por producto**, garantizada por el motor y no por quien envía.
+ *
+ * Vía hasta la empresa: producto → almacén → empresa. Su política atraviesa por el producto, igual
+ * que la de las medidas.
+ */
+export const warehouseProductImages = pgTable(
+  "warehouse_product_images",
+  {
+    id: primaryId(),
+    productId: reference("product_id")
+      .notNull()
+      .references(() => warehouseProducts.id, { onDelete: "cascade" }),
+    /**
+     * El archivo.
+     *
+     * En cascada porque esta fila **es** la referencia: sin archivo no queda nada que enseñar.
+     * Quién puede borrar el archivo lo decide `apps/api/src/media/collections.ts`, que comprueba
+     * antes que no lo referencie nadie más y que no sea un marcador de posición.
+     */
+    uploadId: reference("upload_id")
+      .notNull()
+      .references(() => uploads.id, { onDelete: "cascade" }),
+
+    position: integer("position").notNull().default(0),
+    isCover: boolean("is_cover").notNull().default(false),
+
+    ...timestamps,
+  },
+  (table) => [
+    // La misma foto dos veces en el mismo producto es un error de quien envía, no una galería.
+    uniqueIndex("warehouse_product_images_unique").on(table.productId, table.uploadId),
+    uniqueIndex("warehouse_product_images_cover_unique")
+      .on(table.productId)
+      .where(sql`is_cover = true`),
+    index("warehouse_product_images_order_idx").on(table.productId, table.position),
   ],
 )
 
@@ -479,6 +533,15 @@ export const warehouseProductsRelations = relations(warehouseProducts, ({ one, m
   }),
   measurements: many(warehouseMeasurements),
   prices: many(warehouseProductPrices),
+  images: many(warehouseProductImages),
+}))
+
+export const warehouseProductImagesRelations = relations(warehouseProductImages, ({ one }) => ({
+  product: one(warehouseProducts, {
+    fields: [warehouseProductImages.productId],
+    references: [warehouseProducts.id],
+  }),
+  upload: one(uploads, { fields: [warehouseProductImages.uploadId], references: [uploads.id] }),
 }))
 
 export const warehouseMeasurementsRelations = relations(warehouseMeasurements, ({ one, many }) => ({

@@ -12,6 +12,7 @@ import { eq, sql } from "drizzle-orm"
 import { afterAll, beforeEach, describe, expect, it } from "vitest"
 import { closeConnection, db } from "../index.ts"
 import { companies } from "./identity.ts"
+import { uploads } from "./media.ts"
 import {
   pixitBoardSizes,
   pixitBoards,
@@ -32,6 +33,7 @@ import { productionItems, productionProps } from "./productions-ops.ts"
 import { warehouseOrders, warehouseStockReservations } from "./warehouse-commerce.ts"
 import {
   warehouseMeasurements,
+  warehouseProductImages,
   warehouseProducts,
   warehouseStockUnits,
   warehouses,
@@ -42,7 +44,9 @@ const TABLES = [
   "warehouse_orders",
   "warehouse_stock_units",
   "warehouse_measurements",
+  "warehouse_product_images",
   "warehouse_products",
+  "uploads",
   "warehouses",
   "pixit_inventory_movements",
   "pixit_inventory_definitions",
@@ -365,6 +369,85 @@ describe("catálogo de Pixit", () => {
       db.insert(pixitColors).values({ id: newId(), name: "Inválido", hex: "rojo" }),
       "pixit_colors_hex_format",
     )
+  })
+})
+
+describe("galería de un producto", () => {
+  async function seedProductAndUpload() {
+    const company = await seedCompany()
+    const warehouse = { id: newId(), companyId: company.id, name: "Bodega" }
+    const product = { id: newId(), warehouseId: warehouse.id, name: "Cámara", code: newId() }
+
+    await db.insert(warehouses).values(warehouse)
+    await db.insert(warehouseProducts).values(product)
+
+    return { product, upload: await seedUpload() }
+  }
+
+  async function seedUpload() {
+    const id = newId()
+    await db.insert(uploads).values({
+      id,
+      kind: "image",
+      url: `https://ejemplo.mx/${id}/original.jpg`,
+      fileName: "camara.jpg",
+      extension: "jpg",
+      contentType: "image/jpeg",
+      byteSize: 1024,
+      storagePath: `empresa/${id}`,
+    })
+    return { id }
+  }
+
+  it("no admite la misma foto dos veces en el mismo producto", async () => {
+    const { product, upload } = await seedProductAndUpload()
+
+    await db
+      .insert(warehouseProductImages)
+      .values({ id: newId(), productId: product.id, uploadId: upload.id })
+
+    await expectConstraint(
+      db
+        .insert(warehouseProductImages)
+        .values({ id: newId(), productId: product.id, uploadId: upload.id }),
+      "warehouse_product_images_unique",
+    )
+  })
+
+  it("no admite dos portadas del mismo producto", async () => {
+    // La portada es una marca y no la primera posición, así que lo que impide que haya dos es el
+    // motor: sin este índice, dos peticiones simultáneas dejan el producto con dos.
+    const { product, upload } = await seedProductAndUpload()
+    const otra = await seedUpload()
+
+    await db
+      .insert(warehouseProductImages)
+      .values({ id: newId(), productId: product.id, uploadId: upload.id, isCover: true })
+
+    await expectConstraint(
+      db
+        .insert(warehouseProductImages)
+        .values({ id: newId(), productId: product.id, uploadId: otra.id, isCover: true }),
+      "warehouse_product_images_cover_unique",
+    )
+  })
+
+  it("dos productos distintos tienen cada uno la suya", async () => {
+    const { product, upload } = await seedProductAndUpload()
+    const [warehouse] = await db.select().from(warehouses)
+    if (!warehouse) throw new Error("sin almacén")
+
+    const otro = { id: newId(), warehouseId: warehouse.id, name: "Trípode", code: newId() }
+    await db.insert(warehouseProducts).values(otro)
+
+    await db
+      .insert(warehouseProductImages)
+      .values({ id: newId(), productId: product.id, uploadId: upload.id, isCover: true })
+    await db
+      .insert(warehouseProductImages)
+      .values({ id: newId(), productId: otro.id, uploadId: upload.id, isCover: true })
+
+    expect(await db.select().from(warehouseProductImages)).toHaveLength(2)
   })
 })
 

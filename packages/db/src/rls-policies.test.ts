@@ -210,7 +210,7 @@ describe("cobertura", () => {
     // El número es una alarma a propósito: añadir una tabla obliga a pasar por aquí, y por aquí es
     // donde se recuerda que una tabla nueva **no hereda** la política de plataforma —la 0005 la
     // repartió con un bucle que corrió una sola vez—. Así se descubrió que faltaba en `prospects`.
-    expect(tablas.length).toBe(92)
+    expect(tablas.length).toBe(93)
     expect(tablas.filter((t) => !t.rls).map((t) => t.relname)).toEqual([])
     expect(tablas.filter((t) => t.politicas === 0).map((t) => t.relname)).toEqual([])
   })
