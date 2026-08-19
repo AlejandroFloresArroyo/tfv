@@ -94,14 +94,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     <input
       ref={ref}
       className={cn(
-        // `rule-field` y no un filete: el borde de un control se dibuja con un píxel de CSS
-        // completo, no con medio. Un campo cuyo límite no se ve es el defecto que este sistema ya
-        // había corregido una vez, y el motor de rayado no es razón para volver a cometerlo.
-        "h-[var(--control-h)] w-full rule-field bg-panel px-3",
+        // `edge-control` y no el borde vivo: el borde de un control llega a 3:1 porque es lo que
+        // dice dónde se puede escribir. Un campo cuyo límite no se ve es un defecto que este
+        // sistema ya corrigió una vez y no se vuelve a cometer por estética.
+        "h-[var(--control-h)] w-full border border-edge-control rounded-lg bg-panel px-3",
         "text-body1 text-content placeholder:text-content-faint",
         "transition-colors duration-150 ease-[--ease-out-soft]",
-        "hover:border-content-muted",
-        "aria-invalid:border-[var(--marca-alto)]",
+        "hover:border-content-faint",
+        "aria-invalid:border-[var(--luz-alto)]",
         "disabled:cursor-not-allowed disabled:opacity-60",
         className,
       )}
@@ -129,11 +129,11 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
       ref={ref}
       rows={rows}
       className={cn(
-        "w-full resize-y rule-field bg-panel px-3 py-2",
+        "w-full resize-y border border-edge-control rounded-lg bg-panel px-3 py-2",
         "text-body1 text-content placeholder:text-content-faint",
         "transition-colors duration-150 ease-[--ease-out-soft]",
-        "hover:border-content-muted",
-        "aria-invalid:border-[var(--marca-alto)]",
+        "hover:border-content-faint",
+        "aria-invalid:border-[var(--luz-alto)]",
         "disabled:cursor-not-allowed disabled:opacity-60",
         className,
       )}
@@ -182,7 +182,7 @@ export const AmountInput = forwardRef<HTMLInputElement, AmountInputProps>(functi
       autoComplete="off"
       value={value}
       onChange={(event) => onValueChange(sanitizeAmount(event.target.value, { negative, decimal }))}
-      className={cn("text-right font-mono tnum", className)}
+      className={cn("rounded-l-none text-right font-mono tnum", className)}
       {...rest}
     />
   )
@@ -192,7 +192,7 @@ export const AmountInput = forwardRef<HTMLInputElement, AmountInputProps>(functi
   return (
     <div className="flex">
       <span
-        className="inline-flex h-[var(--control-h)] items-center rule-field border-r-0 bg-panel-sunken px-3 text-body2 text-content-muted"
+        className="inline-flex h-[var(--control-h)] items-center rounded-l-lg border border-edge-control border-r-0 bg-panel-sunken px-3 text-body2 text-content-muted"
         aria-hidden="true"
       >
         {prefix}

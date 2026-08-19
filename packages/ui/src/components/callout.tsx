@@ -7,20 +7,17 @@ export type CalloutTone = "info" | "success" | "warning" | "danger"
 /**
  * Aviso.
  *
- * Caja rayada, sin relleno tintado. El sistema anterior pintaba el fondo del color del tono y el
- * texto de una variante oscura del mismo, que es la disposición por defecto de la categoría y trae
- * dos problemas: obliga a mantener veinte pares fondo/texto medidos en dos temas, y hace que un
- * aviso largo se lea sobre un color en vez de sobre el papel.
+ * Una tarjeta con la temperatura del tono: el degradado tiñe la esquina y se disuelve antes de
+ * llegar al texto, así que un aviso largo se sigue leyendo sobre el panel y no sobre un color.
  *
- * Aquí el tono vive en el **icono y la marca**, y el texto se queda en la tinta normal. El icono
- * no es adorno: es la señal que no depende del color, y por eso cada tono tiene una forma distinta
- * —círculo, palomita, triángulo, aspa— y no el mismo icono repintado.
+ * El icono no es adorno: es la señal que no depende del color, y por eso cada tono tiene una forma
+ * distinta —círculo, palomita, triángulo, aspa— y no el mismo icono repintado.
  */
-const TONES: Record<CalloutTone, { ink: string; icon: typeof Info }> = {
-  info: { ink: "text-tinta-curso", icon: Info },
-  success: { ink: "text-tinta-firme", icon: CheckCircle2 },
-  warning: { ink: "text-tinta-cuida", icon: AlertTriangle },
-  danger: { ink: "text-tinta-alto", icon: XCircle },
+const TONES: Record<CalloutTone, { ink: string; tint: string; icon: typeof Info }> = {
+  info: { ink: "text-tinta-curso", tint: "tint-curso", icon: Info },
+  success: { ink: "text-tinta-firme", tint: "tint-firme", icon: CheckCircle2 },
+  warning: { ink: "text-tinta-cuida", tint: "tint-cuida", icon: AlertTriangle },
+  danger: { ink: "text-tinta-alto", tint: "tint-alto", icon: XCircle },
 }
 
 export interface CalloutProps {
@@ -45,16 +42,16 @@ export interface CalloutProps {
 }
 
 export function Callout({ tone = "info", children, className, label, live }: CalloutProps) {
-  const { ink, icon: Icon } = TONES[tone]
+  const { ink, tint, icon: Icon } = TONES[tone]
 
   return (
     <div
       role={live ? "alert" : undefined}
-      className={cn("rule flex items-start gap-2.5 bg-panel px-3 py-2.5 text-body2", className)}
+      className={cn("card flex items-start gap-3 px-4 py-3 text-body2", tint, className)}
     >
       <Icon className={cn("mt-0.5 size-4 shrink-0", ink)} aria-hidden="true" />
       <div className="min-w-0 flex-1 text-content">
-        {label ? <span className={cn("mb-0.5 block apparatus", ink)}>{label}</span> : null}
+        {label ? <span className={cn("mb-0.5 block legend", ink)}>{label}</span> : null}
         {children}
       </div>
     </div>

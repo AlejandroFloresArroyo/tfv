@@ -85,11 +85,14 @@ export {
   Avatar,
   Badge,
   type BadgeTone,
+  Fact,
   Panel,
-  Rail,
-  RailKey,
+  type PanelProps,
   Separator,
   Skeleton,
+  StatCard,
+  type StatCardProps,
+  type Tint,
 } from "./components/surfaces.tsx"
 export {
   Wizard,

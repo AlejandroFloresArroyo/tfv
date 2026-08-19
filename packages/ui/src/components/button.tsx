@@ -12,22 +12,20 @@ export type ButtonSize = "sm" | "md" | "lg"
 /**
  * Botón.
  *
- * Sin esquina redondeada y sin relleno tintado en los secundarios: el límite de un control se
- * afirma con filete, igual que en el resto del sistema.
+ * El primario es el **oro de marca** relleno, con tinta encima: 13.26:1. Es la primera vez en este
+ * sistema que el oro hace trabajo de verdad en lugar de sobrevivir en el logotipo, y es lo que
+ * hace que la acción principal se encuentre sin buscarla sobre un lienzo oscuro.
  *
- * El primario es la inversión de la tinta —negro sobre claro, claro sobre negro— y se conserva del
- * sistema anterior porque es correcto: es la señal más fuerte disponible sin gastar un color que
- * la escalera semántica necesita para significar algo.
+ * Al pasar el ratón cambia el color y **nada más**: ni escala, ni se levanta, ni se desplaza.
  */
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: "bg-accent text-on-accent hover:bg-accent-hover",
-  // El borde de un control tiene que verse: `rule-field` es un píxel de CSS completo, no un filete
-  // de medio píxel. Ver la nota del motor de rayado en `tokens.css`.
-  secondary: "rule-field bg-panel text-content hover:bg-panel-hover",
-  ghost: "bg-transparent text-content-muted hover:bg-panel-hover hover:text-content",
-  // La destructiva usa el relleno destructivo, no la marca `alto`: una marca se mide contra el
-  // lienzo y un relleno contra su propio texto. Blanco sobre la marca en tema oscuro da 3.01:1.
-  danger: "bg-danger-fill text-on-danger hover:brightness-90",
+  // El borde de un control tiene que verse: `edge-control` llega a 3:1, el borde vivo no.
+  secondary: "border border-edge-control bg-panel text-content hover:bg-panel-raised",
+  ghost: "bg-transparent text-content-muted hover:bg-panel-raised hover:text-content",
+  // El relleno destructivo va aparte de la temperatura `alto`: una luz se mide contra el lienzo y
+  // un relleno contra su propio texto. Son dos preguntas distintas.
+  danger: "bg-danger-fill text-on-danger hover:brightness-110",
 }
 
 /**
@@ -38,9 +36,9 @@ const VARIANTS: Record<ButtonVariant, string> = {
  * dedo gane en tacto y la densidad en escritorio.
  */
 const SIZES: Record<ButtonSize, string> = {
-  sm: "h-[var(--control-h-sm)] px-2.5 gap-1.5 text-body3",
-  md: "h-[var(--control-h)] px-4 gap-2 text-button",
-  lg: "h-[var(--control-h-lg)] px-6 gap-2 text-body1",
+  sm: "h-[var(--control-h-sm)] px-3 gap-1.5 rounded-md text-body3",
+  md: "h-[var(--control-h)] px-4 gap-2 rounded-lg text-button",
+  lg: "h-[var(--control-h-lg)] px-6 gap-2 rounded-lg text-body1",
 }
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -87,9 +85,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       aria-busy={loading || undefined}
       className={cn(
         "inline-flex items-center justify-center font-semibold whitespace-nowrap",
-        // Un solo eje, amortiguado y sin rebote. El rebote es la firma del software de consumo.
-        "transition-colors duration-150 ease-[--ease-out-soft]",
-        "disabled:pointer-events-none disabled:opacity-55",
+        // Sólo color. Nada de transformaciones: es la regla del mundo y también lo correcto en una
+        // rejilla densa, donde un control que se levanta descoloca todo lo que tiene al lado.
+        "transition-colors duration-200 ease-[--ease-out-soft]",
+        // Deshabilitado sale del color de la variante y cae a neutro. Un primario en oro al 55%
+        // se lee como un oro enfermo, no como un botón apagado, y eso enseña a dudar del color de
+        // marca en el resto de la pantalla.
+        "disabled:pointer-events-none disabled:border disabled:border-edge",
+        "disabled:bg-panel-sunken disabled:text-content-faint disabled:shadow-none",
         VARIANTS[variant],
         SIZES[size],
         block && "w-full",

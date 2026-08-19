@@ -51,10 +51,13 @@ export function DataTable<T>({
             ninguna columna se pierde por el borde. */}
         <ul className="tablet:hidden">
           {rows.map((row) => (
-            <li key={rowKey(row)} className="flex flex-col gap-1.5 px-4 py-3.5 not-last:rule-b">
+            <li
+              key={rowKey(row)}
+              className="flex flex-col gap-1.5 px-4 py-3.5 not-last:border-edge not-last:border-b"
+            >
               {columns.map((column) => (
                 <div key={column.header} className="flex items-baseline justify-between gap-4">
-                  <span className="apparatus shrink-0 text-content-faint">{column.header}</span>
+                  <span className="legend shrink-0 text-content-faint">{column.header}</span>
                   <span className="min-w-0 text-right text-body2 text-content">
                     {column.cell(row)}
                   </span>
@@ -67,9 +70,9 @@ export function DataTable<T>({
         {/* Tableta en adelante: la tabla de verdad, que es donde la comparación en columna vale. */}
         <table className="hidden w-full border-collapse text-left tablet:table">
           <thead>
-            <tr className="rule-b">
+            <tr className="border-edge border-b">
               {columns.map((column) => (
-                <th key={column.header} className="px-4 py-3 apparatus text-content-faint">
+                <th key={column.header} className="px-4 py-3 legend text-content-faint">
                   {column.header}
                 </th>
               ))}
@@ -77,7 +80,7 @@ export function DataTable<T>({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={rowKey(row)} className="not-last:rule-b">
+              <tr key={rowKey(row)} className="not-last:border-edge not-last:border-b">
                 {columns.map((column) => (
                   <td
                     key={column.header}

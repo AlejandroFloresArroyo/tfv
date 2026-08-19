@@ -9,33 +9,34 @@ import "./globals.css"
 /**
  * Contrato de dirección de la rebanada de rediseño.
  *
- * Se emite al marcado para que sobreviva al build de producción: `grep 9f316c9f` sobre la salida
- * compilada tiene que encontrarlo. Es lo que la revisión final audita contra lo que se construyó.
+ * Se emite al marcado para que sobreviva al build de producción: buscar «CONTRATO DE DIRECCIÓN»
+ * en la salida compilada tiene que encontrarlo. Es lo que la revisión final audita contra lo que
+ * de verdad se construyó.
  */
 const DIRECTION_CONTRACT = `<!--
-CONTRATO DE DIRECCIÓN · Motor de Rayado · seed 9f316c9f · re-tirada 3, registro bolder
+CONTRATO DE DIRECCIÓN · Hoja de Llamado · dirección fijada por el cliente, no por el dado
 
-THESIS: El sistema traza su propia estructura. Un motor de rayado dibuja cada filete, muesca y
-corchete a un píxel de dispositivo exacto, y el estado es una marca trazada, nunca un relleno
-tintado. Rechaza la disposición por defecto de la categoría: tarjetas redondeadas flotando sobre
-sombras, con chips de color de fondo.
+THESIS: La hoja de llamado —el documento que toda la industria lee cada mañana— convertida en
+superficie de control oscura e iluminada. Su arquitectura se conserva: hechos duros arriba, bloques
+debajo, todo lo del día en una sola superficie. Su materia no: no es papel, es panel. Rechaza la
+disposición por defecto de la categoría, la barra lateral con fila de métricas planas.
 
-OWN-WORLD: Cero radios en todo el sistema. Filetes de un píxel de dispositivo, resueltos contra
-devicePixelRatio. Separación por línea y escalón de valor, nunca por relleno. Raíl de claves con
-muescas cuadradas cortadas donde cambia el pie. Estados como marcas: fina en reposo, llena al
-presionar, atravesada si deshabilitada, entre corchetes al enfocar, barra tachada si gastada. Ley
-de paleta: escalera semántica corta, fija y numerada, y nada se pinta fuera de ella. Oro de marca
-sólo como relleno con tinta encima o como marca de posición activa.
+OWN-WORLD: Lienzo casi negro azulado con tarjetas de degradado teñido y filo superior de luz. La
+cromática no es inventada: son temperaturas de set —tungsteno 3200 K, HMI 5600 K, hora mágica, luz
+de seguridad— y cada estado toma una, así que el color dice algo antes de que nadie lea la
+etiqueta. Radios generosos. Voz de display en Archivo expandida al 118%, de su propio eje de ancho.
+El oro de marca es la acción primaria y el estado «apartado». Claro es par legítimo, no modo
+alterno.
 
-STORY: Quien entra ve una superficie de precisión que se explica sola —cada estado trae su nombre
-además de su color— y entiende en segundos qué toca hacer y qué está en curso.
+STORY: Quien entra ve de un vistazo qué hay hoy y qué está comprometido, y encuentra la acción
+principal sin buscarla.
 
-FIRST VIEWPORT: El constructor de cotización con su raíl central: las claves de bloque corriendo
-por el centro, cada muesca cortada donde cambia el pie, el margen ancho absorbiendo el sobrante en
-ultrapanorámico, y la acción primaria al alcance del pulgar.
+FIRST VIEWPORT: Cabecera de hechos duros —fecha, día X de Y, citación, puesta de sol— sobre una
+fila de tarjetas de tablero con degradado por temperatura, la magnitud a tamaño de display y la
+tendencia debajo.
 
-FORM: Motor de rayado, retador líder de la mano bolder por orden de reparto, arrancado de su papel
-porque el brief fija «nada de hojas de papel» y un brief fijado gana al dado. Seed 9f316c9f.
+FORM: Dirección fijada por el cliente tras rechazar la anterior. Un brief fijado le gana al dado,
+siempre; por eso esta ronda no lleva semilla.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the
 verdict, DESIGN.md, and every shipping raster carrying its provenance.
@@ -56,8 +57,8 @@ export const viewport: Viewport = {
    * sistema donde un color se escribe dos veces, y por eso se anota.
    */
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ededeb" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d0e10" },
+    { media: "(prefers-color-scheme: light)", color: "#f1f2f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#08090c" },
   ],
 }
 
@@ -84,7 +85,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         {/*
           El contrato de dirección se emite como comentario HTML real, no como comentario de JSX:
           el de JSX lo borra el compilador y un contrato que el build borra no lo puede auditar
-          nadie. Va de primer hijo del cuerpo y se busca en el build por su clave de semilla.
+          nadie. Va de primer hijo del cuerpo y se busca en el build por su primera línea.
         */}
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: un comentario sólo llega al marcado así. */}
         <div hidden dangerouslySetInnerHTML={{ __html: DIRECTION_CONTRACT }} />

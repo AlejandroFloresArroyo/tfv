@@ -2,35 +2,16 @@ import type { HTMLAttributes, ReactNode } from "react"
 import { cn } from "../lib/cn.ts"
 
 /**
- * Superficie. La unidad de agrupación visual de todo el panel.
+ * Las temperaturas del sistema, en el mismo orden y con los mismos nombres que los tokens.
  *
- * Se separa del lienzo por **escalón de valor y filete**, nunca por sombra ni por esquina
- * redondeada. Es la regla que más cambia el aspecto de la aplicación respecto del sistema anterior,
- * y la que responde a que las superficies no se distinguían: una sombra difusa sugiere separación,
- * un filete la afirma.
- */
-export function Panel({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rule bg-panel", className)} {...rest} />
-}
-
-export function Separator({ className, ...rest }: HTMLAttributes<HTMLHRElement>) {
-  return <hr className={cn("rule-t border-0", className)} {...rest} />
-}
-
-/**
- * La escalera semántica, en el mismo orden y con los mismos nombres que los tokens.
+ * No son una paleta de marca inventada: son las fuentes de luz con las que esta industria trabaja.
+ * Tungsteno a 3200 K, HMI a 5600 K, la magenta de la hora mágica, el rojo de la luz de seguridad.
+ * Cada estado toma una, así que el color dice algo antes de que nadie lea la etiqueta.
  *
- * Los cinco primeros nombres son los del sistema anterior y siguen funcionando para que las
- * pantallas ya escritas no se rompan. Los siete de abajo son los de este mundo, y dos de ellos no
- * existían: `aparta`, que es el estado propio de TFV —la unidad física apartada contra una
- * cotización—, y `leido`, que es lo que el modelo extrajo del guion y falta revisar.
+ * Los cinco últimos nombres son los del sistema anterior y siguen funcionando para que las
+ * pantallas ya escritas no se rompan.
  */
-export type BadgeTone =
-  | "neutral"
-  | "accent"
-  | "success"
-  | "warning"
-  | "danger"
+export type Tint =
   | "reposo"
   | "curso"
   | "firme"
@@ -38,58 +19,95 @@ export type BadgeTone =
   | "cuida"
   | "alto"
   | "leido"
+  | "neutral"
+  | "accent"
+  | "success"
+  | "warning"
+  | "danger"
 
-const TONES: Record<BadgeTone, { mark: string; ink: string }> = {
-  reposo: { mark: "text-marca-reposo", ink: "text-tinta-reposo" },
-  curso: { mark: "text-marca-curso", ink: "text-tinta-curso" },
-  firme: { mark: "text-marca-firme", ink: "text-tinta-firme" },
-  aparta: { mark: "text-marca-aparta", ink: "text-tinta-aparta" },
-  cuida: { mark: "text-marca-cuida", ink: "text-tinta-cuida" },
-  alto: { mark: "text-marca-alto", ink: "text-tinta-alto" },
-  leido: { mark: "text-marca-leido", ink: "text-tinta-leido" },
-  // Vocabulario anterior, mapeado a la escalera.
-  neutral: { mark: "text-marca-reposo", ink: "text-tinta-reposo" },
-  accent: { mark: "text-marca-curso", ink: "text-tinta-curso" },
-  success: { mark: "text-marca-firme", ink: "text-tinta-firme" },
-  warning: { mark: "text-marca-cuida", ink: "text-tinta-cuida" },
-  danger: { mark: "text-marca-alto", ink: "text-tinta-alto" },
+const TINTS: Record<Tint, { tint: string; ink: string; luz: string }> = {
+  reposo: { tint: "tint-reposo", ink: "text-tinta-reposo", luz: "bg-luz-reposo" },
+  curso: { tint: "tint-curso", ink: "text-tinta-curso", luz: "bg-luz-curso" },
+  firme: { tint: "tint-firme", ink: "text-tinta-firme", luz: "bg-luz-firme" },
+  aparta: { tint: "tint-aparta", ink: "text-tinta-aparta", luz: "bg-luz-aparta" },
+  cuida: { tint: "tint-cuida", ink: "text-tinta-cuida", luz: "bg-luz-cuida" },
+  alto: { tint: "tint-alto", ink: "text-tinta-alto", luz: "bg-luz-alto" },
+  leido: { tint: "tint-leido", ink: "text-tinta-leido", luz: "bg-luz-leido" },
+  neutral: { tint: "tint-reposo", ink: "text-tinta-reposo", luz: "bg-luz-reposo" },
+  accent: { tint: "tint-aparta", ink: "text-tinta-aparta", luz: "bg-luz-aparta" },
+  success: { tint: "tint-firme", ink: "text-tinta-firme", luz: "bg-luz-firme" },
+  warning: { tint: "tint-cuida", ink: "text-tinta-cuida", luz: "bg-luz-cuida" },
+  danger: { tint: "tint-alto", ink: "text-tinta-alto", luz: "bg-luz-alto" },
+}
+
+/** Compatibilidad: el nombre que usaban las pantallas ya escritas. */
+export type BadgeTone = Tint
+
+export interface PanelProps extends HTMLAttributes<HTMLDivElement> {
+  /** La temperatura de la que sale el degradado. Sin ella la tarjeta es neutra. */
+  tint?: Tint | undefined
+  /**
+   * La tarjeta reacciona al ratón.
+   *
+   * Sólo para las que llevan a algún sitio. Encender una tarjeta de sólo lectura enseña a la gente
+   * a desconfiar de la señal, que es peor que no tenerla.
+   */
+  live?: boolean | undefined
+}
+
+/**
+ * Superficie. La unidad de agrupación de todo el panel.
+ *
+ * Lleva su degradado teñido, su filo superior de luz y su sombra. Al pasar el ratón —si es viva—
+ * suben el degradado y el borde, **y nada se mueve**: en una rejilla densa una tarjeta que se
+ * levanta obliga al ojo a recolocar todo lo que tiene al lado.
+ */
+export function Panel({ tint, live = false, className, ...rest }: PanelProps) {
+  return (
+    <div
+      className={cn("card", tint && TINTS[tint].tint, live && "card-live", className)}
+      {...rest}
+    />
+  )
+}
+
+export function Separator({ className, ...rest }: HTMLAttributes<HTMLHRElement>) {
+  return <hr className={cn("border-0 border-edge border-t", className)} {...rest} />
 }
 
 /**
  * Marca de estado.
  *
- * No es un chip de color de fondo: es una **muesca trazada** junto al nombre del estado. Los dos
- * juntos, siempre, y por dos razones que apuntan al mismo sitio.
- *
- * La primera es de accesibilidad y no se negocia: quien no distingue el verde del ámbar tiene que
- * poder leer en qué estado está una cotización. Un chip que sólo se diferencia por su tinte deja a
- * esa persona fuera.
- *
- * La segunda es de oficio: once estados de unidad y cuatro tipos de pedido no caben en una paleta
- * que alguien pueda memorizar. Quien entra por primera vez no tiene que aprenderse ninguna leyenda
- * si la leyenda viaja pegada a la marca.
- *
- * La muesca se llena cuando el estado es **terminal** —entregado, pagado, rechazado—: un estado
- * del que ya no se sale se dibuja macizo, y uno en el que todavía se puede intervenir se dibuja
- * hueco. Se lee sin leer.
+ * Un punto de la temperatura pura junto al nombre del estado, siempre los dos. El color acelera la
+ * lectura de quien ya conoce el sistema; el nombre es lo que lo hace utilizable por quien no, y
+ * por quien no distingue el ámbar del verde. Once estados de unidad y cuatro tipos de pedido no
+ * caben en una paleta que alguien pueda memorizar.
  */
 export function Badge({
   tone = "neutral",
-  filled = false,
   className,
   children,
 }: {
-  tone?: BadgeTone
-  /** Estado terminal: la muesca se dibuja maciza en lugar de hueca. */
-  filled?: boolean
+  tone?: Tint
   className?: string
   children: ReactNode
 }) {
-  const { mark, ink } = TONES[tone]
+  const { ink, luz, tint } = TINTS[tone]
 
   return (
-    <span className={cn("inline-flex items-center gap-1.5 apparatus", ink, className)}>
-      <span className={cn("detent", mark, filled && "detent-filled")} aria-hidden="true" />
+    <span
+      className={cn(
+        // `w-fit` y no sólo `inline-flex`: dentro de una columna flexible los hijos se estiran en
+        // el eje transversal, y una insignia estirada de borde a borde deja de leerse como marca y
+        // se lee como barra de relleno.
+        "inline-flex w-fit items-center gap-1.5 rounded-md border border-edge px-2 py-1 legend",
+        "bg-[color-mix(in_oklab,var(--luz)_14%,var(--panel))]",
+        tint,
+        ink,
+        className,
+      )}
+    >
+      <span className={cn("size-1.5 shrink-0 rounded-full", luz)} aria-hidden="true" />
       {children}
     </span>
   )
@@ -103,16 +121,16 @@ export function Badge({
  */
 export function Skeleton({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div aria-hidden="true" className={cn("animate-pulse bg-panel-hover", className)} {...rest} />
+    <div
+      aria-hidden="true"
+      className={cn("animate-pulse rounded-md bg-panel-sunken", className)}
+      {...rest}
+    />
   )
 }
 
 /**
  * Iniciales de una persona o empresa, como sustituto de imagen.
- *
- * Cuadrada, no circular. En este mundo no hay una sola esquina redondeada, y el círculo del sistema
- * anterior era además la única forma que no se alineaba con nada: junto a una tabla de filas
- * rectas, un disco flota.
  *
  * Toma las iniciales de hasta dos palabras. No intenta ser listo con nombres compuestos: acierta en
  * el caso común y no estorba en el resto.
@@ -134,13 +152,13 @@ export function Avatar({
       .map((word) => word[0]?.toUpperCase() ?? "")
       .join("") || "?"
 
-  const sizes = { sm: "size-6 text-body4", md: "size-8 text-body3", lg: "size-12 text-body1" }
+  const sizes = { sm: "size-7 text-body4", md: "size-9 text-body3", lg: "size-12 text-body1" }
 
   return (
     <span
       aria-hidden="true"
       className={cn(
-        "grid shrink-0 place-items-center bg-accent font-bold text-on-accent tabular-nums",
+        "grid shrink-0 place-items-center rounded-lg bg-accent font-bold text-on-accent",
         sizes[size],
         className,
       )}
@@ -151,72 +169,62 @@ export function Avatar({
 }
 
 /**
- * El raíl de claves.
+ * La casilla de una hoja de llamado: un hecho duro con su nombre encima.
  *
- * La única pieza móvil de la composición: una columna estrecha que corre junto al contenido y lleva
- * las claves de cada bloque, con una muesca cortada donde cambia el pie. Es lo que sustituye a la
- * pila de tarjetas del sistema anterior — en vez de N cajas flotando, un solo cuerpo con sus
- * divisiones marcadas al margen.
- *
- * En tacto el raíl va arriba y en horizontal, porque una columna de dos centímetros a la izquierda
- * de una iPad es espacio que el pulgar no alcanza y que la tabla necesita.
+ * Es la pieza de la que está hecha la cabecera de un llamado —día 4 de 18, citación 06:30, salida
+ * del sol 07:12— y aquí sirve para lo mismo: un dato que no cambia mientras miras la pantalla. El
+ * número va grande y en la voz de display, porque en un llamado el dato se busca de un vistazo
+ * desde el otro lado de la mesa.
  */
-export function Rail({
-  children,
+export function Fact({
+  label,
+  value,
+  hint,
   className,
-  ...rest
-}: HTMLAttributes<HTMLDivElement> & { children: ReactNode }) {
+}: {
+  label: string
+  value: ReactNode
+  hint?: string | undefined
+  className?: string
+}) {
   return (
-    <div
-      className={cn(
-        // El filete se declara por lado en cada calibración en vez de ponerse y quitarse: una
-        // utilidad que escribe la forma abreviada `border-bottom` no se cancela de forma fiable
-        // con `border-b-0`, porque las dos viven en la misma capa y gana el orden del archivo.
-        "flex flex-row gap-0 overflow-x-auto max-laptop:rule-b",
-        // En tacto el raíl se desplaza, y sin anclaje la última clave queda cortada a media
-        // palabra: se lee como un fallo de maquetación, no como «hay más a la derecha».
-        "snap-x snap-mandatory scroll-px-4 max-laptop:pr-4",
-        "laptop:w-44 laptop:shrink-0 laptop:flex-col laptop:overflow-visible laptop:rule-r",
-        className,
-      )}
-      {...rest}
-    >
-      {children}
+    <div className={cn("flex flex-col gap-1", className)}>
+      <span className="legend text-content-faint">{label}</span>
+      <span className="display text-h3 text-content tnum">{value}</span>
+      {hint ? <span className="text-body3 text-content-muted">{hint}</span> : null}
     </div>
   )
 }
 
+export interface StatCardProps extends Omit<HTMLAttributes<HTMLDivElement>, "children" | "title"> {
+  label: string
+  value: ReactNode
+  /** La dirección del dato. Una cantidad sin ella obliga a recordar la de ayer. */
+  trend?: string | undefined
+  tint?: Tint | undefined
+  live?: boolean | undefined
+}
+
 /**
- * Una clave del raíl.
+ * La tarjeta de tablero: una cifra grande, su nombre y su temperatura.
  *
- * El estado es una marca, como en todo el sistema: hueca en reposo, maciza en la posición activa,
- * y la activa lleva además la rúbrica de marca. El oro no es decoración aquí — es lo único que
- * dice dónde estás.
+ * Es lo que pide un tablero — que la magnitud se lea antes que la etiqueta— y es donde el degradado
+ * hace su trabajo: la temperatura dice de qué es la cifra antes de leerla.
  */
-export function RailKey({
-  active = false,
+export function StatCard({
+  label,
+  value,
+  trend,
+  tint = "reposo",
+  live = false,
   className,
-  children,
   ...rest
-}: HTMLAttributes<HTMLButtonElement> & { active?: boolean; children: ReactNode }) {
+}: StatCardProps) {
   return (
-    <button
-      type="button"
-      aria-current={active ? "true" : undefined}
-      className={cn(
-        "group flex shrink-0 snap-start items-center gap-2 px-3 text-left apparatus",
-        "h-[var(--control-h)] whitespace-nowrap",
-        "transition-colors duration-150 ease-[--ease-out-soft]",
-        active ? "text-content" : "text-content-muted hover:text-content",
-        className,
-      )}
-      {...rest}
-    >
-      <span
-        className={cn("detent", active ? "detent-filled text-rubric-ink" : "text-marca-reposo")}
-        aria-hidden="true"
-      />
-      {children}
-    </button>
+    <Panel tint={tint} live={live} className={cn("flex flex-col gap-2 p-5", className)} {...rest}>
+      <span className="legend text-content-faint">{label}</span>
+      <span className="display text-h1 text-content tnum">{value}</span>
+      {trend ? <span className={cn("text-body3", TINTS[tint].ink)}>{trend}</span> : null}
+    </Panel>
   )
 }

@@ -23,11 +23,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
         <select
           ref={ref}
           className={cn(
-            "h-[var(--control-h)] w-full appearance-none rule-field bg-panel pr-9 pl-3",
+            "h-[var(--control-h)] w-full appearance-none border border-edge-control rounded-lg bg-panel pr-9 pl-3",
             "text-body1 text-content",
             "transition-colors duration-150 ease-[--ease-out-soft]",
-            "hover:border-content-muted",
-            "aria-invalid:border-[var(--marca-alto)]",
+            "hover:border-content-faint",
+            "aria-invalid:border-[var(--luz-alto)]",
             "disabled:cursor-not-allowed disabled:opacity-60",
             className,
           )}
@@ -92,12 +92,11 @@ export function Checkbox({ label, hint, className, id: given, ...rest }: Checkbo
       id={id}
       {...(hintId ? { "aria-describedby": hintId } : {})}
       className={cn(
-        // Cuadrada y sin radio, como todas las marcas del sistema. El tamaño sube a 20 px porque
-        // en tacto una casilla de 18 con guantes se falla, y aquí el tacto es la calibración de
-        // partida; el área sensible la da el `<label>`, que ya está atado.
-        "grid size-5 shrink-0 place-items-center rule-field bg-panel",
+        // 20 px porque en tacto una casilla de 18 con guantes se falla, y aquí el tacto es la
+        // calibración de partida; el área sensible la da el `<label>`, que ya está atado.
+        "grid size-5 shrink-0 place-items-center rounded-md border border-edge-control bg-panel",
         "transition-colors duration-150 ease-[--ease-out-soft]",
-        "hover:border-content-muted",
+        "hover:border-content-faint",
         "data-[state=checked]:border-accent data-[state=checked]:bg-accent",
         "data-[state=indeterminate]:border-accent data-[state=indeterminate]:bg-accent",
         "disabled:cursor-not-allowed disabled:opacity-50",
@@ -168,13 +167,11 @@ export function Switch({ label, className, id: given, required, ...rest }: Switc
       id={id}
       {...(required === undefined ? {} : { required })}
       className={cn(
-        // Una vía de dos posiciones, cuadrada. La píldora con disco del sistema anterior era la
-        // única forma redonda que quedaba en pantalla, y en este mundo no hay ninguna.
-        "relative h-6 w-11 shrink-0 rule-field bg-panel-sunken",
-        // El bloque no ocupa media vía exacta: deja un canal visible alrededor. Sin ese canal los
-        // dos tonos se leen como dos cuadros pegados y no como una pieza dentro de una guía, que
-        // es justo la duda que tiene quien abre la aplicación por primera vez.
-        "transition-colors duration-150 ease-[--ease-out-soft]",
+        "relative h-6.5 w-11 shrink-0 rounded-full border border-edge-control bg-panel-sunken",
+        // El disco deja un canal visible alrededor: sin ese canal los dos tonos se leen como dos
+        // bloques pegados y no como una pieza dentro de una guía, que es justo la duda que tiene
+        // quien abre la aplicación por primera vez.
+        "transition-colors duration-200 ease-[--ease-out-soft]",
         "data-[state=checked]:border-accent data-[state=checked]:bg-accent",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
@@ -183,11 +180,11 @@ export function Switch({ label, className, id: given, required, ...rest }: Switc
     >
       <SwitchPrimitive.Thumb
         className={cn(
-          // Un solo eje y sin rebote: el bloque llega a su posición y se queda. Un interruptor que
-          // se pasa de tope y vuelve es la firma del software de consumo.
-          "absolute inset-y-0.5 left-0.5 block w-[calc(50%-0.125rem)] bg-content",
-          "transition-[left] duration-150 ease-[--ease-out-soft]",
-          "data-[state=checked]:left-1/2 data-[state=checked]:bg-on-accent",
+          // Sin rebote: el disco llega a su tope y se queda. Un interruptor que se pasa y vuelve
+          // es la firma del software de consumo.
+          "absolute inset-y-0.5 left-0.5 block aspect-square rounded-full bg-content-muted",
+          "transition-[left,background-color] duration-200 ease-[--ease-out-soft]",
+          "data-[state=checked]:left-[calc(100%-1.375rem)] data-[state=checked]:bg-on-accent",
         )}
       />
     </SwitchPrimitive.Root>

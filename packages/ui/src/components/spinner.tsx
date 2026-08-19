@@ -19,7 +19,7 @@ export function Spinner({ className, label }: SpinnerProps) {
           d="M21 12a9 9 0 0 0-9-9"
           stroke="currentColor"
           strokeWidth="2.5"
-          strokeLinecap="butt"
+          strokeLinecap="round"
         />
       </svg>
       {label ? <span className="sr-only">{label}</span> : null}
