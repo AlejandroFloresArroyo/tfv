@@ -468,11 +468,15 @@
   --tinta-alto: #b02418;
   --tinta-leido: #a3175c;
 
+  /* La superficie de paso del puntero. Papel real, no alias: la dirección correcta depende
+     del tema —en claro el hover baja hacia el hundido, en oscuro sube hacia el elevado— y ninguna
+     de las dos superficies fijas sirve para ambos. */
+  --panel-hover: var(--panel-sunken);
+
   /* Vocabulario anterior, mientras las pantallas migran. */
   --line: var(--edge);
   --line-strong: var(--edge-control);
   --field: var(--edge-control);
-  --panel-hover: var(--panel-sunken);
   --danger: var(--tinta-alto);
   --success: var(--tinta-firme);
   --warning: var(--tinta-cuida);
@@ -522,10 +526,12 @@
   --tinta-alto: #ff8a80;
   --tinta-leido: #ff8fbc;
 
+  --panel-hover: var(--panel-raised);
+
+  /* Vocabulario anterior, mientras las pantallas migran. */
   --line: var(--edge);
   --line-strong: var(--edge-control);
   --field: var(--edge-control);
-  --panel-hover: var(--panel-raised);
   --danger: var(--tinta-alto);
   --success: var(--tinta-firme);
   --warning: var(--tinta-cuida);

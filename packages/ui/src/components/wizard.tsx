@@ -130,7 +130,7 @@ export function Wizard<T>({
 
       {error ? <Callout tone="danger">{error}</Callout> : null}
 
-      <div className="flex items-center gap-2 border-t border-line pt-5">
+      <div className="flex items-center gap-2 border-edge border-t pt-5">
         <Button type="button" variant="ghost" onClick={cancel} disabled={pending}>
           {labels.cancel}
         </Button>
@@ -209,21 +209,21 @@ function Steps<T>({
                 disabled={!reachable}
                 aria-current={current ? "step" : undefined}
                 className={cn(
-                  "inline-flex h-9 items-center gap-2 rounded-sm px-3 text-body3 font-semibold",
-                  "transition-colors duration-150",
+                  "inline-flex h-[var(--control-h-sm)] items-center gap-2 rounded-lg px-3 text-body3 font-semibold",
+                  "transition-colors duration-200 ease-[--ease-out-soft]",
                   "disabled:cursor-default disabled:opacity-60",
                   current ? "bg-accent text-on-accent" : "text-content-muted",
                   !current && reachable ? "hover:bg-panel-hover hover:text-content" : "",
-                  !current && fails ? "text-danger" : "",
+                  !current && fails ? "text-tinta-alto" : "",
                 )}
               >
                 <span
                   className={cn(
                     "inline-flex size-5 items-center justify-center rounded-xl text-body3",
-                    current ? "bg-on-accent/20" : "bg-line-strong text-content",
-                    // El círculo no se rellena: `--danger` es claro en el tema oscuro y el
-                    // blanco encima deja de leerse. El icono ya lleva el significado.
-                    !current && fails ? "bg-transparent text-danger" : "",
+                    current ? "bg-on-accent/20" : "bg-edge-control text-content",
+                    // El círculo del paso fallido no se rellena: la tinta de alto es clara en el
+                    // tema oscuro y un relleno encima dejaría de leerse. El icono ya lo dice.
+                    !current && fails ? "bg-transparent text-tinta-alto" : "",
                   )}
                   aria-hidden="true"
                 >

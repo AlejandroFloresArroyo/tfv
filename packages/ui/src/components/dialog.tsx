@@ -103,7 +103,7 @@ export function DialogContent({
           {locked ? null : (
             <Primitive.Close
               aria-label={closeLabel}
-              className="-mr-1 -mt-1 grid size-[var(--control-h-sm)] shrink-0 place-items-center rounded-lg text-content-faint transition-colors hover:bg-panel-sunken hover:text-content"
+              className="-mr-1 -mt-1 grid size-[var(--control-h-sm)] shrink-0 place-items-center rounded-lg text-content-faint transition-colors hover:bg-panel-hover hover:text-content"
             >
               <X className="size-4" aria-hidden="true" />
             </Primitive.Close>

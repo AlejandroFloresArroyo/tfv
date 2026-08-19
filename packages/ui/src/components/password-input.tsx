@@ -37,7 +37,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           aria-label={visible ? hideLabel : showLabel}
           aria-pressed={visible}
           className={cn(
-            "absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-sm",
+            "absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-lg",
             "text-content-faint transition-colors hover:text-content",
           )}
         >

@@ -21,8 +21,8 @@ export type ButtonSize = "sm" | "md" | "lg"
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: "bg-accent text-on-accent hover:bg-accent-hover",
   // El borde de un control tiene que verse: `edge-control` llega a 3:1, el borde vivo no.
-  secondary: "border border-edge-control bg-panel text-content hover:bg-panel-raised",
-  ghost: "bg-transparent text-content-muted hover:bg-panel-raised hover:text-content",
+  secondary: "border border-edge-control bg-panel text-content hover:bg-panel-hover",
+  ghost: "bg-transparent text-content-muted hover:bg-panel-hover hover:text-content",
   // El relleno destructivo va aparte de la temperatura `alto`: una luz se mide contra el lienzo y
   // un relleno contra su propio texto. Son dos preguntas distintas.
   danger: "bg-danger-fill text-on-danger hover:brightness-110",

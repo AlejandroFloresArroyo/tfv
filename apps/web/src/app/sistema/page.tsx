@@ -5,15 +5,22 @@ import {
   Badge,
   Button,
   Callout,
+  type ChatEntry,
   Checkbox,
+  CollectionLayout,
   Counter,
   cn,
   Dialog,
   DialogContent,
   DialogTrigger,
+  EmptyState,
+  ErrorState,
   Fact,
   Field,
+  FilePicker,
+  FilterChip,
   Input,
+  ItemCard,
   Menu,
   MenuContent,
   MenuItem,
@@ -22,13 +29,21 @@ import {
   MenuRadioItem,
   MenuSeparator,
   MenuTrigger,
+  OrderChat,
+  Pagination,
   Panel,
+  PasswordInput,
+  ReorderList,
+  SearchField,
+  SearchSelect,
   Select,
   Spinner,
   StatCard,
   Switch,
   Textarea,
   type Tint,
+  Wizard,
+  wizard,
 } from "@tfv/ui"
 import { useState } from "react"
 
@@ -110,6 +125,120 @@ const LINEAS: {
  *  distinto, la hidratación pintaría dos números diferentes para el mismo dato. */
 const miles = (valor: number) => new Intl.NumberFormat("es-MX").format(valor)
 
+const CLIENTES = [
+  { value: "vela", label: "Producciones Vela", hint: "3 cotizaciones abiertas" },
+  { value: "faro", label: "Cine Faro", hint: "cliente desde 2024" },
+  { value: "norte", label: "Estudios del Norte", hint: "" },
+  { value: "mar", label: "Mar Adentro Films", hint: "2 pedidos en curso" },
+]
+
+const CONVERSACION: ChatEntry[] = [
+  {
+    id: "c1",
+    side: "system",
+    body: "La cotización pasó a Apartado: 4 unidades comprometidas.",
+    authorName: null,
+    createdAt: "2026-08-19T14:02:00Z",
+    editedAt: null,
+    read: false,
+    pending: false,
+    failed: false,
+    mine: false,
+    canEdit: false,
+    canDelete: false,
+  },
+  {
+    id: "c2",
+    side: "client",
+    body: "¿Pueden entregar el SkyPanel un día antes? Adelantamos la escena de noche.",
+    authorName: "Producciones Vela",
+    createdAt: "2026-08-19T14:10:00Z",
+    editedAt: null,
+    read: false,
+    pending: false,
+    failed: false,
+    mine: false,
+    canEdit: false,
+    canDelete: false,
+  },
+  {
+    id: "c3",
+    side: "provider",
+    body: "Sí — queda para el jueves a primera hora, sin cargo extra.",
+    authorName: null,
+    createdAt: "2026-08-19T14:12:00Z",
+    editedAt: null,
+    read: true,
+    pending: false,
+    failed: false,
+    mine: true,
+    canEdit: true,
+    canDelete: true,
+  },
+  {
+    id: "c4",
+    side: "provider",
+    body: "Les mando la guía de la paquetería en cuanto salga.",
+    authorName: null,
+    createdAt: "2026-08-19T14:13:00Z",
+    editedAt: null,
+    read: false,
+    pending: true,
+    failed: false,
+    mine: true,
+    canEdit: false,
+    canDelete: false,
+  },
+]
+
+const CHAT_LABELS = {
+  title: "Conversación del pedido",
+  placeholder: "Escribe un mensaje…",
+  send: "Enviar",
+  empty: "Todavía no hay mensajes.",
+  older: "Ver anteriores",
+  system: "Sistema",
+  otherSide: "El cliente",
+  mySide: "Tú",
+  edited: "editado",
+  read: "Leído",
+  sending: "enviando…",
+  failed: "No se envió",
+  retry: "Reintentar",
+  edit: "Editar",
+  save: "Guardar",
+  cancel: "Cancelar",
+  remove: "Borrar",
+  reconnecting: "Reconectando…",
+  readOnly: "Este pedido está cerrado: la conversación es de sólo lectura.",
+}
+
+const PASOS = [
+  {
+    id: "datos",
+    label: "Datos",
+    content: () => <PasoDemo texto="Los campos del paso uno viven aquí." />,
+  },
+  {
+    id: "fechas",
+    label: "Fechas",
+    content: () => <PasoDemo texto="La ventana de fechas del pedido." />,
+  },
+  {
+    id: "resumen",
+    label: "Resumen",
+    content: () => <PasoDemo texto="Lo capturado, listo para enviarse." />,
+  },
+]
+
+function PasoDemo({ texto }: { texto: string }) {
+  return (
+    <Panel className="p-5">
+      <p className="text-body2 text-content-muted">{texto}</p>
+    </Panel>
+  )
+}
+
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section className="border-edge border-t px-5 py-10 tablet:px-8 laptop:px-12">
@@ -130,6 +259,11 @@ const FONDOS = [
 export default function SistemaPage() {
   const [fondo, setFondo] = useState<(typeof FONDOS)[number]["id"]>("nada")
   const [importe, setImporte] = useState("1850.00")
+  const [busqueda, setBusqueda] = useState("")
+  const [pagina, setPagina] = useState(3)
+  const [paso, setPaso] = useState(wizard.start())
+  const [cliente, setCliente] = useState<string | null>("vela")
+  const [orden, setOrden] = useState(["Cámara", "Iluminación", "Grip", "Sonido"])
   const [idioma, setIdioma] = useState("es")
   const [envio, setEnvio] = useState(true)
 
@@ -428,6 +562,193 @@ export default function SistemaPage() {
           <Callout tone="danger" label="Error" live>
             El guion no se pudo leer. Sustitúyelo y vuelve a solicitar la extracción.
           </Callout>
+        </div>
+      </Seccion>
+
+      {/* ─── Colección ───────────────────────────────────────────────────────── */}
+      <Seccion titulo="Colección">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <SearchField
+              value={busqueda}
+              onValueChange={setBusqueda}
+              label="Buscar en el catálogo"
+              placeholder="Buscar por nombre o código"
+              clearLabel="Limpiar la búsqueda"
+            />
+            <FilterChip
+              field="Estado"
+              value="Apartado"
+              onRemove={() => {}}
+              removeLabel="Quitar el filtro"
+            />
+            <FilterChip
+              field="Bodega"
+              value="Centro"
+              onRemove={() => {}}
+              removeLabel="Quitar el filtro"
+            />
+          </div>
+
+          <CollectionLayout view="grid" label="Catálogo de muestra">
+            {LINEAS.slice(0, 3).map((l) => (
+              <ItemCard
+                key={l.codigo}
+                view="grid"
+                title={l.medida}
+                subtitle={l.codigo}
+                meta={<Badge tone={l.tone}>{l.estado}</Badge>}
+              />
+            ))}
+          </CollectionLayout>
+
+          <Pagination
+            page={pagina}
+            totalPages={12}
+            totalItems={287}
+            onPageChange={setPagina}
+            limit={24}
+            limitOptions={[12, 24, 48]}
+            onLimitChange={() => {}}
+            labels={{
+              summary: `Página ${pagina} de 12 · 287 elementos`,
+              navigation: "Paginación",
+              first: "Primera página",
+              previous: "Página anterior",
+              next: "Página siguiente",
+              last: "Última página",
+              perPage: "Por página",
+              page: (n) => `Página ${n}`,
+            }}
+          />
+
+          <div className="grid gap-4 tablet:grid-cols-2">
+            <EmptyState
+              title="Todavía no hay productos"
+              body="Crea el primero y aparecerá aquí con su código y sus existencias."
+              action={<Button size="sm">Crear producto</Button>}
+            />
+            <ErrorState
+              title="No se pudo cargar el catálogo"
+              body="La conexión se cortó a medias. Los datos no se han perdido."
+              retryLabel="Reintentar"
+              onRetry={() => {}}
+            />
+          </div>
+        </div>
+      </Seccion>
+
+      {/* ─── Asistente ───────────────────────────────────────────────────────── */}
+      <Seccion titulo="Asistente por pasos">
+        <Panel className="p-5">
+          <Wizard
+            steps={PASOS}
+            values={{}}
+            state={paso}
+            onStateChange={setPaso}
+            onSubmit={() => {}}
+            onCancel={() => setPaso(wizard.start())}
+            labels={{
+              back: "Atrás",
+              next: "Siguiente",
+              submit: "Crear pedido",
+              cancel: "Cancelar",
+              counter: (n, total) => `Paso ${n} de ${total}`,
+              stepWithError: "con errores",
+              stepDone: "completado",
+              discardTitle: "¿Tirar lo capturado?",
+              discardDescription: "Lo escrito en los tres pasos se pierde.",
+              discardConfirm: "Tirar",
+              discardKeep: "Seguir capturando",
+              close: "Cerrar",
+            }}
+          />
+        </Panel>
+      </Seccion>
+
+      {/* ─── Conversación y selección ────────────────────────────────────────── */}
+      <Seccion titulo="Conversación y selección">
+        <div className="grid gap-4 laptop:grid-cols-2">
+          <OrderChat
+            entries={CONVERSACION}
+            status="live"
+            hasOlder={false}
+            loadingOlder={false}
+            canWrite
+            labels={CHAT_LABELS}
+            formatTime={(instante) =>
+              new Date(instante).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })
+            }
+            onSend={() => {}}
+            onRetry={() => {}}
+            onEdit={() => {}}
+            onDelete={() => {}}
+            onOlder={() => {}}
+          />
+
+          <div className="flex flex-col gap-5">
+            <Field label="Cliente" hint="Escribe para filtrar los trescientos.">
+              {(ids) => (
+                <SearchSelect
+                  id={ids.id}
+                  value={cliente}
+                  onValueChange={setCliente}
+                  options={CLIENTES}
+                  placeholder="Elige un cliente"
+                  searchPlaceholder="Buscar por nombre"
+                  emptyLabel="Ningún cliente con ese nombre"
+                  clearLabel="Quitar la selección"
+                />
+              )}
+            </Field>
+
+            <Field label="Contraseña" hint="Al menos 12 caracteres.">
+              {(ids) => (
+                <PasswordInput
+                  {...ids}
+                  showLabel="Mostrar la contraseña"
+                  hideLabel="Ocultar la contraseña"
+                  defaultValue="Desarrollo.2026"
+                />
+              )}
+            </Field>
+
+            <FilePicker
+              files={[]}
+              onFilesChange={() => {}}
+              labels={{
+                label: "Fotos del producto",
+                browse: "Elegir archivos",
+                hint: "O arrástralos aquí. Imágenes de hasta 20 MB.",
+                remove: (n) => `Quitar ${n}`,
+                retry: (n) => `Reintentar ${n}`,
+                progress: (hecho, total) => `${hecho} de ${total} subidos`,
+                rejected: () => "Ese archivo no se admite.",
+                dismiss: "Entendido",
+                size: (bytes) => `${Math.round(bytes / 1024)} KB`,
+                noPreview: "Sin vista previa",
+                noDerivatives: "Subido, sin miniatura",
+                waiting: "En espera",
+                working: "Subiendo",
+                done: "Subido",
+                failed: "Falló",
+              }}
+            />
+
+            <div>
+              <span className="legend mb-2 block text-content-faint">Reordenar arrastrando</span>
+              <ReorderList
+                items={orden}
+                keyOf={(item) => item}
+                onReorder={(siguiente) => setOrden([...siguiente])}
+                handleLabel={(item) => `Mover ${item}`}
+              >
+                {(item) => (
+                  <span className="block py-2.5 pr-3 text-body2 text-content">{item}</span>
+                )}
+              </ReorderList>
+            </div>
+          </div>
         </div>
       </Seccion>
 

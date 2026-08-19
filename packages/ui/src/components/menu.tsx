@@ -67,7 +67,7 @@ export function MenuItem({
       className={cn(
         "flex cursor-pointer items-center gap-2.5 rounded-lg px-3 text-body2 text-content",
         "h-[var(--control-h)] outline-hidden select-none",
-        "data-highlighted:bg-panel-sunken",
+        "data-highlighted:bg-panel-hover",
         "data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
       )}
@@ -90,7 +90,7 @@ export function MenuRadioItem({
       className={cn(
         "flex cursor-pointer items-center gap-2.5 rounded-lg px-3 text-body2 text-content",
         "h-[var(--control-h)] outline-hidden select-none",
-        "data-highlighted:bg-panel-sunken",
+        "data-highlighted:bg-panel-hover",
         className,
       )}
       {...rest}

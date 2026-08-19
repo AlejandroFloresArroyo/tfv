@@ -57,9 +57,8 @@ export function SearchField({
         placeholder={placeholder}
         onChange={(event) => onValueChange(event.target.value)}
         className={cn(
-          "h-10 w-full rounded-sm border border-field bg-field pr-10 pl-9 text-body2 text-content",
+          "h-[var(--control-h)] w-full rounded-lg border border-edge-control bg-panel pr-10 pl-9 text-body2 text-content",
           "placeholder:text-content-faint",
-          "focus-visible:border-focus focus-visible:outline-2 focus-visible:outline-focus/40",
           // El navegador pinta su propia cruz sobre `type=search` y no se puede etiquetar ni
           // alcanzar con el teclado de forma consistente. La nuestra sí.
           "[&::-webkit-search-cancel-button]:appearance-none",
@@ -74,7 +73,7 @@ export function SearchField({
             type="button"
             aria-label={clearLabel}
             onClick={() => onValueChange("")}
-            className="grid size-6 place-items-center rounded-xs text-content-faint hover:bg-panel-hover hover:text-content"
+            className="grid size-6 place-items-center rounded-md text-content-faint hover:bg-panel-hover hover:text-content"
           >
             <X aria-hidden="true" className="size-4" />
           </button>
@@ -102,7 +101,7 @@ export interface FilterChipProps {
 
 export function FilterChip({ field, value, onRemove, removeLabel }: FilterChipProps) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-xs border border-line bg-panel py-0.5 pr-0.5 pl-2 text-body3">
+    <span className="inline-flex items-center gap-1 rounded-md border border-edge bg-panel-raised py-0.5 pr-0.5 pl-2 text-body3">
       {/* Un solo nodo de texto, con su espacio de verdad. Repartido en dos cajas de disposición, el
           espacio lo pone el CSS y el texto leído queda «Estado:Inactiva» — que es lo que oye un
           lector de pantalla y lo que encuentra una búsqueda en la página. */}
@@ -114,7 +113,7 @@ export function FilterChip({ field, value, onRemove, removeLabel }: FilterChipPr
         type="button"
         aria-label={removeLabel}
         onClick={onRemove}
-        className="grid size-5 place-items-center rounded-xs text-content-faint hover:bg-panel-hover hover:text-content"
+        className="grid size-5 place-items-center rounded-md text-content-faint hover:bg-panel-hover hover:text-content"
       >
         <X aria-hidden="true" className="size-3.5" />
       </button>
@@ -184,7 +183,7 @@ export function Pagination({
           <select
             value={limit}
             onChange={(event) => onLimitChange(Number(event.target.value))}
-            className="h-8 rounded-xs border border-field bg-field px-1.5 text-body3 text-content focus-visible:border-focus focus-visible:outline-2 focus-visible:outline-focus/40"
+            className="h-[var(--control-h-sm)] rounded-md border border-edge-control bg-panel px-1.5 text-body3 text-content"
           >
             {limitOptions.map((option) => (
               <option key={option} value={option}>
@@ -275,11 +274,11 @@ function PageButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "inline-flex h-8 min-w-8 items-center justify-center rounded-xs px-2 text-body3 font-semibold",
-        "transition-colors duration-150 disabled:pointer-events-none disabled:opacity-40",
+        "inline-flex h-[var(--control-h-sm)] min-w-[var(--control-h-sm)] items-center justify-center rounded-md px-2 text-body3 font-semibold",
+        "transition-colors duration-200 ease-[--ease-out-soft] disabled:pointer-events-none disabled:opacity-40",
         current
           ? "bg-accent text-on-accent"
-          : "border border-field bg-panel text-content-muted hover:bg-panel-hover hover:text-content",
+          : "border border-edge-control bg-panel text-content-muted hover:bg-panel-hover hover:text-content",
         className,
       )}
     >
@@ -328,7 +327,7 @@ export function ErrorState({
   onRetry: () => void
 }) {
   return (
-    <Panel className="grid place-items-center gap-2 p-10 text-center">
+    <Panel tint="alto" className="grid place-items-center gap-2 p-10 text-center">
       <p className="text-title2 font-bold text-content">{title}</p>
       <p className="max-w-prose text-body2 text-content-muted">{body}</p>
       <Button variant="secondary" size="sm" className="mt-2" onClick={onRetry}>
@@ -440,8 +439,10 @@ export function ItemCard({
   return (
     <li className="min-w-0">
       <Panel
+        tint="reposo"
+        live
         className={cn(
-          "flex h-full min-w-0 gap-3 p-3 transition-colors hover:bg-panel-hover",
+          "flex h-full min-w-0 gap-3 p-3",
           view === "grid" ? "flex-col" : "flex-row items-center",
         )}
       >

@@ -122,7 +122,7 @@ export function OrderChat({
 
   return (
     <Panel className={cn("flex min-h-0 flex-col", className)}>
-      <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+      <div className="flex items-center justify-between gap-3 border-edge border-b px-4 py-3">
         <h2 className="text-body2 font-bold text-content">{labels.title}</h2>
         {status === "retrying" ? (
           <span className="flex items-center gap-1.5 text-body3 text-content-faint">
@@ -189,7 +189,7 @@ export function OrderChat({
       </div>
 
       {canWrite ? (
-        <div className="flex items-end gap-2 border-t border-line px-4 py-3">
+        <div className="flex items-end gap-2 border-edge border-t px-4 py-3">
           <textarea
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
@@ -205,9 +205,8 @@ export function OrderChat({
             placeholder={labels.placeholder}
             aria-label={labels.placeholder}
             className={cn(
-              "max-h-32 min-h-10 flex-1 resize-y rounded-sm border border-field bg-panel px-3 py-2",
+              "max-h-32 min-h-[var(--control-h)] flex-1 resize-y rounded-lg border border-edge-control bg-panel px-3 py-2",
               "text-body2 text-content placeholder:text-content-faint",
-              "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus/40",
             )}
           />
           <Button onClick={submit} disabled={draft.trim() === ""} aria-label={labels.send}>
@@ -215,7 +214,7 @@ export function OrderChat({
           </Button>
         </div>
       ) : (
-        <p className="border-t border-line px-4 py-3 text-body3 text-content-faint">
+        <p className="border-edge border-t px-4 py-3 text-body3 text-content-faint">
           {labels.readOnly}
         </p>
       )}
@@ -276,12 +275,16 @@ function Bubble({
     <div className={cn("flex flex-col gap-1", entry.mine ? "items-end" : "items-start")}>
       <div
         className={cn(
-          "max-w-[85%] rounded-md px-3 py-2 text-body2",
-          entry.mine ? "bg-accent text-on-accent" : "bg-panel-hover text-content",
+          "max-w-[85%] rounded-xl px-3 py-2 text-body2",
+          // La propia lleva la temperatura HMI —la conversación es trabajo en curso—, no el oro:
+          // la rúbrica marca posición y acción primaria, y un mensaje no es ninguna de las dos.
+          entry.mine
+            ? "bg-tinta-curso text-canvas"
+            : "border border-edge bg-panel-raised text-content",
           // Lo que aún no ha llegado no se pinta como lo confirmado: pintarlo igual promete algo
           // que todavía no ha ocurrido.
           entry.pending && !entry.failed && "opacity-60",
-          entry.failed && "border border-red-8",
+          entry.failed && "border border-[var(--luz-alto)]",
         )}
       >
         {!entry.mine ? (
@@ -297,7 +300,7 @@ function Bubble({
               onChange={(event) => onChangeEdit(event.target.value)}
               rows={2}
               aria-label={labels.edit}
-              className="w-full resize-y rounded-xs border border-field bg-panel px-2 py-1 text-body2 text-content"
+              className="w-full resize-y rounded-md border border-edge-control bg-panel px-2 py-1 text-body2 text-content"
             />
             <div className="flex justify-end gap-1">
               <Button variant="ghost" size="sm" onClick={onCancelEdit}>
@@ -320,14 +323,14 @@ function Bubble({
 
         {entry.failed ? (
           <>
-            <span className="flex items-center gap-1 text-danger">
+            <span className="flex items-center gap-1 text-tinta-alto">
               <AlertCircle className="size-3.5" aria-hidden="true" />
               {labels.failed}
             </span>
             <button
               type="button"
               onClick={onRetry}
-              className="flex items-center gap-1 rounded-xs font-semibold text-content hover:underline focus-visible:outline-2 focus-visible:outline-focus/40"
+              className="flex items-center gap-1 rounded-sm font-semibold text-content hover:underline"
             >
               <RotateCcw className="size-3.5" aria-hidden="true" />
               {labels.retry}
@@ -350,7 +353,7 @@ function Bubble({
           <button
             type="button"
             onClick={onStartEdit}
-            className="rounded-xs hover:text-content focus-visible:outline-2 focus-visible:outline-focus/40"
+            className="rounded-sm hover:text-content"
             aria-label={labels.edit}
           >
             <Pencil className="size-3.5" aria-hidden="true" />
@@ -361,7 +364,7 @@ function Bubble({
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-xs hover:text-danger focus-visible:outline-2 focus-visible:outline-focus/40"
+            className="rounded-sm hover:text-tinta-alto"
             aria-label={labels.remove}
           >
             <Trash2 className="size-3.5" aria-hidden="true" />
