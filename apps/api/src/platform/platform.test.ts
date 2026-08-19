@@ -149,6 +149,37 @@ describe("el padrón de empresas", () => {
     // Ni siquiera las suyas: la ruta es de plataforma, no una vista alternativa de lo propio.
     expect((await request("GET", "/platform/companies", undefined, duena.cookie)).status).toBe(403)
   })
+
+  it("dice quién lleva una empresa ajena", async () => {
+    const duena = await signUp("duena3@ejemplo.mx")
+    const company = await newCompany(duena, "Renta Fílmica del Norte")
+    const admin = await signUp("admin10@ejemplo.mx", { platformAdmin: true })
+
+    const body = await json<{ items: { email: string; isOwner: boolean }[] }>(
+      await request("GET", `/platform/companies/${company.id}/members`, undefined, admin.cookie),
+    )
+    expect(body.items).toHaveLength(1)
+    expect(body.items[0]?.email).toBe(duena.email)
+    expect(body.items[0]?.isOwner).toBe(true)
+  })
+
+  it("y esa lista tampoco la abre nadie más", async () => {
+    // Es la ruta más apetecible del área: enseña nombres y correos de una empresa cualquiera.
+    const duena = await signUp("duena4@ejemplo.mx")
+    const company = await newCompany(duena, "Renta Fílmica del Norte")
+    const ajena = await signUp("ajena2@ejemplo.mx")
+
+    expect(
+      (await request("GET", `/platform/companies/${company.id}/members`, undefined, ajena.cookie))
+        .status,
+    ).toBe(403)
+
+    // Ni la propia dueña por esta puerta: para eso está el panel de su empresa, con su permiso.
+    expect(
+      (await request("GET", `/platform/companies/${company.id}/members`, undefined, duena.cookie))
+        .status,
+    ).toBe(403)
+  })
 })
 
 // ─── El padrón de usuarios ───────────────────────────────────────────────────
