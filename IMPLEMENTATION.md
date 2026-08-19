@@ -202,6 +202,11 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | 02 | `add-postgres-data-model` | 🟡 | 29/34 | 91 tablas, 229 claves foráneas, 48 únicos parciales. Falta medir el volcado real, la siembra y el desfase en integración continua |
 | 03 | `add-hono-api-runtime` | ✅ | 26/26 | Registro explícito, validación, contrato de error, contrato publicado con su cliente tipado y su candado de desfase, salud, límite de cuerpo y limitación de frecuencia. **La primera rebanada cerrada del todo** |
 
+> **La 09 se cierra el 2026-08-19**, la segunda. Al cerrarla salieron las dos cosas que nadie había
+> mirado por no hacer falta para que la pantalla se dibujara: el asiento guardaba español (H-153) y
+> **ninguna de sus referencias llevaba a ninguna parte** (H-154) — la bandeja las pintaba como
+> enlace desde el primer día y la prueba que había afirmaba la dirección rota tal cual.
+
 > **La 03 se cierra el 2026-08-19**, esta vez con sus veintiséis tareas marcadas y no por costumbre.
 > Al cerrarla apareció lo que faltaba por mirar: el comando que emite el contrato apuntaba a un
 > archivo que no existía (H-126), y las capas del motor se montaban por camino y no por verbo, así
@@ -226,7 +231,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
 | 08 | `migrate-media-storage` | 🟡 | **Subida directa entera y usada**: autorización acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión, confirmación que dice qué se escribió, y el selector con vista previa, reducción y reintento por objeto. La **sustitución de colecciones diferencia** —L-01— y las pantallas del almacén ya suben: galería del producto, e imagen única de almacén y ubicación. Faltan los marcadores de posición como activos propios y la ejecución del recolector, que espera al despachador de trabajos (09) |
-| 09 | `migrate-activity-and-notifications` | 🟡 | Bitácora transaccional de sólo anexado, audiencia por permiso, bandeja entera con su contador, preferencias y dispositivos. Y el **despachador de trabajos**, que desbloquea la 08 y la 13. Faltan los proveedores de empuje y de correo —configuración externa— y anotar las ~35 rutas de escritura que aún no dejan asiento |
+| 09 | `migrate-activity-and-notifications` | ✅ | 50/50. Bitácora transaccional de sólo anexado, audiencia por permiso, bandeja entera con su contador, preferencias y dispositivos, y el **despachador de trabajos**, que desbloquea la 08 y la 13. Cerrada el 2026-08-19: el asiento pasa a **clave y parámetros**, la referencia navegable sale de una sola función y apunta a pantallas que existen, el destinatario se da de alta ante el proveedor antes de su primer envío, y la administración de plantillas queda retirada con su delta y con una prueba que impide que vuelva. **La segunda rebanada cerrada del todo** |
 | 10 | `migrate-identity-and-companies` | 🟡 | 61/78. Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos, ya con sus dos pantallas**: el formulario público y la bandeja, que estrena el **área de administración de plataforma**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen |
 | 11 | `migrate-subscriptions-and-billing` | 🟡 | 40/40. Planes, contratación, asientos, gracia, las tres compuertas y el alta de comercio entera, con 61 pruebas. Su lista se marcó el 2026-08-19 leyendo el código: la rebanada se fusionó sin marcar. Falta el **procesador real** (H-85), que es configuración externa |
 
@@ -3593,6 +3598,158 @@ petición llegue hasta él en lugar de quedarse en la capa de antes.
   `defineRoute` lo impide al cargar. De dónde sale el alcance sin sesión lo decide la rebanada 18.
 - **El limitador cuenta por proceso** (H-130). Es un guardarraíl de recursos, no un control de
   credenciales; el de intentos de acceso vive en la base precisamente por eso.
+### 2026-08-19 · La novena, cerrada del todo
+
+Rebanada **09 · `migrate-activity-and-notifications`**, **50 de 50**. La segunda que se cierra
+entera en la historia del proyecto.
+
+Quedaban seis tareas y ninguna esperaba a nadie. Lo interesante es que cuatro de las seis se habían
+dejado abiertas por el mismo motivo equivocado —«esto necesita un proveedor», «esto es del
+navegador»—, y al mirarlas de cerca lo que faltaba estaba entero de nuestro lado.
+
+**Lo que se guardaba era español**
+
+`company_activities.title` era prosa libre: «Editó los datos de la empresa». Y el cuerpo del aviso
+se redactaba al escribirlo, pegando el nombre de quien actuó delante de esa frase con la primera
+letra en minúscula.
+
+Es H-67 otra vez —los hitos de la conversación del pedido, anotado y no resuelto— y esta vez en la
+tabla que más filas acumula de todo el sistema. En una aplicación que se sirve en dos idiomas desde
+el primer componente, la bitácora y la bandeja eran **las dos únicas pantallas que no cambiaban de
+idioma**. La spec lo bendecía: «El cuerpo SHALL estar en español».
+
+Y hay una razón más dura que la traducción: la concatenación no sobrevive. «Ana creó la empresa» se
+compone bajando la primera letra del verbo; «Ana Created the company» no se compone así, porque el
+verbo cambia de forma y de sitio. La frase entera tiene que ser una unidad traducible, con huecos.
+
+Así que el asiento guarda **una clave del catálogo y sus parámetros**, y `title` se retira en lugar
+de convivir con ella: dejar las dos formas habría sido una migración que no arregla nada, porque
+basta que alguien escriba una y lea la otra para volver al principio. El catálogo vive en
+`@tfv/contracts/activity` —el servidor lo escribe, el navegador lo lee— y es cerrado: una clave que
+no exista no compila, y el tipo exige exactamente los parámetros que la clave declara, así que un
+aviso que dijera «incorporó a » tampoco llega a compilar (H-153).
+
+Se paga un precio y está escrito: el buscador de la bitácora ya no busca por la frase, porque no hay
+frase. Busca por el nombre de la entidad, y lo que se hizo se acota con el filtro de acción, que es
+la pregunta que esa búsqueda intentaba responder.
+
+**Ningún aviso llevaba a ninguna parte**
+
+Éste no lo esperaba. El asiento guardaba `/{companyId}`, `/{companyId}/miembros` y
+`/{companyId}/warehouses/{id}`; el panel vive bajo `/c/{companyId}` y los miembros están en
+`settings/members`. Las tres direcciones respondían `404`.
+
+La bandeja las pinta como enlace desde que existe. Es decir: **pulsar cualquier notificación era
+caer en una página que no existe**, desde el primer día, y la prueba que había afirmaba la dirección
+rota tal cual —`expect(asiento?.url).toBe(\`/${companyId}\`)`—. Nadie lo vio porque escribir la
+dirección y comprobar que hay una dirección es lo mismo; comprobar **a dónde lleva** es otra cosa, y
+la primera vez que alguien la hace es al escribir «pulsar el aviso abre la entidad» (H-154).
+
+El destino sale ahora de `activityTarget()`, una función pura con sus pruebas, y **no se puede pasar
+desde fuera**: quitar el parámetro es lo que impide que vuelva. Y lo guarda una prueba de `web` que
+**resuelve cada destino contra el árbol de rutas de Next**, aceptando directorio literal o de
+parámetro y exigiendo su `page.tsx`. Una pantalla que se mueva de sitio rompe la prueba en lugar de
+romper el enlace, meses después, en la bandeja de otra persona.
+
+**Enfocar una pestaña no se escribe: se nombra**
+
+«Si ya estaba abierta en otra pestaña, se enfoca esa» es comportamiento de navegador y no se prueba
+con una función pura. Pero la parte que puede estar mal no es enfocar —eso lo hace el navegador—:
+es **qué pestaña es la misma pestaña**. Esa mitad sí es lógica, y es `noticeWindowName`, con sus
+cuatro pruebas: la misma para dos avisos de la misma entidad, distinta entre entidades, legal como
+nombre de ventana, y sin confundir `/c/a/b` con `/c/a-b` — que es lo que pasa si se aplana todo al
+mismo separador.
+
+El enlace de la bandeja lleva ese nombre y ya está. La bandeja se queda donde está al pulsar, que
+además es lo que se quiere: quien tiene cinco avisos los abre uno tras otro sin perder la lista, y
+los tres de la misma cotización caen en la misma pestaña.
+
+**El destinatario, y por qué no hacía falta ningún proveedor**
+
+«Sincronizar los datos del destinatario» y «darlo de alta en el primer envío» se dejaron abiertas
+porque no hay proveedor al que sincronizar. Lo que falta con proveedor es *el otro lado* del cable;
+lo que faltaba aquí era el cable: **qué se le cuenta y cuándo**, que es decisión nuestra y se prueba
+con un transporte de mentira sin necesidad de cuenta en ningún sitio (H-155).
+
+`syncRecipient` entra en la misma costura que `send` y es opcional, porque no todo canal tiene a
+quién presentar —la bandeja escribe en una fila nuestra—. Se llama **antes del primer envío de cada
+pasada**, dentro del mismo `try`: un proveedor que no admite al destinatario tampoco va a admitir el
+aviso, y el modo de fallo correcto es el mismo.
+
+Dos decisiones que importan más que el código:
+
+- **Es una operación, no dos.** Alta y actualización son la misma llamada vista en dos momentos.
+  Partirlas obligaría a preguntar antes si existe, que es una carrera y un viaje de más.
+- **No se guarda copia de lo que el proveedor sabe.** La lista de destinatarios es suya y se toca
+  desde su panel; una tabla espejo nuestra empezaría a mentir el primer día que alguien la tocara.
+  Lo que sí es nuestro es el momento, y el momento se prueba: una vez por persona y por pasada, no
+  una por aviso.
+
+El cambio de perfil encola `avisos.sincronizar-destinatario`, fuera de la transacción que lo guarda:
+hablar con un tercero dentro de ella haría que un proveedor lento impidiera cambiarse el correo. Hoy
+el correo es el único dato del perfil que la API deja cambiar, y es el que dispara la
+sincronización; nombre, teléfono y avatar no tienen ruta de edición todavía.
+
+**Retirar algo que nunca se escribió**
+
+La administración de plantillas de notificación por API era una herramienta **sin autenticación** que
+operaba sobre la cuenta real del proveedor, y la pila nueva nunca la reimplementó. Retirarla no es
+borrar código: es impedir que vuelva y dejar constancia de que fue una decisión.
+
+Lo primero lo vigila una prueba que recorre la tabla de rutas entera —ninguna las nombra, y ninguna
+superficie de avisos queda pública—, que es la propiedad y no el nombre. Lo segundo es el delta
+`REMOVED`, que `changes/README.md` asigna a esta rebanada y no a la 30: la 30 retira la **pila
+anterior**, que es otra cosa. Es el primer delta de retirada del repositorio.
+
+**Un hallazgo que se queda abierto**
+
+Al pasar el aviso a clave y parámetros aparece una pregunta que antes no existía porque la respuesta
+era «español y punto»: **en qué idioma se redacta un aviso saliente**. La bandeja no lo sufre —la
+pinta el navegador de quien la mira, con su cookie delante—, pero un correo o un empuje no tienen
+navegador. El idioma vive hoy en una cookie y no hay ninguna ruta que lo escriba en la cuenta. Una
+columna `users.locale` es de `app-shell`, no de aquí, y la cola ya viaja con clave y parámetros, así
+que el día que exista el transporte tiene todo lo que necesita (H-156).
+
+**La trampa de las migraciones, otra vez**
+
+La `0029` se generó con la herramienta y **no se aplicó**. H-145 en vivo: el motor lee cuál fue la
+última aplicada y salta todo lo que no la supere, y la `0027` había quedado con una marca de tiempo
+posterior a la `0028`, así que la `0029` recién generada nacía por debajo del listón. Se descubrió
+con la prueba de políticas fallando por una columna que no existía. El sello se sube a mano por
+encima de todos los del diario; mientras el orden del archivo y el del registro puedan discrepar,
+generar una migración no basta.
+
+**Comprobado**
+
+`pnpm test --force` en verde con **1492** —1461 de partida y **31 nuevas**: 13 de contratos, 10 de la
+API y 8 de web—. `pnpm check` y `pnpm lint` limpios.
+
+La suite de navegador, contra una base propia de este árbol, con las **dos sesiones abiertas a la
+vez**: la administración edita la empresa, y la propietaria ve el asiento con la frase armada en su
+idioma y el aviso en su bandeja. Y ahora la prueba mira **a dónde apunta el enlace** —`/c/{id}`, con
+su nombre de ventana— y abre esa dirección para ver que responde una pantalla. Esa comprobación es
+la que no existía, y por eso el `404` vivió desde el primer día.
+
+La pasada completa da **82 de 83**: la que cae es `suscripcion.spec.ts`, que exige que no haya
+ningún plan que contratar mientras la siembra crea tres desde antes de esta rama (H-158). Y una de
+cada tres vueltas de `avisos.spec.ts` cae en su última línea, la del contador de la campana, que es
+H-146 y es anterior; las otras dos vueltas dan 3 de 3.
+
+`pnpm lint` **fallaba con cinco errores desde `b67f309`**, todos de formato. Van corregidos con esta
+rama porque la verificación lo exige limpio, y porque una comprobación que ya está roja al empezar
+deja de avisar de nada.
+
+**Lo que queda, y no es de esta rebanada**
+
+Los dos proveedores salientes (H-80), las ~35 rutas de escritura que aún no dejan asiento y que cada
+dominio añade al pasar por su módulo (H-82), una clave de permiso propia para la bitácora (H-81) y
+el idioma de la cuenta (H-156). Ninguna depende de nadie de aquí.
+
+Y una que sí es la misma corrección, en otra tabla: **la bitácora de plataforma guarda español**
+igual que ésta lo guardaba —«Prospecto corregido», «Prospecto descartado»— y ahora es la única
+superficie que no cambia de idioma. La receta está escrita y la tabla es de la rebanada 10, con su
+esquema en la migración `0024`: cambiarla pide una migración que este encargo no tiene (H-157).
+
 ### 2026-08-19 · La red se puede volver a tender
 
 La suite de extremo a extremo llevaba varias rondas sin correrse, y no por descuido: **no se podía

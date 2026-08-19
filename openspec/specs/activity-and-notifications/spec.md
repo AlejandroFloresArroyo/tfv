@@ -44,12 +44,32 @@ un asiento de actividad que identifique **qué** se hizo, **sobre qué entidad**
 El asiento SHALL incluir una referencia navegable a la entidad afectada y un nombre legible que
 permita identificarla sin abrirla.
 
+Lo que se hizo SHALL registrarse como **clave de un catálogo cerrado con sus parámetros**, no como
+una frase redactada. Un campo de texto libre acaba guardando el idioma de quien escribió el código
+—pasó aquí y pasó en la conversación del pedido—, y con él la bitácora y la bandeja son las únicas
+superficies de una aplicación bilingüe que no cambian de idioma (ver `HALLAZGOS.md` H-153 y H-67).
+
+La referencia navegable SHALL resolverse a partir del tipo de entidad y no escribirse en cada punto
+de llamada, y SHALL apuntar a una pantalla existente (ver `HALLAZGOS.md` H-154).
+
 #### Scenario: Una creación queda registrada
 
 - **WHEN** un miembro crea una cotización
 - **THEN** se registra un asiento con acción de creación
 - **AND** identifica la cotización, a su autor y el instante
 - **AND** incluye una referencia que lleva a esa cotización
+
+#### Scenario: El asiento no guarda una frase
+
+- **WHEN** se registra cualquier asiento
+- **THEN** lo que se hizo queda como clave del catálogo y parámetros
+- **AND** no hay ningún campo donde quepa una frase redactada
+
+#### Scenario: La referencia lleva a una pantalla que existe
+
+- **WHEN** se registra un asiento de una entidad sin pantalla propia
+- **THEN** la referencia lleva al panel de la empresa
+- **AND** no a una dirección construida a partir de un identificador ausente
 
 #### Scenario: El origen queda diferenciado
 
@@ -211,23 +231,46 @@ revocarlos.
 - **WHEN** el mismo dispositivo se registra de nuevo
 - **THEN** sigue habiendo un solo registro para él
 
-### Requirement: El aviso push resume la actividad
+### Requirement: El aviso resume la actividad
 
-Una notificación push de actividad SHALL llevar un título con el nombre de la entidad afectada, un
+Una notificación de actividad SHALL llevar un título con el nombre de la entidad afectada, un
 cuerpo que indique quién hizo qué, y una referencia que lleve a la entidad al pulsarla.
 
-El cuerpo SHALL estar en español y SHALL sanearse de cualquier marcado antes de mostrarse.
+El cuerpo SHALL viajar como clave y parámetros, y SHALL redactarse **en el idioma de quien lo lee**.
+Un requisito anterior lo fijaba en español, lo que obligaba a guardarlo ya redactado y hacía de la
+bandeja la única superficie que no cambia de idioma; además la composición no sobrevive a la
+traducción, porque «Ana creó la empresa» se arma bajando la primera letra del verbo y su equivalente
+en inglés no (ver `HALLAZGOS.md` H-153).
+
+Los parámetros SHALL sanearse de cualquier marcado antes de mostrarse: con el cuerpo hecho de una
+frase propia con huecos, el marcado sólo puede entrar por los huecos.
+
+Quién decide **a dónde** lleva el aviso es lógica del sistema y SHALL poder comprobarse; abrir la
+pantalla o enfocar una pestaña ya abierta es del navegador, y SHALL resolverse dándole a cada
+destino un nombre de ventana estable.
 
 #### Scenario: Pulsar el aviso abre la entidad
 
-- **WHEN** un usuario pulsa una notificación push de una cotización creada
+- **WHEN** un usuario pulsa una notificación de una cotización creada
 - **THEN** la aplicación se abre en esa cotización
 - **AND** si ya estaba abierta en otra pestaña, se enfoca esa
 
+#### Scenario: Dos avisos de la misma entidad comparten pestaña
+
+- **GIVEN** dos notificaciones de la misma cotización
+- **WHEN** se pulsan una tras otra
+- **THEN** las dos resuelven al mismo destino y al mismo nombre de ventana
+
+#### Scenario: El cuerpo se lee en el idioma de quien lo abre
+
+- **GIVEN** dos personas de la misma audiencia con distinto idioma de interfaz
+- **WHEN** las dos abren el mismo aviso
+- **THEN** cada una lo lee en su idioma
+
 #### Scenario: El texto no arrastra marcado
 
-- **GIVEN** una entidad cuya descripción contiene marcado enriquecido
-- **WHEN** se genera el aviso push
+- **GIVEN** una entidad cuyo nombre contiene marcado enriquecido
+- **WHEN** se muestra el aviso
 - **THEN** el cuerpo muestra el texto plano, sin etiquetas
 
 ### Requirement: Los datos del destinatario se mantienen al día
@@ -236,7 +279,13 @@ El sistema SHALL mantener sincronizados con el proveedor de notificaciones el no
 teléfono y el avatar de cada usuario, y SHALL actualizarlos cuando cambien en el perfil.
 
 El destinatario SHALL crearse en el proveedor la primera vez que se le envíe algo, sin exigir un
-alta previa.
+alta previa. El alta y la actualización SHALL ser la misma operación: preguntar antes si existe es
+una carrera y un viaje de más.
+
+El sistema **no** SHALL guardar copia de lo que el proveedor ya sabe del destinatario. Esa lista es
+del proveedor y se puede tocar desde su panel; una tabla espejo empezaría a mentir el primer día que
+alguien la tocara. Lo que sí es del sistema es **cuándo** se le cuenta: antes del primer envío de
+cada pasada de entrega, y cuando el perfil cambie.
 
 #### Scenario: Cambiar el nombre se propaga
 
@@ -248,6 +297,13 @@ alta previa.
 - **GIVEN** un usuario que nunca ha recibido notificaciones
 - **WHEN** se le envía la primera
 - **THEN** el destinatario se crea automáticamente y la recibe
+- **AND** el alta ocurre antes del envío
+
+#### Scenario: Varios avisos seguidos no repiten el alta
+
+- **GIVEN** tres notificaciones para la misma persona en la misma pasada de entrega
+- **WHEN** se entregan
+- **THEN** el destinatario se da de alta una sola vez
 
 ### Requirement: Bitácora de la empresa consultable
 

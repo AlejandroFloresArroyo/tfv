@@ -121,6 +121,23 @@ test("lo que uno guarda aparece en la bitácora y en la bandeja del otro", async
   const avisos = mirando.getByRole("listitem")
   await expect(avisos.first()).toContainText(/editó los datos de la empresa/i)
 
+  /**
+   * Y **lleva a donde dice**.
+   *
+   * Es la comprobación que no existía, y por eso las tres direcciones que se guardaban respondían
+   * `404` sin que nadie se enterara (`HALLAZGOS.md` H-154). Se mira el enlace y no se pulsa: pulsar
+   * abre la pestaña de la entidad —eso es lo que hace el nombre de ventana— y lo que hay que
+   * comprobar aquí es a dónde apunta, no que el navegador sepa abrirla.
+   */
+  const enlace = avisos.first().getByRole("link").first()
+  await expect(enlace).toHaveAttribute("href", `/c/${companyId}`)
+  // El nombre de la ventana es lo que hace que dos avisos de lo mismo compartan pestaña.
+  await expect(enlace).toHaveAttribute("target", /^tfv_/)
+
+  // Y la dirección existe de verdad: se abre y responde una pantalla, no un 404.
+  await mirando.goto(`/c/${companyId}`)
+  await expect(mirando.getByRole("link", { name: /Notificaciones/ })).toBeVisible()
+
   // ─── Marcarla leída baja el contador, sin recargar a mano ──────────────────
   const sinLeer = async () => {
     const etiqueta = await mirando
