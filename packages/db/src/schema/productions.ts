@@ -22,6 +22,7 @@
 import { relations, sql } from "drizzle-orm"
 import {
   boolean,
+  check,
   foreignKey,
   index,
   integer,
@@ -67,6 +68,31 @@ export const productions = pgTable(
     uniqueIndex("productions_slug_unique").on(table.slug).where(sql`deleted_at IS NULL`),
     uniqueIndex("productions_legacy_unique").on(table.legacyId).where(sql`deleted_at IS NULL`),
     index("productions_company_idx").on(table.companyId, table.createdAt),
+
+    /**
+     * Las dos fechas van en orden, y lo dice el motor.
+     *
+     * `production-management` lo pide como escenario de frontera. Comprobarlo sólo en el manejador
+     * lo deja valiendo mientras nadie escriba por otra vía —la siembra, un trasvase de la pila
+     * anterior, una corrección a mano—, y una producción que termina antes de empezar no se nota
+     * hasta que alguien cuenta jornadas y le salen negativas.
+     *
+     * Nulas se admiten: una producción puede registrarse antes de tener fechas.
+     */
+    check(
+      "productions_dates_ordered",
+      sql`starts_on is null or ends_on is null or ends_on >= starts_on`,
+    ),
+
+    /**
+     * Publicada exige identificador legible.
+     *
+     * La spec las une en una sola frase —«SHALL poder marcarse como publicada **y** SHALL tener un
+     * identificador legible único, para aparecer en los directorios públicos»—, y sin el segundo el
+     * primero no sirve de nada: una producción publicada sin `slug` no tiene dirección por la que
+     * llegar a ella, así que está publicada en un sitio al que nadie puede ir.
+     */
+    check("productions_published_needs_slug", sql`is_published is false or slug is not null`),
   ],
 )
 
