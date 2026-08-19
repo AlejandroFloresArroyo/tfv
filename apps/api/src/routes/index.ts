@@ -168,6 +168,11 @@ import {
   unitHistoryRoute,
   updatePriceListRoute,
 } from "./stock.ts"
+import {
+  storefrontProductRoute,
+  storefrontProductsRoute,
+  storefrontSiteRoute,
+} from "./storefront.ts"
 import { authorizeUploadRoute, confirmUploadRoute, reissueTargetsRoute } from "./uploads.ts"
 import {
   createStorageRoute,
@@ -410,4 +415,10 @@ export const routes: readonly RegisteredRoute[] = [
   getWebsiteRoute,
   updateWebsiteRoute,
   deleteWebsiteRoute,
+
+  // La tienda pública que cuelga de un sitio. Las tres son públicas, y su motivo está escrito en
+  // cada una: es la superficie que se sirve a quien no tiene cuenta.
+  storefrontSiteRoute,
+  storefrontProductsRoute,
+  storefrontProductRoute,
 ]
