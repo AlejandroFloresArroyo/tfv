@@ -5,19 +5,25 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./api-client": "./src/api-client.ts",
     "./billing": "./src/billing.ts",
     "./catalog": "./src/catalog.ts",
+    "./checkout": "./src/checkout.ts",
+    "./computed": "./src/computed.ts",
     "./media": "./src/media.ts",
     "./money": "./src/money.ts",
+    "./openapi-types": "./src/openapi-types.ts",
     "./document": "./src/document.ts",
     "./errors": "./src/errors.ts",
+    "./idempotency": "./src/idempotency.ts",
     "./query": "./src/query.ts",
     "./quotation": "./src/quotation.ts",
     "./rate": "./src/rate.ts",
     "./quote-status": "./src/quote-status.ts",
     "./order-status": "./src/order-status.ts",
     "./order-chat": "./src/order-chat.ts",
-    "./storefront": "./src/storefront.ts"
+    "./storefront": "./src/storefront.ts",
+    "./sections": "./src/sections.ts"
   },
   "scripts": {
     "check": "tsc --noEmit",

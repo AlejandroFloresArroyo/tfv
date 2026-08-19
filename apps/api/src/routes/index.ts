@@ -80,6 +80,15 @@ import {
   warehouseCategoryScopeRoute,
 } from "./catalog.ts"
 import {
+  cancelCheckoutRoute,
+  createCheckoutRoute,
+  myCheckoutRoute,
+  myCheckoutsRoute,
+  myOrderRoute,
+  myOrdersRoute,
+  priceCartRoute,
+} from "./checkout.ts"
+import {
   addMemberRoute,
   createCompanyRoute,
   createRoleRoute,
@@ -139,6 +148,34 @@ import {
 import { paymentWebhookRoute } from "./payments.ts"
 import { permissionCatalogRoute } from "./permissions.ts"
 import {
+  platformActivityRoute,
+  platformCompaniesRoute,
+  platformCompanyMembersRoute,
+  platformUsersRoute,
+} from "./platform.ts"
+import {
+  createProductionCategoryRoute,
+  createProductionRoute,
+  createWorkflowRoute,
+  deleteProductionCategoryRoute,
+  deleteProductionRoute,
+  deleteWorkflowRoute,
+  getProductionCategoryRoute,
+  getProductionRoute,
+  getWorkflowRoute,
+  listProductionCategoriesRoute,
+  listProductionsRoute,
+  listWorkflowsRoute,
+  productionCategoryPathRoute,
+  productionCategoryScopeRoute,
+  productionPanelRoute,
+  productionScopeRoute,
+  updateProductionCategoryRoute,
+  updateProductionRoute,
+  updateWorkflowRoute,
+  workflowScopeRoute,
+} from "./productions.ts"
+import {
   acceptProspectRoute,
   captureProspectRoute,
   discardProspectRoute,
@@ -176,6 +213,15 @@ import {
   updateShipmentRoute,
   updateShippingRatesRoute,
 } from "./shipping.ts"
+import {
+  createCustomizationRoute,
+  deleteCustomizationRoute,
+  getCustomizationRoute,
+  listCustomizationsRoute,
+  previewSitePageRoute,
+  storefrontPageRoute,
+  updateCustomizationRoute,
+} from "./site-builder.ts"
 import {
   changeUnitStatusRoute,
   createPriceListRoute,
@@ -256,6 +302,15 @@ export const routes: readonly RegisteredRoute[] = [
 
   // ─── Autorización ──────────────────────────────────────────────────────────
   permissionCatalogRoute,
+
+  // ─── Administración de plataforma ──────────────────────────────────────────
+  // Ninguna lleva `:companyId`: lo que atienden no pertenece a ninguna empresa, así que no hay
+  // permiso de empresa contra el que resolverlas. Todas son de lectura salvo la bandeja de
+  // prospectos, que está arriba con el resto del acceso.
+  platformCompaniesRoute,
+  platformCompanyMembersRoute,
+  platformUsersRoute,
+  platformActivityRoute,
 
   // ─── Núcleo ────────────────────────────────────────────────────────────────
   createCompanyRoute,
@@ -467,7 +522,35 @@ export const routes: readonly RegisteredRoute[] = [
   changeShipmentStatusRoute,
 
   // ─── Producciones ──────────────────────────────────────────────────────────
-  // Pendiente: rebanada 20.
+  // La producción como entidad, su taxonomía —que dirige el trabajo a un equipo— y sus planes de
+  // trabajo. El panel va **antes** que la ficha con parámetro por el mismo motivo que el perfil
+  // operativo de facturación: nada garantiza que un identificador no se parezca a «panel».
+
+  listProductionsRoute,
+  createProductionRoute,
+  productionPanelRoute,
+  getProductionRoute,
+  updateProductionRoute,
+  productionScopeRoute,
+  deleteProductionRoute,
+
+  listProductionCategoriesRoute,
+  getProductionCategoryRoute,
+  productionCategoryPathRoute,
+  createProductionCategoryRoute,
+  updateProductionCategoryRoute,
+  productionCategoryScopeRoute,
+  deleteProductionCategoryRoute,
+
+  listWorkflowsRoute,
+  createWorkflowRoute,
+  getWorkflowRoute,
+  updateWorkflowRoute,
+  workflowScopeRoute,
+  deleteWorkflowRoute,
+
+  // Pendiente: guion, capítulos y escenas (21); inventario, entregas y presupuesto (22); compras
+  // a almacenes (23). Las tablas existen desde la `0002` y el panel ya las cuenta.
 
   // ─── Pixit ─────────────────────────────────────────────────────────────────
   // Pendiente: rebanada 24.
@@ -483,9 +566,32 @@ export const routes: readonly RegisteredRoute[] = [
   updateWebsiteRoute,
   deleteWebsiteRoute,
 
-  // La tienda pública que cuelga de un sitio. Las tres son públicas, y su motivo está escrito en
+  // El constructor: los temas de un sitio y su contenido, más la vista previa de lo que servirían.
+  listCustomizationsRoute,
+  previewSitePageRoute,
+  createCustomizationRoute,
+  getCustomizationRoute,
+  updateCustomizationRoute,
+  deleteCustomizationRoute,
+
+  // La tienda pública que cuelga de un sitio. Las cuatro son públicas, y su motivo está escrito en
   // cada una: es la superficie que se sirve a quien no tiene cuenta.
   storefrontSiteRoute,
+  storefrontPageRoute,
   storefrontProductsRoute,
   storefrontProductRoute,
+
+  // ─── Compra en la tienda pública ───────────────────────────────────────────
+  // Valorar el carrito es público —es el escaparate con precios—; pagar exige cuenta, y las
+  // compras y los pedidos son de la persona, no de una empresa. Ver `storefront-checkout`.
+
+  priceCartRoute,
+  createCheckoutRoute,
+
+  myCheckoutsRoute,
+  myCheckoutRoute,
+  cancelCheckoutRoute,
+
+  myOrdersRoute,
+  myOrderRoute,
 ]

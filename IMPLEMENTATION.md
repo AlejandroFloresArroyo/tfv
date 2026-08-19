@@ -127,20 +127,49 @@ Lo construido hasta ahora, medido y no estimado:
 | | |
 |---|---|
 | Rebanadas | 19 de 30 empezadas, **ninguna cerrada del todo** |
+| Código sin pruebas | 75 036 líneas |
+| Código de prueba | 24 853 líneas |
+| Pruebas | **1457** de vitest — 393 contratos, 87 datos, 757 API, 101 web, 119 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
+| Esquema | 97 tablas · 290 índices · 50 enumerados · 6 comprobaciones · 41 únicos parciales · 236 claves foráneas |
+| Aislamiento | 215 políticas · 97/97 tablas · 0 con identidad cruda |
+| Migraciones | 25, replicadas desde cero en cada verificación |
+| Rutas | **220** registradas, 159 con permiso declarado, 18 públicas y enumeradas |
+| Permisos | **255** claves, comprobadas antes de cualquier efecto |
+| Pantallas | 62, en español e inglés (1649 mensajes, sin desalinear) |
 | Código sin pruebas | 31 130 líneas |
 | Código de prueba | 9 973 líneas |
-| Pruebas | **1097** de vitest — 256 contratos, 78 datos, 573 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
+| Pruebas | **1154** de vitest — 268 contratos, 78 datos, 610 API, 101 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
 | Esquema | 95 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
-| Aislamiento | 208 políticas · 95/95 tablas · 0 con identidad cruda |
-| Migraciones | 21, replicadas desde cero en cada verificación |
+| Aislamiento | 210 políticas · 95/95 tablas · 0 con identidad cruda |
+| Migraciones | 22, replicadas desde cero en cada verificación |
+| Rutas | **193** registradas, 133 con permiso declarado, 17 públicas y enumeradas |
+| Pruebas | **1244** de vitest — 353 contratos, 78 datos, 623 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
+| Esquema | 96 tablas · 62 enumerados · 6 comprobaciones · 48 únicos parciales. **El recuento de índices queda sin actualizar**: no se pudo reproducir la medida de la que salió el «270» anterior, y un número sin medir es peor que ninguno |
+| Aislamiento | 211 políticas · 96/96 tablas · 0 con identidad cruda |
+| Migraciones | 22, replicadas desde cero en cada verificación |
 | Rutas | **182** registradas, 133 con permiso declarado, 16 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 48, en español e inglés (1356 mensajes, sin desalinear) |
+| Pantallas | 50, en español e inglés (1396 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
-colecciones explorables** y **el almacén entero, del catálogo a las existencias**. La parte ancha
-del trabajo siguen siendo las rebanadas 08 a 27; la 10 está casi entera y las demás sin tocar.
+colecciones explorables**, **el almacén entero, del catálogo a las existencias** y, desde el 19 de
+agosto, **el área de administración de plataforma**. La parte ancha del trabajo siguen siendo las
+rebanadas 08 a 27; la 10 está casi entera y las demás sin tocar.
+
+**La plataforma ya tiene dónde administrarse, y deja rastro de hacerlo.** Un administrador de
+plataforma puede mirar a través de todos los arrendatarios —eso existía desde la rebanada 05— y
+ahora tiene un sitio propio desde el que ejercerlo: la bandeja de prospectos que llevaba desde la 10
+implementada y sin pantalla, y dos padrones de sólo lectura. Cada ruta del área niega a un usuario
+corriente con `403`, y cada acción que se hace desde ella queda escrita en una bitácora que ni
+siquiera quien la protagoniza puede reescribir.
+
+**Y ya se puede comprar.** Una tienda pública vende de verdad: el carrito se valora contra el
+catálogo publicado con la misma función que pinta la ficha, pagar **aparta unidades concretas** con
+caducidad, y el cobro confirmado materializa las ocho entidades en una transacción con la marca al
+final. Si el cobro falla no queda ni pedido ni existencia apartada; si el mismo cobro llega dos
+veces, hay un pedido. Son los cuatro defectos más caros del levantamiento —M-01, M-02, M-03 y
+M-10— cerrados de una vez.
 
 **El inventario ya es comercio, y se puede mirar.** Hay cotizaciones, y reservan equipo de verdad:
 unidades concretas apartadas con bloqueo, reconciliadas por diferencia, proyectadas sobre el
@@ -169,9 +198,14 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Tareas | Nota |
 |---|---|---|---|---|
 | 00 | Andamiaje del espacio de trabajo | ✅ | — | Raíz, herramientas, base local |
-| 01 | `add-platform-contracts` | 🟡 | 10/37 | Dinero, errores, consulta, paginación, identificadores. Falta idempotencia, campos calculados, cliente tipado y el registro de búsqueda |
+| 01 | `add-platform-contracts` | 🟡 | 23/37 | Dinero, errores, consulta, paginación, identificadores, **idempotencia**, **campos calculados** y **el cliente tipado generado**. Falta el registro de búsqueda y los esquemas de entrada y salida compartidos |
 | 02 | `add-postgres-data-model` | 🟡 | 29/34 | 91 tablas, 229 claves foráneas, 48 únicos parciales. Falta medir el volcado real, la siembra y el desfase en integración continua |
-| 03 | `add-hono-api-runtime` | 🟡 | 20/26 | Registro explícito, validación, contrato de error, contrato publicado, salud. Falta cliente tipado, límite de cuerpo y limitación de frecuencia genérica |
+| 03 | `add-hono-api-runtime` | ✅ | 26/26 | Registro explícito, validación, contrato de error, contrato publicado con su cliente tipado y su candado de desfase, salud, límite de cuerpo y limitación de frecuencia. **La primera rebanada cerrada del todo** |
+
+> **La 03 se cierra el 2026-08-19**, esta vez con sus veintiséis tareas marcadas y no por costumbre.
+> Al cerrarla apareció lo que faltaba por mirar: el comando que emite el contrato apuntaba a un
+> archivo que no existía (H-126), y las capas del motor se montaban por camino y no por verbo, así
+> que una ruta heredaba los guardianes de sus hermanas según el orden de la tabla (H-127).
 
 > **Corregido el 2026-08-16.** La 02 y la 03 figuraban como terminadas y no lo estaban: sus listas
 > de tareas nunca se habían marcado, y al repasarlas contra el código aparecieron huecos reales.
@@ -185,7 +219,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | 04 | `add-session-lifecycle` | 🟡 | 31/36 | Sesiones revocables, rotación con detección de reutilización, y revocación exigida por el motor. Falta sustituir la maquinaria propia por el servicio gestionado |
 | 05 | `add-authorization-enforcement` | 🟡 | 21/29 | Catálogo de **255** claves, resolución de rol, elusión acotada de propietario y de plataforma, permisos efectivos para la interfaz. Falta la medición previa al corte, que es lo que impide cerrarla |
 | 06 | `add-tenant-scoping` | 🟡 | 24/29 | **Las dos capas en pie**: 195 políticas sobre las 91 tablas, y los manejadores corriendo bajo `withRequester`. Faltan las de los dominios que aún no existen |
-| 07 | `add-verified-payment-webhooks` | 🟡 | 11/38 | **Firma verificada de verdad**, unicidad por reclamación e inserción, y transaccionalidad. Los manejadores por tipo esperan a las rebanadas 11 y 17 |
+| 07 | `add-verified-payment-webhooks` | 🟡 | 11/38 | **Firma verificada de verdad**, unicidad por reclamación e inserción, y transaccionalidad. Los manejadores por tipo **ya están**: los de suscripción con la 11, los de cobro en tienda con la 18 (H-88 cerrado) |
 
 ### Servicios de plataforma
 
@@ -193,8 +227,10 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 |---|---|---|---|
 | 08 | `migrate-media-storage` | 🟡 | **Subida directa entera y usada**: autorización acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión, confirmación que dice qué se escribió, y el selector con vista previa, reducción y reintento por objeto. La **sustitución de colecciones diferencia** —L-01— y las pantallas del almacén ya suben: galería del producto, e imagen única de almacén y ubicación. Faltan los marcadores de posición como activos propios y la ejecución del recolector, que espera al despachador de trabajos (09) |
 | 09 | `migrate-activity-and-notifications` | 🟡 | Bitácora transaccional de sólo anexado, audiencia por permiso, bandeja entera con su contador, preferencias y dispositivos. Y el **despachador de trabajos**, que desbloquea la 08 y la 13. Faltan los proveedores de empuje y de correo —configuración externa— y anotar las ~35 rutas de escritura que aún no dejan asiento |
-| 10 | `migrate-identity-and-companies` | 🟡 | Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen, y las pantallas de prospecto —el formulario público es de la 19 y la bandeja necesita un área de administración de plataforma |
+| 10 | `migrate-identity-and-companies` | 🟡 | 61/78. Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos, ya con sus dos pantallas**: el formulario público y la bandeja, que estrena el **área de administración de plataforma**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen |
 | 11 | `migrate-subscriptions-and-billing` | ⬜ | |
+| 10 | `migrate-identity-and-companies` | 🟡 | Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen, y las pantallas de prospecto —el formulario público es de la 19 y la bandeja necesita un área de administración de plataforma |
+| 11 | `migrate-subscriptions-and-billing` | 🟡 | 40/40. Planes, contratación, asientos, gracia, las tres compuertas y el alta de comercio entera, con 61 pruebas. Su lista se marcó el 2026-08-19 leyendo el código: la rebanada se fusionó sin marcar. Falta el **procesador real** (H-85), que es configuración externa |
 
 ### Columna de comercio
 
@@ -207,13 +243,15 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | 16 | `migrate-order-chat-realtime` | 🟡 | 24/38. Historial con cursor, envío optimista, acuses por lado, editar y borrar lo propio, mensajes del sistema y la pertenencia al pedido, con la pantalla dentro de la ficha. **Sin conexión persistente**: pide configuración externa que no hay, y el transporte queda detrás de una costura (H-60) |
 | 17 | `migrate-shipping-rates` | ⬜ | |
 | 18 | `add-transactional-checkout` | ⬜ | |
+| 19 | `migrate-websites-and-site-builder` | 🟡 | 38/49. Sitios, resolución por subdominio, tienda y **el constructor entero**: temas con su campaña programada, secciones con su contenido, reordenación por arrastre y vista previa que comparte función y componente con lo que se sirve. Falta el carrito y la cuenta del comprador, que son de la 18 |
+| 18 | `add-transactional-checkout` | 🟡 | 37/43. Carrito valorado en el servidor, **reserva efectiva con caducidad**, instantánea congelada, idempotencia y la materialización de las ocho entidades en transacción, con la marca al final. Las cuatro de mosaicos esperan a la 24; el aviso de fallo persistente y el reproceso manual, a un área de administración de plataforma |
 | 19 | `migrate-websites-and-site-builder` | ⬜ | |
 
 ### Columna de producciones
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 20 | `migrate-productions-core` | ⬜ | |
+| 20 | `migrate-productions-core` | 🟡 | 7/44 más lo que no estaba en la lista. **La columna deja de estar en cero**: la producción entera —alta, ficha, fechas, publicación, panel y baja con su alcance—, su taxonomía con el rol que dirige el trabajo al equipo, y el flujo básico de los planes de trabajo. Faltan guion, capítulos y escenas (21), y jornadas, continuidad y catálogos, que son el grueso de la lista |
 | 21 | `add-durable-script-sync` | ⬜ | |
 | 22 | `migrate-productions-operations` | ⬜ | |
 | 23 | `add-transactional-procurement` | ⬜ | Converge las dos columnas |
@@ -255,14 +293,19 @@ En este orden, y con el motivo de que sea ése:
 7. **Pedidos de almacén** (hecho): ciclo, aceptación atómica, rechazo con motivo y su bandeja.
    Quedan cuatro tareas de la rebanada esperando al escaparate y al servicio de producciones.
 8. **Lo que queda de la 10** (hecho): los prospectos y la comprobación de «en uso» de una
-   contraparte, que ya tiene documentos que consultar. Las pantallas esperan al sitio público y a
-   un área de administración de plataforma.
+   contraparte, que ya tiene documentos que consultar. Sus dos pantallas ya están: el formulario
+   público, y la bandeja dentro del área de administración de plataforma.
 9. **Base de pruebas separada de la de desarrollo** (hecho). Dos ejecuciones simultáneas siguen
    pisándose, que es la mitad barata de vivir con ella.
 10. **Recepción verificada de eventos de cobro** (hecho en su parte crítica: firma, unicidad y
    transaccionalidad; los manejadores esperan a las rebanadas 11 y 17). Queda **sustituir la
    maquinaria de sesión propia por el servicio gestionado**, que cierra la 04: es una reescritura
    del camino de autenticación, necesita configuración externa, y no debe hacerse sin supervisión.
+11. **La compra en la tienda pública** (hecho): el carrito valorado en el servidor, la reserva
+   efectiva con caducidad y la materialización de las ocho entidades en transacción, con la marca al
+   final. Con ella llegan los manejadores de cobro que la 07 dejó pendientes, y de paso tres
+   políticas que dejaban al comprador reescribir la instantánea de su compra, fabricar el asiento de
+   su cobro e insertar una orden de trabajo en el almacén de cualquier empresa.
 
 Dos cosas que no van en esta lista porque no dependen de nosotros: la **medición previa al corte**
 de la 05, que necesita tráfico real de la pila anterior, y la **medición de importes** de la 14
@@ -270,28 +313,31 @@ de la 05, que necesita tráfico real de la pila anterior, y la **medición de im
 
 Lo que queda, sin orden acordado todavía:
 
-- **Llevar el almacenamiento de objetos a S3** (2026-08-19, pedido por el propietario). Hoy los
-  bytes ya viven **fuera de la base** —almacenamiento de objetos, un objeto por variante, con la
-  clave `empresa/archivo/variante.ext`—, así que esto no es sacarlos de ninguna tabla: es cambiar
-  de proveedor. Lo que hay que reescribir son tres funciones de `apps/api/src/media/storage.ts`
-  —`authorizeWrite`, `publicUrl` y `removeObjects`—, y el motivo de que hoy no haya cliente de S3
-  está escrito ahí: se usa el punto de firma del proveedor en vez de calcular una firma SigV4 a
-  mano. Lo que **no** es gratis es el resto: las direcciones públicas ya persistidas están
-  incrustadas en documentos generados y en enlaces repartidos, y la spec lo exige explícitamente
-  («Un cambio de proveedor SHALL contemplar la actualización de las direcciones ya persistidas»).
-  Su sitio natural es junto a la rebanada 30, con el corte.
+- **Llevar el almacenamiento de objetos a S3** (2026-08-19, pedido por el propietario). **El código
+  ya está**: hay una interfaz de proveedor, el de hoy detrás de ella, un segundo que habla S3 con su
+  firma SigV4 —ejercido contra la pila local, que expone su punto S3— y el guion que reescribe las
+  direcciones ya persistidas. `STORAGE_PROVIDER` elige, y llega valiendo el de siempre.
+  Lo que falta es **infraestructura, no código**, y no se puede hacer desde aquí: depósito de AWS con
+  lectura pública y CORS, una credencial de escritura acotada al prefijo, y copiar los objetos con
+  `aws s3 sync` —el guion mueve direcciones, no bytes—. Hoy el depósito local existe porque alguien
+  lo creó a mano y no hay nada en el repositorio que lo deje puesto (H-136). Su sitio natural sigue
+  siendo junto a la rebanada 30, con el corte.
 
 - **Sustituir la maquinaria de sesión propia por el servicio gestionado** (cierra la 04). Es lo
   único de la lista anterior que quedó sin hacer, y a propósito: reescribe el camino de
   autenticación y necesita configuración externa.
 - **El detalle de producto y sus asistentes** (29b). Sin ellos no se puede completar un alta
   provisional ni editar una medida desde la pantalla.
-- **Los manejadores de eventos de pago**, que esperan a suscripciones (11) y a la compra en
-  tienda (17).
+- **Un procesador de pagos real** (H-85). El ciclo entero corre contra una costura y su
+  suplente; lo que falta es una cuenta con sus credenciales, que es configuración externa.
 - **El sitio público** (29e): el formulario de contacto y la tienda de almacén. Con él llegan
   también la compra pública de la 15 y las unidades concretas por línea.
-- **Un área de administración de plataforma**, que hoy no existe: la bandeja de prospectos es su
-  primer inquilino.
+- ~~**Un área de administración de plataforma**~~ (hecha, 2026-08-19): la bandeja de prospectos, el
+  padrón de empresas y el de cuentas, y su propia bitácora. Lo que sigue fuera es **escribir** datos
+  de una empresa desde ahí —leer sí, escribir es otra decisión y no tiene clave que la respalde
+  (H-121)—, y las dos superficies de plataforma que sus specs piden y sus rebanadas todavía no
+  tienen: reprocesar un evento de cobro (`payment-webhooks`) y habilitar servicios de una empresa
+  (`companies`).
 - **El idioma de los importes** (H-25): `es` agrupa a la europea y esto es un sistema mexicano. Es
   decisión de producto.
 
@@ -2997,6 +3043,560 @@ máquina de estados en contratos, 7 de aislamiento en datos —incluida la polí
 en los tres lados— y 19 de extremo a extremo en la API. `pnpm check` y `pnpm lint` limpios. La
 pantalla, ejercitada en un navegador: bajar la base local de `99` a `49` y ver el cálculo siguiente
 pasar de `119.00` a `69.00` es el requisito «se cambia una tarifa sin desplegar», mirado.
+
+### 2026-08-19 · La plataforma, con dónde administrarse y con qué responder
+
+Un **área de administración de plataforma**, que no existía. Cierra lo que quedaba abierto de la
+rebanada **10** —la bandeja de prospectos llevaba desde entonces implementada en el servidor y sin
+pantalla— y la consola de la **29a**, con lo que le falta anotado.
+
+**Por qué era otra navegación y no una sección más**
+
+Lo que se mira aquí **atraviesa a todos los arrendatarios**. Ponerlo entre «Miembros» y «Roles» de
+una empresa concreta habría invitado a confundir el alcance de lo que se está viendo, que es
+exactamente la confusión que hay que evitar cuando la pantalla enseña datos de todos. Así que
+`/platform` tiene su propio armazón, su propia navegación y una salida explícita.
+
+Y un prospecto no cabía en el panel de ninguna empresa por la misma razón por la que su formulario
+público está en la raíz: **no es de nadie** hasta que alguien lo convierte en cuenta.
+
+**La elusión no se amplía: se usa**
+
+La marca de administración de plataforma existe desde la rebanada 04 y la resuelven dos capas: la
+sesión la trae de `users.is_platform_admin`, y el motor la vuelve a resolver por su cuenta con
+`app.is_platform_admin()`. Aquí no se calcula nada nuevo. Las tres lecturas del área corren bajo
+`withRequester` con la identidad de quien pregunta, **no por la vía elevada**, y la diferencia es lo
+que queda si mañana alguien borra la comprobación de un manejador: un usuario corriente vería sus
+propias empresas —que ya puede ver— en lugar de las de todos.
+
+Cada ruta lleva su prueba de que un usuario corriente recibe `403`, y se comprobó también **con el
+navegador**: `admin@tfv.dev` entra en las cuatro pantallas; `duena@tfv.dev`, que no es de
+plataforma, no entra ni por el enlace —que no se le pinta— ni escribiendo la dirección, donde la
+guarda del armazón la devuelve al panel y la API responde `403` a la petición que iba debajo.
+
+**El poder que no deja rastro**
+
+«Toda acción realizada bajo esa condición SHALL registrarse», dice `access-control`. Y la bitácora
+que lo cumple **no podía registrar la mitad de ellas**: `company_activities.company_id` es no nulo,
+y debe serlo —de ahí sale que su política se exprese contra el alcance del arrendatario—. Aceptar un
+prospecto crea una cuenta que todavía no pertenece a nadie: no había dónde escribirlo, así que no se
+escribía.
+
+Se amplió la spec y se añadió `platform_activities` en la **0024**. No se aflojó `company_id` a
+nulo: meter un caso especial dentro de un predicado de aislamiento es por donde se filtra. Es la
+**única tabla del esquema sin política de arrendatario**, y su ausencia es la decisión —o la lee la
+administración de plataforma o no la lee nadie—, y de sólo anexado por retirada de permiso, como la
+de empresa. Aquí importa más que allí: quien la protagoniza es quien tiene la llave de todos los
+arrendatarios (H-120).
+
+Aceptar, corregir y descartar un prospecto escriben su asiento **dentro de la misma transacción que
+la mutación**. Un `403` no escribe nada, y eso sale gratis por dónde vive la comprobación.
+
+**El recuento que salía cero para todo el mundo**
+
+`memberCount` daba `0` en el padrón entero. En la lista de selección, Drizzle emite las columnas
+**sin cualificar**: `where m.company_id = ${companies.id}` se convierte en `where m.company_id =
+"id"`, y dentro de una subconsulta sobre `company_members` —que también tiene una columna `id`— eso
+resuelve contra la subconsulta. La correlación se rompe sin error. En un `where` sí se cualifica,
+así que el mismo fragmento funciona en un sitio y miente en otro (H-122).
+
+**Lo que queda fuera, y por qué**
+
+- **Escribir datos de una empresa desde plataforma.** Leer sí; escribir es otra decisión y no tiene
+  clave que la respalde. Los dos padrones no traen un solo botón que escriba.
+- **Ampliar el catálogo de 255 claves.** El área entera se apoya en la marca y no en un permiso,
+  igual que ya hacían la taxonomía global y la transferencia de propiedad. Delegarla a un rol pide
+  una clave nueva y desalinearía el catálogo migrado: es la misma decisión pendiente de producto
+  (H-121).
+- Las dos superficies de plataforma que sus specs piden y sus rebanadas de servidor todavía no
+  tienen: **reprocesar un evento de cobro** (`payment-webhooks`) y **habilitar servicios de una
+  empresa** (`companies`).
+
+**Verificación**
+
+`pnpm test --force` en verde con **1118** pruebas, 21 más que las 1097 de partida: 17 del área en la
+API y 4 de aislamiento en datos —la tabla nueva leída, escrita y rechazada desde los tres lados—.
+`pnpm check` y `pnpm lint` limpios. Y el recorrido completo en el navegador, con la aplicación
+levantada en puertos propios y contra una base propia: un contacto entrando por el formulario
+público sin sesión, corregido y aceptado desde la bandeja, la cuenta apareciendo verificada en el
+padrón, el prospecto saliendo de la bandeja por construcción, y los dos asientos —«Prospecto
+corregido» y «Prospecto aceptado»— con quién los hizo y sobre quién.
+
+**El bloque de progreso, vuelto a medir.** Traía cifras de hace varias tandas: las rutas decían 182
+y son 190, las pantallas 48 y son 53. Dos estaban mal de origen y se corrigen: los **enumerados** son
+50 y no 62 —hay exactamente 50 `pgEnum` en el esquema y 50 tipos enumerados en la base— y los
+**únicos parciales** 41 y no 48, contados como índices únicos con predicado. Decir un número que no
+se ha medido es la clase de cosa que este documento existe para no hacer.
+
+### 2026-08-19 · Lo que se construye es lo que se sirve
+
+Rebanada **19 · `migrate-websites-and-site-builder`**, la mitad que faltaba: **el constructor**. Los
+sitios, la resolución por subdominio y la tienda ya estaban; lo que no había era con qué decidir qué
+enseña esa tienda. De 21 a 38 de 49.
+
+**La regla se escribe una vez, o la vista previa es una promesa que nadie comprueba**
+
+La spec pide que la vista previa use «el mismo renderizado que el sitio público, de modo que lo que
+se ve sea lo que se sirve». Eso no se consigue escribiendo dos implementaciones cuidadosas: se
+consigue con una. Están en `packages/contracts/src/sections.ts` —qué tipos existen, cuál se omite,
+en qué orden va, cuál de las personalizaciones manda hoy— y las usan el servidor para componer lo
+que sirve y el navegador para componer lo que previsualiza.
+
+En el servidor la costura es más estrecha todavía: `publicSitePage` y `previewSitePage` se
+diferencian **sólo** en cómo llegan hasta la fila del sitio —una atraviesa las tres compuertas sin
+credencial, la otra exige permiso— y de ahí en adelante llaman a la misma función. La prueba que lo
+cubre no lee las dos implementaciones: **pide las dos respuestas y las compara**. Rota a mano la
+composición, tres pruebas se ponen rojas.
+
+Y en el navegador, el mismo componente pinta las dos: la portada de `/s/[slug]` y el marco de la
+vista previa reciben `SiteSections`. Lo que cambia fuera es el borde.
+
+**Reordenar es aritmética, no un evento del ratón**
+
+Mover una sección de la tercera posición a la primera no tiene nada que ver con el puntero, y una
+aritmética que sólo se puede ejercer arrastrando con la mano no la prueba nadie: los casos que
+fallan —soltar sobre uno mismo, salirse de la lista, el movimiento hacia abajo, que no es simétrico
+del de arriba— se descubren el día que alguien pierde una sección. La máquina está en
+`packages/ui/src/lib/reorder.ts` con **22 pruebas** y el componente sólo traduce seis eventos del
+puntero y dos teclas en llamadas a ella. Las flechas mueven la fila por la misma función que el
+arrastre, así que la lista se puede ordenar sin ratón.
+
+**Las secciones se escriben enteras, y no por casualidad**
+
+El modelo guarda las secciones como un `jsonb` **sin identidad por elemento**. Eso decide tres cosas
+seguidas: reordenar es mandar el arreglo en el orden que se quiere y que el servidor lo numere —no
+hay ruta de reordenación, porque no hay a qué sección referirse—; un botón de desplazamiento sólo
+puede apuntar a **un tipo de sección**, que es la única identidad estable que existe (H-114); y el
+constructor le pone a cada fila una clave que vive sólo en el navegador, porque la posición es justo
+el dato que está cambiando.
+
+**Un tipo desconocido se guarda y se omite**
+
+La spec dice qué hacer con él al renderizar: omitirlo sin romper la página. Rechazarlo al escribir
+habría sido lo contrario de eso — un sitio trasvasado de la pila anterior no podría guardar ni la
+corrección de una errata hasta que alguien borrara a mano la sección que estorba (H-117).
+
+**El defecto C-09, cerrado por donde se veía**
+
+`website/customize/delete.ts` borraba de la colección de **sitios** en vez de la de
+personalizaciones: quien retiraba la campaña de diciembre se quedaba sin tienda. La prueba que lo
+cubre no comprueba que la personalización desaparezca —eso lo comprueba otra—: comprueba que **el
+sitio sigue respondiendo** después.
+
+**Tres decisiones que la spec dejaba abiertas, adoptadas y anotadas**
+
+El desempate entre campañas solapadas —gana la que empezó más tarde, y a igualdad, la de
+identificador menor (H-116)—; que un sitio no se pueda quedar sin primaria, porque «la primera es
+primaria» y «eliminar la primaria promueve otra» sólo tienen sentido si siempre hay una (H-115); y
+la identidad de una sección, ya dicha (H-114).
+
+**Comprobado en un navegador de verdad**
+
+Construir arrastrando, guardar, publicar y abrir la tienda en una ventana **sin sesión**: seis
+secciones sembradas por la vertical de almacén, «Características» arrastrada con el ratón de la
+cuarta posición a la primera, un título editado que la vista previa enseñó sin guardar, y la tienda
+pública sirviendo `features · hero · categories · products · faq · footer` con el mismo texto y cero
+cookies en el contexto del visitante.
+
+No se pudo hacer contra la base de desarrollo: **no tiene planes de suscripción ni ninguna categoría
+de vertical**, así que la segunda compuerta cierra para toda tienda y todo sitio nace «en
+construcción» (H-91 y H-92, ya abiertos). Se hizo contra la base de pruebas propia, que sí se puede
+poblar. Mientras la siembra no cree esas dos cosas, la tienda pública no se puede ver en desarrollo
+por mucho que funcione.
+
+**Fuera de alcance, dicho a propósito**
+
+La **portada de marketing** y la **tienda de mosaicos** no entran. La segunda es de Pixit, que está
+pausado; el modelo la reconoce como vertical y su sitio se sirve como página en construcción, que es
+lo que la spec pide para una vertical sin páginas propias.
+### 2026-08-19 · Los marcadores que faltaban, y la puerta a S3
+
+Dos cosas, y la segunda la pidió el propietario: cerrar lo que le faltaba a la rebanada 08 y dejar
+que el almacenamiento se pueda cambiar sin reescribir nada.
+
+**Un marcador de posición que sólo existía en la salvaguarda**
+
+La `0017` trae un disparador que se niega a borrar un marcador, y `collections.ts` lo respeta con su
+prueba. No había ninguno. La protección llevaba semanas cuidando de una fila que nadie había
+escrito, y el escenario «una entidad sin imagen recibe el marcador» no se podía cumplir desde
+ninguna parte.
+
+Ahora los tres son **archivos de este repositorio** —dos vectores dibujados a mano, un PDF vectorial
+de 736 bytes y dos segundos de video— y no direcciones de terceros como en la pila anterior, donde
+la imagen que se enseñaba cuando faltaba otra dependía de que `w3.org` siguiera sirviéndola (O-06).
+Se siembran **pidiendo autorización como la pide el navegador**: así sembrar funciona con cualquier
+proveedor sin una segunda forma de subir. Y se comprueba objeto por objeto en vez de fiarse de la
+fila, porque las dos mitades se separan: un depósito recreado deja la fila apuntando a bytes que ya
+no están, y ahí «ya está sembrado» significaría «la imagen queda rota para siempre».
+
+Referenciarlos obligó a una excepción que no se veía sin uno delante: el archivo se acota a una
+empresa por el prefijo de la clave de su objeto, y el marcador **es de todas**, así que no cuelga
+del prefijo de ninguna. La comprobación lo declaraba inexistente para todas a la vez (H-133). Lo que
+sigue abierto es quién se lo asigna: hoy ninguna entidad **exige** archivo, así que el escenario no
+tiene dónde ocurrir (H-134).
+
+**Una costura, y detrás de ella dos proveedores**
+
+Las tres funciones que hablaban la API HTTP del proveedor —firmar la escritura, componer la
+dirección pública, retirar objetos— son ahora una interfaz. `uploads.ts` y `collections.ts` no
+cambiaron ni una línea: siguen llamando a las mismas tres funciones.
+
+El segundo proveedor habla S3, con la firma calculada a mano y sin cliente oficial. De todo lo que
+hace `@aws-sdk/client-s3` aquí se usan tres cosas —una dirección prefirmada de `PUT`, un listado por
+prefijo y un borrado por clave—, y los bytes no pasan por el servicio, así que no hace falta nada de
+lo que ese paquete pesa: ni multiparte, ni reanudación, ni cadena de credenciales. La firma son
+ciento y pico líneas de aritmética contra vectores publicados, y el protocolo lleva congelado desde
+2012. El intercambio se invierte el día que haga falta subida multiparte o credenciales por rol.
+
+**Ejercido, no supuesto**
+
+La pila local ya tenía `[storage.s3_protocol] enabled = true`, así que el proveedor de S3 se prueba
+**contra un servidor de verdad y sin credenciales de AWS**. La prueba de contrato no conoce a ningún
+proveedor: recorre los que haya y les exige las mismas cinco propiedades. Y las pruebas de subida de
+extremo a extremo pasan enteras con `STORAGE_PROVIDER=s3`.
+
+En el navegador, los dos: se sube una foto de producto, se escriben los cinco objetos, la miniatura
+se pinta en la ficha, y la autorización de un objeto sobre otro se rechaza —`400` con el proveedor de
+hoy, `403 SignatureDoesNotMatch` con S3— sin dejar nada escrito.
+
+**El defecto que apareció por el camino**
+
+El reintento por objeto no funcionaba en el único caso para el que existe. El proveedor se niega a
+**firmar** una clave ya ocupada, y la máquina de subida reintenta pidiendo autorización para el
+archivo entero porque no sabe pedir cuatro de cinco: escrito el original y caída la miniatura,
+reintentar respondía `500`. Es decir, en cuanto algo se escribía bien, recuperar lo que faltaba era
+imposible. Se pide el permiso de sobrescritura al firmar, que no ensancha nada —la autorización
+sigue acotada a una clave que inventa la API— y además hace que los dos proveedores digan lo mismo
+(H-132).
+
+**Mudarse no es cambiar una variable**
+
+`STORAGE_PROVIDER` cambia dónde se escribe de ahora en adelante y no toca ni una de las direcciones
+ya repartidas. Se recorrió el esquema buscando cuáles son: hoy **una sola tabla**, no lo que dice la
+justificación de la spec —los documentos generados todavía no incrustan direcciones— y eso hace la
+mudanza mucho más barata de lo que parecía (H-135). El requisito gana el escenario que le faltaba, y
+la reescritura tiene guion: por prefijo, idempotente y sin aplicar por omisión, porque antes de mover
+mil filas hay que poder contar cuántas se mueven.
+
+**Lo que hace falta para apuntar a AWS de verdad**
+
+Está en `.env.example` y se resume en cinco pasos: depósito con lectura pública y CORS, credencial
+de escritura acotada al prefijo, copiar los objetos con `aws s3 sync` —este guion mueve direcciones,
+no bytes—, poner las variables, reescribir las direcciones y volver a dejar los marcadores. El paso
+que hoy no está escrito en ninguna parte es el primero: **el depósito lo creó alguien a mano** y no
+hay migración ni guion que lo deje puesto (H-136).
+
+**Verificación**
+
+`pnpm test` en verde con **1132** pruebas, 35 más que las 1097 de partida: 11 de contrato contra los
+dos proveedores, 9 de la reescritura, 7 de la firma sin red, 7 de los marcadores sembrados de verdad
+y una del reintento que faltaba. `pnpm check` y `pnpm lint` limpios. El proveedor por omisión no
+cambia, y hay una prueba que lo fija.
+
+**Lo que hay que poner en el `.env` para que pasen.** Las dos credenciales del punto S3 local, que
+imprime `pnpm db:status` como `S3_PROTOCOL_ACCESS_KEY_ID` y `S3_PROTOCOL_ACCESS_KEY_SECRET`. La
+prueba de contrato **falla** si faltan en vez de saltarse: saltar el segundo proveedor sería decir
+que sí sin haber mirado. Es la misma exigencia que ya tenía `STORAGE_SERVICE_KEY`, y está escrita en
+`.env.example`.
+### 2026-08-19 · La columna que estaba en cero
+
+Rebanada **20 · `migrate-productions-core`**, de 0 a 7 de su lista más dos cosas que no figuraban en
+ella. Es la primera vez que el servicio de producciones existe: había veintiséis tablas desde la
+`0002` y **ninguna ruta llegaba a ellas**.
+
+**Lo que entra: la producción como entidad, su equipo y su panel**
+
+La producción con sus fechas, su publicación y su baja; la taxonomía que la organiza por
+departamentos; los planes de trabajo con sus cinco estados; y el panel, que es lo primero que se
+mira al abrir un rodaje. Veintiuna rutas.
+
+Queda fuera, y se dice: guion, capítulos y escenas —rebanada 21—; jornadas, continuidad, personajes,
+sets, videos, inventario de utilería y presupuesto —22 y 23—. El panel **cuenta** todas ellas
+porque sus tablas ya existen, así que el día que otra rebanada las llene el resumen no hay que
+tocarlo.
+
+**La comprobación de habilitación que no había que escribir**
+
+La spec pide que crear una producción exija el servicio contratado, y el almacén tiene esa
+comprobación en su manejador. Copiarla habría sido lo cómodo. No corre: desde la rebanada 11 la
+compuerta vive en el guardián y **deriva el servicio del primer nivel de la clave de permiso**, así
+que responde `403 service_not_enabled` antes de que exista el manejador. Se vio al escribir su
+prueba y ver que llegaba otra respuesta. Producciones no la lleva; las dos que quedan —en el almacén
+y en sitios— son código muerto que se lee como si protegiera (H-108).
+
+**Dos invariantes bajan al motor**
+
+La `0022` no crea tablas: pone las dos reglas que `production-management` enuncia como propiedades
+de la entidad. Que la fecha de fin no preceda al inicio, y que publicada exija identificador
+legible. El manejador las comprueba también, y no sobra: arriba se responde `422` con el motivo, y
+abajo se garantiza para quien escriba por la siembra, por el trasvase o a mano. Una producción que
+termina antes de empezar no da error en ninguna pantalla — da recuentos negativos meses después.
+
+**El equipo rentado sin devolver se lee del otro lado del mostrador**
+
+La spec impide dar de baja una producción con órdenes de compra en curso o equipo sin devolver. Lo
+segundo son **pedidos de almacén de otra empresa**, y se alcanzan porque la política de esa tabla
+admite explícitamente la vía de la orden de compra (`app.reaches_purchase_order`, `0005`). No se
+consulta la cotización del almacén, que es su documento interno: `delivered` ya significa que salió
+y no ha vuelto. Es la primera lectura entre arrendatarios de esta columna, y funciona porque el
+aislamiento está en dos capas y la segunda sabe quién puede ver qué.
+
+**El rol de una categoría, y una clave foránea que no basta**
+
+Una categoría de producción apunta a un rol, y ése es el mecanismo por el que el trabajo llega al
+departamento correcto. La clave foránea sola no lo acota: **se comprueba con los permisos del dueño
+de la tabla y se salta las políticas de fila**, así que el motor habría aceptado el rol de otra
+productora. Quien lo escribiera no podría leerlo de vuelta, pero la referencia entre arrendatarios
+quedaría escrita. Se corta en la capa que sabe de qué empresa es la producción, con su prueba —que
+falla con `201` si se quita la comprobación—.
+
+**Lo que la spec no decide, no se decide aquí**
+
+`production-workflows` enumera cinco estados y dice que un plan nace pendiente, pero **no declara
+qué transiciones son legales**, al revés que la cotización y el pedido de almacén, que las
+transcriben. Se admite cualquiera de los cinco, que es la lectura literal, y queda anotado (H-111).
+Escribir una tabla plausible habría fijado por nuestra cuenta una regla que nadie ha decidido, y la
+pagaría un jefe de producción al que la aplicación le dijera que no puede reabrir una jornada.
+
+Con él salieron otros dos desajustes del modelo de la 22: el código de un plan es único en toda la
+plataforma y no distingue las bajas (H-109), y la spec manda buscar planes «por nombre» cuando la
+tabla no tiene columna de nombre (H-110). Ninguno se toca: `productions-ops.ts` es de otro encargo.
+
+**El panel es la portada, al revés que en el almacén**
+
+Allí la portada es el catálogo, con tres razones escritas. Ninguna se da aquí: una producción no
+tiene catálogo, la dirección es nueva y no hay enlaces compartidos que reinterpretar, y lo primero
+que se pregunta al abrir un rodaje es cómo va. Quien no alcance el resumen —hace falta
+`productions.budgets.view`, que es la única de las cuatro cifras que no cubre ver la producción
+(H-112)— entra igual y ve la ficha.
+
+El presupuesto sale de la fórmula que `production-budget` transcribe, con la aritmética decimal del
+paquete compartido. No se inventa ninguna cifra más: las cuatro que la spec enumera y ninguna otra.
+
+**Verificación**
+
+`pnpm test --force` en verde con **1125**, 28 más que las 1097 de partida de este árbol: 5 de motor
+en datos —los dos invariantes, comprobados también en su caso de frontera— y 23 de extremo a extremo
+en la API. Fusionado con el área de administración de plataforma, que entró mientras tanto, el
+conjunto da **1146**, también en verde, y ésa es la cifra de la tabla de arriba.
+`pnpm check` y `pnpm lint` limpios. Las pantallas, conducidas en un navegador contra la base de
+desarrollo: dar de alta, ver rechazar unas fechas invertidas, crear un equipo con su rol, anidar
+otro dentro, crear un plan, **reprogramarlo en una sola operación** y ver el panel pasar de «0
+planes» a «Reprogramado: 1».
+
+De ahí salió el último hallazgo, y no de leer código: un enlace seguido antes de tiempo dejó
+`undefined` en el camino y la respuesta fue `500`. Alcanza a las noventa rutas con parámetro de
+identificador, no sólo a éstas, así que no se corrige en un módulo (H-113).
+### 2026-08-19 · Comprar en la tienda, y que el pedido exista o no exista
+
+Rebanada **18 · `add-transactional-checkout`**, de 0 a 37, y con ella los cuatro defectos más caros
+del levantamiento: M-10, M-02, M-03 y M-01. Cierra además el H-88 que la 07 dejó esperando.
+
+**Apartar y cobrar empiezan a existir en el mismo instante**
+
+Comprobar existencia, apartar las unidades concretas, cotizar el envío, congelar la instantánea y
+abrir la sesión de pago van en **una sola transacción**. Si el procesador falla, no queda ni compra
+ni una unidad retirada del catálogo. La alternativa —apartar, confirmar, y llamar al procesador
+después— deja una ventana en la que un fallo de red saca inventario de la tienda sin que nadie pueda
+pagarlo ni soltarlo hasta que caduque.
+
+El costo es que la transacción sostiene los bloqueos mientras dura una llamada de red. Se paga a
+sabiendas: son unos cientos de milisegundos sobre las filas de un puñado de unidades.
+
+`for update skip locked` es lo que hace que dos compradores no se lleven la misma cámara. Sin él, la
+segunda transacción espera a la primera y acaba tomando las mismas filas; con él, salta lo bloqueado
+y coge lo siguiente, y si no queda nada falla por existencia insuficiente — que es la verdad. Es el
+defecto M-10, que la pila anterior tenía abierto por los dos lados: seleccionaba unidades **sin
+marcarlas**, y sus checkouts pendientes **no caducaban nunca**.
+
+**El orden de las escrituras no es casual, y el motivo es de la rebanada anterior**
+
+La compra se inserta **antes** de calcular el envío. La lectura de `user_addresses` la concede su
+dueño o **una compra que apunte a ella**, y esta transacción corre con el alcance de la empresa
+vendedora, no con la sesión del comprador: sin la fila ya escrita, el domicilio no se ve, el cálculo
+lo tomaría por «sin coordenadas» y el envío perdería su recargo por distancia en silencio. Es H-98
+visto desde el otro lado — la 17 lo encontró comparando las dos vías, y aquí es lo que fija el orden.
+
+**Por qué la materialización abre su propia transacción**
+
+El receptor de webhooks corre por la vía **elevada**: tiene que escribir `payment_events`, cuya
+política es `false` para todo el mundo salvo la administración de plataforma. Elevada significa *sin
+políticas*, y materializar ahí dentro habría sido renunciar a la segunda capa de aislamiento en la
+operación que más escribe de todo el sistema — ocho tablas de una empresa, disparadas por una señal
+externa.
+
+Así que abre la suya, con la empresa vendedora declarada. Lo que se pierde es que la reclamación del
+evento y el trabajo dejen de ser la misma transacción; lo que **no** se pierde es la ejecución única,
+porque nunca dependió de eso:
+
+- si la materialización falla, lanza, el receptor revierte también la reclamación y el procesador
+  vuelve a intentarlo entera;
+- si la materialización cuaja y la reclamación no, el reintento encuentra `fulfilled_at` puesta y no
+  duplica nada.
+
+Las dos barreras siguen siendo dos, y cada una hace su trabajo donde sirve: la unicidad del evento
+contra la doble entrega, la marca contra el mismo cobro anunciado por dos eventos distintos. La marca
+se pone **al final**, que es el detalle que arruina todo lo demás si se equivoca: la pila anterior la
+ponía antes de hacer el trabajo, así que un fallo dejaba una compra marcada como resuelta y sin
+pedido, irreparable por reintento (M-03).
+
+**Tres políticas que dejaban escribir a quien sólo debía mirar**
+
+Aparecieron escribiendo las pruebas de aislamiento, y son el mismo error que la propia `0005` deja
+advertido en su cabecera: **un `exists` se resuelve con la política de lectura del padre**.
+
+- `checkouts` tenía una sola política para todo, «la empresa **o** el comprador». La instantánea es
+  la fuente de la materialización, y su dueño podía reescribirla entre el pago y la confirmación.
+- `payments` se escribía componiendo con `checkouts`, que el comprador lee: podía fabricar el asiento
+  de su propio cobro.
+- `warehouse_orders` admite componerse con `buyer_orders`, que el comprador lee: podía **insertar una
+  orden de trabajo en el almacén de cualquier empresa**, porque con esa rama cierta el `warehouse_id`
+  deja de estar acotado por nada.
+
+Las tres corregidas en la `0021`, atravesando hasta `companies` como hizo la `0020` con los envíos, y
+las tres con prueba por `withRequester`. Las dos de escritura se vieron **fallar con la política
+vieja puesta** antes de darlas por buenas. Y por el otro lado faltaba lo contrario:
+`buyer_order_lines` sólo tenía política de arrendatario, así que el comprador veía su pedido y su
+total y no veía qué había comprado. H-102 y H-103.
+
+**El precio sale de donde salió el que se vio**
+
+El carrito no valora contra el catálogo por su cuenta: llama a `storefrontProduct`, la misma función
+con la que la tienda pinta la ficha. Así el escaparate no puede decir una cifra y el cobro otra, y la
+intersección de «qué producto alcanza la tienda» —publicado, no provisional, vivo, del almacén del
+sitio— no se escribe dos veces. Cuesta una resolución de tienda por producto distinto del carrito, y
+es un cambio barato por no tener dos definiciones de lo que se puede vender.
+
+Al hacerlo apareció H-104: la ficha pública publica el precio del **producto**, y la precedencia del
+catálogo dice que el de una medida es ése **más el ajuste de la medida**. Quien elige «Kit con
+óptica» ve el precio del cuerpo suelto hasta que abre el carrito. La compra cobra lo correcto y el
+carrito lo enseña antes de pagar; publicarlo por medida es cambiar lo que devuelve la tienda, que es
+de la 19.
+
+**Lo que la spec pedía y no se puede hacer todavía**
+
+La compra **de renta** se rechaza con motivo. Su tarifa sale de una lista de precios y una lista se
+aplica a un cliente concreto; quien mira una tienda pública no tiene ninguna, así que cobrarla
+significaría inventarle una tarifa — exactamente lo que la ficha se niega a hacer al no enseñar
+importes de renta. Es el criterio de la regla 5, señalado en el código y anotado (H-105).
+
+Y el envío, según la fórmula transcrita, **lo paga el comprador y no llega al neto del comercio**.
+Puede ser deliberado y no lo dice en ninguna parte; queda anotado para que la decisión se tome
+mirándola y no descubriéndola en una conciliación (H-106).
+
+**Bookkeeping heredado**
+
+La rebanada **11** estaba implementada y fusionada con su lista intacta: el agente que la hizo no
+llegó a marcarla. Repasadas las cuarenta contra `apps/api/src/billing/` y sus 61 pruebas, están todas
+hechas. Lo único que le faltaba de verdad era su otro extremo —los manejadores del cobro en tienda,
+H-88—, que llega con ésta: con ellos el libro de ingresos del comercio deja de estar vacío.
+
+**Lo que queda fuera, a propósito**
+
+La vertical de **mosaicos**, con sus cuatro casillas: sus artículos son de la rebanada 24, pausada. El
+modelo ya los admite y el carrito los rechaza con su motivo, así que lo que falta es la vertical, no
+la compra. El **aviso por fallo persistente** no se puede decidir hoy: la reclamación del evento se
+revierte con el fallo, así que `payment_events.attempts` nunca crece y no hay con qué contar los
+intentos —la incidencia sí queda registrada con su detalle—. Y el **reproceso manual** tiene su
+garantía puesta y le falta la superficie que lo dispare, que es un área de administración de
+plataforma que todavía no existe.
+
+**Verificación**
+
+`pnpm test` en verde con **1154** pruebas, 57 más que las 1097 de partida: 12 del cálculo y la
+máquina de estados en contratos, 37 de extremo a extremo en la API —incluidas las cuatro que
+justifican la rebanada— y 8 del carrito en el navegador. `pnpm check` y `pnpm lint` limpios, y las 22
+migraciones replicadas desde cero.
+
+Y **comprado en un navegador, de principio a fin y sin sesión al empezar**: catálogo, ficha, carrito,
+entrar, apartar, pagar con el suplente y volver a la tienda. La página de vuelta dijo «estamos
+confirmando» hasta que llegó el evento firmado, y entonces «compra confirmada». En la base quedaron
+las ocho entidades y dos unidades pasaron de disponibles a vendidas — las otras dos siguen en el
+catálogo.
+
+### 2026-08-19 · Los cimientos que llevaban cinco meses a medias
+
+**Cerrado — rebanadas 01 y 03**
+
+- **Idempotencia** (`api-conventions`). Repetir una escritura con la misma clave produce un solo
+  efecto y devuelve el resultado de la primera; con otro cuerpo, `409`. Tabla propia (`0026`),
+  reclamación por `insert` con índice único, y su caducidad colgando del despachador de trabajos.
+- **Campos calculados** (`computed-fields`). La spec entera estaba sin implementar: las diecisiete
+  fórmulas están ahora en un solo sitio, puras, con 49 pruebas de valores concretos.
+- **El cliente tipado generado** del contrato publicado: 186 endpoints, con su candado de desfase.
+- **Límite de cuerpo y limitación de frecuencia** en el motor. Con eso, **la 03 queda cerrada del
+  todo, 26 de 26** — la primera rebanada que se cierra entera.
+
+**Lo que la clave de idempotencia no puede ser**
+
+Un espacio de nombres global. Aquí se guarda un **cuerpo de respuesta ya calculado**, así que si la
+unicidad fuera sobre la clave sola, quien acierte o adivine la de otro recibiría su respuesta —los
+importes de un cobro, los datos de una persona—, servida por el mecanismo que existe para que nadie
+pague dos veces. La terna es **(actor, empresa, clave)**, con el índice único y la política del
+motor diciendo lo mismo por los dos lados, y una prueba que comprueba que repetir la clave de otro
+no devuelve su resultado: sencillamente no encuentra nada y la petición corre con sus permisos.
+
+Del cuerpo de entrada **sólo se guarda la huella**. Del de salida no hay alternativa —el requisito
+es devolver *lo mismo*—, y lo que se acota es el riesgo: sólo la respuesta de una petición correcta,
+sólo la alcanza su actor, y caduca en horas.
+
+**El que encontró otro, y que no era de nadie por dominio sino de la capa**
+
+La cadena `undefined` en el camino —la que deja una plantilla que interpola una variable que no
+existe— **respondía `500`**. Medido con un barrido sobre la tabla de rutas antes de tocar nada:
+**713 combinaciones de ruta y valor** devolvían `5xx`. Lo encontró quien escribía otra pantalla,
+siguiendo un enlace antes de tiempo, y el síntoma —«el servidor se cayó»— no se parece a la causa
+—un enlace roto—, que es **exactamente** lo que ya había pasado con `H-30`.
+
+Se rechaza con `400`, que es la fila de «ruta que no cumple el esquema», y **antes del guardián**:
+el guardián resuelve la membresía contra la empresa del camino, así que con `companyId` inválido el
+fallo ocurría dentro del propio guardián. Eso es también por qué no valía validarlo en el esquema de
+la ruta, que corre después. El candado **recorre la tabla registrada**, así que una ruta nueva entra
+sola (H-144).
+
+Con eso cambia una política, y queda escrita: una petición **sin credencial** con un identificador
+mal formado recibe ahora `400` y no `401`. Es la misma categoría que un camino inexistente, que el
+motor ya contesta con `404` a quien no ha entrado. La prueba que fijaba que el guardián alcanza los
+caminos con parámetro **sigue fijando eso**: pide con un identificador bien formado, para que la
+petición llegue hasta él en lugar de quedarse en la capa de antes.
+
+**Dos defectos que aparecieron al cerrarla**
+
+- `pnpm --filter @tfv/api contract` **apuntaba a un archivo que nunca se escribió**. Estaba
+  declarado desde la rebanada 03 y nadie lo notó porque nada lo llamaba: el comando esperaba al
+  cliente tipado y el cliente tipado esperaba al comando (H-126).
+- **Las capas del motor se montaban por camino y no por verbo**, así que una ruta heredaba los
+  guardianes de sus hermanas y el resultado dependía del orden de la tabla de rutas. Hoy hay 47
+  caminos con más de un verbo y en 40 los regímenes difieren. Comprobado antes de tocarlo: una ruta
+  pública declarada después de una autenticada sobre el mismo camino respondía `401`. Falla cerrado,
+  así que no abrió nada; lo que rompía es peor de ver — **el permiso que una ruta exige de verdad no
+  era el que declara** (H-127).
+
+**Verificado, no supuesto**
+
+- `pnpm test --force`: **1244** en verde, 147 más que las 1097 de partida. `pnpm check` y
+  `pnpm lint` limpios.
+- Contra el servicio en marcha, en un puerto propio: un cuerpo de dos megas responde `413` con la
+  forma del contrato de error; el sexto intento de un origen con el cupo en cinco responde `429` con
+  `Retry-After`, y **otro origen sigue pasando**; crear una empresa dos veces con la misma clave
+  devuelve el mismo identificador y deja **una** empresa en la base, y con otro cuerpo responde
+  `409` con `idempotency_key_reused`.
+- La pantalla de sesiones activas, servida y renderizada, ya consume el **cliente tipado**: es la
+  única de las cuarenta y ocho que se pasó, y a propósito.
+- `GET /companies/undefined/warehouses` con sesión válida, que era el caso que lo destapó: `500`
+  antes, `400` con el campo señalado ahora.
+
+**Abierto, y por qué**
+
+- **Las otras cuarenta y siete pantallas** (H-128). Seis encargos están dentro de ellas ahora mismo.
+  `apiCall` convive con `apiGet` y `apiTyped` con `api()`, así que convertirlas es endpoint por
+  endpoint y sin ronda de migración — cuando no haya nadie dentro.
+- **Los campos calculados están definidos y sin consumir** (H-129). Esta rebanada da la definición
+  única; llamarla es de cada dominio, y la mayoría de esos dominios aún no existen.
+- **La idempotencia no llega a la compra pública** (H-131): no hay actor al que acotar la clave, y
+  `defineRoute` lo impide al cargar. De dónde sale el alcance sin sesión lo decide la rebanada 18.
+- **El limitador cuenta por proceso** (H-130). Es un guardarraíl de recursos, no un control de
+  credenciales; el de intentos de acceso vive en la base precisamente por eso.
 ### 2026-08-19 · La red se puede volver a tender
 
 La suite de extremo a extremo llevaba varias rondas sin correrse, y no por descuido: **no se podía

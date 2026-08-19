@@ -1,30 +1,35 @@
 # 18 · Compra y materialización transaccionales — trabajo
 
+> **La vertical de mosaicos queda fuera**, y con ella cuatro casillas: sus artículos son productos
+> de Pixit o mosaicos configurados, y ese catálogo es la rebanada 24 —pausada—. El modelo ya los
+> admite (`CheckoutLine.kind`, con su desglose de láminas y colores) y el carrito los rechaza con
+> su motivo, así que lo que falta es la vertical, no la compra.
+
 ## Requisitos previos de la compra
 
-- [ ] Comprobación de tienda publicada, suscripción vigente y servicio habilitado
-- [ ] Comprobación de perfil de facturación operativo
-- [ ] Comprador identificado y domicilio, salvo recolección
-- [ ] Mensajes de rechazo comprensibles, sin revelar configuración interna
+- [x] Comprobación de tienda publicada, suscripción vigente y servicio habilitado
+- [x] Comprobación de perfil de facturación operativo
+- [x] Comprador identificado y domicilio, salvo recolección
+- [x] Mensajes de rechazo comprensibles, sin revelar configuración interna
 
 ## Reserva con caducidad
 
-- [ ] Validación de existencia por línea
-- [ ] **Reserva efectiva** de unidades concretas al crear la sesión
-- [ ] Caducidad de la reserva, alineada con la de la sesión de pago
-- [ ] Liberación al caducar
-- [ ] Liberación al cancelar explícitamente
-- [ ] Recolector de reservas caducadas, que respete las materializaciones en curso
-- [ ] Prueba de concurrencia: dos compradores, una unidad
+- [x] Validación de existencia por línea
+- [x] **Reserva efectiva** de unidades concretas al crear la sesión
+- [x] Caducidad de la reserva, alineada con la de la sesión de pago
+- [x] Liberación al caducar
+- [x] Liberación al cancelar explícitamente
+- [x] Recolector de reservas caducadas, que respete las materializaciones en curso
+- [x] Prueba de concurrencia: dos compradores, una unidad
 
 ## Precio e instantánea
 
-- [ ] Resolución de precios en el servidor
-- [ ] Descarte de los precios recibidos del navegador
-- [ ] Cálculo de comisión y neto
-- [ ] Envío desde la rebanada 17
-- [ ] Instantánea completa persistida antes del pago
-- [ ] Clave de idempotencia en la creación de la sesión
+- [x] Resolución de precios en el servidor
+- [x] Descarte de los precios recibidos del navegador
+- [x] Cálculo de comisión y neto
+- [x] Envío desde la rebanada 17
+- [x] Instantánea completa persistida antes del pago
+- [x] Clave de idempotencia en la creación de la sesión
 
 ## Mosaicos
 
@@ -34,36 +39,36 @@
 
 ## Materialización
 
-- [ ] Reclamar el evento por restricción única
-- [ ] Bloquear la compra y comprobar que no está materializada
-- [ ] Pago con su desglose completo
-- [ ] Envío con estado inicial y fecha estimada
-- [ ] Pedido de comprador con su referencia legible
-- [ ] Líneas del pedido
-- [ ] Alta del comprador como cliente, idempotente
-- [ ] Entrada en el libro de ingresos del comercio
-- [ ] Pedido operativo de almacén o de tienda de mosaicos
-- [ ] Conversión de las reservas al estado definitivo
-- [ ] **Marca de materialización al final de la transacción, nunca al principio**
+- [x] Reclamar el evento por restricción única
+- [x] Bloquear la compra y comprobar que no está materializada
+- [x] Pago con su desglose completo
+- [x] Envío con estado inicial y fecha estimada
+- [x] Pedido de comprador con su referencia legible
+- [x] Líneas del pedido
+- [x] Alta del comprador como cliente, idempotente
+- [x] Entrada en el libro de ingresos del comercio
+- [x] Pedido operativo de almacén ~~o de tienda de mosaicos~~ — el de almacén, finalizado y con sus líneas. El de mosaicos espera a la vertical (24 y 26)
+- [x] Conversión de las reservas al estado definitivo
+- [x] **Marca de materialización al final de la transacción, nunca al principio**
 
 ## Corrección de importes
 
-- [ ] Total del pedido igual a lo pagado
-- [ ] Subtotal, envío y comisión registrados por separado
-- [ ] Prueba: el comprobante cuadra con el cargo
+- [x] Total del pedido igual a lo pagado
+- [x] Subtotal, envío y comisión registrados por separado
+- [x] Prueba: el comprobante cuadra con el cargo
 
 ## Estados y operación
 
-- [ ] Los cuatro estados de la compra, todos alcanzables
-- [ ] Registro de incidencias con detalle suficiente
-- [ ] Aviso a la operación ante fallo persistente
-- [ ] Reproceso manual con ejecución única
+- [x] Los cuatro estados de la compra, todos alcanzables
+- [x] Registro de incidencias con detalle suficiente
+- [ ] Aviso a la operación ante fallo persistente — **no hay cómo contar los intentos**: la reclamación del evento se revierte con el fallo, así que `payment_events.attempts` nunca crece y «persistente» no se puede decidir. La incidencia sí queda registrada con su detalle
+- [ ] Reproceso manual con ejecución única — la garantía está (`fulfilled_at` con la fila bloqueada, comprobada con dos eventos distintos); falta la **superficie** que lo dispare, que es un área de administración de plataforma que todavía no existe
 
 ## Verificación
 
-- [ ] Prueba: fallo a mitad no deja ninguna de las ocho entidades
-- [ ] Prueba: reenvío del evento no duplica
-- [ ] Prueba: sesión caducada libera el inventario
-- [ ] Prueba: precio manipulado no altera lo cobrado
+- [x] Prueba: fallo a mitad no deja ninguna de las ocho entidades
+- [x] Prueba: reenvío del evento no duplica
+- [x] Prueba: sesión caducada libera el inventario
+- [x] Prueba: precio manipulado no altera lo cobrado
 - [ ] Prueba: mosaico sin diseño no se cobra
 - [ ] Prueba: el mosaico llega completo al pedido

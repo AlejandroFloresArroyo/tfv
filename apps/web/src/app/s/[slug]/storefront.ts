@@ -1,5 +1,6 @@
 import type { WebsiteVertical } from "@tfv/contracts/storefront"
 import { cache } from "react"
+import type { SitePageBody } from "~/components/site/page.ts"
 import { apiGet } from "~/lib/api.server.ts"
 
 /**
@@ -98,6 +99,18 @@ export async function fetchProducts(
     `/public/sites/${encodeURIComponent(slug)}/products${query ? `?${query}` : ""}`,
   )
 
+  return result.ok ? result.data : null
+}
+
+/**
+ * Las secciones que la personalización vigente pone en la portada.
+ *
+ * Ruta aparte de la resolución y no un campo suyo: la resolución la piden **todas** las páginas de
+ * la tienda —la disposición la memoriza— y las secciones sólo las necesita la portada. Metidas
+ * dentro, la ficha de un producto cargaría en cada visita un tema entero que no va a pintar.
+ */
+export async function fetchSitePage(slug: string): Promise<SitePageBody | null> {
+  const result = await apiGet<SitePageBody>(`/public/sites/${encodeURIComponent(slug)}/page`)
   return result.ok ? result.data : null
 }
 

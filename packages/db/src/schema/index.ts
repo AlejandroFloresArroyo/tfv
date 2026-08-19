@@ -25,13 +25,16 @@ export * from "./categories.ts"
 // orden de compra de producción como el pedido de comprador.
 export * from "./commerce.ts"
 export * from "./counterparties.ts"
+// ─── Infraestructura ─────────────────────────────────────────────────────────
+export * from "./idempotency.ts"
 // ─── Identidad y arrendatarios ───────────────────────────────────────────────
 export * from "./identity.ts"
-// ─── Infraestructura ─────────────────────────────────────────────────────────
 export * from "./jobs.ts"
 export * from "./locations.ts"
 export * from "./media.ts"
 export * from "./pixit.ts"
+// ─── Administración de plataforma ────────────────────────────────────────────
+export * from "./platform.ts"
 export * from "./productions.ts"
 export * from "./productions-ops.ts"
 export * from "./services.ts"

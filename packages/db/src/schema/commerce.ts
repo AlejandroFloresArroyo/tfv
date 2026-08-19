@@ -166,6 +166,16 @@ export const checkouts = pgTable(
 
     externalSessionId: varchar("external_session_id", { length: 160 }),
     checkoutUrl: text("checkout_url"),
+
+    /**
+     * La clave con la que el navegador reintenta sin comprar dos veces.
+     *
+     * Y el resumen del cuerpo con el que se pidió, que es lo que distingue el reintento de la misma
+     * compra —devuelve lo de la primera vez— de otra compra distinta enviada con una clave ya usada,
+     * que `api-conventions` manda rechazar con `409`. Ver la migración `0021`.
+     */
+    idempotencyKey: varchar("idempotency_key", { length: 120 }),
+    requestHash: varchar("request_hash", { length: 64 }),
     /** La sesión caduca; al hacerlo se liberan las unidades apartadas. */
     expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }),
 
@@ -187,6 +197,12 @@ export const checkouts = pgTable(
     // El recolector de compras caducadas.
     index("checkouts_expiry_idx").on(table.expiresAt).where(sql`status = 'pending'`),
     index("checkouts_buyer_idx").on(table.buyerId, table.createdAt),
+    // Por comprador y no global: las claves las escoge cada navegador, y dos personas pueden
+    // elegir la misma sin que eso signifique nada. Global, la segunda recibiría la compra de la
+    // primera, que es un fallo de aislamiento y no una colisión.
+    uniqueIndex("checkouts_idempotency_unique")
+      .on(table.buyerId, table.idempotencyKey)
+      .where(sql`idempotency_key IS NOT NULL`),
   ],
 )
 

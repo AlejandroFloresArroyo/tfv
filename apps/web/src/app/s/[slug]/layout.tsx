@@ -1,3 +1,4 @@
+import { ShoppingCart } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
@@ -99,6 +100,19 @@ export default async function StorefrontLayout({
                 </span>
               ) : null}
             </span>
+          </Link>
+
+          {/*
+            El carrito, en la cabecera y en todas las páginas de la tienda. Sin contador: cuántas
+            piezas lleva sólo lo sabe el navegador, y pintarlo aquí obligaría a que esta cáscara
+            —que es del servidor, y la comparten todas las páginas— pasara a serlo del navegador.
+          */}
+          <Link
+            href={`/s/${slug}/carrito`}
+            className="ml-auto flex shrink-0 items-center gap-2 rounded-lg border border-line px-3 py-2 text-body2 text-content"
+          >
+            <ShoppingCart className="size-4" aria-hidden />
+            {t("cart")}
           </Link>
         </div>
       </header>

@@ -189,6 +189,7 @@ export async function assertUsableImages(
       kind: uploads.kind,
       status: uploads.status,
       storagePath: uploads.storagePath,
+      isPlaceholder: uploads.isPlaceholder,
     })
     .from(uploads)
     .where(inArray(uploads.id, wanted))
@@ -199,7 +200,12 @@ export async function assertUsableImages(
     const row = byId.get(id)
     if (row === undefined) throw new NotFoundError("La imagen no existe")
     // La misma respuesta para una de otra empresa: distinguirla sería confirmar que existe.
-    if (!row.storagePath.startsWith(`${companyId}/`)) {
+    //
+    // El marcador de posición es la excepción, y tiene que serlo: es de todas las empresas, así que
+    // no vive bajo el prefijo de ninguna. Sin este caso el acotamiento lo volvía inservible para
+    // todas a la vez, y el requisito «una entidad sin imagen recibe el marcador» no se podía
+    // cumplir desde ninguna parte.
+    if (!row.isPlaceholder && !row.storagePath.startsWith(`${companyId}/`)) {
       throw new NotFoundError("La imagen no existe")
     }
     if (row.status !== "uploaded") {

@@ -13,7 +13,9 @@
  * | `archivos.recoger-abandonados` | Rebanada 08 | Una subida interrumpida deja un registro huérfano para siempre (`DEFECTS.md` O-05) |
  * | `almacenes.verificar-coherencia` | Rebanada 13 (`HALLAZGOS.md` H-11) | Un descuadre de inventario puede vivir meses sin que nadie mire |
  * | `avisos.entregar` | Ésta | Las entregas se quedan encoladas |
+ * | `idempotencia.caducar-claves` | Rebanada 01 | Las claves y las respuestas guardadas se acumulan sin plazo |
  * | `suscripciones.vencer-gracia` | Rebanada 11 | Una empresa opera indefinidamente sin pagar |
+ * | `tiendas.caducar-compras` | Rebanada 18 | Un carrito abandonado retira inventario del catálogo para siempre (`DEFECTS.md` M-10) |
  */
 
 import { withElevated, withSystem } from "@tfv/db"
@@ -21,8 +23,10 @@ import { uploads, warehouses } from "@tfv/db/schema"
 import { and, eq, isNull, lt } from "drizzle-orm"
 import { audienceFor, deliverQueued, enqueueInbox, requeueFailed } from "../activity/delivery.ts"
 import { sweepExpiredGrace } from "../billing/subscriptions.ts"
+import { sweepExpiredCheckouts } from "../checkout/expiry.ts"
 import { env } from "../env.ts"
 import { collectAbandoned } from "../media/uploads.ts"
+import { sweepIdempotencyKeys } from "../runtime/idempotency.ts"
 import { checkCoherence } from "../warehouses/reservations.ts"
 import { registerJob, scheduleJob } from "./dispatcher.ts"
 
@@ -30,6 +34,8 @@ export const COLLECT_ABANDONED = "archivos.recoger-abandonados"
 export const STOCK_COHERENCE = "almacenes.verificar-coherencia"
 export const DELIVER_NOTIFICATIONS = "avisos.entregar"
 export const EXPIRE_GRACE = "suscripciones.vencer-gracia"
+export const EXPIRE_CHECKOUTS = "tiendas.caducar-compras"
+export const EXPIRE_IDEMPOTENCY = "idempotencia.caducar-claves"
 
 /**
  * Con quién corre el recolector de archivos.
@@ -175,6 +181,35 @@ async function expireSubscriptionGrace(): Promise<string> {
 }
 
 /**
+ * Caduca las compras que nadie llegó a pagar y devuelve su inventario al catálogo.
+ *
+ * Es la otra mitad de la corrección M-10: apartar sin caducar deja fuera del catálogo, y para
+ * siempre, todo lo que alguien puso en un carrito y no pagó. Corre cada pocos minutos porque el
+ * plazo que aparta es de minutos, no de horas: barrerlo una vez al día haría que la caducidad
+ * dijera media hora y durase un día.
+ */
+async function expireAbandonedCheckouts(): Promise<string> {
+  const { expired, released } = await sweepExpiredCheckouts()
+  return `${expired} compras caducadas, ${released} unidades devueltas al catálogo`
+}
+
+/**
+ * Caduca las claves de idempotencia.
+ *
+ * La retención es la mitad que hace falta escribir: sin ella, la tabla guarda **cuerpos de
+ * respuesta** —con sus importes y sus datos personales— para siempre, y lo que empezó siendo una
+ * protección contra el cobro doble acaba siendo una copia paralela de medio sistema sin plazo ni
+ * dueño. Ver `openspec/changes/add-platform-contracts/tasks.md`, «Almacén de claves de idempotencia
+ * con su plazo de retención».
+ */
+async function expireIdempotencyKeys(payload: Record<string, unknown>): Promise<string> {
+  const abandono = Number(payload.abandonedAfterMs ?? env.IDEMPOTENCY_ABANDONED_AFTER_MS)
+  const borradas = await sweepIdempotencyKeys(abandono)
+
+  return `${borradas} claves de idempotencia caducadas (retención ${env.IDEMPOTENCY_RETENTION_HOURS} h)`
+}
+
+/**
  * Deja el registro listo. Se llama una vez, al arrancar.
  *
  * Las pruebas del despachador **no** llaman aquí: registran sus propios trabajos, para poder
@@ -185,9 +220,13 @@ export function registerBuiltinJobs(): void {
   registerJob(STOCK_COHERENCE, verifyStockCoherence)
   registerJob(DELIVER_NOTIFICATIONS, deliverNotifications)
   registerJob(EXPIRE_GRACE, expireSubscriptionGrace)
+  registerJob(EXPIRE_CHECKOUTS, expireAbandonedCheckouts)
+  registerJob(EXPIRE_IDEMPOTENCY, expireIdempotencyKeys)
 
   scheduleJob({ kind: COLLECT_ABANDONED, everyMs: env.UPLOADS_COLLECT_EVERY_MS })
   scheduleJob({ kind: STOCK_COHERENCE, everyMs: env.STOCK_COHERENCE_EVERY_MS })
   scheduleJob({ kind: DELIVER_NOTIFICATIONS, everyMs: env.NOTIFICATIONS_DELIVER_EVERY_MS })
   scheduleJob({ kind: EXPIRE_GRACE, everyMs: env.BILLING_GRACE_SWEEP_EVERY_MS })
+  scheduleJob({ kind: EXPIRE_CHECKOUTS, everyMs: env.CHECKOUT_SWEEP_EVERY_MS })
+  scheduleJob({ kind: EXPIRE_IDEMPOTENCY, everyMs: env.IDEMPOTENCY_SWEEP_EVERY_MS })
 }

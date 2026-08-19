@@ -336,6 +336,43 @@ administrador de plataforma.
 - **WHEN** un administrador de plataforma modifica datos de una empresa ajena
 - **THEN** el asiento de actividad refleja que la acción se ejerció como administrador de plataforma
 
+### Requirement: Las acciones de plataforma dejan asiento aunque no sean de ninguna empresa
+
+Existen operaciones que un administrador de plataforma realiza **fuera de todo arrendatario** —dar
+de alta a alguien a partir de un prospecto, por ejemplo—. El sistema SHALL registrarlas igualmente,
+con quién las hizo, sobre qué entidad y cuándo.
+
+Ese registro SHALL ser de sólo anexado y SHALL quedar fuera del alcance de todo arrendatario: sólo
+la administración de plataforma lo lee, y ni siquiera ella puede modificarlo ni eliminarlo.
+
+Las superficies exclusivas de la administración de plataforma SHALL responder `403` a quien no lleve
+la marca, y no `404`: la distinción de `404` existe para no revelar la existencia de una empresa
+ajena, y aquí no se oculta ninguna existencia sino que se niega un papel.
+
+> **Añadido el 2026-08-19.** El requisito anterior sólo cubría lo que ocurre *dentro* de una
+> empresa, y la bitácora que lo cumple tiene la empresa como columna obligatoria. Aceptar un
+> prospecto crea una cuenta que todavía no pertenece a nadie: no había dónde registrarlo, así que no
+> se registraba. Ver `HALLAZGOS.md` H-120.
+
+#### Scenario: Aceptar un prospecto queda registrado
+
+- **WHEN** un administrador de plataforma convierte un prospecto en cuenta
+- **THEN** queda un asiento con quién lo hizo y sobre qué prospecto
+- **AND** ese asiento no pertenece a ninguna empresa
+
+#### Scenario: El registro no se puede reescribir
+
+- **GIVEN** un asiento de una acción de plataforma
+- **WHEN** un administrador de plataforma intenta modificarlo o eliminarlo
+- **THEN** la operación se rechaza
+
+#### Scenario: Un usuario corriente no alcanza el área
+
+- **GIVEN** un usuario sin la marca de administrador de plataforma
+- **WHEN** solicita cualquier superficie exclusiva de la administración de plataforma
+- **THEN** la respuesta es `403`
+- **AND** no se le devuelve una versión reducida de esos datos
+
 ### Requirement: El comprador accede sólo a lo suyo
 
 Un principal que actúe como comprador en una tienda pública SHALL poder leer y modificar

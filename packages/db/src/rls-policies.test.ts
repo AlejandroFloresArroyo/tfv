@@ -223,8 +223,13 @@ describe("cobertura", () => {
     // El número es una alarma a propósito: añadir una tabla obliga a pasar por aquí, y por aquí es
     // donde se recuerda que una tabla nueva **no hereda** la política de plataforma —la 0005 la
     // repartió con un bucle que corrió una sola vez—. Así se descubrió que faltaba en `prospects`.
+    // 96 desde la 0024, que añade `platform_activities`. Es la única tabla del esquema **sin
+    // política de arrendatario**, y su ausencia es la decisión: no pertenece a ninguna empresa, así
+    // que o la lee la administración de plataforma o no la lee nadie.
     // 95 desde la 0020, que añade `shipping_rates` con sus dos políticas.
-    expect(tablas.length).toBe(95)
+    // 96 desde la 0026, que añade `idempotency_keys` con **tres**: la de su dueño, la de sistema
+    // —para que el barrido de caducadas alcance las de todo el mundo— y la de plataforma.
+    expect(tablas.length).toBe(97)
     expect(tablas.filter((t) => !t.rls).map((t) => t.relname)).toEqual([])
     expect(tablas.filter((t) => t.politicas === 0).map((t) => t.relname)).toEqual([])
   })
@@ -588,6 +593,65 @@ describe("la bitácora es de sólo anexado", () => {
     await expectRejectedByPolicy(
       withRequester(identity(seed.admin), (tx) =>
         tx.execute(sql.raw("delete from company_activities")),
+      ),
+    )
+  })
+})
+
+// ─── La otra bitácora, la que no es de nadie ─────────────────────────────────
+
+/**
+ * `platform_activities` es la única tabla del esquema **sin política de arrendatario**.
+ *
+ * Es la excepción deliberada que la 0024 introduce, y por eso se comprueba aquí y no sólo desde la
+ * API: lo que registra son acciones que no ocurren dentro de ninguna empresa —aceptar un prospecto
+ * crea una cuenta que todavía no pertenece a nadie—, así que no hay predicado de empresa que pueda
+ * acotarla. O la lee la administración de plataforma, o no la lee nadie.
+ */
+describe("la bitácora de plataforma", () => {
+  const asiento = newId()
+
+  it("la anexa y la lee la administración de plataforma", async () => {
+    await withRequester(identity(seed.admin), (tx) =>
+      tx.execute(
+        sql.raw(`insert into platform_activities (id, action, entity, title, performed_by_id)
+                 values ('${asiento}', 'create', 'prospects', 'Prospecto aceptado', '${seed.admin}')`),
+      ),
+    )
+
+    expect(await countAs(seed.admin, "platform_activities")).toBe(1)
+  })
+
+  it("y no la ve nadie más, ni siquiera una propietaria", async () => {
+    // Ana es propietaria de su empresa. La elusión del propietario llega hasta el borde de la
+    // suya; esto está fuera de toda empresa, y por eso no lo alcanza.
+    expect(await countAs(seed.ana, "platform_activities")).toBe(0)
+    expect(await countAs(seed.beto, "platform_activities")).toBe(0)
+    expect(await countAs(seed.cliente, "platform_activities")).toBe(0)
+  })
+
+  it("ni la escribe quien no es de plataforma", async () => {
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.ana), (tx) =>
+        tx.execute(
+          sql.raw(`insert into platform_activities (id, action, entity, title)
+                   values ('${newId()}', 'create', 'prospects', 'Colada')`),
+        ),
+      ),
+    )
+  })
+
+  it("y tampoco se reescribe desde plataforma", async () => {
+    // Aquí importa más que en la de empresa: quien la protagoniza es justamente quien tiene la
+    // llave de todos los arrendatarios.
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.admin), (tx) =>
+        tx.execute(sql.raw("update platform_activities set title = 'Otra cosa'")),
+      ),
+    )
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.admin), (tx) =>
+        tx.execute(sql.raw("delete from platform_activities")),
       ),
     )
   })

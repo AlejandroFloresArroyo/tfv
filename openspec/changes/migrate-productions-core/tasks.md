@@ -2,13 +2,13 @@
 
 ## Producción
 
-- [ ] Creación con comprobación de habilitación del servicio
-- [ ] Validación de que la fecha de fin no precede al inicio
-- [ ] Publicación e identificador legible
-- [ ] Baja con borrado lógico, previa enumeración del alcance
-- [ ] Impedir la baja con órdenes en curso o equipo sin devolver
-- [ ] **Corregir la cascada que borra de la tabla de empresas**
-- [ ] Panel de resumen de la producción
+- [x] Creación con comprobación de habilitación del servicio
+- [x] Validación de que la fecha de fin no precede al inicio
+- [x] Publicación e identificador legible
+- [x] Baja con borrado lógico, previa enumeración del alcance
+- [x] Impedir la baja con órdenes en curso o equipo sin devolver
+- [x] **Corregir la cascada que borra de la tabla de empresas**
+- [x] Panel de resumen de la producción
 
 ## Catálogos
 
@@ -53,3 +53,17 @@
 
 - [ ] Resolver la referencia del capítulo que apunta a la colección equivocada
 - [ ] Resolver las referencias derivadas hacia colecciones inexistentes
+
+## Lo que la rebanada 20 tiene fuera de su lista
+
+La **taxonomía de la producción** —`category-trees`, requisito «Alcance de la taxonomía de
+producción»— no figuraba aquí y es de esta rebanada: la 10 la dejó pendiente porque colgaba de una
+entidad que todavía no existía. Está hecha, con el vínculo al rol que dirige el trabajo al equipo.
+
+- [x] Categorías de producción, con su rol y su alcance de borrado
+
+Y el **flujo básico de los planes de trabajo** —`production-workflows`—, que el panel necesita para
+poder resumirlos por estado. Sólo el plan: sus tareas, actividades, comentarios, adjuntos, el
+calendario y el documento son de la rebanada 22.
+
+- [x] Planes de trabajo: alta, edición, estados, recuento de tareas y baja
