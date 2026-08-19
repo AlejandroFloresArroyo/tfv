@@ -34,7 +34,7 @@ import {
 } from "@tfv/contracts"
 import { type Transaction, withRequester } from "@tfv/db"
 import { companies, companyMembers, platformActivities, users } from "@tfv/db/schema"
-import { and, count, eq, sql } from "drizzle-orm"
+import { and, count, desc, eq, sql } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 
@@ -267,21 +267,24 @@ export async function listPlatformCompanyMembers(
   companyId: string,
 ): Promise<readonly PlatformMemberRecord[]> {
   return withRequester(actor, async (tx) => {
-    return tx
-      .select({
-        id: companyMembers.id,
-        userId: users.id,
-        email: users.email,
-        name: users.name,
-        lastname: users.lastname,
-        isOwner: companyMembers.isOwner,
-        isActive: companyMembers.isActive,
-      })
-      .from(companyMembers)
-      .innerJoin(users, eq(users.id, companyMembers.userId))
-      .where(eq(companyMembers.companyId, companyId))
-      .orderBy(companyMembers.isOwner, users.name, companyMembers.id)
-      .limit(96)
+    return (
+      tx
+        .select({
+          id: companyMembers.id,
+          userId: users.id,
+          email: users.email,
+          name: users.name,
+          lastname: users.lastname,
+          isOwner: companyMembers.isOwner,
+          isActive: companyMembers.isActive,
+        })
+        .from(companyMembers)
+        .innerJoin(users, eq(users.id, companyMembers.userId))
+        .where(eq(companyMembers.companyId, companyId))
+        // Las propietarias primero: la pregunta que trae a alguien aquí es a quién hay que llamar.
+        .orderBy(desc(companyMembers.isOwner), users.name, companyMembers.id)
+        .limit(96)
+    )
   })
 }
 
