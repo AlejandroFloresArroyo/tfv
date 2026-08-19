@@ -34,7 +34,13 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 - [ ] Planes: selección, cambio, cancelación, reactivación
 - [ ] Historial de cobros
 - [ ] Bitácora personal y de empresa
-- [ ] Consola de administración de plataforma
+- [~] Consola de administración de plataforma. **Existe desde el 2026-08-19** bajo `/platform`, con
+      su propia navegación, la guarda de `app-shell` en el armazón —sin la marca se va al panel— y
+      cuatro pantallas: la bandeja de prospectos con su flujo de aprobación, el padrón de empresas,
+      el de cuentas y la bitácora de plataforma. **Faltan** las dos superficies cuyas rebanadas de
+      servidor todavía no existen: reprocesar un evento de cobro (`payment-webhooks`) y habilitar
+      servicios de una empresa (`companies`). Escribir datos de una empresa desde aquí queda fuera a
+      propósito: es otra decisión y no tiene clave de permiso que la respalde (H-121)
 
 ## 29b · Almacenes
 

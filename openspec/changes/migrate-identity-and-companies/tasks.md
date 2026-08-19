@@ -2,8 +2,9 @@
 
 Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falta anotada.
 
-Hechas **empresas, membresías, roles, direcciones, contrapartes y la taxonomía global**. Faltan los
-prospectos y las dos taxonomías que cuelgan de entidades que aún no existen.
+Hechas **empresas, membresías, roles, direcciones, contrapartes, la taxonomía global y los
+prospectos** —con su bandeja, desde el 2026-08-19—. Faltan las dos taxonomías que cuelgan de
+entidades que aún no existen.
 
 ## Cuentas
 
@@ -15,9 +16,10 @@ Casi todo esto ya existía desde la rebanada 04, que construyó el ciclo de vida
 - [x] Activación y desactivación, con invalidación de sesiones
 - [x] Baja con borrado lógico y liberación del correo
 - [ ] Impedir la baja del único propietario de una empresa activa
-- [x] Prospectos: captura pública, gestión y aceptación. **Sin pantalla todavía**: el formulario
-      pertenece al sitio público (29e) y la bandeja necesita un área de administración de
-      plataforma que aún no existe
+- [x] Prospectos: captura pública, gestión y aceptación. **Con sus dos pantallas**: el formulario
+      público en `/contacto` y la bandeja en el área de administración de plataforma, que ya existe
+      (`/platform/prospects`). Aceptar, corregir y descartar dejan asiento en la bitácora de
+      plataforma
 - [x] Corregir la retirada del prospecto aceptado. La bandeja son los que no tienen `accepted_at`,
       así que sale de ella por construcción y el rastro se conserva
 - [ ] Corregir la escritura de la marca de última actividad
@@ -113,6 +115,10 @@ Casi todo esto ya existía desde la rebanada 04, que construyó el ciclo de vida
 - [x] Quien crea una empresa queda como propietaria, en la misma transacción
 - [x] Una empresa ajena no aparece en el listado y responde `403` por su dirección
 - [x] La administración de plataforma entra en cualquier empresa
+- [x] El padrón de empresas y el de cuentas cruzan arrendatarios, y un usuario corriente recibe
+      `403` en los dos — por la pantalla y escribiendo la dirección
+- [x] Aceptar, corregir y descartar un prospecto dejan asiento; un intento denegado no deja ninguno
+- [x] La bitácora de plataforma no la lee nadie más, y **no la reescribe ni quien la protagoniza**
 - [x] La comisión no la mueve quien la paga, y el rechazo no escribe nada
 - [x] La baja conserva la fila y su fecha, y retira el acceso
 - [x] **El motor deja de contar una empresa dada de baja aunque su membresía sobreviva**
