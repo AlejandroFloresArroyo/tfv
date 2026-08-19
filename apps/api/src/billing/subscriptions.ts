@@ -262,13 +262,23 @@ async function subscribeToFreePlan(
 
 // ─── Cambio de plan ──────────────────────────────────────────────────────────
 
-export interface ChangePlanResult {
-  readonly subscription: SubscriptionState
-  /** Lo que el cambio cuesta ahora mismo, prorrateado. Negativo es saldo a favor. */
-  readonly due: string
-  readonly credit: string
-  readonly charge: string
-}
+export type ChangePlanResult =
+  | {
+      readonly kind: "aplicado"
+      readonly subscription: SubscriptionState
+      /** Lo que el cambio cuesta ahora mismo, prorrateado. Negativo es saldo a favor. */
+      readonly due: string
+      readonly credit: string
+      readonly charge: string
+    }
+  /**
+   * Hay que pasar por el procesador.
+   *
+   * Ocurre subiendo del plan gratuito a uno de pago: **no hay suscripción en el procesador que
+   * modificar**, así que no es un cambio sino una contratación. Cambiar la fila sin más dejaría a la
+   * empresa en el plan caro sin que nadie hubiera pagado. Ver `HALLAZGOS.md` H-89.
+   */
+  | { readonly kind: "checkout"; readonly url: string }
 
 /**
  * Cambia de plan conservando los asientos.
@@ -289,6 +299,33 @@ export async function changePlan(
 
   const plan = await requirePlan(input.planId)
   const interval = (input.interval ?? current.interval) as BillingInterval
+
+  // Sin suscripción en el procesador no hay nada que modificar allí, y el plan de destino cuesta
+  // dinero: esto no es un cambio, es contratar. Se manda a la sesión de pago y la suscripción se
+  // sustituye cuando el evento confirme que alguien pagó.
+  if (!current.externalSubscriptionId && plan.tier > 0) {
+    const price = await requirePrice(plan.externalProductId, interval)
+    const discount = decideDiscount(current.seats, volumePolicy())
+
+    const session = await paymentProvider().createCheckoutSession({
+      companyId,
+      priceId: price.id,
+      seats: current.seats,
+      allowsPromotionCode: discount.allowsPromotionCode,
+      successUrl: `${env.BILLING_RETURN_ORIGIN}/c/${companyId}/settings/plan`,
+      cancelUrl: `${env.BILLING_RETURN_ORIGIN}/c/${companyId}/settings/plan`,
+      metadata: {
+        companyId,
+        planId: plan.id,
+        seats: String(current.seats),
+        interval,
+        subscribedById: actor.userId,
+        ...(discount.percent === null ? {} : { discountPercent: formatPercent(discount.percent) }),
+      },
+    })
+
+    return { kind: "checkout", url: session.url }
+  }
 
   const currentPlan = await requirePlan(current.planId)
   const [currentPrice, nextPrice] = await Promise.all([
@@ -326,7 +363,7 @@ export async function changePlan(
   const subscription = await readSubscription(companyId)
   if (!subscription) throw new Error("la suscripción debería seguir existiendo")
 
-  return { subscription, ...quote }
+  return { kind: "aplicado", subscription, ...quote }
 }
 
 /**
@@ -394,6 +431,16 @@ export async function cancelSubscription(
     throw new ConflictError("Esta suscripción ya está marcada para terminar")
   }
 
+  /**
+   * Sin periodo pagado no hay vencimiento al que aplazar la baja.
+   *
+   * Es el caso del plan gratuito. Marcarlo para terminar «al vencimiento» lo dejaba operando para
+   * siempre —no hay vencimiento— y sin fecha que enseñarle a nadie, que es justo lo que la spec pide
+   * comunicar. Lo que la cancelación aplazada protege es el tiempo ya pagado; aquí no hay ninguno,
+   * así que termina en el acto y el plan gratuito vuelve a quedar disponible.
+   */
+  const immediate = !current.externalSubscriptionId && current.periodEnd === null
+
   const snapshot = current.externalSubscriptionId
     ? await paymentProvider().cancelAtPeriodEnd(current.externalSubscriptionId)
     : null
@@ -401,14 +448,56 @@ export async function cancelSubscription(
   await withRequester(actor, async (tx) => {
     await tx
       .update(companySubscriptions)
-      .set({
-        cancelAtPeriodEnd: true,
-        ...(snapshot ? { periodEnd: snapshot.periodEnd } : {}),
-      })
+      .set(
+        immediate
+          ? { status: "canceled", cancelAtPeriodEnd: false }
+          : {
+              cancelAtPeriodEnd: true,
+              ...(snapshot ? { periodEnd: snapshot.periodEnd } : {}),
+            },
+      )
       .where(eq(companySubscriptions.id, current.id))
   })
 
+  if (immediate) {
+    const canceled = await readCanceled(current.id)
+    if (!canceled) throw new Error("la suscripción cancelada debería existir")
+    return canceled
+  }
+
   return requireSubscription(companyId)
+}
+
+/**
+ * Una suscripción ya cancelada, por su identificador.
+ *
+ * `readSubscription` busca la **vigente** y una cancelada no lo es, así que después de cancelar de
+ * inmediato hace falta esta otra vía para poder devolver lo que acaba de pasar.
+ */
+async function readCanceled(subscriptionId: string): Promise<SubscriptionState | null> {
+  const [row] = await db
+    .select({
+      id: companySubscriptions.id,
+      status: companySubscriptions.status,
+      planId: companySubscriptions.planId,
+      planTier: subscriptionPlans.tier,
+      planTitle: subscriptionPlans.title,
+      seats: companySubscriptions.seats,
+      cancelAtPeriodEnd: companySubscriptions.cancelAtPeriodEnd,
+      periodStart: companySubscriptions.periodStart,
+      periodEnd: companySubscriptions.periodEnd,
+      gracePeriodEndsAt: companySubscriptions.gracePeriodEndsAt,
+      discountPercent: companySubscriptions.discountPercent,
+      promotionCode: companySubscriptions.promotionCode,
+      externalSubscriptionId: companySubscriptions.externalSubscriptionId,
+      interval: companySubscriptions.interval,
+    })
+    .from(companySubscriptions)
+    .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, companySubscriptions.planId))
+    .where(eq(companySubscriptions.id, subscriptionId))
+    .limit(1)
+
+  return row ? { ...row, isOperating: false } : null
 }
 
 /** Deshace la cancelación mientras el periodo siga vigente. */

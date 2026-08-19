@@ -79,6 +79,14 @@ export default async function PlanPage({ params }: { params: Promise<{ companyId
                 <Badge tone={statusTone(subscription.status)}>
                   {t(`billing.plan.status.${subscription.status}`)}
                 </Badge>
+                {/*
+                  El estado sigue siendo «Activa» cuando está marcada para terminar —y es cierto:
+                  la empresa opera hasta el vencimiento—, así que la marca va aparte. Sin ella, quien
+                  acaba de cancelar ve un verde tranquilizador y cree que no se guardó.
+                */}
+                {subscription.cancelAtPeriodEnd ? (
+                  <Badge tone="warning">{t("billing.plan.status.canceled")}</Badge>
+                ) : null}
               </p>
 
               <p className="mt-2 text-body2 text-content-muted">
@@ -198,7 +206,14 @@ export default async function PlanPage({ params }: { params: Promise<{ companyId
                       {plan.features.map((feature) => (
                         <li key={feature.key} className="text-body2 text-content-muted">
                           {feature.name}
-                          {feature.value === undefined ? null : `: ${String(feature.value)}`}
+                          {/*
+                            Una prestación de sí o no ya lo dice con su nombre: «Producciones: true»
+                            enseña el tipo de dato en lugar de la prestación. Sólo se acompaña el
+                            valor cuando aporta algo — un número, un texto.
+                          */}
+                          {typeof feature.value === "boolean" || feature.value === undefined
+                            ? null
+                            : `: ${String(feature.value)}`}
                         </li>
                       ))}
                     </ul>

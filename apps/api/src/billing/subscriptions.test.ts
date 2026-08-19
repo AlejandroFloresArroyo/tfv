@@ -499,7 +499,12 @@ describe("el cambio de plan", () => {
     const basic = await newPlan(1, "Básico")
     const pro = await newPlan(2, "Profesional")
 
-    await activate(companyId, basic, { seats: 5 })
+    await activate(companyId, basic, {
+      seats: 5,
+      periodStart: past(),
+      periodEnd: future(),
+      externalSubscriptionId: "sub_cambia",
+    })
 
     const body = await json<{ subscription: { seats: number; planId: string }; due: string }>(
       await request(
@@ -517,7 +522,94 @@ describe("el cambio de plan", () => {
   })
 })
 
+describe("subir del plan gratuito a uno de pago", () => {
+  it("pasa por el procesador en lugar de cambiar la fila sin cobrar", async () => {
+    // Encontrado mirando la pantalla: el plan gratuito no tiene suscripción en el procesador, así
+    // que cambiar de plan actualizaba la fila y dejaba a la empresa en el plan caro **sin que nadie
+    // hubiera pagado nada**, y sin periodo. Subir de gratuito a pago es contratar, y contratar pasa
+    // por la sesión de pago. Ver `HALLAZGOS.md` H-89.
+    const session = await signUp("sube-de-gratis@ejemplo.mx")
+    const companyId = await newCompany(session)
+    const free = await newPlan(0, "Gratuito", false)
+    const paid = await newPlan(1, "Básico")
+
+    await activate(companyId, free, { seats: 1 })
+
+    const body = await json<{ kind: string; url?: string }>(
+      await request(
+        "PATCH",
+        `/companies/${companyId}/subscription`,
+        { planId: paid },
+        session.cookie,
+      ),
+    )
+
+    expect(body.kind).toBe("checkout")
+    expect(body.url).toContain("https://procesador.example/")
+
+    // Y hasta que el pago llegue, la empresa sigue en el gratuito.
+    const row = await subscriptionOf(companyId)
+    expect(row?.planId).toBe(free)
+  })
+
+  it("bajar a gratuito sí se aplica en el acto", async () => {
+    const session = await signUp("baja-a-gratis@ejemplo.mx")
+    const companyId = await newCompany(session)
+    const free = await newPlan(0, "Gratuito", false)
+    const paid = await newPlan(1, "Básico")
+
+    await activate(companyId, paid, {
+      seats: 2,
+      periodStart: past(),
+      periodEnd: future(),
+      externalSubscriptionId: "sub_baja",
+    })
+
+    const body = await json<{ kind: string; subscription?: { planId: string; seats: number } }>(
+      await request(
+        "PATCH",
+        `/companies/${companyId}/subscription`,
+        { planId: free },
+        session.cookie,
+      ),
+    )
+
+    expect(body.kind).toBe("aplicado")
+    expect(body.subscription?.planId).toBe(free)
+    expect(body.subscription?.seats).toBe(2)
+  })
+})
+
 describe("la cancelación", () => {
+  it("una suscripción sin periodo pagado termina en el acto", async () => {
+    // Encontrado mirando la pantalla: el plan gratuito no tiene periodo, así que marcarlo para
+    // terminar «al vencimiento» lo dejaba operando **para siempre** —no hay vencimiento— y sin
+    // fecha que enseñarle a nadie. Sin periodo pagado no hay nada que proteger: termina ya.
+    const session = await signUp("cancela-gratis@ejemplo.mx")
+    const companyId = await newCompany(session)
+    const planId = await newPlan(0, "Gratuito", false)
+
+    await activate(companyId, planId, { seats: 1 })
+
+    const body = await json<{ status: string; isOperating: boolean }>(
+      await request(
+        "POST",
+        `/companies/${companyId}/subscription/cancel`,
+        undefined,
+        session.cookie,
+      ),
+    )
+
+    expect(body.status).toBe("canceled")
+    expect(body.isOperating).toBe(false)
+
+    // Y el plan gratuito vuelve a estar disponible para esa persona.
+    const free = await json<{ available: boolean }>(
+      await request("GET", "/plans/free-availability", undefined, session.cookie),
+    )
+    expect(free.available).toBe(true)
+  })
+
   it("surte efecto al terminar el periodo, y la empresa sigue operando", async () => {
     // Escenario: «La empresa opera hasta el final del periodo».
     const session = await signUp("cancela@ejemplo.mx")

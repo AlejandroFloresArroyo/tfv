@@ -82,7 +82,7 @@ export default async function BillingProfilesPage({
       subtitle={t("billing.profiles.subtitle", { company: company.name })}
       actions={canCreate ? <NewProfile companyId={companyId} /> : undefined}
     >
-      {operating && operating.exists ? (
+      {operating?.exists ? (
         <Callout tone={operating.canCharge ? "success" : "warning"} className="mb-5">
           {operating.canCharge
             ? t("billing.profiles.canCharge")

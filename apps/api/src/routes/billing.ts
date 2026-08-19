@@ -336,14 +336,18 @@ export const changePlanRoute = defineRoute({
     },
     responses: {
       200: {
-        description: "La suscripción nueva y lo que costó el cambio, prorrateado",
+        description:
+          "La suscripción nueva y lo que costó el cambio, prorrateado — o la dirección de pago " +
+          "cuando subir de plan es en realidad contratar",
         content: {
           "application/json": {
             schema: z.object({
-              subscription: subscriptionSchema,
-              due: z.string(),
-              credit: z.string(),
-              charge: z.string(),
+              kind: z.enum(["aplicado", "checkout"]),
+              url: z.string().optional(),
+              subscription: subscriptionSchema.optional(),
+              due: z.string().optional(),
+              credit: z.string().optional(),
+              charge: z.string().optional(),
             }),
           },
         },
@@ -357,12 +361,15 @@ export const changePlanRoute = defineRoute({
     const result = await changePlan(actorOf(c), companyId, c.req.valid("json"))
 
     return c.json(
-      {
-        subscription: serializeSubscription(result.subscription),
-        due: result.due,
-        credit: result.credit,
-        charge: result.charge,
-      },
+      result.kind === "checkout"
+        ? { kind: "checkout" as const, url: result.url }
+        : {
+            kind: "aplicado" as const,
+            subscription: serializeSubscription(result.subscription),
+            due: result.due,
+            credit: result.credit,
+            charge: result.charge,
+          },
       200,
     )
   },

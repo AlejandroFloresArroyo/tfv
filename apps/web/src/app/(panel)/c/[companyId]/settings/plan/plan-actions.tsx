@@ -56,10 +56,19 @@ export function ChoosePlan({
       }
       action={async (data) => {
         if (mode === "change") {
-          return api(`/companies/${companyId}/subscription`, {
-            method: "PATCH",
-            body: { planId: plan.id, interval: text(data, "interval") },
-          })
+          const changed = await api<{ kind: string; url?: string }>(
+            `/companies/${companyId}/subscription`,
+            {
+              method: "PATCH",
+              body: { planId: plan.id, interval: text(data, "interval") },
+            },
+          )
+
+          // Subir del plan gratuito a uno de pago no es un cambio: no hay suscripción en el
+          // procesador que modificar, y nadie ha pagado nada. El servidor lo devuelve como sesión
+          // de pago y aquí se va allí.
+          if (changed.kind === "checkout" && changed.url) window.location.assign(changed.url)
+          return changed
         }
 
         const result = await api<{ kind: string; url?: string }>(
