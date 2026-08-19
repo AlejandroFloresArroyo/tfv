@@ -31,11 +31,13 @@
       `app.upload_is_referenced`— y no una lista escrita a mano de las treinta y dos columnas que
       hoy apuntan a `uploads`
 - [x] Nunca eliminar un marcador de posición
-- [~] Recolector de archivos pendientes, con plazo configurable. Escrito y sin ejecutar: quien lo
-      dispararía es el despachador de trabajos de la rebanada 09
-- [~] El recolector nunca toca archivos referenciados. Sólo mira los **pendientes**, que por
-      definición no los referencia nadie todavía; comprobarlo pide ejecutarlo, y quien lo dispara es
-      el despachador de la rebanada 09
+- [x] Recolector de archivos pendientes, con plazo configurable. Ejecutado y probado de extremo a
+      extremo: la subida vencida pierde su fila y sus cinco objetos, y la que está ocurriendo ahora
+      mismo sobrevive a la misma pasada
+- [x] El recolector nunca toca archivos referenciados. **Ni la fila ni los objetos**: un archivo
+      pendiente sí puede estar referenciado —la entidad se guardó antes de que llegara la
+      confirmación— y retirar los objetos antes de borrar dejaba esa fila viva apuntando a bytes que
+      ya no existían (H-160). Se borra primero y se retira sólo lo que el motor dejó borrar
 - [x] Marcadores de posición como activos propios. Los tres activos viven en
       `media/assets/` —dos vectores dibujados a mano, un PDF vectorial y dos segundos de video—, y
       `ensurePlaceholders` los escribe por el mismo camino que el navegador y registra sus filas
@@ -84,16 +86,25 @@
 - [x] Reescritura de las direcciones ya persistidas, con su guion y su prueba. Por prefijo,
       idempotente, y sin aplicar por omisión: lo primero que hay que poder hacer antes de mover mil
       filas es contar cuántas se mueven. Escenario nuevo en la spec (H-135)
-- [ ] Copia de los objetos entre depósitos. No es de este guion —mueve direcciones, no bytes— y
-      hacerlo desde aquí sería reimplementar mal lo que `aws s3 sync` hace bien
-- [ ] Creación del depósito y su política de lectura pública. Hoy el depósito local existe porque
-      alguien lo creó a mano: no hay ni migración ni guion que lo deje puesto (H-136)
+- [x] Copia de los objetos entre depósitos. **Decidido: no es código nuestro.** Lo mueve
+      `aws s3 sync` —paralelismo, reanudación, multiparte y reintento, ninguno negociable en una
+      mudanza de verdad—; lo nuestro es **qué** sincronizar, que compone `media/transfer.ts` desde la
+      configuración y ejecuta `copy-media-objects`. Con su hallazgo: la herramienta toma un solo
+      punto de acceso para las dos orillas, así que una copia entre almacenamientos distintos son dos
+      órdenes y una escala en disco (H-162)
+- [x] Creación del depósito y su política de lectura pública. `media/bucket.ts` lo deja puesto,
+      **repara** el que esté privado o sin tope de tamaño, y comprueba lo que importa desde donde
+      mira el navegador: lee un objeto recién escrito **sin credencial** y pide el preflight de `PUT`
+      desde el origen de la aplicación. Se planta con el motivo si algo falla. Lo corre
+      `pnpm --filter @tfv/api bucket` y la siembra por su cuenta; la pila local lo trae declarado en
+      `supabase/config.toml` y AWS tiene sus cuatro órdenes en `bucket --aws` (H-136, H-159)
 
 ## Verificación
 
-- [~] Prueba: autorización caducada se rechaza. La caducidad la fija el almacenamiento en dos
-      horas y no se puede adelantar desde aquí; lo que sí está probado es la **reemisión**, que es
-      lo que la caducidad obliga a hacer
+- [x] Prueba: autorización caducada se rechaza. Se podía desde que hay un segundo proveedor: la
+      vigencia la **declara** él, así que se firma con un segundo, se espera, y el almacenamiento
+      responde que el permiso venció. Con la otra mitad en la misma prueba: reemitir vuelve a
+      escribir en el acto
 - [x] Prueba: autorización de un objeto no sirve para otro
 - [x] Prueba: un derivado no se amplía por encima del original — `file-derivatives.test.ts`, sobre
       la política, que es donde se decide el tamaño

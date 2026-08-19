@@ -258,6 +258,41 @@ persistidas, porque están incrustadas en documentos generados y en enlaces comp
 - **AND** volver a ejecutarla no cambia nada
 - **AND** los marcadores de posición se actualizan como cualquier otro archivo
 
+### Requirement: El almacenamiento queda puesto al montarlo
+
+Montar el sistema SHALL dejar el almacenamiento de objetos listo para recibir subidas, sin pasos
+manuales: sirviendo **lectura pública** de lo escrito y admitiendo **escritura directa desde el
+origen de la aplicación**.
+
+La operación SHALL ser idempotente y reparadora —se ejecuta en cada despliegue— y SHALL fallar con
+el motivo cuando alguna de las dos condiciones no se cumpla, en lugar de darlas por buenas.
+
+Las dos condiciones son las que sostienen los requisitos anteriores y no se pueden dar por
+supuestas: sin lectura pública, las direcciones que este sistema persiste no responden; sin permiso
+de escritura desde el origen de la aplicación, el modelo de subida directa no llega a intentarse,
+porque quien escribe es el navegador (ver `HALLAZGOS.md` H-136).
+
+#### Scenario: Una instalación nueva admite la primera subida
+
+- **GIVEN** una instalación en la que nadie ha preparado el almacenamiento a mano
+- **WHEN** se monta el sistema
+- **THEN** el almacenamiento queda listo
+- **AND** la primera subida se escribe y se lee sin ningún paso adicional
+
+#### Scenario: Un almacenamiento que no sirve lectura pública se rechaza
+
+- **GIVEN** un almacenamiento que acepta escrituras y no sirve lo escrito sin credencial
+- **WHEN** se monta el sistema
+- **THEN** la operación falla diciendo qué falta
+- **AND** no se informa de que el almacenamiento esté listo
+
+#### Scenario: Volver a montarlo no cambia nada
+
+- **GIVEN** un almacenamiento ya puesto
+- **WHEN** se repite la operación
+- **THEN** termina correctamente
+- **AND** no se altera lo que ya estaba
+
 ### Requirement: Sólo se aceptan tipos de contenido conocidos
 
 La API SHALL rechazar con `400` una solicitud de subida cuyo tipo de contenido declarado no figure
