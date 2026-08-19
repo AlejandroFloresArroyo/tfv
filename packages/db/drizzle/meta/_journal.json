@@ -147,6 +147,13 @@
       "when": 1787180200000,
       "tag": "0020_tarifas_de_envio",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787180300000,
+      "tag": "0021_compra_en_tienda_publica",
+      "breakpoints": true
     }
   ]
 }
