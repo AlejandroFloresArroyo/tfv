@@ -39,7 +39,7 @@ function freshPrefix(): string {
  * Se construye aquí y no se pone como proveedor del servicio: lo que se despliega sigue siendo el
  * de siempre, y esta prueba no cambia eso.
  */
-function s3Provider(): StorageProvider {
+function s3Provider(expiresInSeconds: number = env.STORAGE_S3_EXPIRES_SECONDS): StorageProvider {
   if (!env.STORAGE_S3_ACCESS_KEY_ID || !env.STORAGE_S3_SECRET_ACCESS_KEY) {
     throw new Error(
       "Faltan STORAGE_S3_ACCESS_KEY_ID y STORAGE_S3_SECRET_ACCESS_KEY en `.env`. Las imprime " +
@@ -57,7 +57,7 @@ function s3Provider(): StorageProvider {
     endpoint: env.STORAGE_S3_ENDPOINT ?? `${env.STORAGE_URL}/s3`,
     publicUrl:
       env.STORAGE_S3_PUBLIC_URL ?? `${env.STORAGE_URL}/object/public/${env.STORAGE_BUCKET}`,
-    expiresInSeconds: env.STORAGE_S3_EXPIRES_SECONDS,
+    expiresInSeconds,
   })
 }
 
@@ -167,6 +167,45 @@ describe.each(providers.map((provider) => [provider.name, provider] as const))(
     })
   },
 )
+
+describe("la vigencia de la autorización", () => {
+  it("una autorización caducada no sirve, y volver a pedirla sí", async () => {
+    // Escenario: «Una autorización caducada no sirve». Llevaba sin probar porque el proveedor de hoy
+    // fija la vigencia en dos horas y no se puede adelantar desde aquí — esperarlas no es una
+    // prueba, es una tarde. El segundo proveedor **declara** la vigencia, así que se firma con un
+    // segundo y se comprueba de verdad: el almacenamiento responde que el permiso venció.
+    //
+    // Y se comprueba la otra mitad, que es la que importa para quien sube: reemitir vuelve a
+    // funcionar en el acto. El archivo, mientras tanto, sigue pendiente — nada lo confirmó —, que es
+    // lo que la máquina de estados de `uploads.test.ts` ya fija.
+    const provider = s3Provider(1)
+    const prefix = freshPrefix()
+    const path = `${prefix}/original.txt`
+
+    const caducada = await provider.authorizeWrite(path, "text/plain")
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    const tarde = await fetch(caducada.url, {
+      method: "PUT",
+      headers: caducada.headers,
+      body: BYTES,
+    })
+
+    expect(tarde.ok).toBe(false)
+    expect((await fetch(provider.publicUrl(path))).ok).toBe(false)
+
+    const reemitida = await provider.authorizeWrite(path, "text/plain")
+    const aTiempo = await fetch(reemitida.url, {
+      method: "PUT",
+      headers: reemitida.headers,
+      body: BYTES,
+    })
+
+    expect(aTiempo.ok).toBe(true)
+
+    await provider.removeObjects([prefix])
+  })
+})
 
 describe("qué proveedor está puesto", () => {
   it("por omisión sigue siendo el de siempre", async () => {
