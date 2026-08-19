@@ -124,7 +124,7 @@ Lo construido hasta ahora, medido y no estimado:
 | Rebanadas | 19 de 30 empezadas, **ninguna cerrada del todo** |
 | Código sin pruebas | 31 130 líneas |
 | Código de prueba | 9 973 líneas |
-| Pruebas | **1232** de vitest — 353 contratos, 78 datos, 611 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
+| Pruebas | **1244** de vitest — 353 contratos, 78 datos, 623 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
 | Esquema | 96 tablas · 62 enumerados · 6 comprobaciones · 48 únicos parciales. **El recuento de índices queda sin actualizar**: no se pudo reproducir la medida de la que salió el «270» anterior, y un número sin medir es peor que ninguno |
 | Aislamiento | 211 políticas · 96/96 tablas · 0 con identidad cruda |
 | Migraciones | 22, replicadas desde cero en cada verificación |
@@ -3025,6 +3025,26 @@ Del cuerpo de entrada **sólo se guarda la huella**. Del de salida no hay altern
 es devolver *lo mismo*—, y lo que se acota es el riesgo: sólo la respuesta de una petición correcta,
 sólo la alcanza su actor, y caduca en horas.
 
+**El que encontró otro, y que no era de nadie por dominio sino de la capa**
+
+La cadena `undefined` en el camino —la que deja una plantilla que interpola una variable que no
+existe— **respondía `500`**. Medido con un barrido sobre la tabla de rutas antes de tocar nada:
+**713 combinaciones de ruta y valor** devolvían `5xx`. Lo encontró quien escribía otra pantalla,
+siguiendo un enlace antes de tiempo, y el síntoma —«el servidor se cayó»— no se parece a la causa
+—un enlace roto—, que es **exactamente** lo que ya había pasado con `H-30`.
+
+Se rechaza con `400`, que es la fila de «ruta que no cumple el esquema», y **antes del guardián**:
+el guardián resuelve la membresía contra la empresa del camino, así que con `companyId` inválido el
+fallo ocurría dentro del propio guardián. Eso es también por qué no valía validarlo en el esquema de
+la ruta, que corre después. El candado **recorre la tabla registrada**, así que una ruta nueva entra
+sola (H-144).
+
+Con eso cambia una política, y queda escrita: una petición **sin credencial** con un identificador
+mal formado recibe ahora `400` y no `401`. Es la misma categoría que un camino inexistente, que el
+motor ya contesta con `404` a quien no ha entrado. La prueba que fijaba que el guardián alcanza los
+caminos con parámetro **sigue fijando eso**: pide con un identificador bien formado, para que la
+petición llegue hasta él en lugar de quedarse en la capa de antes.
+
 **Dos defectos que aparecieron al cerrarla**
 
 - `pnpm --filter @tfv/api contract` **apuntaba a un archivo que nunca se escribió**. Estaba
@@ -3039,7 +3059,7 @@ sólo la alcanza su actor, y caduca en horas.
 
 **Verificado, no supuesto**
 
-- `pnpm test --force`: **1232** en verde, 135 más que las 1097 de partida. `pnpm check` y
+- `pnpm test --force`: **1244** en verde, 147 más que las 1097 de partida. `pnpm check` y
   `pnpm lint` limpios.
 - Contra el servicio en marcha, en un puerto propio: un cuerpo de dos megas responde `413` con la
   forma del contrato de error; el sexto intento de un origen con el cupo en cinco responde `429` con
@@ -3048,6 +3068,8 @@ sólo la alcanza su actor, y caduca en horas.
   `409` con `idempotency_key_reused`.
 - La pantalla de sesiones activas, servida y renderizada, ya consume el **cliente tipado**: es la
   única de las cuarenta y ocho que se pasó, y a propósito.
+- `GET /companies/undefined/warehouses` con sesión válida, que era el caso que lo destapó: `500`
+  antes, `400` con el campo señalado ahora.
 
 **Abierto, y por qué**
 

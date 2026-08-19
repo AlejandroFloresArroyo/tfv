@@ -19,6 +19,7 @@ import type { ZodError } from "zod"
 import { guardFor } from "../auth/middleware.ts"
 import { env, exposeErrorDetails, rateLimitEnabled } from "../env.ts"
 import { idempotencyFor } from "./idempotency.ts"
+import { identifierShapeFor } from "./identifiers.ts"
 import { bodyLimitFor, createRateLimiter, type RateLimitOptions } from "./limits.ts"
 import { createLogger, type Logger } from "./logger.ts"
 import { mountRoutes, type RegisteredRoute } from "./route.ts"
@@ -139,11 +140,17 @@ export function createApp(
    *
    * El límite de cuerpo primero: rechazar por tamaño antes de resolver la sesión es lo que impide
    * que una petición desproporcionada cueste una consulta a la base antes de que nadie la mire.
+   *
+   * La forma de los identificadores **antes que el guardián**, y no es un detalle de orden: el
+   * guardián resuelve la membresía contra la empresa del camino, así que con un `companyId`
+   * inválido el fallo ocurría dentro del propio guardián, antes de que corriera ningún manejador.
+   *
    * Después el guardián, porque nada debe correr sin credencial. Y por último la idempotencia, que
    * necesita saber quién es el actor para acotarle la clave y sin sesión no lo sabría.
    */
   mountRoutes(app, routes, [
     bodyLimitFor(options.maxBodyBytes ?? env.BODY_LIMIT_BYTES),
+    identifierShapeFor,
     (route) => guardFor(route.access),
     idempotencyFor,
   ])
