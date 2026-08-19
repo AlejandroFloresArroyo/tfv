@@ -28,8 +28,17 @@
  * en la plataforma— y por eso está transcrita y no interpretada. Anotado en `HALLAZGOS.md` H-105.
  */
 
-import { formatMoney, formatPercent, type Money, money, percent } from "./money.ts"
-import { applyPercent, multiply, subtract, sum } from "./money.ts"
+import {
+  applyPercent,
+  formatMoney,
+  formatPercent,
+  type Money,
+  money,
+  multiply,
+  percent,
+  subtract,
+  sum,
+} from "./money.ts"
 
 // ─── Estados ─────────────────────────────────────────────────────────────────
 

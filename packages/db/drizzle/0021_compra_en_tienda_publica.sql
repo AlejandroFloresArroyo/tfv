@@ -99,6 +99,22 @@ create policy arrendatario on public.payments
     )
   );--> statement-breakpoint
 
+-- ─── Y el comprador sí puede ver lo que compró ───────────────────────────────
+--
+-- El mismo error por el otro lado. `buyer_order_lines` sólo tenía política de arrendatario, que
+-- atraviesa hasta `companies` —correcto para escribir, por lo que la propia `0005` explica— y deja
+-- al comprador **sin poder leer las líneas de su propio pedido**: ve el pedido, ve el total, y no ve
+-- qué compró.
+--
+-- «Un comprador SHALL poder consultar sus pedidos con su estado, **sus artículos**, su pago y el
+-- seguimiento de su envío.» La lectura se apoya en `buyer_orders`, que es donde vive la regla de
+-- quién alcanza un pedido, y componer lecturas con lecturas no ensancha nada: una línea se ve
+-- exactamente cuando se ve su pedido.
+drop policy if exists lectura on public.buyer_order_lines;--> statement-breakpoint
+create policy lectura on public.buyer_order_lines
+  for select to authenticated
+  using (exists (select 1 from buyer_orders o where o.id = buyer_order_lines.order_id));--> statement-breakpoint
+
 -- ─── Y el pedido operativo tampoco ───────────────────────────────────────────
 --
 -- El tercero del mismo grupo, y el más caro: la escritura de `warehouse_orders` admite

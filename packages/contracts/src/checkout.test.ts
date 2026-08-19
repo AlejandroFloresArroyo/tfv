@@ -14,8 +14,8 @@
 import { describe, expect, it } from "vitest"
 import {
   allowedCheckoutTransitions,
-  canTransitionCheckout,
   CHECKOUT_STATUSES,
+  canTransitionCheckout,
   computeCheckoutTotals,
   isCheckoutOpen,
 } from "./checkout.ts"
@@ -106,9 +106,9 @@ describe("el importe de una compra", () => {
   })
 
   it("una cantidad que no es entera positiva se rechaza", () => {
-    expect(() => computeCheckoutTotals({ lines: [line("10.00", 0)], shippingCost: "0.00" })).toThrow(
-      /cantidad/i,
-    )
+    expect(() =>
+      computeCheckoutTotals({ lines: [line("10.00", 0)], shippingCost: "0.00" }),
+    ).toThrow(/cantidad/i)
     expect(() =>
       computeCheckoutTotals({ lines: [line("10.00", 1.5)], shippingCost: "0.00" }),
     ).toThrow(/cantidad/i)
