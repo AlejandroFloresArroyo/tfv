@@ -76,6 +76,23 @@ export function requireCompany(profile: Profile, companyId: string): ProfileComp
   redirect("/companies")
 }
 
+/**
+ * Exige la marca de administración de plataforma. Sin ella, al panel.
+ *
+ * Es la cuarta guarda de `app-shell`: «Las rutas de administración de plataforma SHALL exigir que
+ * el usuario esté marcado como administrador de plataforma, y SHALL redirigir al panel cuando no lo
+ * esté». Al panel y no a la pantalla de acceso: la sesión es buena, lo que falta es el papel.
+ *
+ * **Y esto tampoco protege nada**, igual que las otras tres. Lo que protege es el servidor de la
+ * API, que comprueba la misma marca por su cuenta y responde `403` a quien escriba la dirección.
+ * Aquí sólo se evita servirle la página a alguien que no va a poder usarla.
+ */
+export function requirePlatformAdmin(profile: Profile): void {
+  if (profile.isPlatformAdmin) return
+
+  redirect("/dashboard")
+}
+
 // `can()` vive en `./can.ts`: lo usan componentes de cliente y este archivo no puede llegar al
 // navegador — importa `next/headers` a través de la capa de transporte.
 
