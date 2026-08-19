@@ -567,7 +567,7 @@ export const updateProductRoute = defineRoute({
 /**
  * La galería de un producto.
  *
- * **Criterio adoptado, y anotado** (`HALLAZGOS.md` H-60): la protege
+ * **Criterio adoptado, y anotado** (`HALLAZGOS.md` H-64): la protege
  * `warehouses.products.edit_info`. El catálogo de permisos está cerrado en las 255 claves migradas
  * y no tiene ninguna de archivos; la más cercana es la de la información del producto, que es donde
  * viven el nombre y la descripción — las fotos son lo mismo dicho en imágenes. Ampliar el catálogo

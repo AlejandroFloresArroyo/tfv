@@ -141,7 +141,7 @@ export interface Permissions {
   readonly canSelectCategory: boolean
   readonly canEditLocation: boolean
   readonly canPublish: boolean
-  /** Las fotos van con la información del producto. Ver `HALLAZGOS.md` H-60. */
+  /** Las fotos van con la información del producto. Ver `HALLAZGOS.md` H-64. */
   readonly canEditPhotos: boolean
 }
 

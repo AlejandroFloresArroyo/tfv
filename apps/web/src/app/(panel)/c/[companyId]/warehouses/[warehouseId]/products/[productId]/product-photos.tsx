@@ -56,6 +56,10 @@ export function EditPhotos({
 
   async function save() {
     const outcome = await uploads.run()
+
+    // Las recién subidas entran sin dirección: el navegador no la conoce hasta que el servidor
+    // responde. Por eso la galería se rehace **con la respuesta** y no con esto, que sólo sirve
+    // para componer el cuerpo — pintar una dirección vacía es un hueco roto y una descarga inútil.
     const next = add(
       gallery,
       outcome.uploaded.map((uploadId) => ({ uploadId, url: "", thumbnailUrl: null })),
@@ -63,8 +67,11 @@ export function EditPhotos({
 
     // Se guarda lo que sí llegó **antes** de avisar de lo que no: revertir por una foto caída
     // tiraría las que sí subieron, y darlo todo por bueno escondería el fallo.
-    await api(`${path}/images`, { method: "PUT", body: toBody(next) })
-    setGallery(next)
+    const saved = await api<ProductDetail>(`${path}/images`, {
+      method: "PUT",
+      body: toBody(next),
+    })
+    setGallery(galleryOf(saved))
 
     // `207 Multi-Status` dicho en voz alta: parte llegó y parte no. Se lanza como error del
     // contrato porque es lo que el diálogo sabe enseñar tal cual; un `Error` pelado saldría como
