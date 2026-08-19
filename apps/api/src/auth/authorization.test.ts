@@ -16,9 +16,11 @@ import { closeConnection, db } from "@tfv/db"
 import {
   companies,
   companyMembers,
+  companyServices,
   loginAttempts,
   notificationDeliveries,
   roles,
+  services,
   sessions,
   users,
 } from "@tfv/db/schema"
@@ -69,7 +71,7 @@ const PASSWORD = "una-frase-larga-y-buena"
 async function reset() {
   effects = []
   await db.execute(
-    sql`truncate table ${notificationDeliveries}, ${sessions}, ${loginAttempts}, ${users}, ${companyMembers}, ${roles}, ${companies} cascade`,
+    sql`truncate table ${notificationDeliveries}, ${sessions}, ${loginAttempts}, ${users}, ${companyMembers}, ${roles}, ${companyServices}, ${services}, ${companies} cascade`,
   )
 }
 
@@ -112,6 +114,26 @@ interface Scenario {
   readonly isPlatformAdmin?: boolean | undefined
   readonly withoutMembership?: boolean | undefined
   readonly withoutRole?: boolean | undefined
+  readonly withoutService?: boolean | undefined
+}
+
+/** Contrata el servicio de almacenes para una empresa. */
+async function enableWarehouses(companyId: string): Promise<void> {
+  const [existing] = await db
+    .select({ id: services.id })
+    .from(services)
+    .where(eq(services.keycode, "warehouses"))
+    .limit(1)
+
+  const serviceId = existing?.id ?? newId()
+  if (!existing) {
+    await db.insert(services).values({ id: serviceId, keycode: "warehouses", name: "Almacenes" })
+  }
+
+  await db
+    .insert(companyServices)
+    .values({ id: newId(), companyId, serviceId })
+    .onConflictDoNothing()
 }
 
 /** Monta una empresa, un rol y un miembro con las características que pida el escenario. */
@@ -127,6 +149,12 @@ async function scenario(email: string, options: Scenario = {}) {
 
   const companyId = newId()
   await db.insert(companies).values({ id: companyId, name: "Empresa de prueba" })
+
+  // La ruta de prueba exige una clave de `warehouses`, y desde la rebanada 11 eso pasa además por
+  // la compuerta de habilitación. Estas pruebas son de **permisos**: se abre la otra compuerta para
+  // que lo que decida el resultado siga siendo la clave y no lo contratado. La independencia de las
+  // tres se prueba aparte, en `billing/entitlements.test.ts`.
+  if (!options.withoutService) await enableWarehouses(companyId)
 
   let roleId: string | null = null
   if (!options.withoutRole) {
@@ -295,6 +323,9 @@ describe("administración de plataforma", () => {
     // Una empresa distinta de la suya, y sin membresía en ella.
     const otherCompanyId = newId()
     await db.insert(companies).values({ id: otherCompanyId, name: "Empresa ajena" })
+    // La elusión de plataforma alcanza al permiso, no a la habilitación: la empresa ajena necesita
+    // el servicio contratado igual que cualquier otra. Es la misma acotación que la del propietario.
+    await enableWarehouses(otherCompanyId)
 
     const response = await probe(otherCompanyId, cookie)
 
@@ -313,6 +344,9 @@ describe("pertenencia", () => {
 
     const otherCompanyId = newId()
     await db.insert(companies).values({ id: otherCompanyId, name: "Empresa ajena" })
+    // La elusión de plataforma alcanza al permiso, no a la habilitación: la empresa ajena necesita
+    // el servicio contratado igual que cualquier otra. Es la misma acotación que la del propietario.
+    await enableWarehouses(otherCompanyId)
 
     expect((await probe(otherCompanyId, cookie)).status).toBe(403)
     expect(effects).toEqual([])

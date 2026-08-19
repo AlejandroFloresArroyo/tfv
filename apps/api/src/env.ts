@@ -74,6 +74,55 @@ const schema = z
     PAYMENTS_WEBHOOK_TOLERANCE: z.coerce.number().int().positive().default(300),
 
     /**
+     * Qué procesador de pagos hay puesto.
+     *
+     * `none` —lo de fábrica— falla en toda operación de cobro diciendo qué falta. `local` es un
+     * suplente en memoria que **no mueve dinero**, para poder ejercer las pantallas sin cuenta del
+     * procesador. El real llega cuando haya credenciales; ver `billing/provider.ts` y H-85.
+     *
+     * Nunca hay suplente por defecto: uno puesto sin querer en producción parecería funcionar.
+     */
+    PAYMENTS_PROVIDER: z.enum(["none", "local"]).default("none"),
+
+    /**
+     * ¿Se exige suscripción vigente en toda operación de negocio?
+     *
+     * **Llega apagada, y no es un descuido.** La compuerta está implementada y probada; encenderla
+     * hoy dejaría fuera a toda empresa que no tenga suscripción — que ahora mismo son todas, porque
+     * el trasvase de datos es la rebanada 30. Encendida antes de eso, la aplicación no se puede
+     * usar. Ver `HALLAZGOS.md` H-86.
+     */
+    BILLING_SUBSCRIPTION_GATE: z
+      .string()
+      .default("false")
+      .transform((value) => value === "true" || value === "1"),
+
+    /**
+     * Por encima de cuántos asientos se aplica el descuento por volumen, y cuánto.
+     *
+     * El umbral **no** entra: se aplica por encima. Por debajo, la sesión de pago admite escribir un
+     * código promocional a mano; por encima no, para no acumular dos descuentos que nadie autorizó.
+     */
+    BILLING_VOLUME_SEATS: z.coerce.number().int().positive().default(10),
+    BILLING_VOLUME_PERCENT: z
+      .string()
+      .default("15")
+      .refine((value) => /^\d+(\.\d{1,4})?$/.test(value), {
+        message: "Porcentaje con cuatro decimales como mucho",
+      }),
+
+    /**
+     * Cuánto dura el periodo de gracia tras un fallo de cobro.
+     *
+     * Configurable porque no es una constante del dominio: lo que se está comprando es tiempo para
+     * que el cliente arregle su tarjeta, y cuánto vale ese tiempo lo decide el negocio.
+     */
+    BILLING_GRACE_DAYS: z.coerce.number().int().positive().default(7),
+
+    /** A dónde vuelve el navegador desde la sesión de pago y desde el formulario del procesador. */
+    BILLING_RETURN_ORIGIN: z.string().url().default("http://localhost:3000"),
+
+    /**
      * El secreto con el que se firman los enlaces públicos de los documentos.
      *
      * Es lo único que hace impredecible la referencia de un enlace compartido: quien la altera

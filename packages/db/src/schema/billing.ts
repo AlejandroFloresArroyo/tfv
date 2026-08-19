@@ -221,16 +221,16 @@ export interface MerchantBusiness {
   readonly type: "individual" | "company" | "government_entity" | "non_profit"
   readonly legalName: string
   readonly taxId: string
-  readonly taxRegime?: string
-  readonly invoiceUse?: string
-  readonly email?: string
-  readonly dialCode?: string
-  readonly phone?: string
+  readonly taxRegime?: string | undefined
+  readonly invoiceUse?: string | undefined
+  readonly email?: string | undefined
+  readonly dialCode?: string | undefined
+  readonly phone?: string | undefined
 }
 
 /** Cuenta bancaria. La clave interbancaria se valida antes de registrarla. */
 export interface MerchantBank {
-  readonly bankName?: string
+  readonly bankName?: string | undefined
   readonly holderType: "individual" | "company"
   readonly holder: string
   readonly clabe: string
@@ -242,10 +242,10 @@ export interface MerchantBank {
 export interface MerchantRepresentative {
   readonly name: string
   readonly lastname: string
-  readonly email?: string
-  readonly dialCode?: string
-  readonly phone?: string
-  readonly taxId?: string
+  readonly email?: string | undefined
+  readonly dialCode?: string | undefined
+  readonly phone?: string | undefined
+  readonly taxId?: string | undefined
   readonly birthdate: { day: number; month: number; year: number }
   readonly address: {
     line1: string
@@ -255,12 +255,12 @@ export interface MerchantRepresentative {
     country: string
   }
   readonly relationship: {
-    title?: string
-    isDirector?: boolean
-    isExecutive?: boolean
-    isRepresentative?: boolean
-    isOwner?: boolean
-    percentOwnership?: number
+    title?: string | undefined
+    isDirector?: boolean | undefined
+    isExecutive?: boolean | undefined
+    isRepresentative?: boolean | undefined
+    isOwner?: boolean | undefined
+    percentOwnership?: number | undefined
   }
 }
 

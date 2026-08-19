@@ -41,6 +41,25 @@ import {
   verifyEmailRoute,
 } from "./auth.ts"
 import {
+  cancelSubscriptionRoute,
+  changePlanRoute,
+  createMerchantProfileRoute,
+  deleteMerchantProfileRoute,
+  entitlementsRoute,
+  freePlanAvailabilityRoute,
+  getMerchantProfileRoute,
+  listMerchantPaymentsRoute,
+  listMerchantProfilesRoute,
+  listPlansRoute,
+  listSubscriptionPaymentsRoute,
+  operatingProfileRoute,
+  reactivateSubscriptionRoute,
+  setPrimaryMerchantProfileRoute,
+  subscribeRoute,
+  updateMerchantProfileRoute,
+  verifyMerchantProfileRoute,
+} from "./billing.ts"
+import {
   addChildRoute,
   addMeasurementRoute,
   createProductRoute,
@@ -260,6 +279,34 @@ export const routes: readonly RegisteredRoute[] = [
   categoryScopeRoute,
   deleteCategoryRoute,
   // Pendiente de la rebanada 10: prospectos.
+
+  // ─── Suscripción y facturación ─────────────────────────────────────────────
+  // El catálogo y la disponibilidad del plan gratuito son de la persona: se consultan antes de
+  // tener empresa contra la que resolver un permiso.
+
+  listPlansRoute,
+  freePlanAvailabilityRoute,
+
+  entitlementsRoute,
+
+  subscribeRoute,
+  changePlanRoute,
+  cancelSubscriptionRoute,
+  reactivateSubscriptionRoute,
+  listSubscriptionPaymentsRoute,
+
+  // El perfil operativo va antes que el de identificador: `operating` no es un UUID, y con el
+  // orden al revés lo capturaría la ruta con parámetro.
+  operatingProfileRoute,
+  listMerchantProfilesRoute,
+  createMerchantProfileRoute,
+  getMerchantProfileRoute,
+  updateMerchantProfileRoute,
+  setPrimaryMerchantProfileRoute,
+  verifyMerchantProfileRoute,
+  deleteMerchantProfileRoute,
+
+  listMerchantPaymentsRoute,
 
   // ─── Almacenes ─────────────────────────────────────────────────────────────
   listWarehousesRoute,

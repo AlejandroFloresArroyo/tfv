@@ -175,8 +175,11 @@ describe("un almacén pertenece a una empresa", () => {
       session.cookie,
     )
 
-    expect(response.status).toBe(422)
-    expect(await response.text()).toContain("servicio de almacenes")
+    // Desde la rebanada 11 la habilitación es una compuerta del guardián, no una comprobación del
+    // manejador: se responde `403` con un código propio antes de que el manejador corra. Que sea
+    // distinguible del permiso es lo que permite a la pantalla decir cuál de las dos cosas falta.
+    expect(response.status).toBe(403)
+    expect(await response.text()).toContain("service_not_enabled")
   })
 
   it("con el servicio contratado se crea con su identificador legible", async () => {
