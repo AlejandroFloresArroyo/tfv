@@ -178,6 +178,20 @@ export function apiEnv(): Record<string, string> {
     // Fijo, para que un enlace público firmado siga valiendo si el servicio se reinicia entre dos
     // pasadas. Sin él se firma con uno al azar por proceso.
     DOCUMENTS_LINK_SECRET: "e2e-firma-de-enlaces-publicos-de-prueba",
+    /**
+     * El limitador de frecuencia, apagado.
+     *
+     * Son 300 peticiones por minuto y por dirección, y aquí **dieciséis trabajadores comparten
+     * `127.0.0.1`**: la suite se estrangula sola y devuelve `429` a mitad de un recorrido, con un
+     * fallo que parece de la pantalla y es del vecino de al lado. No se apaga porque estorbe: se
+     * apaga porque en esta suite la dirección no distingue a nadie, que es justo lo que el
+     * limitador necesita para significar algo.
+     *
+     * Ojo con lo que esto **no** prueba: que el límite sea el correcto para gente de verdad
+     * detrás de una misma salida a internet —una oficina entera comparte dirección—. Eso no se
+     * mide aquí.
+     */
+    RATE_LIMIT_ENABLED: "false",
     NODE_ENV: "development",
   }
 }
