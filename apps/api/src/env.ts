@@ -85,6 +85,8 @@ const schema = z
      * repartidos, que es la única forma de revocarlos.
      */
     DOCUMENTS_LINK_SECRET: z.string().min(32).optional(),
+
+    /**
      * El almacenamiento de objetos, y la credencial con la que se le pide permiso.
      *
      * Los bytes **no pasan por aquí**: la API firma una autorización de escritura acotada a un
