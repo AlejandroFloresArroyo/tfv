@@ -86,6 +86,8 @@ export {
   Badge,
   type BadgeTone,
   Panel,
+  Rail,
+  RailKey,
   Separator,
   Skeleton,
 } from "./components/surfaces.tsx"

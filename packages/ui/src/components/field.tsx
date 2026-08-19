@@ -41,10 +41,19 @@ export function Field({ label, hint, error, required, className, children }: Fie
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
+      {/*
+        La etiqueta va en voz de contenido, no en la voz de aparato del sistema.
+
+        El aparato —once píxeles, versalitas, muy espaciado— nombra columnas, estados y metadatos,
+        que son cosas que se recorren con la vista. Una etiqueta de formulario se **lee**, a menudo
+        por alguien que abre esta pantalla por primera vez, y en español las etiquetas son largas:
+        «Correo de acceso», «Frecuencia de cobro». En versalitas apretadas a once píxeles eso deja
+        de leerse y empieza a descifrarse. El mundo manda en el aparato; la tarea manda aquí.
+      */}
       <label htmlFor={id} className="text-body2 font-semibold text-content">
         {label}
         {required ? (
-          <span className="ml-1 text-danger" aria-hidden="true">
+          <span className="ml-1 text-tinta-alto" aria-hidden="true">
             *
           </span>
         ) : null}
@@ -65,7 +74,7 @@ export function Field({ label, hint, error, required, className, children }: Fie
 
       {/* `role="alert"` para que el error se anuncie al aparecer, no sólo al recorrer el formulario. */}
       {error ? (
-        <p id={errorId} role="alert" className="text-body3 font-medium text-danger">
+        <p id={errorId} role="alert" className="text-body3 font-semibold text-tinta-alto">
           {error}
         </p>
       ) : null}
@@ -85,13 +94,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     <input
       ref={ref}
       className={cn(
-        // `border-field`, no `border-line`: el borde de un control tiene que llegar a 3:1 porque es
-        // lo que indica dónde se puede escribir. Ver la nota de contraste en `tokens.css`.
-        "h-10 w-full rounded-sm border border-field bg-panel px-3",
+        // `rule-field` y no un filete: el borde de un control se dibuja con un píxel de CSS
+        // completo, no con medio. Un campo cuyo límite no se ve es el defecto que este sistema ya
+        // había corregido una vez, y el motor de rayado no es razón para volver a cometerlo.
+        "h-[var(--control-h)] w-full rule-field bg-panel px-3",
         "text-body1 text-content placeholder:text-content-faint",
-        "transition-colors duration-150",
+        "transition-colors duration-150 ease-[--ease-out-soft]",
         "hover:border-content-muted",
-        "aria-invalid:border-danger",
+        "aria-invalid:border-[var(--marca-alto)]",
         "disabled:cursor-not-allowed disabled:opacity-60",
         className,
       )}
@@ -119,11 +129,11 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
       ref={ref}
       rows={rows}
       className={cn(
-        "w-full resize-y rounded-sm border border-field bg-panel px-3 py-2",
+        "w-full resize-y rule-field bg-panel px-3 py-2",
         "text-body1 text-content placeholder:text-content-faint",
-        "transition-colors duration-150",
+        "transition-colors duration-150 ease-[--ease-out-soft]",
         "hover:border-content-muted",
-        "aria-invalid:border-danger",
+        "aria-invalid:border-[var(--marca-alto)]",
         "disabled:cursor-not-allowed disabled:opacity-60",
         className,
       )}
@@ -172,7 +182,7 @@ export const AmountInput = forwardRef<HTMLInputElement, AmountInputProps>(functi
       autoComplete="off"
       value={value}
       onChange={(event) => onValueChange(sanitizeAmount(event.target.value, { negative, decimal }))}
-      className={cn("text-right tabular-nums", prefix ? "rounded-l-none" : "", className)}
+      className={cn("text-right font-mono tnum", className)}
       {...rest}
     />
   )
@@ -182,7 +192,7 @@ export const AmountInput = forwardRef<HTMLInputElement, AmountInputProps>(functi
   return (
     <div className="flex">
       <span
-        className="inline-flex h-10 items-center rounded-l-sm border border-r-0 border-field bg-panel-sunken px-3 text-body2 text-content-muted"
+        className="inline-flex h-[var(--control-h)] items-center rule-field border-r-0 bg-panel-sunken px-3 text-body2 text-content-muted"
         aria-hidden="true"
       >
         {prefix}

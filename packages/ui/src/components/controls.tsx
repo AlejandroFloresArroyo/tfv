@@ -23,11 +23,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
         <select
           ref={ref}
           className={cn(
-            "h-10 w-full appearance-none rounded-sm border border-field bg-panel pr-9 pl-3",
+            "h-[var(--control-h)] w-full appearance-none rule-field bg-panel pr-9 pl-3",
             "text-body1 text-content",
-            "transition-colors duration-150",
+            "transition-colors duration-150 ease-[--ease-out-soft]",
             "hover:border-content-muted",
-            "aria-invalid:border-danger",
+            "aria-invalid:border-[var(--marca-alto)]",
             "disabled:cursor-not-allowed disabled:opacity-60",
             className,
           )}
@@ -92,8 +92,11 @@ export function Checkbox({ label, hint, className, id: given, ...rest }: Checkbo
       id={id}
       {...(hintId ? { "aria-describedby": hintId } : {})}
       className={cn(
-        "grid size-4.5 shrink-0 place-items-center rounded-xs border border-field bg-panel",
-        "transition-colors duration-150",
+        // Cuadrada y sin radio, como todas las marcas del sistema. El tamaño sube a 20 px porque
+        // en tacto una casilla de 18 con guantes se falla, y aquí el tacto es la calibración de
+        // partida; el área sensible la da el `<label>`, que ya está atado.
+        "grid size-5 shrink-0 place-items-center rule-field bg-panel",
+        "transition-colors duration-150 ease-[--ease-out-soft]",
         "hover:border-content-muted",
         "data-[state=checked]:border-accent data-[state=checked]:bg-accent",
         "data-[state=indeterminate]:border-accent data-[state=indeterminate]:bg-accent",
@@ -165,9 +168,11 @@ export function Switch({ label, className, id: given, required, ...rest }: Switc
       id={id}
       {...(required === undefined ? {} : { required })}
       className={cn(
-        "relative h-5.5 w-9.5 shrink-0 rounded-xl border border-transparent bg-line-strong",
-        "transition-colors duration-150",
-        "data-[state=checked]:bg-accent",
+        // Una vía de dos posiciones, cuadrada. La píldora con disco del sistema anterior era la
+        // única forma redonda que quedaba en pantalla, y en este mundo no hay ninguna.
+        "relative h-6 w-11 shrink-0 rule-field bg-panel-sunken",
+        "transition-colors duration-150 ease-[--ease-out-soft]",
+        "data-[state=checked]:border-accent data-[state=checked]:bg-accent",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
@@ -175,9 +180,11 @@ export function Switch({ label, className, id: given, required, ...rest }: Switc
     >
       <SwitchPrimitive.Thumb
         className={cn(
-          "block size-4.5 rounded-full bg-panel shadow-sm",
-          "translate-x-0.5 transition-transform duration-150 ease-[--ease-out-soft]",
-          "data-[state=checked]:translate-x-4.5",
+          // Un solo eje y sin rebote: el bloque llega a su posición y se queda. Un interruptor que
+          // se pasa de tope y vuelve es la firma del software de consumo.
+          "block h-full w-1/2 bg-content",
+          "translate-x-0 transition-transform duration-150 ease-[--ease-out-soft]",
+          "data-[state=checked]:translate-x-full data-[state=checked]:bg-on-accent",
         )}
       />
     </SwitchPrimitive.Root>

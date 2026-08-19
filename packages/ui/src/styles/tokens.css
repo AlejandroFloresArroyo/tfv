@@ -476,6 +476,12 @@
   --focus: #1877d4;
   --overlay: rgb(16 17 20 / 0.5);
 
+  /* Relleno destructivo. Va aparte de `--marca-alto` porque una marca se mide contra el lienzo que
+     la rodea, y un relleno contra el texto que lleva encima: son dos preguntas distintas y dan dos
+     valores distintos. Blanco sobre este rojo da 6.54:1. */
+  --danger-fill: #b3261e;
+  --on-danger: #ffffff;
+
   /* ─── Escalera semántica ────────────────────────────────────────────────────
      Siete entradas, fijas y numeradas. Nada se pinta fuera de ellas. Cada una tiene dos valores:
      la **marca** que se traza (mínimo 3:1) y la **tinta** con la que se escribe (mínimo 4.5:1).
@@ -529,6 +535,11 @@
   --focus: #4fa8f0;
   --overlay: rgb(0 0 0 / 0.66);
 
+  /* En oscuro el relleno se invierte, igual que la acción primaria: salmón claro con tinta encima,
+     8.47:1. Un rojo oscuro con texto blanco sobre un panel casi negro no se despega del fondo. */
+  --danger-fill: #ff8a82;
+  --on-danger: #0d0e10;
+
   --marca-reposo: #686c74;
   --tinta-reposo: #a5a8ae;
   --marca-curso: #4fa8f0;
@@ -570,6 +581,10 @@
  * | tinta-leido      |  5.51           |  8.05           | 4.5    |
  * | marca-* (peor)   |  3.57           |  5.96           | 3      |
  *
+ * Rellenos, medidos contra el texto que llevan encima y no contra el lienzo:
+ * tinta sobre oro 12.88 · `on-accent` sobre `accent` 18.08 claro y 17.08 oscuro ·
+ * `on-danger` sobre `danger-fill` 6.54 claro y 8.47 oscuro.
+ *
  * El filete suave (`--rule`) queda deliberadamente por debajo: separa dentro de un grupo, no
  * delimita un control ni comunica estado, y subirlo convertiría cada tabla en una reja.
  */
@@ -593,6 +608,8 @@
   --color-on-rubric: var(--on-rubric);
   --color-focus: var(--focus);
   --color-overlay: var(--overlay);
+  --color-danger-fill: var(--danger-fill);
+  --color-on-danger: var(--on-danger);
 
   --color-marca-reposo: var(--marca-reposo);
   --color-marca-curso: var(--marca-curso);

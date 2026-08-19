@@ -1,6 +1,5 @@
 "use client"
 
-import { Check } from "lucide-react"
 import { DropdownMenu } from "radix-ui"
 import type { ComponentPropsWithoutRef, ReactNode } from "react"
 import { cn } from "../lib/cn.ts"
@@ -32,9 +31,11 @@ export function MenuContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "z-(--z-dialog) min-w-56 overflow-hidden rounded-sm border border-line bg-panel p-1",
-          "shadow-lg shadow-black/10 dark:shadow-black/40",
-          "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+          "z-(--z-dialog) min-w-56 overflow-hidden rule-hard bg-panel p-0",
+          "shadow-[0_6px_20px_rgb(0_0_0/0.18)] dark:shadow-[0_6px_20px_rgb(0_0_0/0.55)]",
+          // Aparece sin escalar: un menú que crece desde el 95% es un rebote disfrazado, y este
+          // mundo se mueve en un solo eje amortiguado o no se mueve.
+          "data-[state=open]:animate-in data-[state=open]:fade-in-0",
           className,
         )}
         {...rest}
@@ -47,14 +48,14 @@ export function MenuContent({
 
 export function MenuLabel({ children }: { children: ReactNode }) {
   return (
-    <DropdownMenu.Label className="px-2.5 py-1.5 text-body3 font-semibold tracking-wide text-content-faint uppercase">
+    <DropdownMenu.Label className="px-3 pt-2.5 pb-1.5 apparatus text-content-faint">
       {children}
     </DropdownMenu.Label>
   )
 }
 
 export function MenuSeparator() {
-  return <DropdownMenu.Separator className="my-1 h-px bg-line" />
+  return <DropdownMenu.Separator className="rule-t" />
 }
 
 export function MenuItem({
@@ -66,8 +67,8 @@ export function MenuItem({
   return (
     <DropdownMenu.Item
       className={cn(
-        "flex cursor-pointer items-center gap-2.5 rounded-xs px-2.5 py-2 text-body2 text-content",
-        "outline-hidden select-none",
+        "flex cursor-pointer items-center gap-2.5 px-3 text-body2 text-content",
+        "h-[var(--control-h)] outline-hidden select-none",
         "data-highlighted:bg-panel-hover",
         "data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
@@ -89,16 +90,20 @@ export function MenuRadioItem({
   return (
     <DropdownMenu.RadioItem
       className={cn(
-        "flex cursor-pointer items-center gap-2.5 rounded-xs px-2.5 py-2 text-body2 text-content",
-        "outline-hidden select-none",
+        "flex cursor-pointer items-center gap-2.5 px-3 text-body2 text-content",
+        "h-[var(--control-h)] outline-hidden select-none",
         "data-highlighted:bg-panel-hover",
         className,
       )}
       {...rest}
     >
-      <span className="grid size-4 shrink-0 place-items-center">
-        <DropdownMenu.ItemIndicator>
-          <Check className="size-4" aria-hidden="true" />
+      {/* La opción elegida se marca con la muesca maciza del sistema, no con una palomita: es la
+          misma marca que dice «activo» en el raíl y en los estados, y repetirla es lo que la hace
+          legible sin leyenda. */}
+      <span className="relative grid size-4 shrink-0 place-items-center">
+        <span className="detent text-marca-reposo" aria-hidden="true" />
+        <DropdownMenu.ItemIndicator className="absolute inset-0 grid place-items-center">
+          <span className="detent detent-filled text-rubric-ink" aria-hidden="true" />
         </DropdownMenu.ItemIndicator>
       </span>
       <span className="min-w-0 flex-1 truncate">{children}</span>

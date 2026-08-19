@@ -9,22 +9,38 @@ import { Spinner } from "./spinner.tsx"
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md" | "lg"
 
+/**
+ * Botón.
+ *
+ * Sin esquina redondeada y sin relleno tintado en los secundarios: el límite de un control se
+ * afirma con filete, igual que en el resto del sistema.
+ *
+ * El primario es la inversión de la tinta —negro sobre claro, claro sobre negro— y se conserva del
+ * sistema anterior porque es correcto: es la señal más fuerte disponible sin gastar un color que
+ * la escalera semántica necesita para significar algo.
+ */
 const VARIANTS: Record<ButtonVariant, string> = {
-  // El primario es el contrario del fondo: así lo definía el tema anterior con
-  // `primaryColor: "foreground"`, y es lo que da el aspecto de la aplicación.
   primary: "bg-accent text-on-accent hover:bg-accent-hover",
-  // Borde de control, no separador: el secundario es un control y su límite tiene que verse.
-  secondary:
-    "bg-panel text-content border border-field hover:bg-panel-hover hover:border-content-muted",
+  // El borde de un control tiene que verse: `rule-field` es un píxel de CSS completo, no un filete
+  // de medio píxel. Ver la nota del motor de rayado en `tokens.css`.
+  secondary: "rule-field bg-panel text-content hover:bg-panel-hover",
   ghost: "bg-transparent text-content-muted hover:bg-panel-hover hover:text-content",
-  // Blanco sobre `red.8` da 4.51:1; sobre `red.7`, 3.84 — por debajo del mínimo para texto.
-  danger: "bg-red-8 text-white hover:bg-red-9",
+  // La destructiva usa el relleno destructivo, no la marca `alto`: una marca se mide contra el
+  // lienzo y un relleno contra su propio texto. Blanco sobre la marca en tema oscuro da 3.01:1.
+  danger: "bg-danger-fill text-on-danger hover:brightness-90",
 }
 
+/**
+ * Los tamaños salen de las dos calibraciones, no de una altura fija.
+ *
+ * En tacto `md` mide 44 px, que es el objetivo mínimo que una mano con guante acierta en una nave;
+ * en escritorio con ratón baja a 34 y la tabla vuelve a caber. Es la respuesta directa a que el
+ * dedo gane en tacto y la densidad en escritorio.
+ */
 const SIZES: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 gap-1.5 text-body3",
-  md: "h-10 px-4 gap-2 text-body2",
-  lg: "h-12 px-6 gap-2 text-body1",
+  sm: "h-[var(--control-h-sm)] px-2.5 gap-1.5 text-body3",
+  md: "h-[var(--control-h)] px-4 gap-2 text-button",
+  lg: "h-[var(--control-h-lg)] px-6 gap-2 text-body1",
 }
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -70,9 +86,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={asChild ? undefined : disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        "inline-flex items-center justify-center rounded-sm font-semibold whitespace-nowrap",
+        "inline-flex items-center justify-center font-semibold whitespace-nowrap",
+        // Un solo eje, amortiguado y sin rebote. El rebote es la firma del software de consumo.
         "transition-colors duration-150 ease-[--ease-out-soft]",
-        "disabled:pointer-events-none disabled:opacity-50",
+        "disabled:pointer-events-none disabled:opacity-55",
         VARIANTS[variant],
         SIZES[size],
         block && "w-full",
