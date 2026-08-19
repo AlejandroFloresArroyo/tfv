@@ -32,6 +32,7 @@ import { FormDialog } from "~/components/form-dialog.tsx"
 import { decimalSeparator } from "~/lib/amount.ts"
 import { api } from "~/lib/api.client.ts"
 import type { MeasurementRow, ProductDetail } from "../../../warehouse.ts"
+import { EditPhotos } from "./product-photos.tsx"
 
 /**
  * Lo que se puede hacer con un producto desde su ficha.
@@ -55,6 +56,7 @@ export interface ProductOptions {
 
 export interface ProductPermissions {
   readonly canEditInfo: boolean
+  /** Las fotos van con la información: es la clave más cercana del catálogo cerrado. Ver H-60. */
   readonly canSelectCategory: boolean
   readonly canEditLocation: boolean
   readonly canEditPayment: boolean
@@ -90,6 +92,17 @@ export function ProductActions({
             label: t("warehouses.products.editInfo"),
             dialog: (control: { open: boolean; onOpenChange: (open: boolean) => void }) => (
               <EditInfo path={path} product={product} {...control} />
+            ),
+          },
+        ]
+      : []),
+    ...(permissions.canEditInfo
+      ? [
+          {
+            key: "photos",
+            label: t("warehouses.products.editPhotos"),
+            dialog: (control: { open: boolean; onOpenChange: (open: boolean) => void }) => (
+              <EditPhotos companyId={companyId} path={path} product={product} {...control} />
             ),
           },
         ]

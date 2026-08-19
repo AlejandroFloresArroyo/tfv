@@ -151,6 +151,9 @@ export default async function NewProductPage({
           canSelectCategory,
           canEditLocation,
           canPublish: can(company, "warehouses.products.website"),
+          // Las fotos van con la información del producto: es la clave más cercana del catálogo
+          // cerrado de 255. Ver `HALLAZGOS.md` H-60.
+          canEditPhotos: can(company, "warehouses.products.edit_info"),
         }}
       />
     </PageShell>
