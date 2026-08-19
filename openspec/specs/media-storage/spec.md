@@ -249,6 +249,15 @@ persistidas, porque están incrustadas en documentos generados y en enlaces comp
 - **WHEN** se lee dos veces la entidad que referencia un archivo
 - **THEN** la dirección pública del archivo es la misma
 
+#### Scenario: Un cambio de proveedor mueve las direcciones ya guardadas
+
+- **GIVEN** archivos cuyas direcciones apuntan al almacenamiento anterior
+- **WHEN** se cambia de proveedor y se ejecuta la actualización de direcciones
+- **THEN** cada archivo apunta al almacenamiento nuevo, conservando su clave
+- **AND** los archivos que no colgaban del almacenamiento anterior quedan intactos
+- **AND** volver a ejecutarla no cambia nada
+- **AND** los marcadores de posición se actualizan como cualquier otro archivo
+
 ### Requirement: Sólo se aceptan tipos de contenido conocidos
 
 La API SHALL rechazar con `400` una solicitud de subida cuyo tipo de contenido declarado no figure
