@@ -12,12 +12,12 @@
 
 ## Catálogos
 
-- [ ] Personajes
-- [ ] Eliminar un personaje deja sin personaje sus continuidades
-- [ ] Sets con sus artículos; un artículo puede estar en varios
-- [ ] Eliminar un set no elimina sus artículos
-- [ ] Biblioteca de videos con reproducción
-- [ ] Eliminar un video retira las piezas de utilería que lo señalaban
+- [x] Personajes
+- [x] Eliminar un personaje deja sin personaje sus continuidades
+- [x] Sets con sus artículos; un artículo puede estar en varios
+- [x] Eliminar un set no elimina sus artículos
+- [x] Biblioteca de videos con reproducción
+- [x] Eliminar un video retira las piezas de utilería que lo señalaban
 
 ## Desglose
 
@@ -47,7 +47,7 @@
 - [ ] Notas de jornada
 - [ ] Consulta de la continuidad de un personaje
 - [ ] Vista completa de una jornada
-- [ ] Consulta de dónde se ha usado un artículo
+- [x] Consulta de dónde se ha usado un artículo — sets y jornadas, con la continuidad concreta
 
 ## Referencias
 
