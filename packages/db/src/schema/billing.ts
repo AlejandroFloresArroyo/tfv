@@ -125,6 +125,23 @@ export const companySubscriptions = pgTable(
      */
     gracePeriodEndsAt: timestamp("grace_period_ends_at", { withTimezone: true, mode: "date" }),
 
+    /**
+     * El descuento aplicado, y por qué.
+     *
+     * **Vive en la suscripción, no se recalcula en cada ciclo.** La implementación anterior
+     * sincronizaba los asientos en cada renovación reescribiendo las líneas de la suscripción, y en
+     * el camino borraba descuentos y códigos promocionales (`DEFECTS.md` M-07): quien contrataba
+     * con un quince por ciento lo perdía al mes siguiente, sin que nadie lo tocara ni se enterara.
+     *
+     * Guardado aquí, la sincronización de asientos no tiene por qué mirarlo, que es exactamente la
+     * propiedad que hacía falta.
+     */
+    discountPercent: percent("discount_percent"),
+    /** El código que lo concedió, cuando lo escribió una persona. */
+    promotionCode: varchar("promotion_code", { length: 60 }),
+    /** Su referencia en el procesador, para reconocerlo al reconciliar. */
+    externalDiscountId: varchar("external_discount_id", { length: 120 }),
+
     externalSubscriptionId: varchar("external_subscription_id", { length: 120 }),
     externalCustomerId: varchar("external_customer_id", { length: 120 }),
     externalPriceId: varchar("external_price_id", { length: 120 }),
@@ -138,6 +155,15 @@ export const companySubscriptions = pgTable(
       .where(sql`status <> 'canceled'`),
     uniqueIndex("company_subscriptions_external_unique").on(table.externalSubscriptionId),
     index("company_subscriptions_status_idx").on(table.status, table.periodEnd),
+    /**
+     * El barrido de la gracia.
+     *
+     * Busca suscripciones cuyo periodo de gracia venció sin cobro, y son siempre unas pocas entre
+     * todas las vigentes. Sin este índice el barrido recorre la tabla entera cada vez.
+     */
+    index("company_subscriptions_grace_idx")
+      .on(table.gracePeriodEndsAt)
+      .where(sql`grace_period_ends_at is not null`),
   ],
 )
 
@@ -195,16 +221,16 @@ export interface MerchantBusiness {
   readonly type: "individual" | "company" | "government_entity" | "non_profit"
   readonly legalName: string
   readonly taxId: string
-  readonly taxRegime?: string
-  readonly invoiceUse?: string
-  readonly email?: string
-  readonly dialCode?: string
-  readonly phone?: string
+  readonly taxRegime?: string | undefined
+  readonly invoiceUse?: string | undefined
+  readonly email?: string | undefined
+  readonly dialCode?: string | undefined
+  readonly phone?: string | undefined
 }
 
 /** Cuenta bancaria. La clave interbancaria se valida antes de registrarla. */
 export interface MerchantBank {
-  readonly bankName?: string
+  readonly bankName?: string | undefined
   readonly holderType: "individual" | "company"
   readonly holder: string
   readonly clabe: string
@@ -216,10 +242,10 @@ export interface MerchantBank {
 export interface MerchantRepresentative {
   readonly name: string
   readonly lastname: string
-  readonly email?: string
-  readonly dialCode?: string
-  readonly phone?: string
-  readonly taxId?: string
+  readonly email?: string | undefined
+  readonly dialCode?: string | undefined
+  readonly phone?: string | undefined
+  readonly taxId?: string | undefined
   readonly birthdate: { day: number; month: number; year: number }
   readonly address: {
     line1: string
@@ -229,12 +255,12 @@ export interface MerchantRepresentative {
     country: string
   }
   readonly relationship: {
-    title?: string
-    isDirector?: boolean
-    isExecutive?: boolean
-    isRepresentative?: boolean
-    isOwner?: boolean
-    percentOwnership?: number
+    title?: string | undefined
+    isDirector?: boolean | undefined
+    isExecutive?: boolean | undefined
+    isRepresentative?: boolean | undefined
+    isOwner?: boolean | undefined
+    percentOwnership?: number | undefined
   }
 }
 

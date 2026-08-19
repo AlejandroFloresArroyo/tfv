@@ -11,6 +11,7 @@
 
 import { serve } from "@hono/node-server"
 import { closeConnection, ping } from "@tfv/db"
+import { localProvider, usePaymentProvider } from "./billing/provider.ts"
 import { env } from "./env.ts"
 import { type RunningDispatcher, startDispatcher } from "./jobs/dispatcher.ts"
 import { registerBuiltinJobs } from "./jobs/handlers.ts"
@@ -38,6 +39,20 @@ async function main() {
           : "Revisa DATABASE_URL",
     })
     process.exit(1)
+  }
+
+  /**
+   * Qué procesador de pagos hay puesto.
+   *
+   * Sin esta línea queda el de fábrica, que **falla en toda operación de cobro** diciendo qué falta.
+   * El suplente se pide de forma explícita y se anuncia en el registro, para que nadie tenga que
+   * averiguar por qué una suscripción se activó sin que nadie pagara nada.
+   */
+  if (env.PAYMENTS_PROVIDER === "local") {
+    usePaymentProvider(localProvider())
+    rootLogger.warn(
+      "procesador de pagos SUPLENTE: no mueve dinero y las suscripciones se activan sin cobrar",
+    )
   }
 
   const app = createApp(routes)

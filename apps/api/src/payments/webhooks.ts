@@ -43,6 +43,7 @@ import { newId } from "@tfv/contracts"
 import { db, type Transaction } from "@tfv/db"
 import { paymentEvents } from "@tfv/db/schema"
 import { eq } from "drizzle-orm"
+import { BILLING_HANDLERS } from "../billing/events.ts"
 
 export type VerificationFailure =
   | "sin_secreto"
@@ -134,17 +135,18 @@ export type Outcome =
 /**
  * Qué hace el sistema con cada tipo de evento.
  *
- * **Está vacío a propósito.** Los manejadores —sesión completada, factura cobrada, suscripción
- * modificada, reembolso, disputa— actúan sobre suscripciones (rebanada 11) y sobre la compra en
- * tienda (17), que no existen todavía. Lo que sí existe ya es lo que protege: la verificación, la
- * unicidad y la transaccionalidad.
+ * **Estuvo vacío hasta la rebanada 11**, y el comentario de entonces decía por qué: los manejadores
+ * actúan sobre suscripciones, que no existían. Ya existen, y viven en `billing/events.ts` —aquí
+ * sólo se enchufan— porque lo que este archivo protege es la recepción, no el dominio: la
+ * verificación de la firma, la unicidad y la transaccionalidad no dependen de qué se haga después.
  *
- * Mientras esté vacío, todo tipo cae en «sin manejador», que responde éxito y deja constancia — que
- * es exactamente lo que la spec pide para un tipo no atendido, y lo que evita que el procesador
- * reintente indefinidamente y acabe desactivando el endpoint.
+ * Sigue faltando el cobro en tienda pública (`payment_intent.*`), que es de la rebanada 18. Lo que
+ * no esté en la tabla cae en «sin manejador», que responde éxito y deja constancia — que es lo que
+ * la spec pide para un tipo no atendido, y lo que evita que el procesador reintente indefinidamente
+ * y acabe desactivando el endpoint.
  */
 const HANDLERS: Readonly<Record<string, (tx: Transaction, event: PaymentEvent) => Promise<void>>> =
-  {}
+  BILLING_HANDLERS
 
 /**
  * Recibe un evento ya verificado.

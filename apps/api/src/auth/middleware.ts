@@ -14,6 +14,12 @@
 
 import { missingPermission, type PermissionKey, UnauthenticatedError } from "@tfv/contracts"
 import type { Context, MiddlewareHandler } from "hono"
+import {
+  assertServiceEnabled,
+  assertSubscriptionOperating,
+  serviceOf,
+  subscriptionGateOn,
+} from "../billing/entitlements.ts"
 import type { AccessRegime } from "../runtime/route.ts"
 import {
   type Authorization,
@@ -153,6 +159,26 @@ function requirePermission(permission: PermissionKey): MiddlewareHandler {
 
     const authorization = await resolveAuthorization(session.userId, companyId)
     if (!allows(authorization, permission)) throw missingPermission(permission)
+
+    /**
+     * Las otras dos compuertas.
+     *
+     * El servicio se **deriva de la clave de permiso** —su primer nivel es `services.keycode`— en
+     * lugar de declararse ruta por ruta. Es lo que cumple «la comprobación SHALL realizarse en el
+     * servidor en cada operación del servicio»: no hay forma de escribir una operación de servicio
+     * que se salte la compuerta, ni de olvidarse de declararla. Ver `billing/entitlements.ts`.
+     *
+     * Y va **después** del permiso a propósito: si faltan las dos cosas, la respuesta habla del
+     * permiso, que es la que no revela qué tiene contratado la empresa a quien no pertenece a ella.
+     *
+     * La elusión del propietario no llega hasta aquí. Lo dice `access-control` con esas palabras:
+     * se aplica sólo a la comprobación de permiso, y un propietario de una empresa sin el servicio
+     * contratado sigue sin poder abrirlo.
+     */
+    const service = serviceOf(permission)
+    if (service) await assertServiceEnabled(companyId, service)
+
+    if (subscriptionGateOn()) await assertSubscriptionOperating(companyId)
 
     c.set("authorization", authorization)
     c.set("grantReason", reasonFor(authorization, permission))

@@ -12,12 +12,15 @@ import {
 import {
   Building2,
   ChevronsUpDown,
+  CreditCard,
   Handshake,
   History,
   LayoutDashboard,
   MapPin,
   Package,
+  Receipt,
   ShieldCheck,
+  Sparkles,
   Truck,
   Users,
 } from "lucide-react"
@@ -99,6 +102,30 @@ export function CompanyNav({
       label: t("addresses.title"),
       icon: <MapPin className="size-4" aria-hidden="true" />,
       permission: "companies.addresses.view",
+    },
+    {
+      // El plan, los perfiles de facturación y los cobros comparten `companies.billings.*`: el
+      // catálogo está cerrado en las 255 claves migradas y no tiene ninguna de suscripciones. Ver
+      // `HALLAZGOS.md` H-84.
+      section: "settings/plan",
+      href: `/c/${company.id}/settings/plan`,
+      label: t("billing.plan.nav"),
+      icon: <Sparkles className="size-4" aria-hidden="true" />,
+      permission: "companies.billings.view",
+    },
+    {
+      section: "settings/billing",
+      href: `/c/${company.id}/settings/billing`,
+      label: t("billing.profiles.nav"),
+      icon: <CreditCard className="size-4" aria-hidden="true" />,
+      permission: "companies.billings.view",
+    },
+    {
+      section: "settings/payments",
+      href: `/c/${company.id}/settings/payments`,
+      label: t("billing.payments.nav"),
+      icon: <Receipt className="size-4" aria-hidden="true" />,
+      permission: "companies.billings.view",
     },
     {
       // Las tarifas de envío tampoco tienen clave propia entre las 255 (H-96): se exige la de ver
