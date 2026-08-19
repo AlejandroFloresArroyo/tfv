@@ -17,7 +17,8 @@
     "./quote-status": "./src/quote-status.ts",
     "./order-status": "./src/order-status.ts",
     "./order-chat": "./src/order-chat.ts",
-    "./storefront": "./src/storefront.ts"
+    "./storefront": "./src/storefront.ts",
+    "./sections": "./src/sections.ts"
   },
   "scripts": {
     "check": "tsc --noEmit",
