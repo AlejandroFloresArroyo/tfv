@@ -11,6 +11,20 @@
 
 import type { RegisteredRoute } from "../runtime/route.ts"
 import {
+  archiveNotificationRoute,
+  companyActivityRoute,
+  devicesRoute,
+  inboxCountsRoute,
+  inboxRoute,
+  myActivityRoute,
+  openInboxRoute,
+  preferencesRoute,
+  readNotificationRoute,
+  registerDeviceRoute,
+  revokeDeviceRoute,
+  setPreferenceRoute,
+} from "./activity.ts"
+import {
   acceptInvitationRoute,
   changeEmailRoute,
   changePasswordRoute,
@@ -329,6 +343,25 @@ export const routes: readonly RegisteredRoute[] = [
   authorizeUploadRoute,
   reissueTargetsRoute,
   confirmUploadRoute,
+
+  // ─── Bitácora y notificaciones ─────────────────────────────────────────────
+  // La bitácora es de la empresa; la bandeja, las preferencias y los dispositivos son de la persona.
+
+  companyActivityRoute,
+  myActivityRoute,
+
+  inboxRoute,
+  inboxCountsRoute,
+  openInboxRoute,
+  readNotificationRoute,
+  archiveNotificationRoute,
+
+  preferencesRoute,
+  setPreferenceRoute,
+
+  devicesRoute,
+  registerDeviceRoute,
+  revokeDeviceRoute,
 
   // ─── Producciones ──────────────────────────────────────────────────────────
   // Pendiente: rebanada 20.

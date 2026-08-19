@@ -38,7 +38,7 @@ import { claimNext, enqueue, type JobRecord, markDone, markFailed, reclaimStuck 
  * Devuelve un resumen legible —«3 archivos recogidos»— que se registra. Un trabajo que no puede
  * decir qué hizo obliga a ir a mirar a la base para saber si hizo algo.
  */
-export type JobHandler = (payload: Record<string, unknown>) => Promise<string | void>
+export type JobHandler = (payload: Record<string, unknown>) => Promise<string>
 
 export interface RecurringJob {
   readonly kind: string

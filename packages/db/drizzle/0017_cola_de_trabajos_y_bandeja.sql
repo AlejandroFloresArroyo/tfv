@@ -113,6 +113,34 @@ create policy bandeja on public.notification_deliveries
   using (notification_deliveries.recipient_id = (select app.uid()))
   with check (notification_deliveries.recipient_id = (select app.uid()));
 
+-- ─── Y las entrega el despachador ────────────────────────────────────────────
+--
+-- Entregar un aviso es leer de quién es, mirar si esa persona lo quiere por ese canal, mandarlo y
+-- anotar el resultado. Nada de eso cabe en la identidad de nadie: quien crea una cotización no puede
+-- leer las preferencias de los doce miembros a los que hay que avisar, y **no debe poder**.
+--
+-- Por eso la entrega corre en la vía de sistema y estas tres políticas la dejan pasar. Las de
+-- preferencias y dispositivos son **sólo de lectura**: el despachador decide con ellas, no las
+-- cambia; cambiarlas es del titular y sólo del titular.
+--
+-- De aquí no sale nada: la preferencia se consulta para decidir si se envía, y lo que se guarda es
+-- el resultado del envío.
+drop policy if exists despachador on public.notification_deliveries;
+create policy despachador on public.notification_deliveries
+  for all to authenticated
+  using ((select app.declares_operation()))
+  with check ((select app.declares_operation()));
+
+drop policy if exists despachador on public.notification_preferences;
+create policy despachador on public.notification_preferences
+  for select to authenticated
+  using ((select app.declares_operation()));
+
+drop policy if exists despachador on public.push_devices;
+create policy despachador on public.push_devices
+  for select to authenticated
+  using ((select app.declares_operation()));
+
 -- ─── La bitácora es de sólo anexado ──────────────────────────────────────────
 --
 -- «Un asiento de actividad no SHALL poder modificarse ni eliminarse una vez escrito.»

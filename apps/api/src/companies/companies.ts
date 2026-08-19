@@ -28,18 +28,28 @@ import {
   newId,
   type Page,
   type ParsedQuery,
+  type PermissionKey,
   type QuerySchema,
   UnprocessableError,
 } from "@tfv/contracts"
 import { db, type Transaction, withRequester, withSystem } from "@tfv/db"
 import { companies, companyMembers, roles, users } from "@tfv/db/schema"
 import { and, count, eq, isNull, ne } from "drizzle-orm"
+import { recordActivity } from "../activity/activity.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 
 /** Quién realiza la operación. Lo mismo que el motor necesita para resolver la identidad. */
 export interface Actor {
   readonly userId: string
   readonly sessionId: string
+  /**
+   * Lo está haciendo la administración de plataforma sobre una empresa ajena.
+   *
+   * No sirve para autorizar —eso lo resuelve el motor, y traerlo desde la aplicación invitaría a
+   * confiar en un valor que la aplicación puede calcular mal—. Sirve para **marcarlo en la
+   * bitácora**, que es lo que permite distinguir lo que hizo soporte de lo que hizo el cliente.
+   */
+  readonly asPlatformAdmin?: boolean | undefined
 }
 
 export interface CompanyRecord {
@@ -105,6 +115,16 @@ export async function createCompany(
       companyId,
       userId: actor.userId,
       isOwner: true,
+    })
+
+    // Sin clave de permiso: crear una empresa no ocurre *dentro* de ninguna, así que no hay
+    // audiencia que seleccionar. El asiento sí queda, y es el primero de su bitácora.
+    await note(tx, actor, companyId, {
+      action: "create",
+      entityId: companyId,
+      entityLabel: company.name,
+      title: `Creó la empresa «${company.name}»`,
+      permissions: [],
     })
 
     return toCompanyRecord(company)
@@ -203,6 +223,15 @@ export async function updateCompany(
       .returning()
 
     if (!updated) throw new NotFoundError("La empresa no existe")
+
+    await note(tx, actor, companyId, {
+      action: "update",
+      entityId: companyId,
+      entityLabel: updated.name,
+      title: `Editó los datos de «${updated.name}»`,
+      permissions: ["companies.companies.edit"],
+    })
+
     return toCompanyRecord(updated)
   })
 }
@@ -221,7 +250,19 @@ export async function updateCompany(
  */
 export async function deleteCompany(actor: Actor, companyId: string): Promise<void> {
   await withRequester(actor, async (tx) => {
-    await loadCompany(tx, companyId)
+    const company = await loadCompany(tx, companyId)
+
+    // El asiento se escribe **antes** de la baja: después, la empresa ya no está entre las del
+    // solicitante —`app.member_of()` excluye las dadas de baja— y la política del asiento no
+    // dejaría anexarlo. Es la misma transacción, así que el orden es lo único que hay que acertar.
+    await note(tx, actor, companyId, {
+      action: "delete",
+      entityId: companyId,
+      entityLabel: company.name,
+      title: `Dio de baja la empresa «${company.name}»`,
+      permissions: ["companies.companies.delete"],
+    })
+
     await tx.update(companies).set({ deletedAt: new Date() }).where(eq(companies.id, companyId))
   })
 }
@@ -361,7 +402,19 @@ export async function addMember(
       isOwner: false,
     })
 
-    return await readMember(tx, companyId, invited.id)
+    const member = await readMember(tx, companyId, invited.id)
+
+    await note(tx, actor, companyId, {
+      action: "create",
+      entity: "company_members",
+      entityId: member.id,
+      entityLabel: member.email,
+      title: `Incorporó a ${member.email}`,
+      url: `/${companyId}/miembros`,
+      permissions: ["companies.users.invite"],
+    })
+
+    return member
   })
 }
 
@@ -408,7 +461,21 @@ export async function updateMember(
       await tx.update(companyMembers).set(patch).where(eq(companyMembers.id, memberId))
     }
 
-    return await readMember(tx, companyId, member.userId)
+    const updated = await readMember(tx, companyId, member.userId)
+
+    if (Object.keys(patch).length > 0) {
+      await note(tx, actor, companyId, {
+        action: "update",
+        entity: "company_members",
+        entityId: memberId,
+        entityLabel: updated.email,
+        title: `Cambió la membresía de ${updated.email}`,
+        url: `/${companyId}/miembros`,
+        permissions: ["companies.users.change-role"],
+      })
+    }
+
+    return updated
   })
 }
 
@@ -424,7 +491,59 @@ export async function removeMember(
     const member = await loadMember(tx, companyId, memberId)
     if (member.isOwner) await assertNotLastOwner(tx, companyId, memberId)
 
+    const retirado = await readMember(tx, companyId, member.userId)
+
     await tx.delete(companyMembers).where(eq(companyMembers.id, memberId))
+
+    await note(tx, actor, companyId, {
+      action: "delete",
+      entity: "company_members",
+      entityId: memberId,
+      entityLabel: retirado.email,
+      title: `Retiró a ${retirado.email} de la empresa`,
+      url: `/${companyId}/miembros`,
+      permissions: ["companies.users.uninvite"],
+    })
+  })
+}
+
+// ─── Bitácora ────────────────────────────────────────────────────────────────
+
+/**
+ * Anota lo que se acaba de hacer, **en la misma transacción**.
+ *
+ * Ver `openspec/specs/activity-and-notifications/spec.md`. Que reciba `tx` y no abra la suya es
+ * todo el requisito: si la mutación se revierte no queda asiento, y si el asiento no se puede
+ * escribir la mutación no se confirma.
+ *
+ * La clave de permiso que se declara aquí es **la misma que protege la ruta**, y ahí está el
+ * vínculo que la spec pide: lo que autoriza la acción selecciona a quién se le cuenta.
+ */
+async function note(
+  tx: Transaction,
+  actor: Actor,
+  companyId: string,
+  input: {
+    action: "create" | "update" | "delete"
+    entity?: string
+    entityId: string
+    entityLabel: string
+    title: string
+    url?: string
+    permissions: readonly PermissionKey[]
+  },
+): Promise<void> {
+  await recordActivity(tx, {
+    companyId,
+    action: input.action,
+    entity: input.entity ?? "companies",
+    entityId: input.entityId,
+    entityLabel: input.entityLabel,
+    title: input.title,
+    url: input.url ?? `/${companyId}`,
+    permissions: input.permissions,
+    performedById: actor.userId,
+    performedAsPlatformAdmin: actor.asPlatformAdmin ?? false,
   })
 }
 
