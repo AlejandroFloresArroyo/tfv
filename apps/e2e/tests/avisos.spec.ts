@@ -82,26 +82,29 @@ test("lo que uno guarda aparece en la bitácora y en la bandeja del otro", async
   // que el campo se guarde —eso lo dice el diálogo al cerrarse— sino a dónde llega el hecho.
 
   // ─── La bitácora: el asiento, con quién y con qué tipo ──────────────────────
-  await actuando.goto(`/c/${companyId}/settings/activity`)
+  await actuando.goto(`/c/${companyId}/settings/activity?action=update`)
 
   /**
-   * Se busca antes de mirar, y se busca **el asiento de quien actuó**, no el más reciente.
+   * Se acota antes de mirar, y se mira **el asiento de quien actuó**, no el más reciente.
    *
    * La bitácora de esta empresa la escriben también las otras pruebas que corren a la vez, y con el
-   * mismo título: «el más reciente» sería el de quien haya guardado un instante antes. Es la
+   * mismo texto: «el más reciente» sería el de quien haya guardado un instante antes. Es la
    * lección de H-23 —comprobar lo propio, no el censo— llevada a una bitácora que, por definición,
    * es de todos.
+   *
+   * Se acota por el **filtro de acción** y no por el buscador: el asiento ya no guarda la frase
+   * sino una clave, así que buscar «Editó los datos de la empresa» no encontraría nada — el
+   * buscador busca por el nombre de la entidad (`HALLAZGOS.md` H-153).
    *
    * Que el asiento sea **de esta pasada** lo demuestra la bandeja de abajo, que se vació al
    * empezar y que sólo esta prueba puede llenar: las demás actúan como la propietaria, y el autor
    * no recibe el suyo.
    */
-  await actuando.getByRole("searchbox").fill("Editó los datos de la empresa")
-
   const asientos = actuando.getByRole("list", { name: "Resultados" }).getByRole("listitem")
-  // El nombre de quien lo hizo es la mitad del «quién hizo qué» que la spec pide.
+  // El nombre de quien lo hizo es la mitad del «quién hizo qué» que la spec pide, y ahora está
+  // **dentro de la frase**: la arma la pantalla, en el idioma de quien mira.
   const mio = asientos.filter({ hasText: "Ale Plataforma" }).first()
-  await expect(mio).toContainText("Editó los datos de la empresa")
+  await expect(mio).toContainText("Ale Plataforma editó los datos de la empresa")
   await expect(mio).toContainText("Cambio")
 
   // ─── La bandeja de la otra: el aviso, y el contador de la campana ───────────

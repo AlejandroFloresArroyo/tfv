@@ -46,7 +46,7 @@
   "activity": {
     "title": "Activity log",
     "subtitle": "What has happened inside {company}. Entries cannot be edited or deleted.",
-    "searchPlaceholder": "Search the log",
+    "searchPlaceholder": "Search by name",
     "action": "Action",
     "when": "When",
     "byPlatform": "Platform support",
@@ -56,6 +56,21 @@
       "create": "Created",
       "update": "Updated",
       "delete": "Removed"
+    },
+    "messages": {
+      "company": {
+        "created": "{actor} created the company",
+        "updated": "{actor} edited the company details",
+        "deleted": "{actor} deactivated the company"
+      },
+      "member": {
+        "invited": "{actor} added {email}",
+        "changed": "{actor} changed the membership of {email}",
+        "removed": "{actor} removed {email} from the company"
+      },
+      "stock": {
+        "incoherent": "The check found {count, plural, one {# mismatched unit} other {# mismatched units}}"
+      }
     }
   },
   "addresses": {

@@ -46,7 +46,7 @@
   "activity": {
     "title": "Bitácora",
     "subtitle": "Lo que ha ocurrido dentro de {company}. Los asientos no se pueden modificar ni borrar.",
-    "searchPlaceholder": "Buscar en la bitácora",
+    "searchPlaceholder": "Buscar por nombre",
     "action": "Acción",
     "when": "Cuándo",
     "byPlatform": "Soporte de plataforma",
@@ -56,6 +56,21 @@
       "create": "Alta",
       "update": "Cambio",
       "delete": "Baja"
+    },
+    "messages": {
+      "company": {
+        "created": "{actor} creó la empresa",
+        "updated": "{actor} editó los datos de la empresa",
+        "deleted": "{actor} dio de baja la empresa"
+      },
+      "member": {
+        "invited": "{actor} incorporó a {email}",
+        "changed": "{actor} cambió la membresía de {email}",
+        "removed": "{actor} retiró a {email} de la empresa"
+      },
+      "stock": {
+        "incoherent": "La verificación encontró {count, plural, one {# unidad descuadrada} other {# unidades descuadradas}}"
+      }
     }
   },
   "addresses": {

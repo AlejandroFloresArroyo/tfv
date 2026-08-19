@@ -1,3 +1,4 @@
+import { noticeWindowName } from "@tfv/contracts/activity"
 import { Badge, cn, Panel } from "@tfv/ui"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
@@ -13,8 +14,11 @@ import { MarkOpened, NotificationActions } from "./notification-actions.tsx"
 interface NotificationRow {
   id: string
   kind: string
+  /** El nombre de la entidad afectada. */
   title: string
-  body: string
+  /** Quién hizo qué, como clave y parámetros: la frase se arma aquí, con el idioma delante. */
+  bodyKey: string
+  bodyParams: Record<string, string | number>
   url: string
   readAt: string | null
   archivedAt: string | null
@@ -52,6 +56,18 @@ export async function generateMetadata(): Promise<Metadata> {
  *
  * Sólo se enseña el canal de bandeja. Los otros dos no tienen proveedor todavía y el bloque de
  * preferencias lo dice en lugar de ofrecer interruptores que no encenderían nada.
+ *
+ * ## Pulsar un aviso abre la entidad, y reutiliza su pestaña
+ *
+ * El enlace lleva **nombre de ventana**, y ahí está todo el requisito: el navegador enfoca la
+ * pestaña que ya se llame así en lugar de abrir otra, que es literalmente «si ya estaba abierta en
+ * otra pestaña, se enfoca esa». Enfocar no se puede probar con una función pura y no hace falta
+ * escribirlo: lo hace el navegador. Lo que sí es decisión nuestra —y lo único que puede estar mal—
+ * es **qué pestaña es la misma pestaña**, y eso lo decide `noticeWindowName`, que se prueba sola.
+ *
+ * La bandeja se queda donde está al pulsar, que además es lo que se quiere: quien tiene cinco
+ * avisos los abre uno tras otro sin perder la lista, y los tres de la misma cotización caen en la
+ * misma pestaña.
  */
 export default async function NotificationsPage({
   searchParams,
@@ -141,7 +157,7 @@ export default async function NotificationsPage({
                 )}
               >
                 <div className="min-w-0 flex-1">
-                  <Link href={item.url} className="rounded-sm">
+                  <Link href={item.url} target={noticeWindowName(item.url)} className="rounded-sm">
                     <p
                       className={cn(
                         "truncate text-body2 text-content",
@@ -150,7 +166,11 @@ export default async function NotificationsPage({
                     >
                       {item.title || t(`notifications.kinds.${kindKey(item.kind)}`)}
                     </p>
-                    <p className="mt-0.5 text-body2 text-content-muted">{item.body}</p>
+                    {item.bodyKey ? (
+                      <p className="mt-0.5 text-body2 text-content-muted">
+                        {t(`activity.messages.${item.bodyKey}`, item.bodyParams)}
+                      </p>
+                    ) : null}
                   </Link>
 
                   <p className="mt-1 text-body3 text-content-faint">
