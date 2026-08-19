@@ -7,20 +7,19 @@
  */
 
 import { expect, test, WAREHOUSE_COMPANY } from "../setup/fixtures.ts"
-
-const ORDERS = (companyId: string, warehouseId: string) =>
-  `/c/${companyId}/warehouses/${warehouseId}/orders`
-
-async function firstWarehouse(page: import("@playwright/test").Page, companyId: string) {
-  await page.goto(`/c/${companyId}/warehouses`)
-  await page.getByRole("link", { name: "Nave Monterrey" }).click()
-  await page.waitForURL(/\/warehouses\/[^/]+$/)
-  return page.url().split("/warehouses/")[1] as string
-}
+import { firstWarehouse, ORDERS } from "../setup/warehouse.ts"
 
 test.describe("la bandeja de pedidos", () => {
   /** Lo creado por cada prueba, para llevárselo al terminar. */
   const trash: { companyId: string; warehouseId: string; orderId: string }[] = []
+
+  /**
+   * Un nombre irrepetible, aunque dos copias de la misma prueba arranquen en el mismo milisegundo.
+   *
+   * La ficha se busca por su nombre en la bandeja, así que dos pedidos que se llamen igual hacen
+   * que la prueba mire el de la vecina. Con `--repeat-each` eso deja de ser hipotético.
+   */
+  const marca = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
 
   test.afterEach(async ({ as }) => {
     if (trash.length === 0) return
@@ -62,8 +61,16 @@ test.describe("la bandeja de pedidos", () => {
         name,
         lines: [
           { measurementId: roomy?.measurementId, quantity: 1 },
-          // Más de lo que hay: es lo que la ficha tiene que señalar antes de aceptar.
-          { measurementId: scarce?.measurementId, quantity: (scarce?.available ?? 0) + 5 },
+          /**
+           * Más de lo que hay, **con margen de sobra**.
+           *
+           * Antes se pedían cinco unidades más de las libres, y la nave entera tiene ciento treinta
+           * y dos: basta con que una prueba vecina cancele una renta entre la lectura y la
+           * comprobación para que esas cinco quepan y la falta desaparezca. La existencia libre que
+           * se acaba de leer es una foto, no una reserva — es la misma trampa que `ownQuote` lleva
+           * anotada. Con quinientas no hay cancelación posible que las cubra.
+           */
+          { measurementId: scarce?.measurementId, quantity: (scarce?.available ?? 0) + 500 },
         ],
       },
     })
@@ -83,7 +90,7 @@ test.describe("la bandeja de pedidos", () => {
     const page = await context.newPage()
     const companyId = companies[WAREHOUSE_COMPANY] as string
     const warehouseId = await firstWarehouse(page, companyId)
-    const name = `Solicitud ${Date.now()}`
+    const name = `Solicitud ${marca()}`
     await shortOrder(context, companyId, warehouseId, name)
 
     await page.goto(ORDERS(companyId, warehouseId))
@@ -115,7 +122,7 @@ test.describe("la bandeja de pedidos", () => {
     const page = await context.newPage()
     const companyId = companies[WAREHOUSE_COMPANY] as string
     const warehouseId = await firstWarehouse(page, companyId)
-    const name = `Rechazo ${Date.now()}`
+    const name = `Rechazo ${marca()}`
     const orderId = await shortOrder(context, companyId, warehouseId, name)
 
     await page.goto(`${ORDERS(companyId, warehouseId)}/${orderId}`)

@@ -11,119 +11,7 @@
  */
 
 import { expect, test, WAREHOUSE_COMPANY } from "../setup/fixtures.ts"
-
-const QUOTES = (companyId: string, warehouseId: string) =>
-  `/c/${companyId}/warehouses/${warehouseId}/quotes`
-
-/** Lo que una prueba creó y tiene que llevarse al terminar. */
-interface Created {
-  companyId: string
-  warehouseId: string
-  quoteId: string
-}
-
-/**
- * Crea una cotización de renta **propia**, con equipo dentro si se le pide.
- *
- * Las pruebas que escriben no pueden compartir documento: el guardado de líneas y el de condiciones
- * de pago mandan **el conjunto completo**, así que dos que corran a la vez sobre el mismo se borran
- * lo que la otra acaba de escribir. Con `--repeat-each` la prueba compite además consigo misma.
- *
- * Toma la medida con **más unidades libres**, para no dejar seco al buscador que otra prueba está
- * usando en ese mismo instante.
- */
-async function ownQuote(
-  context: import("@playwright/test").BrowserContext,
-  companyId: string,
-  warehouseId: string,
-  name: string,
-  trash: Created[],
-  units = 0,
-): Promise<string> {
-  const warehouse = `/api/companies/${companyId}/warehouses/${warehouseId}`
-  const attempt = async (measurementId?: string) =>
-    await context.request.post(`${warehouse}/quotes`, {
-      data: {
-        type: "rent",
-        name,
-        startsOn: "2026-09-03T00:00:00.000Z",
-        endsOn: "2026-09-10T00:00:00.000Z",
-        ...(measurementId === undefined ? {} : { lines: [{ measurementId, quantity: units }] }),
-      },
-    })
-
-  let created = units > 0 ? undefined : await attempt()
-
-  if (units > 0) {
-    const rates = await context.request.get(`${warehouse}/rates?availableForRent=true&limit=30`)
-    expect(rates.ok(), "no se pudieron leer las tarifas").toBe(true)
-    const { items } = (await rates.json()) as {
-      items: { measurementId: string; available: number }[]
-    }
-
-    // **En orden aleatorio, y reintentando.** Quedarse siempre con la más abundante hace que todas
-    // las pruebas que corren a la vez se peleen por la misma medida; y aun eligiendo al azar, otra
-    // prueba puede haberse llevado esas unidades entre la consulta y el alta. La existencia libre
-    // que se leyó hace un instante es una foto, no una reserva.
-    const roomy = items
-      .filter((item) => item.available >= units)
-      .map((item) => ({ item, order: Math.random() }))
-      .sort((a, b) => a.order - b.order)
-      .map(({ item }) => item)
-    expect(roomy.length, "el almacén no tiene equipo libre que rentar").toBeGreaterThan(0)
-
-    for (const { measurementId } of roomy) {
-      created = await attempt(measurementId)
-      if (created.ok()) break
-    }
-  }
-
-  expect(created?.ok(), `no se pudo crear ${name}: ${await created?.text()}`).toBe(true)
-
-  const quote = (await (created as import("@playwright/test").APIResponse).json()) as {
-    id: string
-  }
-  trash.push({ companyId, warehouseId, quoteId: quote.id })
-  return quote.id
-}
-
-/**
- * Se lleva lo que creó una prueba.
- *
- * **Sin navegar**: una limpieza que necesita abrir una página y pulsar un enlace se cae con la
- * prueba que acaba de fallar, y entonces lo creado se queda para siempre. Cancelar antes de borrar,
- * porque cancelar es lo que devuelve el equipo a la nave.
- */
-async function sweep(context: import("@playwright/test").BrowserContext, trash: Created[]) {
-  for (const { companyId, warehouseId, quoteId } of trash.splice(0)) {
-    const base = `/api/companies/${companyId}/warehouses/${warehouseId}/quotes/${quoteId}`
-
-    // Primero el retorno de lo que esté fuera: cancelar proyecta el inventario a disponible, y con
-    // el equipo en la calle el servidor lo rechaza —con razón, porque escribiría que hay cámaras
-    // en el estante que no están.
-    const out = await context.request.get(`${base}/units`)
-    if (out.ok()) {
-      const { items } = (await out.json()) as { items: { id: string; status: string }[] }
-      const rented = items.filter((unit) => unit.status === "rented")
-      if (rented.length > 0) {
-        await context.request.post(`${base}/returns`, {
-          data: { units: rented.map((unit) => ({ unitId: unit.id, status: "available" })) },
-        })
-      }
-    }
-
-    await context.request.patch(`${base}/status`, { data: { status: "canceled" } })
-    await context.request.delete(base)
-  }
-}
-
-/** El primer almacén de la empresa, tal y como lo encuentra quien entra por la navegación. */
-async function firstWarehouse(page: import("@playwright/test").Page, companyId: string) {
-  await page.goto(`/c/${companyId}/warehouses`)
-  await page.getByRole("link", { name: "Nave Monterrey" }).click()
-  await page.waitForURL(/\/warehouses\/[^/]+$/)
-  return page.url().split("/warehouses/")[1] as string
-}
+import { type Created, firstWarehouse, ownQuote, QUOTES, sweep } from "../setup/warehouse.ts"
 
 test.describe("la bandeja de cotizaciones", () => {
   test("llega ordenada por lo que hay que atender antes", async ({ as, companies }) => {
@@ -663,7 +551,13 @@ test.describe("la extensión de renta", () => {
     // Nace en renta, enlazada, con su ventana y sin precio: el periodo es otro.
     await expect(page.getByText("En renta").first()).toBeVisible()
     await expect(page.getByRole("link", { name: /Extiende a/ })).toBeVisible()
-    await expect(page.getByText(/17 sept 2026/)).toBeVisible()
+    // La ventana es la que se pidió en el diálogo. Se lee de los campos y no de una fecha
+    // compuesta: la ficha de una cotización **no imprime la fecha en prosa** en ninguna parte —la
+    // enseña editable—, y afirmarlo contra un formato inventado era comprobar una presentación que
+    // no existe.
+    await expect(page.getByLabel("Empieza")).toHaveValue("2026-09-17")
+    await expect(page.getByLabel("Termina")).toHaveValue("2026-10-01")
+    await expect(page.getByText("14 días")).toBeVisible()
     await expect(page.getByText(/no tiene precio/i)).toBeVisible()
 
     // Dos unidades responden a la extensión, y la que no sigue se quedó en la original.
