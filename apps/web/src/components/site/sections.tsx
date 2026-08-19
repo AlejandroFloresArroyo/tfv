@@ -47,8 +47,10 @@ export interface SectionsCatalog {
   readonly products: readonly SectionProduct[]
   /** Cómo se escribe un importe. Lo inyecta quien pinta, para no formatear dinero aquí. */
   readonly money: (amount: string) => string
-  /** Qué decir cuando una sección de catálogo no tiene nada que enseñar. */
-  readonly emptyLabel: string
+  /** Qué decir cuando una sección de catálogo no tiene nada que enseñar. Distinto por sección: un
+   * bloque de categorías vacío no dice «no hay productos», que es lo que el visitante no preguntó. */
+  readonly emptyProducts: string
+  readonly emptyCategories: string
   readonly askForPriceLabel: string
 }
 
@@ -159,7 +161,7 @@ function Categories({
     <>
       <Heading section={section} />
       {shown.length === 0 ? (
-        <Empty label={catalog.emptyLabel} />
+        <Empty label={catalog.emptyCategories} />
       ) : (
         <ul className="flex flex-wrap gap-2">
           {shown.map((category) => (
@@ -193,7 +195,7 @@ function Products({
     <>
       <Heading section={section} />
       {shown.length === 0 ? (
-        <Empty label={catalog.emptyLabel} />
+        <Empty label={catalog.emptyProducts} />
       ) : (
         <ul className="grid grid-cols-2 gap-4 tablet:grid-cols-3 desktop:grid-cols-4">
           {shown.map((product) => (

@@ -90,7 +90,8 @@ export default async function StorefrontCatalogPage({
             categories: resolution.site.categories,
             products: sample?.items ?? [],
             money,
-            emptyLabel: t("empty"),
+            emptyProducts: t("empty"),
+            emptyCategories: t("emptyCategories"),
             askForPriceLabel: t("askForPrice"),
           })}
         />

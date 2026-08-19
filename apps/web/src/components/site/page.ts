@@ -40,7 +40,8 @@ export interface CatalogSource {
     readonly coverUrl: string | null
   }[]
   readonly money: (amount: string) => string
-  readonly emptyLabel: string
+  readonly emptyProducts: string
+  readonly emptyCategories: string
   readonly askForPriceLabel: string
 }
 
@@ -61,7 +62,8 @@ export function sectionsCatalog(source: CatalogSource): SectionsCatalog {
       href: `/s/${source.slug}/p/${product.slug ?? product.id}`,
     })),
     money: source.money,
-    emptyLabel: source.emptyLabel,
+    emptyProducts: source.emptyProducts,
+    emptyCategories: source.emptyCategories,
     askForPriceLabel: source.askForPriceLabel,
   }
 }

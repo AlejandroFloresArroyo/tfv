@@ -1368,7 +1368,8 @@
     "unavailableBilling": "The company behind it has no active subscription. Please come back later.",
     "unavailableService": "The company behind it does not have the storefront service enabled. Please come back later.",
     "underConstruction": "We are still setting this store up. Come back soon.",
-    "variants": "Variants"
+    "variants": "Variants",
+    "emptyCategories": "No categories to show yet."
   },
   "contact": {
     "companyName": "Company",

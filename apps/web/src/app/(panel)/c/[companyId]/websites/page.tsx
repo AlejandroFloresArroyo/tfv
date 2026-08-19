@@ -47,12 +47,12 @@ export default async function WebsitesPage({ params }: { params: Promise<{ compa
    * La categoría que declara la vertical de almacén.
    *
    * La vertical **se declara con la categoría del sitio**, y la clave estable es lo que el código
-   * reconoce. Se busca en lugar de escribir un identificador: la taxonomía global la administra la
-   * plataforma, y un identificador fijo aquí sería una copia que se rompe al resembrar.
+   * reconoce. Se busca por esa clave en lugar de escribir un identificador: la taxonomía global la
+   * administra la plataforma, y un identificador fijo aquí sería una copia que se rompe al
+   * resembrar. Se piden las raíces sin acotar por servicio: la clave es única y a qué servicio se
+   * adscribió la categoría es decisión de quien administra la taxonomía, no de esta pantalla.
    */
-  const categories = await apiGet<Envelope<{ id: string; keyname: string | null }>>(
-    "/categories?service=websites",
-  )
+  const categories = await apiGet<Envelope<{ id: string; keyname: string | null }>>("/categories")
   const vertical = categories.ok
     ? (categories.data.items.find((entry) => entry.keyname === "warehouse-store")?.id ?? null)
     : null

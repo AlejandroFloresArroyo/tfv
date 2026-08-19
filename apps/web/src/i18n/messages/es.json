@@ -1368,7 +1368,8 @@
     "unavailableBilling": "La empresa que la publica no tiene una suscripción vigente. Vuelve más tarde.",
     "unavailableService": "La empresa que la publica no tiene activo el servicio de tiendas. Vuelve más tarde.",
     "underConstruction": "Estamos preparando esta tienda. Vuelve pronto.",
-    "variants": "Variantes"
+    "variants": "Variantes",
+    "emptyCategories": "Todavía no hay categorías que mostrar."
   },
   "contact": {
     "companyName": "Empresa",

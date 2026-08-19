@@ -258,6 +258,10 @@ export async function updateCustomization(
  * quedan. Determinista, como pide la spec, y con un motivo que se puede decir en voz alta —la que
  * lleva más tiempo en el sitio es la que más se parece a su tema de siempre—; el desempate por
  * identificador no significa nada y no pretende significarlo.
+ *
+ * El banner **no se libera**, igual que en la baja de un sitio: es una baja lógica y la fila sigue
+ * apuntando al archivo. Llamar a `releaseUploads` aquí sería además un gesto vacío —el motor lo ve
+ * referenciado y no lo borraría—, y un gesto vacío que parece hacer algo es peor que no hacerlo.
  */
 export async function deleteCustomization(
   actor: Actor,
@@ -265,7 +269,7 @@ export async function deleteCustomization(
   websiteId: string,
   customizationId: string,
 ): Promise<void> {
-  const released = await withRequester(actor, async (tx) => {
+  await withRequester(actor, async (tx) => {
     await loadWebsite(tx, companyId, websiteId)
     const current = await loadCustomization(tx, websiteId, customizationId)
 
@@ -274,20 +278,16 @@ export async function deleteCustomization(
       .set({ deletedAt: new Date(), updatedAt: new Date(), isPrimary: false })
       .where(eq(websiteCustomizations.id, customizationId))
 
-    if (current.isPrimary) {
-      const [heir] = await customizationsOf(tx, websiteId)
-      if (heir) {
-        await tx
-          .update(websiteCustomizations)
-          .set({ isPrimary: true, updatedAt: new Date() })
-          .where(eq(websiteCustomizations.id, heir.id))
-      }
+    if (!current.isPrimary) return
+
+    const [heir] = await customizationsOf(tx, websiteId)
+    if (heir) {
+      await tx
+        .update(websiteCustomizations)
+        .set({ isPrimary: true, updatedAt: new Date() })
+        .where(eq(websiteCustomizations.id, heir.id))
     }
-
-    return releaseUploads(tx, current.bannerUploadId === null ? [] : [current.bannerUploadId])
   })
-
-  await sweepObjects(released)
 }
 
 // ─── Ayudas ──────────────────────────────────────────────────────────────────

@@ -202,7 +202,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | 16 | `migrate-order-chat-realtime` | 🟡 | 24/38. Historial con cursor, envío optimista, acuses por lado, editar y borrar lo propio, mensajes del sistema y la pertenencia al pedido, con la pantalla dentro de la ficha. **Sin conexión persistente**: pide configuración externa que no hay, y el transporte queda detrás de una costura (H-60) |
 | 17 | `migrate-shipping-rates` | ⬜ | |
 | 18 | `add-transactional-checkout` | ⬜ | |
-| 19 | `migrate-websites-and-site-builder` | ⬜ | |
+| 19 | `migrate-websites-and-site-builder` | 🟡 | 38/49. Sitios, resolución por subdominio, tienda y **el constructor entero**: temas con su campaña programada, secciones con su contenido, reordenación por arrastre y vista previa que comparte función y componente con lo que se sirve. Falta el carrito y la cuenta del comprador, que son de la 18 |
 
 ### Columna de producciones
 
@@ -2992,3 +2992,85 @@ máquina de estados en contratos, 7 de aislamiento en datos —incluida la polí
 en los tres lados— y 19 de extremo a extremo en la API. `pnpm check` y `pnpm lint` limpios. La
 pantalla, ejercitada en un navegador: bajar la base local de `99` a `49` y ver el cálculo siguiente
 pasar de `119.00` a `69.00` es el requisito «se cambia una tarifa sin desplegar», mirado.
+
+### 2026-08-19 · Lo que se construye es lo que se sirve
+
+Rebanada **19 · `migrate-websites-and-site-builder`**, la mitad que faltaba: **el constructor**. Los
+sitios, la resolución por subdominio y la tienda ya estaban; lo que no había era con qué decidir qué
+enseña esa tienda. De 21 a 38 de 49.
+
+**La regla se escribe una vez, o la vista previa es una promesa que nadie comprueba**
+
+La spec pide que la vista previa use «el mismo renderizado que el sitio público, de modo que lo que
+se ve sea lo que se sirve». Eso no se consigue escribiendo dos implementaciones cuidadosas: se
+consigue con una. Están en `packages/contracts/src/sections.ts` —qué tipos existen, cuál se omite,
+en qué orden va, cuál de las personalizaciones manda hoy— y las usan el servidor para componer lo
+que sirve y el navegador para componer lo que previsualiza.
+
+En el servidor la costura es más estrecha todavía: `publicSitePage` y `previewSitePage` se
+diferencian **sólo** en cómo llegan hasta la fila del sitio —una atraviesa las tres compuertas sin
+credencial, la otra exige permiso— y de ahí en adelante llaman a la misma función. La prueba que lo
+cubre no lee las dos implementaciones: **pide las dos respuestas y las compara**. Rota a mano la
+composición, tres pruebas se ponen rojas.
+
+Y en el navegador, el mismo componente pinta las dos: la portada de `/s/[slug]` y el marco de la
+vista previa reciben `SiteSections`. Lo que cambia fuera es el borde.
+
+**Reordenar es aritmética, no un evento del ratón**
+
+Mover una sección de la tercera posición a la primera no tiene nada que ver con el puntero, y una
+aritmética que sólo se puede ejercer arrastrando con la mano no la prueba nadie: los casos que
+fallan —soltar sobre uno mismo, salirse de la lista, el movimiento hacia abajo, que no es simétrico
+del de arriba— se descubren el día que alguien pierde una sección. La máquina está en
+`packages/ui/src/lib/reorder.ts` con **22 pruebas** y el componente sólo traduce seis eventos del
+puntero y dos teclas en llamadas a ella. Las flechas mueven la fila por la misma función que el
+arrastre, así que la lista se puede ordenar sin ratón.
+
+**Las secciones se escriben enteras, y no por casualidad**
+
+El modelo guarda las secciones como un `jsonb` **sin identidad por elemento**. Eso decide tres cosas
+seguidas: reordenar es mandar el arreglo en el orden que se quiere y que el servidor lo numere —no
+hay ruta de reordenación, porque no hay a qué sección referirse—; un botón de desplazamiento sólo
+puede apuntar a **un tipo de sección**, que es la única identidad estable que existe (H-114); y el
+constructor le pone a cada fila una clave que vive sólo en el navegador, porque la posición es justo
+el dato que está cambiando.
+
+**Un tipo desconocido se guarda y se omite**
+
+La spec dice qué hacer con él al renderizar: omitirlo sin romper la página. Rechazarlo al escribir
+habría sido lo contrario de eso — un sitio trasvasado de la pila anterior no podría guardar ni la
+corrección de una errata hasta que alguien borrara a mano la sección que estorba (H-117).
+
+**El defecto C-09, cerrado por donde se veía**
+
+`website/customize/delete.ts` borraba de la colección de **sitios** en vez de la de
+personalizaciones: quien retiraba la campaña de diciembre se quedaba sin tienda. La prueba que lo
+cubre no comprueba que la personalización desaparezca —eso lo comprueba otra—: comprueba que **el
+sitio sigue respondiendo** después.
+
+**Tres decisiones que la spec dejaba abiertas, adoptadas y anotadas**
+
+El desempate entre campañas solapadas —gana la que empezó más tarde, y a igualdad, la de
+identificador menor (H-116)—; que un sitio no se pueda quedar sin primaria, porque «la primera es
+primaria» y «eliminar la primaria promueve otra» sólo tienen sentido si siempre hay una (H-115); y
+la identidad de una sección, ya dicha (H-114).
+
+**Comprobado en un navegador de verdad**
+
+Construir arrastrando, guardar, publicar y abrir la tienda en una ventana **sin sesión**: seis
+secciones sembradas por la vertical de almacén, «Características» arrastrada con el ratón de la
+cuarta posición a la primera, un título editado que la vista previa enseñó sin guardar, y la tienda
+pública sirviendo `features · hero · categories · products · faq · footer` con el mismo texto y cero
+cookies en el contexto del visitante.
+
+No se pudo hacer contra la base de desarrollo: **no tiene planes de suscripción ni ninguna categoría
+de vertical**, así que la segunda compuerta cierra para toda tienda y todo sitio nace «en
+construcción» (H-91 y H-92, ya abiertos). Se hizo contra la base de pruebas propia, que sí se puede
+poblar. Mientras la siembra no cree esas dos cosas, la tienda pública no se puede ver en desarrollo
+por mucho que funcione.
+
+**Fuera de alcance, dicho a propósito**
+
+La **portada de marketing** y la **tienda de mosaicos** no entran. La segunda es de Pixit, que está
+pausado; el modelo la reconoce como vertical y su sitio se sirve como página en construcción, que es
+lo que la spec pide para una vertical sin páginas propias.

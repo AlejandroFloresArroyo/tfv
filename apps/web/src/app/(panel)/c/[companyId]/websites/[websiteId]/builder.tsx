@@ -256,7 +256,8 @@ export function Builder({
                 categories: catalog.categories,
                 products: catalog.products.slice(0, SECTION_PRODUCT_SAMPLE),
                 money: (amount) => formatAmount(amount, format),
-                emptyLabel: store("empty"),
+                emptyProducts: store("empty"),
+                emptyCategories: store("emptyCategories"),
                 askForPriceLabel: store("askForPrice"),
               })}
             />
