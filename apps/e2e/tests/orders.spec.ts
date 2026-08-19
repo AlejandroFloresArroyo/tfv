@@ -7,16 +7,7 @@
  */
 
 import { expect, test, WAREHOUSE_COMPANY } from "../setup/fixtures.ts"
-
-const ORDERS = (companyId: string, warehouseId: string) =>
-  `/c/${companyId}/warehouses/${warehouseId}/orders`
-
-async function firstWarehouse(page: import("@playwright/test").Page, companyId: string) {
-  await page.goto(`/c/${companyId}/warehouses`)
-  await page.getByRole("link", { name: "Nave Monterrey" }).click()
-  await page.waitForURL(/\/warehouses\/[^/]+$/)
-  return page.url().split("/warehouses/")[1] as string
-}
+import { firstWarehouse, ORDERS } from "../setup/warehouse.ts"
 
 test.describe("la bandeja de pedidos", () => {
   /** Lo creado por cada prueba, para llevárselo al terminar. */
