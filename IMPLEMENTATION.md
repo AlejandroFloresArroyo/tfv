@@ -233,7 +233,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | 08 | `migrate-media-storage` | 🟡 | **Subida directa entera y usada**: autorización acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión, confirmación que dice qué se escribió, y el selector con vista previa, reducción y reintento por objeto. La **sustitución de colecciones diferencia** —L-01— y las pantallas del almacén ya suben: galería del producto, e imagen única de almacén y ubicación. Faltan los marcadores de posición como activos propios y la ejecución del recolector, que espera al despachador de trabajos (09) |
 | 09 | `migrate-activity-and-notifications` | ✅ | 50/50. Bitácora transaccional de sólo anexado, audiencia por permiso, bandeja entera con su contador, preferencias y dispositivos, y el **despachador de trabajos**, que desbloquea la 08 y la 13. Cerrada el 2026-08-19: el asiento pasa a **clave y parámetros**, la referencia navegable sale de una sola función y apunta a pantallas que existen, el destinatario se da de alta ante el proveedor antes de su primer envío, y la administración de plantillas queda retirada con su delta y con una prueba que impide que vuelva. **La segunda rebanada cerrada del todo** |
 | 10 | `migrate-identity-and-companies` | 🟡 | 61/78. Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos, ya con sus dos pantallas**: el formulario público y la bandeja, que estrena el **área de administración de plataforma**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen |
-| 11 | `migrate-subscriptions-and-billing` | 🟡 | 40/40. Planes, contratación, asientos, gracia, las tres compuertas y el alta de comercio entera, con 61 pruebas. Su lista se marcó el 2026-08-19 leyendo el código: la rebanada se fusionó sin marcar. Falta el **procesador real** (H-85), que es configuración externa |
+| 11 | `migrate-subscriptions-and-billing` | 🟡 | 43/43. Planes, contratación, asientos, gracia, las tres compuertas y el alta de comercio entera, con 78 pruebas. **Contratar cierra el círculo desde el 2026-08-19**: el suplente tiene su propia página de cobro y al pagarla firma el evento y lo entrega al mismo endpoint que atenderá al procesador real, así que la suscripción nace por donde nacerá siempre (H-163). Falta el **procesador real** (H-85), que es configuración externa |
 
 ### Columna de comercio
 
@@ -4003,3 +4003,100 @@ Una cuenta de AWS, un nombre de depósito y una credencial de administración co
 vez `bucket --aws`. Después: `copy-media-objects` en frío y otra vez en el corte, las variables
 `STORAGE_*`, `rewrite-media-urls`, `placeholders`, y `bucket` al final para comprobar que el depósito
 nuevo sirve. Está en `.env.example` y en la cabecera de `copy-media-objects`, en ese orden.
+
+### 2026-08-19 · Contratar, y que la tienda se encienda detrás
+
+Se podía pulsar «Contratar» y no pasaba nada. La sesión de pago se acuñaba, el navegador volvía a la
+misma pantalla, y `company_subscriptions` seguía vacía: **nada activaba la suscripción**. Con ella se
+quedaban sin recorrer cambiar de plan, cancelar, reactivar, el historial de cobros y —encadenada— la
+tienda pública, que exige suscripción vigente antes de servir nada.
+
+**El atajo que no se tomó**
+
+La salida barata era que la pantalla de planes leyera el `?session=` que el suplente le devolvía y
+activara ella la suscripción. Habría funcionado en una tarde, y habría sido lo peor de las dos
+opciones: una vía que **producción no tiene** —allí la suscripción nace de un evento firmado que el
+procesador manda a `/payments/events`— y, de paso, el camino que sí usará producción sin ejercerse
+nunca. Dos formas de nacer una suscripción, y una de ellas sin firma ninguna.
+
+**Lo que se hizo: el suplente recorre el camino real**
+
+El suplente hace lo que hace el procesador. Tiene **su propia página de cobro**, servida por la API y
+no por la aplicación, y cuando alguien paga en ella **firma dos eventos y los entrega por HTTP** a
+`/payments/events`, con su firma, su ventana temporal y su unicidad. La pantalla de planes no cambió
+ni una línea: sigue yendo a donde el procesador le diga y volviendo a mirar el resultado.
+
+La página no es decoración: es **el disparador explícito** que hacía falta. Sin ella habría que
+emitir el evento al abrir la sesión, y entonces contratar activaría sin que nadie pulsara nada — con
+lo que se pierde el escenario que la spec pide poder recorrer, «abandonar el pago no deja
+suscripción, y puede volver a intentarlo». Con página hay dos salidas de verdad, que son las dos que
+ofrece un procesador.
+
+Dos eventos y no uno, también como el procesador: `checkout.session.completed` hace nacer la
+suscripción e `invoice.paid` cobra el primer periodo. El primero **no trae periodo** —el de verdad
+tampoco—, así que sin el segundo no habría fecha de renovación que enseñar ni un solo cobro en el
+historial. Los dos llevan identificador estable derivado de la sesión: reintentar el pago, o volver
+atrás en el navegador, entrega los mismos y la unicidad los reconoce.
+
+Todo lo del suplente vive en un archivo, `payments/local-processor.ts`, y sus dos rutas responden
+`404` sin `PAYMENTS_PROVIDER=local`. El día que haya procesador de verdad se borra el archivo.
+
+**Tres cosas que sólo aparecen recorriendo el ciclo**
+
+- **Cancelar alargaba la suscripción** (H-164). El suplente no recordaba nada de lo que emitía, así
+  que componía el periodo desde el instante de cada llamada: cancelar un día 20 devolvía un
+  vencimiento un mes más tarde, y eso se escribía tal cual. Dar de baja movía el vencimiento hacia
+  adelante. Ahora recuerda lo que emite, y al segundo —las marcas del procesador van en segundos, y
+  un periodo con milisegundos deja de coincidir consigo mismo en cuanto viaja dentro de un evento—.
+- **Los tres planes costaban cero** (H-165). El precio salía de los dígitos finales de la referencia
+  del producto, y lo que la siembra deja es `local_plan_casa`: sin dígitos, nivel cero, importe cero.
+  La pantalla ofrecía el catálogo entero de balde y el primer cobro se registraba en cero. El nivel
+  pasa a leerse del catálogo, que es lo que el procesador de verdad sabe de su propio producto.
+- **Volver del pago perdía la sesión** en la suite de navegador (H-167). El origen de vuelta decía
+  `localhost` y la suite conduce por `127.0.0.1`: hosts distintos, credencial que no viaja. Llevaba
+  ahí desde que existe la variable, sin que nadie pudiera verlo porque nadie podía completar un pago.
+
+**Lo que la tienda pública dejó ver**
+
+El encadenamiento es la prueba de que el círculo se cierra, y al recorrerlo apareció que **ninguna
+tienda creada desde la pantalla puede servir catálogo** (H-166): la vertical se declara con una
+categoría de la taxonomía global —`warehouse-store`— y la siembra no crea ninguna, así que todo sitio
+nace sin vertical y su tienda dice «Estamos preparando esta tienda» para siempre. Con la categoría
+puesta a mano, la misma tienda pasa de «no está disponible» a servir su catálogo en cuanto se
+paga. La corrección es una fila de la siembra y queda anotada para quien lleve esa rebanada.
+
+Y quedó anotado el motivo de que ese encadenamiento se fije en una prueba de la API y no en el
+navegador (H-168): **no hay ninguna ruta que habilite un servicio a una empresa**, sólo la siembra
+escribe `company_services`, así que una empresa creada por la prueba nunca podrá tener tienda — y la
+única que la tiene es la sembrada, sobre la que otra prueba afirma justo lo contrario.
+
+**Verificación**
+
+`pnpm test --force` en verde con **1534** pruebas, 17 más que las 1517 de partida: el ciclo entero
+contra el suplente con un servidor de verdad escuchando —la entrega es una petición HTTP contra el
+endpoint público, no una llamada al manejador—, el precio, la idempotencia del reintento y el
+encadenamiento con la tienda. `pnpm check` limpio y `pnpm lint` sin ninguna incidencia nueva: las
+seis que salen son las de H-150, ninguna en los archivos de esta tanda.
+
+`pnpm test:e2e` en verde, **83 de 83**, con `suscripcion.spec.ts` reescrita: afirmaba que no había
+nada que contratar (H-158) y ahora conduce el recorrido entero. Sobre una empresa que la propia
+prueba crea y borra, porque contratar cambia el estado de una empresa completa.
+
+Y en un navegador de verdad, encadenado: la tienda dice «La empresa que la publica no tiene una
+suscripción vigente» → se contrata «Casa de renta» con cinco asientos → la página del suplente cobra
+1745,00 MXN → se vuelve y la suscripción está **activa, con sus cinco asientos y su fecha de
+renovación** → el cobro aparece en el historial → **la misma tienda sirve su catálogo** → cancelar la
+deja operando hasta el vencimiento y la tienda sigue sirviéndose → reactivar y cambiar de plan hacen
+lo que dicen.
+
+**Lo que queda fuera**
+
+El **procesador real** (H-85), que es una cuenta con sus credenciales. La fila de la siembra que deja
+la vertical de las tiendas (H-166) y la ruta que habilita servicios a una empresa (H-168), las dos de
+otras rebanadas.
+
+Y una observación que se deja dicha sin tocar nada: **nadie pasa a cancelada una suscripción cuyo
+periodo terminó**. Deja de operar por la fecha —que es lo que las compuertas miran— pero la fila
+sigue ahí y sigue siendo «la vigente», así que volver a contratar responde que ya hay una y el camino
+es cambiar de plan, que funciona. No rompe ningún escenario de la spec; sí deja un estado que nadie
+barre, al lado de la gracia, que sí se barre.
