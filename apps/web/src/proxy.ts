@@ -1,3 +1,4 @@
+import { subdomainOf } from "@tfv/contracts/storefront"
 import { type NextRequest, NextResponse } from "next/server"
 
 /**
@@ -7,7 +8,7 @@ import { type NextRequest, NextResponse } from "next/server"
  * parámetros, no la ruta ni los encabezados de red. En Next 16 este archivo se llama `proxy`; hasta
  * la 15 era `middleware`.
  *
- * Hace dos cosas, y las dos por la misma razón:
+ * Hace tres cosas, y las dos primeras por la misma razón:
  *
  * 1. **El camino**, para que la guarda de sesión pueda conservar el destino en `?next=` y devolver
  *    al usuario adonde iba. Lo pide `app-shell`: «Tras iniciar sesión, el usuario SHALL volver a la
@@ -21,6 +22,11 @@ import { type NextRequest, NextResponse } from "next/server"
  *    En desarrollo no hay nada que reenviar: la conexión es directa y no existe encabezado del que
  *    sacar la dirección. La API lo trata como desconocida, que es distinto de compartir casilla con
  *    todos los demás desconocidos.
+ *
+ * 3. **La resolución por subdominio**, rebanada 19. `websites` la exige «antes de servir contenido
+ *    alguno», y éste es el único sitio donde el nombre de host está a la vista. Va aquí y no en un
+ *    archivo propio porque Next admite **uno solo**: crear `middleware.ts` al lado de esto no da
+ *    dos ganchos, da un servidor que no arranca.
  */
 export default function proxy(request: NextRequest) {
   const headers = new Headers(request.headers)
@@ -29,7 +35,54 @@ export default function proxy(request: NextRequest) {
   const forwarded = clientAddress(request)
   if (forwarded) headers.set("x-forwarded-for", forwarded)
 
+  const storefront = storefrontRewrite(request)
+  if (storefront) return NextResponse.rewrite(storefront, { request: { headers } })
+
   return NextResponse.next({ request: { headers } })
+}
+
+/**
+ * El dominio bajo el que se sirven las tiendas.
+ *
+ * Con prefijo público porque el mismo valor tiene que llegar al empaquetado. Su valor por defecto es
+ * el de desarrollo: cualquier navegador resuelve `loquesea.localhost` sin tocar el sistema de
+ * nombres, así que una tienda se abre sin configurar nada.
+ */
+const SITES_DOMAIN = process.env.NEXT_PUBLIC_SITES_DOMAIN ?? "localhost:3000"
+
+/**
+ * Adónde hay que reescribir esta petición para servir una tienda, o nada.
+ *
+ * Ver `openspec/specs/websites/spec.md`, «Resolución por subdominio».
+ *
+ * **Reescritura, no redirección.** `renta-norte.tfv.mx/p/panel-led` se atiende con
+ * `/s/renta-norte/p/panel-led` sin que la dirección cambie en el navegador; redirigir dejaría el
+ * camino interno a la vista y daría dos direcciones para la misma página, mala de compartir y peor
+ * de indexar.
+ *
+ * El camino interno sigue existiendo por su cuenta, y es deliberado: es la única forma de abrir una
+ * tienda donde no hay sistema de nombres que configurar.
+ *
+ * Nada cuando el anfitrión es el dominio principal, que es la otra mitad del requisito y la que se
+ * olvida: sin ella, el panel dejaría de existir.
+ */
+function storefrontRewrite(request: NextRequest): URL | null {
+  const slug = subdomainOf(request.headers.get("host") ?? "", SITES_DOMAIN)
+  if (slug === null) return null
+
+  const { pathname } = request.nextUrl
+
+  // El reenvío a la API cuelga del mismo origen que la tienda. Reescribirlo bajo `/s/` rompería
+  // toda petición del navegador, incluida la que resuelve la propia tienda.
+  if (pathname.startsWith("/api")) return null
+
+  // Ya viene reescrito, o alguien escribió el camino interno estando en el subdominio. Volver a
+  // anteponerlo daría `/s/renta-norte/s/renta-norte`.
+  if (pathname.startsWith("/s/")) return null
+
+  const url = request.nextUrl.clone()
+  url.pathname = `/s/${slug}${pathname === "/" ? "" : pathname}`
+  return url
 }
 
 /**

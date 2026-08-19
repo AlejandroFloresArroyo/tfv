@@ -83,6 +83,25 @@ describe("superficie pública", () => {
      * alterar la referencia responde `404` sin decir por qué. Es de lectura y de un solo documento.
      */
     "GET /public/documents/{reference}",
+    /**
+     * Las tres de la tienda pública, añadidas el 2026-08-18 de forma deliberada.
+     *
+     * Son **la razón de ser** de la rebanada 19: una tienda que exigiera cuenta para mirar el
+     * catálogo no es una tienda. Lo que las acota no es una credencial sino la forma del camino y
+     * lo que se compone al otro lado:
+     *
+     * - **El camino no lleva empresa.** Lleva el identificador legible del sitio, y la empresa la
+     *   resuelve el motor a partir de él (`app.public_website`), sólo si el sitio está publicado.
+     *   Cambiar el identificador lleva a otra tienda pública, no a la trastienda de nadie.
+     * - **Son de lectura.** No hay un solo verbo de escritura aquí; el formulario de contacto, que
+     *   sí escribe, entra por `POST /prospects`, que ya estaba.
+     * - **Lo que devuelven se compone campo a campo**, no reutiliza los registros del catálogo
+     *   interno: ni costo, ni ubicación, ni existencias, ni el catálogo de quien no publicó. Sus
+     *   pruebas lo comprueban desde fuera, sin cookie.
+     */
+    "GET /public/sites/{slug}",
+    "GET /public/sites/{slug}/products",
+    "GET /public/sites/{slug}/products/{handle}",
   ]
 
   it("es exactamente la declarada", () => {
