@@ -37,6 +37,7 @@
  * dejar objetos que ya no reclama nadie: basura, no una referencia colgando.
  */
 
+import { NotFoundError, UnprocessableError } from "@tfv/contracts"
 import type { Transaction } from "@tfv/db"
 import { uploads } from "@tfv/db/schema"
 import { and, eq, inArray, sql } from "drizzle-orm"
@@ -159,4 +160,83 @@ export async function sweepObjects(released: Released): Promise<void> {
  */
 export function diffSingle(current: string | null, incoming: string | null): CollectionDiff {
   return diffCollection(current === null ? [] : [current], incoming === null ? [] : [incoming])
+}
+
+// ─── Lo que se puede referenciar, y cómo se lee ──────────────────────────────
+
+/**
+ * Que las imágenes existan, sean de esta empresa y estén subidas.
+ *
+ * El archivo no lleva empresa —lo explica `0015_confirmacion_de_archivos.sql`—, así que lo que lo
+ * acota a un arrendatario es el prefijo de la clave de su objeto. Uno de otra empresa responde **que
+ * no existe**, no que no se puede: distinguir las dos cosas sería confirmar que existe.
+ *
+ * Y uno que no llegó a subirse tampoco entra. La spec dice que un archivo erróneo «no se muestra
+ * como una imagen válida en ninguna superficie», y referenciarlo desde una entidad es meterlo en
+ * una: la pantalla acabaría pintando un hueco roto sin saber por qué.
+ */
+export async function assertUsableImages(
+  tx: Transaction,
+  companyId: string,
+  ids: readonly string[],
+): Promise<void> {
+  const wanted = [...new Set(ids)]
+  if (wanted.length === 0) return
+
+  const rows = await tx
+    .select({
+      id: uploads.id,
+      kind: uploads.kind,
+      status: uploads.status,
+      storagePath: uploads.storagePath,
+    })
+    .from(uploads)
+    .where(inArray(uploads.id, wanted))
+
+  const byId = new Map(rows.map((row) => [row.id, row]))
+
+  for (const id of wanted) {
+    const row = byId.get(id)
+    if (row === undefined) throw new NotFoundError("La imagen no existe")
+    // La misma respuesta para una de otra empresa: distinguirla sería confirmar que existe.
+    if (!row.storagePath.startsWith(`${companyId}/`)) {
+      throw new NotFoundError("La imagen no existe")
+    }
+    if (row.status !== "uploaded") {
+      throw new UnprocessableError("La imagen no llegó a subirse")
+    }
+    if (row.kind !== "image") {
+      throw new UnprocessableError("El archivo no es una imagen")
+    }
+  }
+}
+
+/** Las dos direcciones que una pantalla necesita de una imagen: la que se ve y la de celda. */
+export interface ImageRef {
+  readonly url: string
+  /** El derivado de celda. Nulo cuando el navegador que la subió no supo producirlo. */
+  readonly thumbnailUrl: string | null
+}
+
+/**
+ * Las direcciones de un puñado de archivos, en **una** consulta.
+ *
+ * Una por entidad al pintar un listado son tantas consultas como filas tenga, que es el modo
+ * clásico de que una rejilla con imágenes tarde diez veces más que la misma rejilla sin ellas.
+ */
+export async function imageRefs(
+  tx: Transaction,
+  ids: readonly (string | null)[],
+): Promise<Map<string, ImageRef>> {
+  const wanted = [...new Set(ids.filter((id): id is string => id !== null))]
+  if (wanted.length === 0) return new Map()
+
+  const rows = await tx
+    .select({ id: uploads.id, url: uploads.url, variants: uploads.variants })
+    .from(uploads)
+    .where(inArray(uploads.id, wanted))
+
+  return new Map(
+    rows.map((row) => [row.id, { url: row.url, thumbnailUrl: row.variants?.thumbnail ?? null }]),
+  )
 }

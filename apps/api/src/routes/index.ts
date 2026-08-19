@@ -39,6 +39,7 @@ import {
   listProductsRoute,
   listWarehouseCategoriesRoute,
   productScopeRoute,
+  setProductImagesRoute,
   updateMeasurementRoute,
   updateProductRoute,
   updateWarehouseCategoryRoute,
@@ -265,6 +266,7 @@ export const routes: readonly RegisteredRoute[] = [
   createProductRoute,
   getProductRoute,
   updateProductRoute,
+  setProductImagesRoute,
   productScopeRoute,
   deleteProductRoute,
 

@@ -41,6 +41,7 @@ import {
   MEASUREMENT_KINDS,
   productDeletionScope,
   productQuery,
+  setProductImages,
   updateMeasurement,
   updateProduct,
 } from "../warehouses/catalog.ts"
@@ -93,8 +94,18 @@ const productSchema = z.object({
   isPublished: z.boolean(),
   /** Alta provisional desde una cotización, pendiente de completarse. */
   isProvisional: z.boolean(),
+  /** La portada de su galería, en tamaño de celda. Es lo que enseña la rejilla del catálogo. */
+  coverUrl: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
+})
+
+const productImageSchema = z.object({
+  uploadId: z.string(),
+  url: z.string(),
+  thumbnailUrl: z.string().nullable(),
+  position: z.number().int(),
+  isCover: z.boolean(),
 })
 
 const dimensionsSchema = z.object({
@@ -138,6 +149,7 @@ const productDetailSchema = productSchema.extend({
   measurements: z.array(measurementSchema),
   variants: z.array(productSchema),
   accessories: z.array(productSchema),
+  images: z.array(productImageSchema),
 })
 
 const companyParams = z.object({ companyId: z.string() })
@@ -169,6 +181,7 @@ function serializeDetail(row: Awaited<ReturnType<typeof getProduct>>) {
     measurements: row.measurements.map(serializeMeasurement),
     variants: row.variants.map(serializeProduct),
     accessories: row.accessories.map(serializeProduct),
+    images: [...row.images],
   }
 }
 
@@ -546,6 +559,63 @@ export const updateProductRoute = defineRoute({
       params.warehouseId,
       params.productId,
       body,
+    )
+    return c.json(serializeDetail(product), 200)
+  },
+})
+
+/**
+ * La galería de un producto.
+ *
+ * **Criterio adoptado, y anotado** (`HALLAZGOS.md` H-60): la protege
+ * `warehouses.products.edit_info`. El catálogo de permisos está cerrado en las 255 claves migradas
+ * y no tiene ninguna de archivos; la más cercana es la de la información del producto, que es donde
+ * viven el nombre y la descripción — las fotos son lo mismo dicho en imágenes. Ampliar el catálogo
+ * es decisión de producto, no de implementación.
+ *
+ * Se envía la colección **entera** y el servidor diferencia. «Añade ésta» y «quita aquélla» por
+ * separado dejarían el orden a merced de en qué orden lleguen las peticiones, y el orden es parte
+ * de lo que se está guardando.
+ */
+export const setProductImagesRoute = defineRoute({
+  access: REQUIRES("warehouses.products.edit_info"),
+  config: {
+    method: "put",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/products/{productId}/images",
+    summary: "Sustituir la galería de un producto",
+    tags: ["Catálogo"],
+    request: {
+      params: productParams,
+      body: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              uploadIds: z.array(z.string()).max(30),
+              coverUploadId: z.string().nullable().optional(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description:
+          "La galería sustituida: se eliminan las fotos que dejaron de estar y se conservan " +
+          "las que siguen",
+        content: { "application/json": { schema: productDetailSchema } },
+      },
+      404: { description: "El producto no existe, o alguna foto no es de esta empresa" },
+      422: { description: "Alguna foto no llegó a subirse, o no es una imagen" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const product = await setProductImages(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.productId,
+      c.req.valid("json"),
     )
     return c.json(serializeDetail(product), 200)
   },

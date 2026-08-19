@@ -22,6 +22,7 @@ import {
   roles,
   services,
   sessions,
+  uploads,
   users,
   warehouseCategories,
   warehouseMeasurements,
@@ -80,10 +81,19 @@ interface Measurement {
   clothing: { garment?: string; measurements?: Record<string, number> } | null
 }
 
+interface Image {
+  uploadId: string
+  url: string
+  thumbnailUrl: string | null
+  position: number
+  isCover: boolean
+}
+
 interface Detail extends Product {
   measurements: Measurement[]
   variants: Product[]
   accessories: Product[]
+  images: Image[]
 }
 
 let cookie = ""
@@ -830,5 +840,181 @@ describe("camino y alcance de una categoría", () => {
 
     const response = await request("GET", `${base}/categories/${ajena.id}`, undefined, cookie)
     expect(response.status).toBe(404)
+  })
+})
+
+// ─── Fotos ───────────────────────────────────────────────────────────────────
+
+/**
+ * La galería de un producto.
+ *
+ * Transcritas de `openspec/specs/media-storage/spec.md`, requisito «Sustituir una colección de
+ * archivos». Es el defecto L-01 y el escenario está escrito con estas mismas letras: A, B, C → A, D.
+ */
+describe("fotos de un producto", () => {
+  /** Un archivo subido de la empresa, que es lo que la galería admite. */
+  async function seedPhoto(name: string, options: { company?: string } = {}): Promise<string> {
+    const id = newId()
+    const owner = options.company ?? companyId
+    await db.insert(uploads).values({
+      id,
+      kind: "image",
+      status: "uploaded",
+      url: `http://almacen/${owner}/${id}/original.jpg`,
+      fileName: `${name}.jpg`,
+      extension: "jpg",
+      contentType: "image/jpeg",
+      byteSize: 2048,
+      storagePath: `${owner}/${id}`,
+    })
+    return id
+  }
+
+  async function setImages(productId: string, body: Record<string, unknown>) {
+    return request("PUT", `${base}/products/${productId}/images`, body, cookie)
+  }
+
+  async function stillThere(id: string): Promise<boolean> {
+    const [row] = await db.select({ id: uploads.id }).from(uploads).where(eq(uploads.id, id))
+    return row !== undefined
+  }
+
+  it("se eliminan las que dejaron de estar y se conservan las que siguen", async () => {
+    // Escenario: «Sólo se elimina lo retirado». Un producto con A, B y C se actualiza a A y D.
+    await clearCatalog()
+    await db.delete(uploads)
+
+    const product = await newProduct({ name: "Cámara" })
+    const [a, b, c, d] = await Promise.all([
+      seedPhoto("a"),
+      seedPhoto("b"),
+      seedPhoto("c"),
+      seedPhoto("d"),
+    ])
+
+    expect((await setImages(product.id, { uploadIds: [a, b, c] })).status).toBe(200)
+
+    const updated = await json<Detail>(await setImages(product.id, { uploadIds: [a, d] }))
+
+    expect(updated.images.map((image) => image.uploadId)).toEqual([a, d])
+    expect(await stillThere(a)).toBe(true)
+    expect(await stillThere(d)).toBe(true)
+    expect(await stillThere(b)).toBe(false)
+    expect(await stillThere(c)).toBe(false)
+  })
+
+  it("una colección sin cambios no borra nada", async () => {
+    // Escenario: «Una colección sin cambios no borra nada».
+    await clearCatalog()
+    await db.delete(uploads)
+
+    const product = await newProduct({ name: "Tripié" })
+    const [a, b] = await Promise.all([seedPhoto("a"), seedPhoto("b")])
+
+    await setImages(product.id, { uploadIds: [a, b] })
+    await setImages(product.id, { uploadIds: [a, b] })
+
+    expect(await stillThere(a)).toBe(true)
+    expect(await stillThere(b)).toBe(true)
+  })
+
+  it("la portada se elige, y sólo hay una", async () => {
+    await clearCatalog()
+    await db.delete(uploads)
+
+    const product = await newProduct({ name: "Monitor" })
+    const [a, b] = await Promise.all([seedPhoto("a"), seedPhoto("b")])
+
+    // Sin elegir, la portada es la primera: un listado necesita algo que enseñar desde el principio.
+    const first = await json<Detail>(await setImages(product.id, { uploadIds: [a, b] }))
+    expect(first.images.filter((image) => image.isCover).map((image) => image.uploadId)).toEqual([
+      a,
+    ])
+
+    const second = await json<Detail>(
+      await setImages(product.id, { uploadIds: [a, b], coverUploadId: b }),
+    )
+    expect(second.images.filter((image) => image.isCover).map((image) => image.uploadId)).toEqual([
+      b,
+    ])
+  })
+
+  it("reordenar no retira ninguna foto", async () => {
+    await clearCatalog()
+    await db.delete(uploads)
+
+    const product = await newProduct({ name: "Óptica" })
+    const [a, b, c] = await Promise.all([seedPhoto("a"), seedPhoto("b"), seedPhoto("c")])
+
+    await setImages(product.id, { uploadIds: [a, b, c] })
+    const moved = await json<Detail>(await setImages(product.id, { uploadIds: [c, a, b] }))
+
+    expect(moved.images.map((image) => image.uploadId)).toEqual([c, a, b])
+    expect(moved.images.map((image) => image.position)).toEqual([0, 1, 2])
+    expect(await stillThere(b)).toBe(true)
+  })
+
+  it("el borrado lógico conserva las fotos, y vuelven a verse al restaurar", async () => {
+    // Escenario: «Un borrado lógico conserva los archivos».
+    await clearCatalog()
+    await db.delete(uploads)
+
+    const product = await newProduct({ name: "Grúa" })
+    const a = await seedPhoto("a")
+    await setImages(product.id, { uploadIds: [a] })
+
+    await request("DELETE", `${base}/products/${product.id}`, undefined, cookie)
+    expect(await stillThere(a)).toBe(true)
+
+    // Restaurar todavía no tiene ruta: la propiedad que se comprueba es que la foto sobrevive al
+    // borrado y sigue enganchada al producto, no que exista un botón de deshacer.
+    await db
+      .update(warehouseProducts)
+      .set({ deletedAt: null })
+      .where(eq(warehouseProducts.id, product.id))
+
+    const restored = await json<Detail>(
+      await request("GET", `${base}/products/${product.id}`, undefined, cookie),
+    )
+    expect(restored.images.map((image) => image.uploadId)).toEqual([a])
+  })
+
+  it("no admite un archivo de otra empresa", async () => {
+    await clearCatalog()
+    await db.delete(uploads)
+
+    const product = await newProduct({ name: "Foco" })
+    const ajena = await seedPhoto("ajena", { company: newId() })
+
+    const response = await setImages(product.id, { uploadIds: [ajena] })
+    expect(response.status).toBe(404)
+  })
+
+  it("no admite un archivo que no llegó a subirse", async () => {
+    // «No se muestra como una imagen válida en ninguna superficie»: tampoco se deja referenciar.
+    await clearCatalog()
+    await db.delete(uploads)
+
+    const product = await newProduct({ name: "Cable" })
+    const roto = await seedPhoto("roto")
+    await db.update(uploads).set({ status: "error" }).where(eq(uploads.id, roto))
+
+    const response = await setImages(product.id, { uploadIds: [roto] })
+    expect(response.status).toBe(422)
+  })
+
+  it("la portada viaja con el producto en el listado", async () => {
+    await clearCatalog()
+    await db.delete(uploads)
+
+    const product = await newProduct({ name: "Claqueta" })
+    const a = await seedPhoto("a")
+    await setImages(product.id, { uploadIds: [a] })
+
+    const page = await json<{ items: { id: string; coverUrl: string | null }[] }>(
+      await request("GET", `${base}/products`, undefined, cookie),
+    )
+
+    expect(page.items.find((item) => item.id === product.id)?.coverUrl).toContain(`${a}/`)
   })
 })
