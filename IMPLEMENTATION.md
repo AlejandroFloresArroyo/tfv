@@ -122,7 +122,7 @@ Lo construido hasta ahora, medido y no estimado:
 | | |
 |---|---|
 | Rebanadas | 11 de 30 empezadas, **ninguna cerrada del todo** |
-| Pruebas | **696** de vitest — 160 contratos, 68 datos, 414 API, 54 web — más 63 de extremo a extremo |
+| Pruebas | **793** de vitest — 160 contratos, 97 diseño, 68 datos, 414 API, 54 web — más 63 de extremo a extremo |
 | Esquema | 93 tablas · 279 índices · 50 enumerados |
 | Aislamiento | 204 políticas · 93/93 tablas · 0 con identidad cruda |
 | Migraciones | 17, replicadas desde cero en cada verificación |
@@ -2630,10 +2630,16 @@ desde la rebanada 04 y siguen ahí, esperando la misma cuenta.
 
 **Comprobado**
 
-Los seis paquetes, Biome sobre lo propio, y **696 pruebas** de vitest —160 de contratos, 68 de
-datos, 414 de la API y 54 de web—, con las migraciones replicadas **desde cero** tras borrar la base
-de pruebas. Cuarenta y dos son nuevas: 9 de datos, 12 del despachador, 7 de sus trabajos y 23 de la
+Los seis paquetes, Biome sobre lo propio, y **793 pruebas** de vitest —160 de contratos, 97 del
+sistema de diseño, 68 de datos, 414 de la API y 54 de web—, con las migraciones replicadas **desde
+cero** tras borrar la base de pruebas. Cuarenta y dos son nuevas: 9 de datos, 12 del despachador, 7 de sus trabajos y 23 de la
 bitácora y la bandeja.
+
+**Una trampa de la base compartida, otra vez.** La primera pasada del conjunto entero falló con
+sesenta y tres pruebas rotas en archivos que nadie había tocado, justo después de haber tenido el
+servicio levantado contra la base de pruebas: sus conexiones seguían sujetando filas cuando la suite
+fue a truncar. Es H-12 con otra cara — **con un servicio apuntando a la base de pruebas, la suite no
+se puede correr**—. Apagado, la misma pasada da 793 en verde.
 
 Y se miró en pantalla, con la aplicación levantada en puertos propios: la campana anunciando «3 sin
 leer», marcar y archivar moviendo la fila entre filtros, el filtro de la bitácora llevándose la
