@@ -11,8 +11,10 @@ import { apiGet } from "~/lib/api.server.ts"
 import { can } from "~/lib/can.ts"
 import { requireCompany, requireProfile } from "~/lib/session.ts"
 import { QUOTE_STATUSES, type QuoteRow, type WarehouseRow } from "../../warehouse.ts"
+import { canViewPanel } from "../panel/access.ts"
 import { WarehouseNav } from "../warehouse-nav.tsx"
 import { QuoteStatusBadge, QuoteTypeBadge } from "./quote-badges.tsx"
+import { CreateQuote } from "./quote-create.tsx"
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations())("warehouses.quotes.title") }
@@ -41,6 +43,7 @@ export default async function QuotesPage({
   const profile = await requireProfile(path)
   const company = requireCompany(profile, companyId)
   const canViewWarehouses = can(company, "warehouses.warehouses.view")
+  const canCreate = can(company, "warehouses.quotes.create")
 
   const [warehouseResult, quotesResult] = await Promise.all([
     canViewWarehouses
@@ -90,15 +93,21 @@ export default async function QuotesPage({
     <PageShell
       title={warehouseResult?.ok ? warehouseResult.data.name : t("warehouses.quotes.title")}
       subtitle={t("warehouses.quotes.subtitle")}
+      actions={
+        canCreate ? <CreateQuote companyId={companyId} warehouseId={warehouseId} /> : undefined
+      }
     >
       <WarehouseNav
         companyId={companyId}
         warehouseId={warehouseId}
+        canViewPanel={canViewPanel(company)}
         canViewWarehouses={canViewWarehouses}
         canViewProducts={can(company, "warehouses.products.view")}
+        canViewCategories={can(company, "warehouses.categories.view")}
         canViewStorages={can(company, "warehouses.storages.view")}
         canViewQuotes={can(company, "warehouses.quotes.view")}
         canViewOrders={can(company, "warehouses.orders.view")}
+        canViewPrices={can(company, "warehouses.prices.view")}
       />
 
       <Collection
@@ -108,6 +117,9 @@ export default async function QuotesPage({
         searchPlaceholder={t("warehouses.quotes.searchPlaceholder")}
         emptyTitle={t("warehouses.quotes.empty")}
         emptyBody={t("warehouses.quotes.emptyBody")}
+        emptyAction={
+          canCreate ? <CreateQuote companyId={companyId} warehouseId={warehouseId} /> : undefined
+        }
       >
         {(items, view) =>
           items.map((quote) => (

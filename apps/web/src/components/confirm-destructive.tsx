@@ -3,7 +3,7 @@
 import { Button, Callout, Dialog, DialogClose, DialogContent } from "@tfv/ui"
 import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
-import { useState } from "react"
+import { useId, useState } from "react"
 import { useSubmit } from "./use-submit.ts"
 
 /**
@@ -27,6 +27,19 @@ export function ConfirmDestructive({
   entity,
   /** Qué más se lleva por delante. Vacío significa que no se lleva nada. */
   cascade = [],
+  /**
+   * Qué decir mientras la cascada todavía se está contando.
+   *
+   * Hay bajas cuyo alcance sólo lo sabe el servidor —cuántas ubicaciones, cuántos productos— y hay
+   * que preguntárselo al abrir. Mientras la respuesta no llega, confirmar quedaría **por encima de
+   * la enumeración**, que es justo lo que este diálogo existe para impedir: se anuncia que se está
+   * contando y no se deja confirmar hasta que la cuenta esté delante.
+   *
+   * Es el texto y no una bandera porque el texto pertenece al espacio de nombres de quien llama,
+   * igual que el título y la etiqueta de confirmación. Ausente —lo normal— la cascada se conoce sin
+   * preguntar y no hay nada que esperar.
+   */
+  blockedReason,
   confirmLabel,
   action,
   open: controlledOpen,
@@ -37,12 +50,14 @@ export function ConfirmDestructive({
   title: string
   entity: string
   cascade?: readonly string[]
+  blockedReason?: string
   confirmLabel: string
   action: () => Promise<unknown>
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }) {
   const t = useTranslations()
+  const reasonId = useId()
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
 
   const open = controlledOpen ?? uncontrolledOpen
@@ -74,7 +89,11 @@ export function ConfirmDestructive({
             })}
           </p>
 
-          {cascade.length > 0 ? (
+          {blockedReason ? (
+            <p id={reasonId} className="text-body2 text-content-muted" aria-live="polite">
+              {blockedReason}
+            </p>
+          ) : cascade.length > 0 ? (
             <div>
               <p className="text-body2 font-semibold text-content">{t("common.alsoAffects")}</p>
               <ul className="mt-1.5 list-disc pl-5 text-body2 text-content-muted">
@@ -85,7 +104,11 @@ export function ConfirmDestructive({
             </div>
           ) : null}
 
-          <p className="text-body2 text-content-faint">{t("common.cannotUndo")}</p>
+          {/* Nada va a pasar todavía: advertir de que no se deshace lo que no se puede hacer
+              confunde. Vuelve en cuanto la baja sea posible. */}
+          {blockedReason ? null : (
+            <p className="text-body2 text-content-faint">{t("common.cannotUndo")}</p>
+          )}
 
           <div className="flex flex-wrap justify-end gap-2 pt-1">
             <DialogClose asChild>
@@ -94,7 +117,17 @@ export function ConfirmDestructive({
               </Button>
             </DialogClose>
 
-            <Button type="submit" variant="danger" loading={form.pending}>
+            {/* Deshabilitado **y explicado**: un botón apagado sin más deja a quien usa lector de
+                pantalla sin saber por qué, que es la queja que `item-actions` evita omitiendo las
+                acciones en lugar de apagarlas. Aquí no se puede omitir —es la acción del diálogo—,
+                así que se apunta al motivo. */}
+            <Button
+              type="submit"
+              variant="danger"
+              loading={form.pending}
+              disabled={blockedReason !== undefined}
+              {...(blockedReason ? { "aria-describedby": reasonId } : {})}
+            >
               {confirmLabel}
             </Button>
           </div>

@@ -18,10 +18,18 @@
 
 import { z } from "@hono/zod-openapi"
 import { ForbiddenError, toInstant } from "@tfv/contracts"
+import {
+  createProductInput,
+  measurementInput,
+  measurementPatchInput,
+  productChildInput,
+  updateProductInput,
+} from "@tfv/contracts/catalog"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import { defineRoute, REQUIRES } from "../runtime/route.ts"
 import {
+  addChild,
   addMeasurement,
   createProduct,
   deleteMeasurement,
@@ -33,11 +41,15 @@ import {
   MEASUREMENT_KINDS,
   productDeletionScope,
   productQuery,
+  updateMeasurement,
   updateProduct,
 } from "../warehouses/catalog.ts"
 import {
+  categoryDeletionScope,
+  categoryPath,
   createWarehouseCategory,
   deleteWarehouseCategory,
+  getWarehouseCategory,
   listWarehouseCategories,
   updateWarehouseCategory,
 } from "../warehouses/categories.ts"
@@ -128,35 +140,6 @@ const productDetailSchema = productSchema.extend({
   accessories: z.array(productSchema),
 })
 
-const measurementBody = z.object({
-  name: z.string().trim().min(1).max(200),
-  kind: z.enum(MEASUREMENT_KINDS).optional(),
-  priceDifference: z
-    .string()
-    .regex(/^-?\d+(\.\d{1,2})?$/)
-    .optional(),
-  dimensions: dimensionsSchema.optional(),
-  lengthUnit: z.enum(LENGTH_UNITS).optional(),
-  massUnit: z.enum(MASS_UNITS).optional(),
-  clothing: clothingSchema.optional(),
-  initialQuantity: z.number().int().min(0).max(1000).optional(),
-})
-
-const childBody = z.object({
-  name: z.string().trim().min(1).max(250),
-  description: z.string().max(8000).optional(),
-  internalCode: z.string().max(80).optional(),
-  cost: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/)
-    .optional(),
-  price: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/)
-    .optional(),
-  measurements: z.array(measurementBody).max(50).optional(),
-})
-
 const companyParams = z.object({ companyId: z.string() })
 const warehouseParams = companyParams.extend({ warehouseId: z.string() })
 const categoryParams = warehouseParams.extend({ categoryId: z.string() })
@@ -214,6 +197,92 @@ export const listWarehouseCategoriesRoute = defineRoute({
       ...(parentId === undefined ? {} : { parentId }),
     })
     return c.json({ items: items.map(serializeCategory) }, 200)
+  },
+})
+
+export const getWarehouseCategoryRoute = defineRoute({
+  access: REQUIRES("warehouses.categories.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/categories/{categoryId}",
+    summary: "Ver una categoría del almacén",
+    tags: ["Catálogo"],
+    request: { params: categoryParams },
+    responses: {
+      200: {
+        description: "La categoría",
+        content: { "application/json": { schema: categorySchema } },
+      },
+      404: { description: "No existe en este almacén" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const category = await getWarehouseCategory(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.categoryId,
+    )
+    return c.json(serializeCategory(category), 200)
+  },
+})
+
+export const warehouseCategoryPathRoute = defineRoute({
+  access: REQUIRES("warehouses.categories.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/categories/{categoryId}/path",
+    summary: "El camino desde la raíz hasta una categoría",
+    tags: ["Catálogo"],
+    request: { params: categoryParams },
+    responses: {
+      200: {
+        description: "De la raíz a la categoría, ambas incluidas",
+        content: { "application/json": { schema: z.object({ items: z.array(categorySchema) }) } },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const items = await categoryPath(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.categoryId,
+    )
+    return c.json({ items: items.map(serializeCategory) }, 200)
+  },
+})
+
+export const warehouseCategoryScopeRoute = defineRoute({
+  access: REQUIRES("warehouses.categories.delete"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/categories/{categoryId}/scope",
+    summary: "Qué se lleva por delante eliminar la categoría",
+    tags: ["Catálogo"],
+    request: { params: categoryParams },
+    responses: {
+      200: {
+        description: "Categorías del subárbol, y productos que quedarán sin categoría",
+        content: {
+          "application/json": {
+            schema: z.object({ categories: z.number().int(), products: z.number().int() }),
+          },
+        },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const scope = await categoryDeletionScope(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.categoryId,
+    )
+    return c.json(scope, 200)
   },
 })
 
@@ -392,32 +461,7 @@ export const createProductRoute = defineRoute({
       body: {
         content: {
           "application/json": {
-            schema: z.object({
-              name: z.string().trim().min(1).max(250),
-              description: z.string().max(8000).optional(),
-              internalCode: z.string().max(80).optional(),
-              cost: z
-                .string()
-                .regex(/^\d+(\.\d{1,2})?$/)
-                .optional(),
-              price: z
-                .string()
-                .regex(/^\d+(\.\d{1,2})?$/)
-                .optional(),
-              usesPriceLists: z.boolean().optional(),
-              availableForSale: z.boolean().optional(),
-              availableForRent: z.boolean().optional(),
-              storageId: z.string().nullable().optional(),
-              categoryId: z.string().nullable().optional(),
-              globalCategoryId: z.string().nullable().optional(),
-              responsibleId: z.string().nullable().optional(),
-              isPublished: z.boolean().optional(),
-              /** Alta provisional desde una cotización: mientras lo sea no se publica. */
-              isProvisional: z.boolean().optional(),
-              measurements: z.array(measurementBody).max(50).optional(),
-              variants: z.array(childBody).max(50).optional(),
-              accessories: z.array(childBody).max(50).optional(),
-            }),
+            schema: createProductInput,
           },
         },
       },
@@ -453,30 +497,7 @@ export const updateProductRoute = defineRoute({
       body: {
         content: {
           "application/json": {
-            schema: z.object({
-              name: z.string().trim().min(1).max(250).optional(),
-              description: z.string().max(8000).optional(),
-              internalCode: z.string().max(80).nullable().optional(),
-              cost: z
-                .string()
-                .regex(/^\d+(\.\d{1,2})?$/)
-                .optional(),
-              price: z
-                .string()
-                .regex(/^\d+(\.\d{1,2})?$/)
-                .optional(),
-              usesPriceLists: z.boolean().optional(),
-              availableForSale: z.boolean().optional(),
-              availableForRent: z.boolean().optional(),
-              storageId: z.string().nullable().optional(),
-              categoryId: z.string().nullable().optional(),
-              globalCategoryId: z.string().nullable().optional(),
-              responsibleId: z.string().nullable().optional(),
-              isPublished: z.boolean().optional(),
-              /** Retirarla es convertirlo en producto de catálogo, y eso pide su clave. */
-              isProvisional: z.boolean().optional(),
-              slug: z.string().trim().min(1).max(280).optional(),
-            }),
+            schema: updateProductInput,
           },
         },
       },
@@ -595,7 +616,7 @@ export const addMeasurementRoute = defineRoute({
     tags: ["Catálogo"],
     request: {
       params: productParams,
-      body: { content: { "application/json": { schema: measurementBody } } },
+      body: { content: { "application/json": { schema: measurementInput } } },
     },
     responses: {
       201: {
@@ -614,6 +635,89 @@ export const addMeasurementRoute = defineRoute({
       c.req.valid("json"),
     )
     return c.json(serializeMeasurement(measurement), 201)
+  },
+})
+
+export const addChildRoute = defineRoute({
+  access: REQUIRES("warehouses.products.create"),
+  config: {
+    method: "post",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/products/{productId}/children",
+    summary: "Añadir una variante o un accesorio a un producto que ya existe",
+    tags: ["Catálogo"],
+    request: {
+      params: productParams,
+      body: {
+        content: {
+          "application/json": {
+            schema: productChildInput.extend({
+              // Lo único que distingue a los dos: los datos son los mismos.
+              relation: z.enum(["variant", "accessory"]),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "Creado, heredando del padre lo que se hereda",
+        content: { "application/json": { schema: productSchema } },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const { relation, ...input } = c.req.valid("json")
+    const child = await addChild(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.productId,
+      relation,
+      input,
+    )
+    return c.json(serializeProduct(child), 201)
+  },
+})
+
+export const updateMeasurementRoute = defineRoute({
+  /**
+   * La clave del alta, y no una propia.
+   *
+   * El catálogo de permisos está cerrado en las 255 migradas y ampliarlo es decisión de producto,
+   * así que se adopta el criterio de que quien puede añadir una medida puede corregir la que
+   * añadió. Exigir la de borrado pediría el permiso de la operación destructiva para hacer la que
+   * no lo es. Queda anotado en `HALLAZGOS.md`.
+   */
+  access: REQUIRES("warehouses.products.measurement_create"),
+  config: {
+    method: "patch",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/products/{productId}/measurements/{measurementId}",
+    summary: "Corregir una medida, sin tocar sus unidades",
+    tags: ["Catálogo"],
+    request: {
+      params: measurementParams,
+      body: { content: { "application/json": { schema: measurementPatchInput } } },
+    },
+    responses: {
+      200: {
+        description: "Corregida. Sus unidades siguen siendo las mismas",
+        content: { "application/json": { schema: measurementSchema } },
+      },
+      404: { description: "La medida no es de ese producto" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const measurement = await updateMeasurement(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      params.productId,
+      params.measurementId,
+      c.req.valid("json"),
+    )
+    return c.json(serializeMeasurement(measurement), 200)
   },
 })
 

@@ -27,6 +27,7 @@ import {
   verifyEmailRoute,
 } from "./auth.ts"
 import {
+  addChildRoute,
   addMeasurementRoute,
   createProductRoute,
   createWarehouseCategoryRoute,
@@ -34,11 +35,15 @@ import {
   deleteProductRoute,
   deleteWarehouseCategoryRoute,
   getProductRoute,
+  getWarehouseCategoryRoute,
   listProductsRoute,
   listWarehouseCategoriesRoute,
   productScopeRoute,
+  updateMeasurementRoute,
   updateProductRoute,
   updateWarehouseCategoryRoute,
+  warehouseCategoryPathRoute,
+  warehouseCategoryScopeRoute,
 } from "./catalog.ts"
 import {
   addMemberRoute,
@@ -78,6 +83,7 @@ import {
   updateProviderRoute,
   updateUserAddressRoute,
 } from "./directory.ts"
+import { publicDocumentRoute, quoteDocumentRoute } from "./documents.ts"
 import { health } from "./health.ts"
 import {
   deleteMessageRoute,
@@ -135,9 +141,11 @@ import {
   deletePriceListRoute,
   deleteUnitsRoute,
   findUnitByCodeRoute,
+  getPriceListRoute,
   listPriceListsRoute,
   listPricesRoute,
   listUnitsRoute,
+  priceListScopeRoute,
   removePriceRoute,
   resolvePriceRoute,
   setPriceListProductsRoute,
@@ -145,6 +153,7 @@ import {
   unitHistoryRoute,
   updatePriceListRoute,
 } from "./stock.ts"
+import { authorizeUploadRoute, confirmUploadRoute, reissueTargetsRoute } from "./uploads.ts"
 import {
   createStorageRoute,
   createWarehouseRoute,
@@ -253,8 +262,11 @@ export const routes: readonly RegisteredRoute[] = [
   deleteStorageRoute,
 
   listWarehouseCategoriesRoute,
+  getWarehouseCategoryRoute,
+  warehouseCategoryPathRoute,
   createWarehouseCategoryRoute,
   updateWarehouseCategoryRoute,
+  warehouseCategoryScopeRoute,
   deleteWarehouseCategoryRoute,
 
   listProductsRoute,
@@ -264,12 +276,16 @@ export const routes: readonly RegisteredRoute[] = [
   productScopeRoute,
   deleteProductRoute,
 
+  addChildRoute,
   addMeasurementRoute,
+  updateMeasurementRoute,
   deleteMeasurementRoute,
 
   listPriceListsRoute,
+  getPriceListRoute,
   createPriceListRoute,
   updatePriceListRoute,
+  priceListScopeRoute,
   deletePriceListRoute,
   listPricesRoute,
   setPriceRoute,
@@ -306,6 +322,10 @@ export const routes: readonly RegisteredRoute[] = [
   reservationCoherenceRoute,
   deleteQuoteRoute,
 
+  // El documento comercial y su enlace público. Ver `pdf-documents`.
+  quoteDocumentRoute,
+  publicDocumentRoute,
+
   // Pedidos de almacén: la bandeja del operador. Aceptar genera la cotización.
   listOrdersRoute,
   createOrderRoute,
@@ -316,7 +336,15 @@ export const routes: readonly RegisteredRoute[] = [
   changeOrderStatusRoute,
   deleteOrderRoute,
 
-  // La conversación del pedido: los dos lados del mostrador, dentro del pedido.
+  // ─── Archivos ──────────────────────────────────────────────────────────────
+
+  authorizeUploadRoute,
+  reissueTargetsRoute,
+  confirmUploadRoute,
+
+  // ─── Conversación del pedido ───────────────────────────────────────────────
+  // Los dos lados del mostrador, dentro del pedido.
+
   readConversationRoute,
   sendMessageRoute,
   markConversationReadRoute,

@@ -11,6 +11,7 @@ import { apiGet } from "~/lib/api.server.ts"
 import { can } from "~/lib/can.ts"
 import { requireCompany, requireProfile } from "~/lib/session.ts"
 import type { WarehouseRow } from "./warehouse.ts"
+import { CreateWarehouse, WarehouseActions } from "./warehouse-actions.tsx"
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations())("warehouses.title") }
@@ -32,6 +33,9 @@ export default async function WarehousesPage({
   const company = requireCompany(profile, companyId)
   const canViewProducts = can(company, "warehouses.products.view")
   const canViewStorages = can(company, "warehouses.storages.view")
+  const canCreate = can(company, "warehouses.warehouses.create")
+  const canEdit = can(company, "warehouses.warehouses.edit")
+  const canDelete = can(company, "warehouses.warehouses.delete")
   const result = await apiGet<PageEnvelope<WarehouseRow>>(
     `/companies/${companyId}/warehouses?${toApiQuery(query)}`,
   )
@@ -50,6 +54,7 @@ export default async function WarehousesPage({
     <PageShell
       title={t("warehouses.title")}
       subtitle={t("warehouses.subtitle", { company: company.name })}
+      actions={canCreate ? <CreateWarehouse companyId={companyId} /> : undefined}
     >
       <Collection
         params={query}
@@ -58,6 +63,7 @@ export default async function WarehousesPage({
         searchPlaceholder={t("warehouses.searchPlaceholder")}
         emptyTitle={t("warehouses.empty")}
         emptyBody={t("warehouses.emptyBody")}
+        emptyAction={canCreate ? <CreateWarehouse companyId={companyId} /> : undefined}
       >
         {(items, view) =>
           items.map((warehouse) => {
@@ -100,6 +106,20 @@ export default async function WarehousesPage({
                       {format.dateTime(new Date(warehouse.createdAt), { dateStyle: "medium" })}
                     </span>
                   </>
+                }
+                actions={
+                  <WarehouseActions
+                    companyId={companyId}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
+                    warehouse={{
+                      id: warehouse.id,
+                      name: warehouse.name,
+                      description: warehouse.description,
+                      slug: warehouse.slug,
+                      isPublished: warehouse.isPublished,
+                    }}
+                  />
                 }
               />
             )

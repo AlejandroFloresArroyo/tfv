@@ -71,6 +71,115 @@ export async function listWarehouseCategories(
   })
 }
 
+/** Una categoría suelta, por su identificador. */
+export async function getWarehouseCategory(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  categoryId: string,
+): Promise<WarehouseCategoryRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    const row = await loadCategory(tx, warehouseId, categoryId)
+
+    return (await withChildCounts(tx, [row]))[0] as WarehouseCategoryRecord
+  })
+}
+
+/**
+ * El camino desde la raíz hasta una categoría, para poder situarla sin recorrer el árbol.
+ *
+ * Igual que el de las ubicaciones, y por la misma razón: sin él, situar una categoría cuesta una
+ * petición por nivel bajando desde las raíces, y quien abre una hoja no sabe de dónde cuelga.
+ */
+export async function categoryPath(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  categoryId: string,
+): Promise<WarehouseCategoryRecord[]> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    await loadCategory(tx, warehouseId, categoryId)
+
+    /**
+     * La consulta recursiva devuelve **sólo identificadores**, y las filas se leen aparte.
+     *
+     * `tx.execute` entrega las columnas como las nombra la base —`parent_id`, `created_at`—, sin
+     * la traducción del constructor de consultas. Mezclar las dos formas deja campos en
+     * `undefined` que sólo se notan al serializar.
+     */
+    const result = await tx.execute(sql`
+      with recursive camino as (
+        select id, parent_id, 0 as profundidad
+        from warehouse_categories where id = ${categoryId}
+        union all
+        select c.id, c.parent_id, m.profundidad + 1
+        from warehouse_categories c
+        join camino m on c.id = m.parent_id
+      )
+      select id from camino order by profundidad desc
+    `)
+
+    const ids = (result as unknown as { id: string }[]).map((row) => row.id)
+    if (ids.length === 0) return []
+
+    const rows = await tx
+      .select()
+      .from(warehouseCategories)
+      .where(inArray(warehouseCategories.id, ids))
+
+    const byId = new Map(rows.map((row) => [row.id, row]))
+    const ordered = ids
+      .map((id) => byId.get(id))
+      .filter((row): row is (typeof rows)[number] => row !== undefined)
+
+    return withChildCounts(tx, ordered)
+  })
+}
+
+/**
+ * Lo que se lleva por delante eliminar una categoría, para poder advertirlo antes.
+ *
+ * `category-trees` lo exige: «La confirmación previa SHALL indicar cuántas categorías y cuántas
+ * entidades resultarán afectadas». Las entidades de esta taxonomía son los productos del almacén.
+ */
+export interface CategoryDeletionScope {
+  /** Ella misma incluida. */
+  readonly categories: number
+  /** Productos que quedarán sin categoría. No se eliminan. */
+  readonly products: number
+}
+
+export async function categoryDeletionScope(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  categoryId: string,
+): Promise<CategoryDeletionScope> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    await loadCategory(tx, warehouseId, categoryId)
+
+    const subtree = await categorySubtree(tx, categoryId)
+
+    const [products] = await tx
+      .select({ value: count() })
+      .from(warehouseProducts)
+      .where(
+        and(
+          inArray(warehouseProducts.categoryId, subtree),
+          isNull(warehouseProducts.deletedAt),
+          // Las variantes y los accesorios heredan la clasificación de su padre; contarlas
+          // duplicaría el recuento, igual que en el alcance de una ubicación.
+          isNull(warehouseProducts.parentId),
+        ),
+      )
+
+    return { categories: subtree.length, products: products?.value ?? 0 }
+  })
+}
+
 export interface CreateCategoryInput {
   readonly name: string
   readonly description?: string | undefined

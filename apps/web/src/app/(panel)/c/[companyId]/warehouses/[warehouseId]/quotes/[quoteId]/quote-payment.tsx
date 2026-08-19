@@ -297,19 +297,37 @@ export function QuotePaymentTermsPanel({
   )
 }
 
-/** El estado del guardado automático, donde estaría el botón que no hay. */
+/**
+ * El estado del guardado automático, donde estaría el botón que no hay.
+ *
+ * El aviso y el visto van con **la pareja cruda de la paleta**, no con `text-warning` y
+ * `text-success`: esos dos nombres no existen. El sistema de diseño declara `danger` y ninguno de
+ * los otros dos, así que la clase no generaba nada y el aviso salía del color del texto normal —
+ * comprobado en el navegador, `rgb(30,30,30)` en los dos casos. Son las mismas parejas que usa
+ * `Badge` para sus tonos. Ver H-57: cuando el token semántico exista, esto vuelve a un nombre.
+ */
 export function SaveState({
   saving,
   pending,
   saved,
   editable,
   incomplete,
+  incompleteLabel,
 }: {
   saving: boolean
   pending: boolean
   saved: boolean
   editable: boolean
   incomplete: boolean
+  /**
+   * Qué está a medio escribir, cuando no es un importe.
+   *
+   * Los dos bloques de dinero sólo se quedan a medias por una cifra, y ése es el aviso por omisión.
+   * La identidad se queda a medias por **media ventana de fechas**, que es otra cosa y pide otro
+   * texto: decirle «hay un importe a medio escribir» a quien acaba de teclear una fecha le manda a
+   * buscar un campo que no existe.
+   */
+  incompleteLabel?: string
 }) {
   const t = useTranslations("warehouses.quotes")
   if (!editable) return <span className="text-body3 text-content-faint">{t("readOnly")}</span>
@@ -318,7 +336,7 @@ export function SaveState({
     return (
       <span className="inline-flex items-center gap-1 text-body3 text-warning">
         <TriangleAlert className="size-4" aria-hidden="true" />
-        {t("incompleteField")}
+        {incompleteLabel ?? t("incompleteField")}
       </span>
     )
   if (pending) return <span className="text-body3 text-content-muted">{t("unsaved")}</span>

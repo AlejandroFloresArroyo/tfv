@@ -232,3 +232,143 @@ export interface QuoteLineRow {
  * importe vacío en lugar de como un error de compilación.
  */
 export type QuoteBreakdown = QuotationBreakdown
+
+// ─── Unidades de existencia ──────────────────────────────────────────────────
+
+/**
+ * Una unidad es **un objeto físico**, no un contador.
+ *
+ * Ver `openspec/specs/stock-units/spec.md`. De ahí sale que la pantalla de una medida sea una tabla
+ * de filas con código propio y no una casilla con un número: la cámara concreta que está en la caja
+ * `BOX7` y que lleva pegada su etiqueta.
+ */
+export interface StockUnitRow {
+  id: string
+  measurementId: string
+  /** Doce caracteres del alfabeto de Crockford. Es lo que va impreso y lo que se dicta. */
+  code: string
+  status: StockStatus
+  /** Acuñada porque una cotización pidió más de las que había. Auditable, y por eso se enseña. */
+  createdByReservation: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+// ─── Listas de precios ───────────────────────────────────────────────────────
+
+export interface PriceListRow {
+  id: string
+  warehouseId: string
+  name: string
+  description: string
+  /**
+   * Cuántos productos tienen tarifa en ella, contados por el servidor.
+   *
+   * Es lo que hace visible el alcance de eliminarla: la confirmación puede decir a cuántos
+   * productos se les quita el precio en lugar de advertir en abstracto de que «puede afectar».
+   */
+  productCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** Quién provocó un cambio de estado. El motivo escrito va aparte, en `note`. */
+export const STOCK_REASONS = [
+  "manual",
+  "quote_reservation",
+  "quote_release",
+  "quote_status",
+  "order",
+  "storefront_sale",
+  "rental_return",
+  "created",
+] as const
+
+export type StockReason = (typeof STOCK_REASONS)[number]
+
+export interface StockEventRow {
+  id: string
+  /** Nulo en el alta: antes de existir la unidad no estaba en ningún estado. */
+  fromStatus: StockStatus | null
+  toStatus: StockStatus
+  reason: StockReason
+  actorId: string | null
+  /** La cotización o el pedido que lo causó, cuando lo hubo. */
+  causeId: string | null
+  note: string | null
+  occurredAt: string
+}
+
+/**
+ * La tarifa de un producto en una lista.
+ *
+ * Los tres importes viajan como **cadena decimal** y aquí se quedan como tal. Renta y penalización
+ * pueden ser fijas o por periodicidad; cuál manda lo dice `isFixed` y no la presencia de importes.
+ */
+export interface ProductPriceRow {
+  id: string
+  priceListId: string
+  productId: string
+  sale: string
+  rent: RateSchedule
+  penalty: RateSchedule
+  createdAt: string
+  updatedAt: string
+}
+
+// ─── Los dos árboles del almacén ─────────────────────────────────────────────
+
+export type StorageKind = StorageRow["kind"]
+
+/**
+ * El orden de los diez tipos, del más general al más específico.
+ *
+ * Es un `Record` y no una lista suelta a propósito: la lista vive en el servidor y ésta es una
+ * copia. Declarada así, un tipo nuevo en `StorageRow` **deja de compilar** aquí en lugar de
+ * quedarse fuera del desplegable sin que nadie se entere.
+ */
+const STORAGE_KIND_ORDER: Record<StorageKind, number> = {
+  floor: 0,
+  area: 1,
+  aisle: 2,
+  section: 3,
+  bay: 4,
+  rack: 5,
+  shelf: 6,
+  pallet: 7,
+  box: 8,
+  bin: 9,
+}
+
+export const STORAGE_KINDS: readonly StorageKind[] = (
+  Object.keys(STORAGE_KIND_ORDER) as StorageKind[]
+).sort((first, second) => STORAGE_KIND_ORDER[first] - STORAGE_KIND_ORDER[second])
+
+/** Lo que se lleva por delante eliminar una ubicación. Lo cuenta el servidor, no la pantalla. */
+export interface StorageScope {
+  /** Ubicaciones del subárbol, ella incluida. */
+  storages: number
+  /** Productos que quedarán **sin ubicación**. No se eliminan. */
+  products: number
+}
+
+/**
+ * Una categoría del almacén.
+ *
+ * Es el otro árbol, y no trae recuento de productos: el del catálogo se pregunta al listado de
+ * productos, que es quien sabe expandir el filtro a las descendientes.
+ */
+export interface WarehouseCategoryRow {
+  id: string
+  warehouseId: string
+  parentId: string | null
+  name: string
+  description: string
+  /** Único **dentro de su almacén**, no del mundo: dos naves pueden tener «vestuario». */
+  slug: string | null
+  color: string | null
+  icon: string | null
+  childCount: number
+  createdAt: string
+  updatedAt: string
+}

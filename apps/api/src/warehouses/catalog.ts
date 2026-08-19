@@ -41,6 +41,14 @@ import {
   slugify,
   UnprocessableError,
 } from "@tfv/contracts"
+import {
+  LENGTH_UNITS,
+  type LengthUnit,
+  MASS_UNITS,
+  type MassUnit,
+  MEASUREMENT_KINDS,
+  type MeasurementKind,
+} from "@tfv/contracts/catalog"
 import { type Transaction, withRequester } from "@tfv/db"
 import {
   type ClothingSheet,
@@ -57,13 +65,16 @@ import { recordEvents } from "./stock.ts"
 import { loadWarehouse } from "./warehouses.ts"
 
 export type ProductRelation = "variant" | "accessory"
-export type MeasurementKind = "box" | "envelope" | "clothing" | "accessory" | "other"
-export type LengthUnit = "cm" | "m" | "in" | "ft"
-export type MassUnit = "g" | "kg" | "lb" | "oz"
 
-export const MEASUREMENT_KINDS = ["box", "envelope", "clothing", "accessory", "other"] as const
-export const LENGTH_UNITS = ["cm", "m", "in", "ft"] as const
-export const MASS_UNITS = ["g", "kg", "lb", "oz"] as const
+export type { LengthUnit, MassUnit, MeasurementKind }
+/**
+ * El vocabulario de las medidas vive en el contrato compartido.
+ *
+ * Se re-exporta desde aquí para no obligar a cada llamante a saber de dónde viene. La lista está
+ * también en el motor, como tipo enumerado; ésa es la copia que no se puede evitar, porque el
+ * navegador no puede importar el esquema de la base.
+ */
+export { LENGTH_UNITS, MASS_UNITS, MEASUREMENT_KINDS }
 
 export interface ProductRecord {
   readonly id: string
@@ -241,6 +252,23 @@ export interface MeasurementInput {
   readonly clothing?: ClothingSheet | undefined
   /** Cuántas unidades materializar. Ausente o cero: la medida existe sin existencias. */
   readonly initialQuantity?: number | undefined
+}
+
+/**
+ * Corregir una medida.
+ *
+ * Todo opcional salvo lo que no está: **la cantidad inicial no se puede corregir**. Creó unidades
+ * físicas, cada una con su código y su etiqueta impresa; «que ahora sean cinco en vez de tres» no
+ * dice cuáles se destruyen. Las unidades se dan de alta y de baja por su cuenta.
+ */
+export interface MeasurementPatch {
+  readonly name?: string | undefined
+  readonly kind?: MeasurementKind | undefined
+  readonly priceDifference?: string | undefined
+  readonly dimensions?: Dimensions | undefined
+  readonly lengthUnit?: LengthUnit | undefined
+  readonly massUnit?: MassUnit | undefined
+  readonly clothing?: ClothingSheet | undefined
 }
 
 export interface ChildInput {
@@ -552,6 +580,95 @@ export async function addMeasurement(
   })
 }
 
+/**
+ * Corregir una medida sin tocar sus unidades.
+ *
+ * Existe por lo que costaba no tenerla: una errata en el nombre sólo se podía arreglar borrando la
+ * medida y volviéndola a crear, y eso **borra sus unidades** —objetos físicos con su código
+ * impreso en una etiqueta pegada a cada uno—.
+ *
+ * **Criterio adoptado, y anotado**: la protege `warehouses.products.measurement_create`. No hay
+ * clave propia para corregir, el catálogo de permisos está cerrado en las 255 migradas, y
+ * ampliarlo es decisión de producto. Quien puede añadir una medida puede corregir la que añadió;
+ * la alternativa —exigir la de borrado— pediría el permiso de la operación destructiva para hacer
+ * la que no lo es.
+ */
+/**
+ * Añadir una variante o un accesorio a un producto que ya existe.
+ *
+ * La creación con estructura completa deja crear los hijos **en el mismo acto que el padre**, y era
+ * la única forma que había. Pero una variante nace casi siempre después: llega la cámara negra
+ * cuando la gris lleva un año en la nave. La spec ya lo daba por supuesto —«**WHEN** se le crea una
+ * variante»— sin exigir que fuera en la misma operación.
+ *
+ * Hereda lo mismo que un hijo creado con su padre, y por el mismo motivo: **copiando**, no
+ * refiriendo. Poder divergir es lo que hace que una variante sea una variante.
+ */
+export async function addChild(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  productId: string,
+  relation: ProductRelation,
+  input: ChildInput,
+): Promise<ProductRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    const parent = await loadProduct(tx, warehouseId, productId)
+
+    const childId = await insertChild(tx, parent, relation, input, actor.userId)
+    return toProductRecord(await loadProduct(tx, warehouseId, childId))
+  })
+}
+
+export async function updateMeasurement(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  productId: string,
+  measurementId: string,
+  input: MeasurementPatch,
+): Promise<MeasurementRecord> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    await loadProduct(tx, warehouseId, productId)
+
+    // La pertenencia al producto se comprueba aquí y no en la condición del `update`: una medida de
+    // otro producto tiene que responder «no existe», no «no se cambió nada».
+    const [measurement] = await tx
+      .select({ id: warehouseMeasurements.id })
+      .from(warehouseMeasurements)
+      .where(
+        and(
+          eq(warehouseMeasurements.id, measurementId),
+          eq(warehouseMeasurements.productId, productId),
+          isNull(warehouseMeasurements.deletedAt),
+        ),
+      )
+      .limit(1)
+
+    if (!measurement) throw new NotFoundError("La medida no existe")
+
+    await tx
+      .update(warehouseMeasurements)
+      .set({
+        ...(input.name === undefined ? {} : { name: input.name.trim() }),
+        ...(input.kind === undefined ? {} : { kind: input.kind }),
+        ...(input.priceDifference === undefined ? {} : { priceDifference: input.priceDifference }),
+        ...(input.dimensions === undefined ? {} : { dimensions: input.dimensions }),
+        ...(input.lengthUnit === undefined ? {} : { lengthUnit: input.lengthUnit }),
+        ...(input.massUnit === undefined ? {} : { massUnit: input.massUnit }),
+        ...(input.clothing === undefined ? {} : { clothing: input.clothing }),
+        updatedAt: new Date(),
+      })
+      .where(eq(warehouseMeasurements.id, measurementId))
+
+    const [record] = await measurementsOf(tx, productId, [measurementId])
+    if (!record) throw new Error("la medida recién corregida no se pudo leer")
+    return record
+  })
+}
+
 export async function deleteMeasurement(
   actor: Actor,
   companyId: string,
@@ -675,7 +792,7 @@ async function insertChild(
   relation: ProductRelation,
   input: ChildInput,
   actorId: string,
-): Promise<void> {
+): Promise<string> {
   const childId = newId()
 
   await tx.insert(warehouseProducts).values({
@@ -699,6 +816,8 @@ async function insertChild(
   for (const measurement of input.measurements ?? []) {
     await insertMeasurement(tx, childId, measurement, actorId)
   }
+
+  return childId
 }
 
 /**

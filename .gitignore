@@ -33,3 +33,6 @@ apps/web/next-env.d.ts
 # Estado local de la pila de Supabase
 supabase/.temp/
 supabase/.branches/
+
+# Los árboles de trabajo de los agentes, que viven dentro del repositorio.
+.claude/worktrees/

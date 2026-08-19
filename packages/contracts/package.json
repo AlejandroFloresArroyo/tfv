@@ -5,7 +5,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./catalog": "./src/catalog.ts",
+    "./media": "./src/media.ts",
     "./money": "./src/money.ts",
+    "./document": "./src/document.ts",
     "./errors": "./src/errors.ts",
     "./query": "./src/query.ts",
     "./quotation": "./src/quotation.ts",

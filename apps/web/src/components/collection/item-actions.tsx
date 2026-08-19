@@ -3,7 +3,7 @@
 import { Button, Menu, MenuContent, MenuItem, MenuTrigger } from "@tfv/ui"
 import { MoreHorizontal } from "lucide-react"
 import type { ReactNode } from "react"
-import { useState } from "react"
+import { Fragment, useState } from "react"
 
 export interface ItemAction {
   /** Identifica la acción dentro de la tarjeta. No se muestra. */
@@ -60,12 +60,20 @@ export function ItemActions({ label, actions }: { label: string; actions: readon
         </MenuContent>
       </Menu>
 
-      {actions.map((action) =>
-        action.dialog({
-          open: openKey === action.key,
-          onOpenChange: (open) => setOpenKey(open ? action.key : null),
-        }),
-      )}
+      {/*
+        Con clave, y por algo más que callar el aviso: sin ella React empareja los diálogos por su
+        posición, así que una lista de acciones que cambie —porque cambian los permisos o el estado
+        del elemento— puede reusar el diálogo de una acción para otra y llevarse dentro lo que se
+        estuviera escribiendo.
+      */}
+      {actions.map((action) => (
+        <Fragment key={action.key}>
+          {action.dialog({
+            open: openKey === action.key,
+            onOpenChange: (open) => setOpenKey(open ? action.key : null),
+          })}
+        </Fragment>
+      ))}
     </>
   )
 }

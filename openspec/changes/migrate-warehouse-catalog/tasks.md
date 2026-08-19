@@ -3,8 +3,8 @@
 Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falta anotada.
 
 **Hecha entera salvo lo que depende de documentos que aún no existen**: las tres comprobaciones de
-compromiso necesitan las cotizaciones (14) y los pedidos (15), y las etiquetas imprimibles son
-pantalla (29b).
+compromiso necesitan las cotizaciones (14) y los pedidos (15). Las etiquetas imprimibles, que
+esperaban a la pantalla, ya están.
 
 ## Almacén
 
@@ -17,8 +17,9 @@ pantalla (29b).
 - [x] Orden por prioridad, fecha y nombre. Son tres criterios y no uno: la prioridad empata en
       cuanto dos almacenes valen lo mismo, que es lo normal porque casi nadie la toca
 - [x] Baja con borrado lógico, previa enumeración
-- [ ] Impedir la baja con trabajo en curso — necesita cotizaciones (14) y pedidos (15), que son
-      quienes lo tendrían
+- [x] Impedir la baja con trabajo en curso. Estaba anotada esperando a las cotizaciones (14) y a
+      los pedidos (15); existen desde hace dos rebanadas y nadie lo advirtió. Los estados abiertos
+      se **derivan** de los cerrados, para que añadir uno nuevo no deje el hueco abierto en silencio
 - [x] **Corregir la cascada que borra de la tabla de empresas**: no hay cascada escrita a mano que
       pueda hacerlo. El contenido deja de ser accesible porque toda lectura parte del almacén
 
@@ -34,7 +35,7 @@ pantalla (29b).
       motor: la cascada autorreferente y la clave foránea a nulo
 - [x] Recuento de productos de primer nivel, sin contar variantes ni accesorios
 - [x] Camino de la raíz a una ubicación, para situarla sin recorrer el árbol
-- [ ] Presentación como jerarquía navegable, con selección en la dirección — es pantalla (29b)
+- [x] Presentación como jerarquía navegable, con selección en la dirección — es pantalla (29b)
 
 ## Catálogo
 
@@ -64,6 +65,9 @@ pantalla (29b).
 - [x] Árbol propio por almacén, con identificador legible único **dentro de su almacén** y no del
       mundo: es como cada casa de renta organiza su nave
 - [x] Rechazo de ciclos, y eliminación recursiva que deja los productos sin clasificar
+- [x] Ficha, camino y alcance de una categoría, como los de una ubicación. Sin ellos, situar una
+      categoría cuesta una petición por rama bajando desde las raíces, y la confirmación destructiva
+      no puede decir cuántas entidades se lleva — que es lo que la spec exige (H-38)
 
 ## Medidas
 
@@ -90,6 +94,12 @@ pantalla (29b).
       una cotización casi siempre es un producto sin tarifa, no un regalo
 - [x] El ajuste de la medida se suma **en centavos y con enteros**: `0.1 + 0.2` no es `0.3` en coma
       flotante, y mil productos convierten eso en una factura que no cuadra por unos pesos
+- [x] Ficha de una lista por su identificador, con el mismo recuento que su fila del listado (H-35)
+- [x] Las tarifas viajan con el nombre y el código de su producto. Sin eso, pintar doscientas
+      obliga a traerse el catálogo entero del almacén y cruzarlo en memoria (H-34)
+- [x] **Impedir la baja de una lista con cotizaciones en curso**, y enumerarlas antes en su alcance.
+      Es lo que la spec pide advertir, resuelto como en la baja de un almacén: enumerar al abrir el
+      diálogo y rechazar con `409` en la carrera (H-37)
 
 ## Unidades
 
@@ -101,11 +111,19 @@ pantalla (29b).
       compromiso, o la cotización seguiría diciendo que la tiene
 - [x] Estados terminales no vuelven. Una vendida no se recupera con un cambio de estado
 - [x] Recuperación explícita de las unidades de incidencia: las dañadas se reparan y vuelven
-- [ ] Etiquetas individuales y en lote, en ambos formatos — es pantalla (29b). El código ya usa el
-      alfabeto de Crockford, que es lo que la etiqueta necesita del servidor
+- [x] Etiquetas individuales y en lote, en ambos formatos. Hoja imprimible en la pantalla de la
+      medida, con el código de doce caracteres en grande —se dicta por teléfono— y el mismo código
+      bidimensional o de barras, a elegir al imprimir. **Sin la ubicación**: la unidad se mueve y la
+      etiqueta va pegada. El código ya usaba el alfabeto de Crockford, que es lo que la etiqueta
+      necesita del servidor
 - [x] Localización por código, con producto, medida, ubicación y estado. Cuelga del almacén y no de
       la medida: quien lee la etiqueta **no sabe** de qué producto es, para eso la lee
 - [x] Historial de cambio de estado con motivo y responsable, **incluida el alta**: sin el momento
       inicial el historial empieza en el segundo estado
+- [x] El responsable viaja **por su nombre**, no sólo por su identificador: traducirlo obligaba a
+      pedir el padrón de la empresa, que exige un permiso de otro dominio (H-33)
+- [x] La siembra escribe también el alta. Las unidades sembradas empezaban en su segundo estado
+      mientras las creadas por la API sí la llevaban, y la corrección repara las ya sembradas sin
+      duplicar nada al correrla otra vez (H-32)
 - [ ] Decidir si el historial se reconstruye en el corte — no se puede con fidelidad: de la pila
       anterior sólo se conoce el estado final

@@ -10,6 +10,7 @@ import { apiGet } from "~/lib/api.server.ts"
 import { can } from "~/lib/can.ts"
 import { requireCompany, requireProfile } from "~/lib/session.ts"
 import type { ItemsEnvelope, OrderLineRow, OrderRow } from "../../../warehouse.ts"
+import { canViewPanel } from "../../panel/access.ts"
 import { QuoteTypeBadge } from "../../quotes/quote-badges.tsx"
 import { WarehouseNav } from "../../warehouse-nav.tsx"
 import { OrderStatusBadge } from "../order-badges.tsx"
@@ -47,11 +48,14 @@ export default async function OrderPage({
     <WarehouseNav
       companyId={companyId}
       warehouseId={warehouseId}
+      canViewPanel={canViewPanel(company)}
       canViewWarehouses={can(company, "warehouses.warehouses.view")}
       canViewProducts={can(company, "warehouses.products.view")}
+      canViewCategories={can(company, "warehouses.categories.view")}
       canViewStorages={can(company, "warehouses.storages.view")}
       canViewQuotes={can(company, "warehouses.quotes.view")}
       canViewOrders={can(company, "warehouses.orders.view")}
+      canViewPrices={can(company, "warehouses.prices.view")}
     />
   )
 

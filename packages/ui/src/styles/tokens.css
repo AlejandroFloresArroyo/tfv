@@ -414,6 +414,11 @@
   --on-accent: #ffffff;
   --focus: #228be6; /* blue.6 · 3.12:1 sobre el lienzo */
   --danger: #c92a2a; /* red.9 · 4.79:1 sobre el lienzo */
+  /* Ninguno de los dos sale de la escala, y el motivo se mide: sobre este lienzo, `green.9` da
+     3.83:1 y `yellow.9` **2.63:1**, muy por debajo de lo legible para texto. La escala está pensada
+     para rellenos, donde el mínimo es 3:1; estos dos son para texto. Ver la nota de contraste. */
+  --success: #237032; /* medido · 5.36:1 sobre el lienzo */
+  --warning: #a35200; /* medido · 4.90:1 sobre el lienzo */
   --overlay: rgb(30 30 30 / 0.45);
 }
 
@@ -434,6 +439,8 @@
   --on-accent: #1e1e1e;
   --focus: #4dabf7; /* blue.4, que es el que se lee sobre fondo oscuro */
   --danger: #ff8787; /* red.4 · 6.37:1 sobre el panel */
+  --success: #69db7c; /* green.4 · 8.44:1 sobre el panel */
+  --warning: #ffd43b; /* yellow.4 · 10.34:1 sobre el panel */
   --overlay: rgb(0 0 0 / 0.6);
 }
 
@@ -469,6 +476,8 @@
   --color-line-strong: var(--line-strong);
   --color-field: var(--field);
   --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-content: var(--content);
   --color-content-muted: var(--content-muted);
   --color-content-faint: var(--content-faint);

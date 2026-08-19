@@ -595,7 +595,10 @@ function Picker({
           {results.map((candidate) => {
             const rate = unitRate(candidate, type)
             return (
-              <li key={candidate.measurementId}>
+              // `min-w-0`: sin él, el elemento de una rejilla se dimensiona por su contenido
+              // mínimo y la fila se sale de su propia lista, aunque el nombre de dentro sepa
+              // recortarse.
+              <li key={candidate.measurementId} className="min-w-0">
                 <button
                   type="button"
                   onClick={() => onAdd(candidate)}
@@ -614,7 +617,12 @@ function Picker({
                   <Badge tone={candidate.available > 0 ? "success" : "neutral"}>
                     {t("freeUnits", { count: candidate.available })}
                   </Badge>
-                  <span className="w-32 shrink-0 text-right">
+                  {/*
+                    Estrecha en teléfono. Con las ocho unidades fijas de siempre, la fila del
+                    buscador medía 419 px en una pantalla de 390 y **empujaba la ficha entera** a
+                    desplazarse en horizontal: el importe de una tarifa cabe de sobra en seis.
+                  */}
+                  <span className="w-24 shrink-0 text-right tablet:w-32">
                     <span className="block text-body2 text-content-muted tabular-nums">
                       {formatAmount(rate.amount, format)}
                     </span>

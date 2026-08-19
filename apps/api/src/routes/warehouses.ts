@@ -243,6 +243,12 @@ export const warehouseScopeRoute = defineRoute({
               storages: z.number().int(),
               categories: z.number().int(),
               products: z.number().int(),
+              priceLists: z.number().int(),
+              quotes: z.number().int(),
+              orders: z.number().int(),
+              /** Las que además impiden la baja, para decirlo antes de que nadie confirme. */
+              openQuotes: z.number().int(),
+              openOrders: z.number().int(),
             }),
           },
         },
@@ -266,6 +272,7 @@ export const deleteWarehouseRoute = defineRoute({
     request: { params: warehouseParams },
     responses: {
       204: { description: "Dado de baja. El borrado es lógico y conserva el historial" },
+      409: { description: "Tiene cotizaciones o pedidos en curso" },
     },
   },
   handler: async (c) => {

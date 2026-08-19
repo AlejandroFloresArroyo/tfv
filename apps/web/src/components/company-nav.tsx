@@ -10,6 +10,7 @@ import {
   MenuTrigger,
 } from "@tfv/ui"
 import {
+  Building2,
   ChevronsUpDown,
   Handshake,
   LayoutDashboard,
@@ -69,6 +70,13 @@ export function CompanyNav({
   ].filter((entry) => can(company, entry.permission))
 
   const settings = [
+    {
+      section: "settings/company",
+      href: `/c/${company.id}/settings/company`,
+      label: t("companies.manage.nav"),
+      icon: <Building2 className="size-4" aria-hidden="true" />,
+      permission: "companies.companies.view",
+    },
     {
       section: "settings/members",
       href: `/c/${company.id}/settings/members`,

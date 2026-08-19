@@ -32,6 +32,8 @@ import {
   warehousePriceLists,
   warehouseProductPrices,
   warehouseProducts,
+  warehouseQuoteLines,
+  warehouseQuotes,
   warehouseStockEvents,
   warehouseStockUnits,
   warehouseStorages,
@@ -117,7 +119,7 @@ afterAll(async () => {
 
 async function clearCatalog() {
   await db.execute(
-    sql`truncate table ${warehouseStockEvents}, ${warehouseStockUnits}, ${warehouseMeasurements}, ${warehouseProductPrices}, ${warehousePriceLists}, ${warehouseProducts} cascade`,
+    sql`truncate table ${warehouseQuotes}, ${warehouseStockEvents}, ${warehouseStockUnits}, ${warehouseMeasurements}, ${warehouseProductPrices}, ${warehousePriceLists}, ${warehouseProducts} cascade`,
   )
 }
 
@@ -472,7 +474,14 @@ describe("todo cambio de estado deja rastro", () => {
     )
 
     const history = await json<{
-      items: { fromStatus: string | null; toStatus: string; reason: string; note: string | null }[]
+      items: {
+        fromStatus: string | null
+        toStatus: string
+        reason: string
+        note: string | null
+        actorId: string | null
+        actorName: string | null
+      }[]
     }>(await request("GET", `${base}/units/${unit?.id}/history`, undefined, cookie))
 
     expect(history.items[0]).toMatchObject({
@@ -481,6 +490,34 @@ describe("todo cambio de estado deja rastro", () => {
       reason: "manual",
       note: "Golpe en el visor",
     })
+
+    // H-33: el evento viaja con el nombre. Nombrar a quien movió una unidad obligaba a pedir el
+    // padrón de la empresa, que exige un permiso de otro dominio.
+    expect(history.items[0]?.actorId).not.toBeNull()
+    expect(history.items[0]?.actorName).toBe("Existencias")
+  })
+
+  it("un cambio sin responsable no inventa uno", async () => {
+    // Los que provoca un documento —o la siembra— no tienen persona detrás: el nombre es nulo, y
+    // eso es distinto de no saber quién fue.
+    await clearCatalog()
+    const product = await newStocked("Cámara", 1)
+    const measurementId = product.measurements[0]?.id as string
+    const [unit] = await unitsOf(measurementId)
+
+    await db.insert(warehouseStockEvents).values({
+      id: newId(),
+      stockUnitId: unit?.id as string,
+      fromStatus: "available",
+      toStatus: "in_order",
+      reason: "order",
+    })
+
+    const history = await json<{ items: { actorId: string | null; actorName: string | null }[] }>(
+      await request("GET", `${base}/units/${unit?.id}/history`, undefined, cookie),
+    )
+
+    expect(history.items[0]).toMatchObject({ actorId: null, actorName: null })
   })
 })
 
@@ -541,6 +578,96 @@ async function newList(name: string): Promise<{ id: string }> {
 }
 
 describe("listas de precios", () => {
+  it("una lista se pide por su identificador, sin recorrer el listado", async () => {
+    // H-35: la ficha buscaba la suya dentro del listado paginado, que es un rodeo que ninguna otra
+    // ficha del sistema necesita.
+    await clearCatalog()
+    const product = await newStocked("Cámara", 0)
+    const list = await newList("Preferente")
+
+    await request(
+      "PUT",
+      `${base}/price-lists/${list.id}/prices/${product.id}`,
+      { sale: "900.00" },
+      cookie,
+    )
+
+    const response = await request("GET", `${base}/price-lists/${list.id}`, undefined, cookie)
+    expect(response.status).toBe(200)
+    expect(await json<{ name: string; productCount: number }>(response)).toMatchObject({
+      name: "Preferente",
+      productCount: 1,
+    })
+  })
+
+  it("una lista dada de baja deja de traerse", async () => {
+    await clearCatalog()
+    const list = await newList("Temporal")
+    await request("DELETE", `${base}/price-lists/${list.id}`, undefined, cookie)
+
+    const response = await request("GET", `${base}/price-lists/${list.id}`, undefined, cookie)
+    expect(response.status).toBe(404)
+  })
+
+  it("cada tarifa viaja con el nombre y el código de su producto", async () => {
+    // H-34: la pantalla se traía el catálogo entero del almacén —hasta tres peticiones y dos mil
+    // productos— sólo para nombrar las filas. Es H-08b otra vez, en el recurso de al lado.
+    await clearCatalog()
+    const camara = await newStocked("Cámara", 0)
+    const tripie = await newStocked("Tripié", 0)
+    const list = await newList("Pública")
+
+    await request(
+      "PUT",
+      `${base}/price-lists/${list.id}/prices/${tripie.id}`,
+      { sale: "300.00" },
+      cookie,
+    )
+    await request(
+      "PUT",
+      `${base}/price-lists/${list.id}/prices/${camara.id}`,
+      { sale: "1200.00" },
+      cookie,
+    )
+
+    const prices = await json<{
+      items: { productId: string; productName: string; productCode: string; sale: string }[]
+    }>(await request("GET", `${base}/price-lists/${list.id}/prices`, undefined, cookie))
+
+    // Por nombre de producto: una lista de doscientas tarifas se lee, no se ordena en la pantalla.
+    expect(prices.items.map((row) => row.productName)).toEqual(["Cámara", "Tripié"])
+    expect(prices.items[0]).toMatchObject({ productId: camara.id, productCode: camara.code })
+  })
+
+  it("la tarifa de un producto dado de baja deja de figurar y de contarse", async () => {
+    // Las dos cifras se sacan de la misma condición: la ficha no puede decir «dos productos» y
+    // enseñar una fila.
+    await clearCatalog()
+    const a = await newStocked("A", 0)
+    const b = await newStocked("B", 0)
+    const list = await newList("Pública")
+
+    await request(
+      "PUT",
+      `${base}/price-lists/${list.id}/products`,
+      { productIds: [a.id, b.id] },
+      cookie,
+    )
+    expect((await request("DELETE", `${base}/products/${a.id}`, undefined, cookie)).status).toBe(
+      204,
+    )
+
+    const prices = await json<{ items: { productId: string }[] }>(
+      await request("GET", `${base}/price-lists/${list.id}/prices`, undefined, cookie),
+    )
+    expect(prices.items.map((row) => row.productId)).toEqual([b.id])
+
+    const ficha = await json<{ productCount: number }>(
+      await request("GET", `${base}/price-lists/${list.id}`, undefined, cookie),
+    )
+    expect(ficha.productCount).toBe(1)
+  })
+
   it("un producto figura en dos listas con tarifas distintas", async () => {
     // Escenario: «Un producto figura en dos listas».
     await clearCatalog()
@@ -660,6 +787,104 @@ describe("listas de precios", () => {
 
     const gone = await request("GET", `${base}/price-lists/${list.id}/prices`, undefined, cookie)
     expect(gone.status).toBe(404)
+  })
+})
+
+/**
+ * Una cotización que cobra por las tarifas de una lista.
+ *
+ * Va por la base y no por la ruta: lo que se prueba aquí es la guarda de la baja, y montar el
+ * documento entero por la API metería media rebanada 13 en una suite de precios.
+ */
+async function quoteUsing(
+  status: "pending" | "canceled",
+  productPriceIds: readonly string[],
+  measurementId: string,
+): Promise<string> {
+  const quoteId = newId()
+  await db
+    .insert(warehouseQuotes)
+    .values({ id: quoteId, warehouseId, code: `COT-${quoteId}`, type: "rent", status })
+
+  await db.insert(warehouseQuoteLines).values(
+    productPriceIds.map((productPriceId, position) => ({
+      id: newId(),
+      quoteId,
+      measurementId,
+      productPriceId,
+      position,
+    })),
+  )
+
+  return quoteId
+}
+
+describe("baja de una lista de precios", () => {
+  it("el alcance enumera las cotizaciones que la usan, y las que están en curso", async () => {
+    // H-37: `warehouse-catalog` pide advertir cuando la lista esté referenciada por cotizaciones
+    // en curso, y no había dato con el que hacerlo. Es lo mismo que resolvió la baja de un almacén.
+    await clearCatalog()
+    const camara = await newStocked("Cámara", 1)
+    const tripie = await newStocked("Tripié", 1)
+    const list = await newList("Pública")
+    const measurementId = camara.measurements[0]?.id as string
+
+    const unaTarifa = await json<{ id: string }>(
+      await request(
+        "PUT",
+        `${base}/price-lists/${list.id}/prices/${camara.id}`,
+        { sale: "1200.00" },
+        cookie,
+      ),
+    )
+    const otraTarifa = await json<{ id: string }>(
+      await request(
+        "PUT",
+        `${base}/price-lists/${list.id}/prices/${tripie.id}`,
+        { sale: "300.00" },
+        cookie,
+      ),
+    )
+
+    // Dos líneas de la misma lista en una sola cotización: cuenta el documento, no las líneas.
+    await quoteUsing("pending", [unaTarifa.id, otraTarifa.id], measurementId)
+    await quoteUsing("canceled", [unaTarifa.id], measurementId)
+
+    const scope = await json<{ products: number; quotes: number; openQuotes: number }>(
+      await request("GET", `${base}/price-lists/${list.id}/scope`, undefined, cookie),
+    )
+
+    expect(scope).toEqual({ products: 2, quotes: 2, openQuotes: 1 })
+  })
+
+  it("no se da de baja mientras una cotización en curso cobre por ella", async () => {
+    await clearCatalog()
+    const camara = await newStocked("Cámara", 1)
+    const list = await newList("Pública")
+    const measurementId = camara.measurements[0]?.id as string
+
+    const tarifa = await json<{ id: string }>(
+      await request(
+        "PUT",
+        `${base}/price-lists/${list.id}/prices/${camara.id}`,
+        { sale: "1200.00" },
+        cookie,
+      ),
+    )
+    const quoteId = await quoteUsing("pending", [tarifa.id], measurementId)
+
+    const rechazada = await request("DELETE", `${base}/price-lists/${list.id}`, undefined, cookie)
+    expect(rechazada.status).toBe(409)
+    expect(await rechazada.text()).toContain("cotización")
+
+    // Cerrada la cotización, la baja pasa: la guarda mira lo que está en curso, no el historial.
+    await db
+      .update(warehouseQuotes)
+      .set({ status: "canceled" })
+      .where(eq(warehouseQuotes.id, quoteId))
+
+    const aceptada = await request("DELETE", `${base}/price-lists/${list.id}`, undefined, cookie)
+    expect(aceptada.status).toBe(204)
   })
 })
 

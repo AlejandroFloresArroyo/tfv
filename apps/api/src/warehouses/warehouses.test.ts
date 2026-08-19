@@ -19,6 +19,7 @@ import {
   sessions,
   users,
   warehouseProducts,
+  warehouseQuotes,
   warehouseStorages,
   warehouses,
 } from "@tfv/db/schema"
@@ -43,6 +44,17 @@ afterAll(async () => {
 })
 
 // ─── Andamiaje ───────────────────────────────────────────────────────────────
+
+interface Scope {
+  storages: number
+  categories: number
+  products: number
+  priceLists: number
+  quotes: number
+  openQuotes: number
+  orders: number
+  openOrders: number
+}
 
 interface Session {
   readonly cookie: string
@@ -273,6 +285,71 @@ describe("baja de un almacén", () => {
 
     expect(scope.storages).toBe(1)
     expect(scope.products).toBe(1)
+  })
+
+  it("cuenta también lo que más pesa: cotizaciones y pedidos", async () => {
+    const session = await signUp("comercio@ejemplo.mx")
+    const company = await newCompany(session)
+    const warehouse = await newWarehouse(session, company.id)
+
+    const created = await request(
+      "POST",
+      `/companies/${company.id}/warehouses/${warehouse.id}/quotes`,
+      { type: "rent" },
+      session.cookie,
+    )
+    expect(created.status).toBe(201)
+
+    const scope = await json<Scope>(
+      await request(
+        "GET",
+        `/companies/${company.id}/warehouses/${warehouse.id}/scope`,
+        undefined,
+        session.cookie,
+      ),
+    )
+
+    expect(scope.quotes).toBe(1)
+    expect(scope.openQuotes).toBe(1)
+    expect(scope.orders).toBe(0)
+  })
+
+  it("no se da de baja con trabajo en curso", async () => {
+    // Escenario: «No se da de baja con trabajo en curso». Sin esto se puede dar de baja un almacén
+    // con una renta y el equipo en la calle.
+    const session = await signUp("encurso@ejemplo.mx")
+    const company = await newCompany(session)
+    const warehouse = await newWarehouse(session, company.id)
+
+    const created = await request(
+      "POST",
+      `/companies/${company.id}/warehouses/${warehouse.id}/quotes`,
+      { type: "rent" },
+      session.cookie,
+    )
+    const quote = await json<{ id: string }>(created)
+
+    const blocked = await request(
+      "DELETE",
+      `/companies/${company.id}/warehouses/${warehouse.id}`,
+      undefined,
+      session.cookie,
+    )
+    expect(blocked.status).toBe(409)
+
+    // Cerrada la cotización, el almacén deja de tener trabajo en curso.
+    await db
+      .update(warehouseQuotes)
+      .set({ status: "canceled" })
+      .where(eq(warehouseQuotes.id, quote.id))
+
+    const allowed = await request(
+      "DELETE",
+      `/companies/${company.id}/warehouses/${warehouse.id}`,
+      undefined,
+      session.cookie,
+    )
+    expect(allowed.status).toBe(204)
   })
 
   it("la baja conserva la fila y retira el acceso", async () => {

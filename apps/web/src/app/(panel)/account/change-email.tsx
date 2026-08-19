@@ -63,7 +63,7 @@ export function ChangeEmail({ currentEmail }: { currentEmail: string }) {
   }
 
   return (
-    <form onSubmit={submit} noValidate className="flex max-w-xl flex-col gap-4">
+    <form onSubmit={submit} noValidate className="flex max-w-140 flex-col gap-4">
       <p className="text-body2 text-content-muted">{t("description", { email: currentEmail })}</p>
 
       {error ? (
