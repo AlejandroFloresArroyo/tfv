@@ -21,20 +21,34 @@
 - [x] Forma uniforme de la respuesta de error
 - [x] Mensajes de validación por campo, en español
 - [ ] Detalle técnico suprimido en producción y registrado del lado del servidor — el manejador ya distingue; falta la prueba
-- [ ] Correlación entre la respuesta y el registro del servidor
+- [ ] Correlación entre la respuesta y el registro del servidor — **implementada, sin prueba de la
+      mitad que importa**: la respuesta lleva `x-request-id` y el registro estampa el mismo en
+      cada línea (`runtime/app.ts:66-83`, `runtime/logger.ts:41-52`), pero `route.test.ts:238-250`
+      sólo comprueba el encabezado. Que la línea del registro lleve ese identificador no lo
+      afirma nadie
 
 ## Lenguaje de consulta
 
 - [x] Palabras reservadas y sus valores por defecto
 - [x] Tabla de coerción de valores
-- [ ] Declaración de campos filtrables por recurso, con su tipo
+- [x] Declaración de campos filtrables por recurso, con su tipo — `QuerySchema.filters` con
+      `FilterDefinition.type` en `packages/contracts/src/query.ts:19-40`; lo comprueban
+      `query.test.ts:103` (campo no declarado), `:148` (texto en campo numérico) y `:170` (fuera
+      del enumerado), y contra la API `companies/collections.test.ts:256`
 - [ ] Filtros por atributo de entidad relacionada, declarados
 - [x] Orden con desempate determinista
-- [ ] Expansión recursiva al filtrar por categoría
+- [x] Expansión recursiva al filtrar por categoría — `categorySubtree` en
+      `apps/api/src/warehouses/catalog.ts:1045-1052`; pruebas `catalog.test.ts:643` y, por la
+      tienda pública, `websites/storefront.test.ts:423`
 - [ ] Registro de campos de búsqueda: transcribir las cuarenta y cinco filas y verificarlas — el registro está en la spec; falta llevarlo al código
-- [ ] Búsqueda insensible a mayúsculas y acentos, con coincidencia parcial
+- [x] Búsqueda insensible a mayúsculas y acentos, con coincidencia parcial — `searchCondition`
+      normaliza **los dos lados** con `app.norm` (`apps/api/src/runtime/collection.ts:156-162`,
+      `drizzle/0009_search_normalization.sql`). Pruebas `companies/collections.test.ts:219`,
+      `:226` y `:239`, que además fija que un comodín se busca como letra
 - [x] Envolvente de paginación
-- [ ] Prueba: paginar una colección con valores empatados no repite ni omite
+- [x] Prueba: paginar una colección con valores empatados no repite ni omite —
+      `companies/collections.test.ts:181`, con todos los rellenos empatados en prefijo y en fecha
+      de alta al milisegundo, así que lo único que los separa es el desempate
 
 ## Idempotencia
 

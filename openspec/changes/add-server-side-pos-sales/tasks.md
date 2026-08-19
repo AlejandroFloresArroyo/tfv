@@ -29,7 +29,10 @@
 - [ ] Importe recibido y cambio en las ventas en efectivo
 - [ ] Rechazo si el importe recibido es menor que el total
 - [ ] Responsable de la venta
-- [ ] Retirar del navegador la orquestación de escritura
+- [~] Retirar del navegador la orquestación de escritura — **no aplicable**: la orquestación es
+      `[web]` en su totalidad, o sea `tfv-frontend/`, que no está en este árbol y que la regla 1
+      prohíbe tocar (`DEFECTS.md` M-06). Lo que esta rebanada sí puede hacer —que el servidor
+      calcule y escriba— son las tareas de arriba, y siguen abiertas
 
 ## Documentos
 

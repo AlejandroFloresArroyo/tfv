@@ -52,7 +52,11 @@ Casi todo esto ya existía desde la rebanada 04, que construyó el ciclo de vida
 - [ ] Habilitación por conjunto, reconciliando altas y bajas
 - [ ] Retirar un servicio conserva sus datos
 - [ ] Corregir la cascada al eliminar un servicio
-- [ ] Corregir la búsqueda de servicio por clave
+- [x] Corregir la búsqueda de servicio por clave — `hasService` compara contra `services.keycode`
+      y no contra el identificador, que es el defecto `DEFECTS.md` L-10
+      (`apps/api/src/billing/entitlements.ts:225-234`). Lo demuestra el par de
+      `billing/merchants.test.ts`: con el servicio habilitado por su clave la operación pasa
+      (`:709`) y sin él responde `403 service_not_enabled` (`:719`)
 
 ## Direcciones
 
@@ -145,7 +149,14 @@ siendo accesible** — que es lo que lo hacía difícil de notar. Arreglado en e
 **La propiedad no tiene clave de permiso.** El catálogo no trae ninguna para transferirla, así que
 no se puede exigir como permiso: se exige **ser propietaria**, que es una regla y no un permiso. Si
 el negocio quiere poder delegarla a un rol, hace falta una clave nueva y el catálogo deja de
-coincidir con el de la implementación anterior. Queda pendiente de decisión.
+coincidir con el de la implementación anterior.
+
+**Decidido el 2026-08-19: sólo la propietaria, y no se añade clave al catálogo.** Lo que ya está
+implementado es exactamente eso, así que la decisión no mueve código: confirma el que hay. Las
+tareas que dependían de ella —transferencia y retirada de propiedad, y las dos pruebas de que
+nadie más las mueve— ya estaban marcadas y siguen estándolo. La taxonomía global, que se
+apuntaba a esta misma decisión, queda igual: la decide la administración de plataforma y
+tampoco lleva clave.
 
 **Crear una empresa es la única operación que no se puede resolver contra el alcance del
 solicitante**: la política exige que la empresa ya esté entre las suyas, y al crearla no lo está.

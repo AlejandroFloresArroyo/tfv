@@ -2,7 +2,9 @@
 
 > **Sin conexión persistente.** Lo marcado es lo que se cerró contra una consulta periódica detrás
 > de una costura (`ChatTransport`); lo que queda sin marcar depende del transporte que este entorno
-> no tiene. El motivo y lo que entró en su lugar, en `HALLAZGOS.md` H-60.
+> no tiene. El motivo y lo que entró en su lugar, en `HALLAZGOS.md` **H-66** — hasta el
+> 2026-08-19 esta nota citaba H-60, que es la previsualización de la cotización y no habla de
+> esto (ver H-148).
 
 ## Autenticación
 

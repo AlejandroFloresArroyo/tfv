@@ -46,8 +46,15 @@
 - [ ] Cuenta del comprador: direcciones y pedidos de todas las tiendas
 - [x] Catálogo paginado, con búsqueda y filtro por categoría con descendientes
 - [x] Ficha por identificador o por identificador legible
-- [ ] Carrito persistente, con subtotal y estimación de envío
-- [ ] Revalidación de precios y existencias antes de pagar
+- [ ] Carrito persistente, con subtotal y estimación de envío — **dos tercios**: persiste por
+      tienda en el navegador (`apps/web/src/lib/cart.ts:93-115`) y el servidor lo valora en cada
+      cambio, con su subtotal. **No hay estimación de envío en el carrito**: la pantalla dice «el
+      envío se calcula en el siguiente paso, con tu dirección»
+- [ ] Revalidación de precios y existencias antes de pagar — **la mitad**: el servidor revalida de
+      verdad —vuelve a valorar contra el catálogo publicado y aparta unidades concretas—, pero la
+      spec pide dos cosas y la segunda no está: «SHALL revalidar precios y existencias … **y SHALL
+      avisar** al visitante de cualquier cambio en lugar de cobrarle en silencio»
+      (`public-storefronts/spec.md:127-141`). Nadie avisa. Va con la prueba de más abajo
 - [ ] Modalidad venta o renta en la vertical de almacén
 - [ ] Configurador de mosaicos en su vertical
 - [ ] Páginas de confirmación y cancelación
@@ -61,7 +68,10 @@
 
 ## Limpieza
 
-- [ ] **Retirar los enlaces a la ruta de presupuesto compartido inexistente**
+- [~] **Retirar los enlaces a la ruta de presupuesto compartido inexistente** — **no aplicable**:
+      los dos archivos con el enlace roto son `[web]`, es decir `tfv-frontend/`, que no está en
+      este árbol y que la regla 1 prohíbe tocar (`DEFECTS.md` F-11). En la pila nueva la ruta que
+      allí faltaba **existe**: el documento de cotización y su enlace público, rebanada 14
 
 ## Verificación
 

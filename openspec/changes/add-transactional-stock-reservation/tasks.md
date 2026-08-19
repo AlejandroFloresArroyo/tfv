@@ -49,7 +49,10 @@
 
 - [x] Consulta de verificación entre unidades en cotización y vínculos vivos
 - [x] Comunicación de discrepancias
-- [ ] Ejecución programada de la verificación
+- [x] Ejecución programada de la verificación — `scheduleJob({ kind: STOCK_COHERENCE })` en
+      `apps/api/src/jobs/handlers.ts:227`, sobre el despachador durable que trajo la 09. Prueba
+      `jobs/handlers.test.ts:153`: encuentra la unidad comprometida que nadie reclama y **avisa a
+      quien puede arreglarla**; y `:194`, que con el inventario cuadrado no avisa a nadie
 
 ## Verificación
 
