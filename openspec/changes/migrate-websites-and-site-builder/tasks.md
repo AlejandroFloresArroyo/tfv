@@ -22,26 +22,26 @@
 
 ## Constructor
 
-- [ ] Personalización con nombre, color y banner
-- [ ] Una sola primaria; marcar desmarca
-- [ ] La primera es primaria
-- [ ] Programación por ventana de fechas
-- [ ] Resolución de la vigente: programada antes que primaria
-- [ ] Desempate determinista ante solapamiento
-- [ ] Eliminar la primaria promueve otra
-- [ ] **Corregir la eliminación que borra de la tabla de sitios**
-- [ ] Catálogo cerrado de tipos de sección
-- [ ] Tipo desconocido se omite sin romper la página
-- [ ] Contenido de sección: propiedades, estilos, elementos y botones
-- [ ] Ocultar sin eliminar
-- [ ] Orden explícito y reordenación
-- [ ] Tipos de acción de botón, con validación del destino de desplazamiento
-- [ ] Vista previa con el renderizado del sitio público
-- [ ] Contenido inicial por vertical
+- [x] Personalización con nombre, color y banner
+- [x] Una sola primaria; marcar desmarca
+- [x] La primera es primaria
+- [x] Programación por ventana de fechas
+- [x] Resolución de la vigente: programada antes que primaria
+- [x] Desempate determinista ante solapamiento
+- [x] Eliminar la primaria promueve otra
+- [x] **Corregir la eliminación que borra de la tabla de sitios**
+- [x] Catálogo cerrado de tipos de sección
+- [x] Tipo desconocido se omite sin romper la página
+- [x] Contenido de sección: propiedades, estilos, elementos y botones
+- [x] Ocultar sin eliminar
+- [x] Orden explícito y reordenación
+- [x] Tipos de acción de botón, con validación del destino de desplazamiento
+- [x] Vista previa con el renderizado del sitio público
+- [x] Contenido inicial por vertical
 
 ## Tiendas
 
-- [ ] Navegación, pie y secciones de la personalización vigente — navegación y pie hechos; las secciones esperan al constructor
+- [x] Navegación, pie y secciones de la personalización vigente
 - [ ] Registro y acceso desde la propia tienda
 - [ ] Cuenta del comprador: direcciones y pedidos de todas las tiendas
 - [x] Catálogo paginado, con búsqueda y filtro por categoría con descendientes
@@ -67,6 +67,6 @@
 
 - [x] Prueba por cada una de las tres compuertas
 - [x] Prueba: sitio despublicado no revela su existencia
-- [ ] Prueba: la campaña programada sustituye y se retira sola
+- [x] Prueba: la campaña programada sustituye y se retira sola
 - [ ] Prueba: cambio de precio antes de pagar se avisa
 - [x] Prueba: el costo interno no sale en la ficha pública

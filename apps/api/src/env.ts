@@ -151,6 +151,49 @@ const schema = z
     STORAGE_SERVICE_KEY: z.string().min(1).optional(),
 
     /**
+     * Qué almacenamiento hay detrás.
+     *
+     * `supabase` —lo de fábrica— es el que se despliega hoy: su API HTTP, con el punto de firma del
+     * proveedor. `s3` habla el protocolo de S3 y sirve para AWS y para cualquier compatible.
+     *
+     * **Cambiarlo no basta para mudarse.** Las direcciones de lectura están persistidas en la fila
+     * de cada archivo, así que un cambio de proveedor exige además reescribirlas; para eso está
+     * `scripts/rewrite-media-urls.ts`, y la spec lo pide explícitamente.
+     */
+    STORAGE_PROVIDER: z.enum(["supabase", "s3"]).default("supabase"),
+
+    /**
+     * Punto de acceso S3, cuando el almacenamiento no es AWS.
+     *
+     * Puesto, el depósito viaja en el camino —`{punto}/{depósito}/{clave}`—, que es la forma que
+     * entienden los compatibles. Vacío, se usa la de AWS con el depósito en el nombre de máquina.
+     * La pila local expone el suyo en `${STORAGE_URL}/s3`, que es contra lo que está ejercido.
+     */
+    STORAGE_S3_ENDPOINT: z.string().url().optional(),
+    STORAGE_S3_REGION: z.string().min(1).default("us-east-1"),
+    /**
+     * La credencial que firma. **No sale del servidor**, igual que la del proveedor de hoy: lo que
+     * viaja al navegador es una dirección con una firma dentro, acotada a una clave y a un verbo.
+     */
+    STORAGE_S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+    STORAGE_S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    /**
+     * Raíz de las direcciones públicas de lectura.
+     *
+     * Se declara porque no se puede deducir: en AWS puede ser el depósito, una distribución de CDN
+     * o un dominio propio, y en un compatible casi nunca coincide con el punto de escritura. Sin
+     * ella se compone la de AWS.
+     */
+    STORAGE_S3_PUBLIC_URL: z.string().url().optional(),
+    /**
+     * Cuánto dura la autorización de escritura. Dos horas, como la del proveedor de hoy.
+     *
+     * No es una constante: lo que se está comprando es tiempo para subir un archivo por la conexión
+     * que haya, y el tope del protocolo son siete días.
+     */
+    STORAGE_S3_EXPIRES_SECONDS: z.coerce.number().int().positive().max(604_800).default(7_200),
+
+    /**
      * El dominio bajo el que se sirven las tiendas públicas.
      *
      * De él sale la **dirección completa** de un sitio, que es un campo calculado: el identificador
@@ -236,6 +279,29 @@ const schema = z
     /** Cada cuánto se comprueba que las reservas y el inventario digan lo mismo. */
     STOCK_COHERENCE_EVERY_MS: z.coerce.number().int().positive().default(21_600_000),
     NOTIFICATIONS_DELIVER_EVERY_MS: z.coerce.number().int().positive().default(60_000),
+
+    /**
+     * Cuánto tiempo aparta una compra el inventario mientras se paga.
+     *
+     * No es una constante del dominio: es cuánto está dispuesta la tienda a retirar una cámara del
+     * catálogo por alguien que todavía no ha pagado. Media hora es lo que tarda un pago con
+     * transferencia y una eternidad en un fin de semana de rodaje.
+     *
+     * La vigencia de la sesión de pago del procesador se fija a la misma, para que lo apartado y lo
+     * cobrable caduquen juntos: con dos plazos distintos, uno de los dos deja de ser cierto.
+     */
+    CHECKOUT_RESERVATION_MINUTES: z.coerce.number().int().positive().default(30),
+    /** Cada cuánto se barren las compras cuya sesión caducó. Por defecto, cada cinco minutos. */
+    CHECKOUT_SWEEP_EVERY_MS: z.coerce.number().int().positive().default(300_000),
+    /**
+     * El origen al que vuelve el comprador desde la sesión de pago.
+     *
+     * «La sesión de pago SHALL indicar a dónde volver… **dentro del dominio de la propia tienda**».
+     * Hoy la aplicación web sirve cada tienda bajo `/s/<identificador>`, así que de aquí sale el
+     * origen y el camino lo pone la compra. Cuando las tiendas se sirvan por subdominio propio,
+     * éste es el único sitio que cambia.
+     */
+    STOREFRONT_ORIGIN: z.string().url().default("http://localhost:3000"),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV === "production" && !value.STORAGE_SERVICE_KEY) {
@@ -245,6 +311,20 @@ const schema = z
         message:
           "En producción es obligatoria: sin ella no se puede firmar ninguna subida, y toda " +
           "pantalla que suba un archivo queda inservible.",
+      })
+    }
+
+    if (
+      value.STORAGE_PROVIDER === "s3" &&
+      (!value.STORAGE_S3_ACCESS_KEY_ID || !value.STORAGE_S3_SECRET_ACCESS_KEY)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["STORAGE_S3_ACCESS_KEY_ID"],
+        message:
+          "Con STORAGE_PROVIDER=s3 hacen falta STORAGE_S3_ACCESS_KEY_ID y " +
+          "STORAGE_S3_SECRET_ACCESS_KEY: sin ellas no se puede firmar ninguna subida. Se comprueba " +
+          "al arrancar y no en la primera foto que alguien intente subir.",
       })
     }
 

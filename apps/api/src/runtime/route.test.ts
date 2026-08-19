@@ -84,7 +84,8 @@ describe("superficie pública", () => {
      */
     "GET /public/documents/{reference}",
     /**
-     * Las tres de la tienda pública, añadidas el 2026-08-18 de forma deliberada.
+     * Las cuatro de la tienda pública. Tres se añadieron el 2026-08-18 y la de la portada el
+     * 2026-08-19, todas de forma deliberada.
      *
      * Son **la razón de ser** de la rebanada 19: una tienda que exigiera cuenta para mirar el
      * catálogo no es una tienda. Lo que las acota no es una credencial sino la forma del camino y
@@ -100,6 +101,25 @@ describe("superficie pública", () => {
      *   pruebas lo comprueban desde fuera, sin cookie.
      */
     "GET /public/sites/{slug}",
+    /**
+     * Añadida el 2026-08-19, de forma deliberada. Rebanada 18.
+     *
+     * Valorar el carrito de una tienda pública. **Es un `POST` que no escribe nada**: lleva verbo
+     * de escritura porque la lista de artículos no cabe con holgura en una dirección, no porque
+     * cambie nada. Devuelve exactamente lo que la ficha ya enseña —precio publicado y cuántas
+     * unidades quedan—, resuelto por la misma función que la pinta.
+     *
+     * Pagar **no** está aquí y no puede estarlo: apartar inventario a nombre de alguien exige saber
+     * de quién, así que `POST /public/sites/{slug}/checkout` es autenticada.
+     */
+    "POST /public/sites/{slug}/cart",
+    /**
+     * Las secciones que la personalización vigente pone en la portada. Mismo régimen que las otras
+     * tres, y una propiedad más: **devuelve exactamente lo que devuelve la vista previa** del
+     * constructor, que sí exige permiso. Las dos pasan por la misma composición, y eso es lo que
+     * cumple el requisito de que lo que se ve construyendo sea lo que se sirve.
+     */
+    "GET /public/sites/{slug}/page",
     "GET /public/sites/{slug}/products",
     "GET /public/sites/{slug}/products/{handle}",
   ]

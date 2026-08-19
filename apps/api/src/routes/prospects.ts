@@ -153,7 +153,11 @@ export const updateProspectRoute = defineRoute({
   },
   handler: async (c) => {
     assertPlatform(c)
-    const prospect = await updateProspect(c.req.valid("param").prospectId, c.req.valid("json"))
+    const prospect = await updateProspect(
+      c.req.valid("param").prospectId,
+      c.req.valid("json"),
+      requireSession(c).userId,
+    )
     return c.json(serialize(prospect), 200)
   },
 })
@@ -170,7 +174,7 @@ export const discardProspectRoute = defineRoute({
   },
   handler: async (c) => {
     assertPlatform(c)
-    await discardProspect(c.req.valid("param").prospectId)
+    await discardProspect(c.req.valid("param").prospectId, requireSession(c).userId)
     return c.body(null, 204)
   },
 })

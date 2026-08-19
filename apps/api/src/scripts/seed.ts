@@ -46,6 +46,7 @@ import {
 import { and, count, eq, inArray, isNull, notExists, sql } from "drizzle-orm"
 import { hashPassword } from "../auth/password.ts"
 import { env } from "../env.ts"
+import { type EnsureReport, ensurePlaceholders } from "../media/placeholders.ts"
 
 if (env.NODE_ENV === "production") {
   throw new Error("La siembra no se ejecuta en producción: sus contraseñas son públicas.")
@@ -162,12 +163,16 @@ const ROLES: Record<string, readonly PermissionKey[]> = {
 async function main(): Promise<void> {
   const passwordHash = await hashPassword(PASSWORD)
 
+  // Los marcadores primero: no son datos de ejemplo sino inventario del sistema, y cualquier
+  // entidad sembrada que quisiera referenciarlos los necesita ya puestos.
+  const placeholders = await ensurePlaceholders()
+
   const serviceIds = await seedCatalog()
   const companyIds = await seedCompanies(serviceIds)
   await seedAccounts(passwordHash, companyIds)
   const volume = await seedVolume(passwordHash, companyIds)
 
-  report(companyIds, volume)
+  report(companyIds, volume, placeholders)
 }
 
 // ─── Catálogo ────────────────────────────────────────────────────────────────
@@ -1277,7 +1282,11 @@ async function findRole(companyId: string, name: string): Promise<string | null>
 
 // ─── Informe ─────────────────────────────────────────────────────────────────
 
-function report(companyIds: Map<string, string>, volume: VolumeReport): void {
+function report(
+  companyIds: Map<string, string>,
+  volume: VolumeReport,
+  placeholders: EnsureReport,
+): void {
   const lines = [
     "",
     "  Siembra aplicada.",
@@ -1300,6 +1309,8 @@ function report(companyIds: Map<string, string>, volume: VolumeReport): void {
     `    Nave Monterrey: ${volume.products} productos · ${volume.units} unidades · 12 cajas en dos pisos`,
     `    ${volume.quotes} cotizaciones en cuatro estados, con su equipo apartado`,
     `    ${volume.orders} pedidos esperando decisión, uno pidiendo más de lo que hay`,
+    "",
+    `  Marcadores de posición: ${placeholders.rows} filas · ${placeholders.written} objetos escritos`,
     "",
     `  Identificadores: ${[...companyIds.values()].join(", ")}`,
     "",

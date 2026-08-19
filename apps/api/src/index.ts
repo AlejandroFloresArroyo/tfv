@@ -12,6 +12,7 @@
 import { serve } from "@hono/node-server"
 import { closeConnection, ping } from "@tfv/db"
 import { localProvider, usePaymentProvider } from "./billing/provider.ts"
+import { localStorefrontProvider, useStorefrontProvider } from "./checkout/provider.ts"
 import { env } from "./env.ts"
 import { type RunningDispatcher, startDispatcher } from "./jobs/dispatcher.ts"
 import { registerBuiltinJobs } from "./jobs/handlers.ts"
@@ -50,6 +51,9 @@ async function main() {
    */
   if (env.PAYMENTS_PROVIDER === "local") {
     usePaymentProvider(localProvider())
+    // El cobro de tienda tiene su propia costura —líneas, envío aparte y comisión con destino, que
+    // no es la forma de una suscripción—, así que el suplente se pone en las dos.
+    useStorefrontProvider(localStorefrontProvider())
     rootLogger.warn(
       "procesador de pagos SUPLENTE: no mueve dinero y las suscripciones se activan sin cobrar",
     )
