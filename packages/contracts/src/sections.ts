@@ -171,16 +171,22 @@ export function sectionSpec(kind: string): SectionKindSpec | undefined {
 
 // ─── El contenido ────────────────────────────────────────────────────────────
 
-/** Un botón de una sección. */
+/**
+ * Un botón de una sección.
+ *
+ * Los campos opcionales llevan `| undefined` explícito porque el proyecto corre con
+ * `exactOptionalPropertyTypes`: esto viaja como JSON y vuelve, y un campo ausente llega como
+ * `undefined` presente. Sin el `| undefined` no se podría escribir lo que se acaba de leer.
+ */
 export interface SectionButton {
   readonly code: string
   readonly label: string
-  readonly icon?: string
+  readonly icon?: string | undefined
   /**
    * Qué hace el botón, según su acción: la dirección de un enlace, **el tipo de la sección** a la
    * que se desplaza, o la clave de la acción de aplicación.
    */
-  readonly value?: string
+  readonly value?: string | undefined
   readonly action: "link" | "scroll" | "app"
   readonly variant: "filled" | "outline" | "light"
 }
@@ -188,11 +194,11 @@ export interface SectionButton {
 /** Un elemento repetible: un testimonio, una característica, una pregunta. */
 export interface SectionItem {
   readonly code: string
-  readonly title?: string
-  readonly description?: string
-  readonly icon?: string
-  readonly avatar?: string
-  readonly image?: string
+  readonly title?: string | undefined
+  readonly description?: string | undefined
+  readonly icon?: string | undefined
+  readonly avatar?: string | undefined
+  readonly image?: string | undefined
 }
 
 /**
@@ -207,13 +213,13 @@ export interface Section {
   readonly kind: string
   readonly show: boolean
   readonly position: number
-  readonly title?: string
-  readonly description?: string
-  readonly icon?: string
-  readonly props?: Readonly<Record<string, unknown>>
-  readonly styles?: Readonly<Record<string, string>>
-  readonly items?: readonly SectionItem[]
-  readonly buttons?: readonly SectionButton[]
+  readonly title?: string | undefined
+  readonly description?: string | undefined
+  readonly icon?: string | undefined
+  readonly props?: Readonly<Record<string, unknown>> | undefined
+  readonly styles?: Readonly<Record<string, string>> | undefined
+  readonly items?: readonly SectionItem[] | undefined
+  readonly buttons?: readonly SectionButton[] | undefined
 }
 
 /** Una sección que sí se va a pintar: su tipo está en el catálogo y se muestra. */
