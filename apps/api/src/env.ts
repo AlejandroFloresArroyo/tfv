@@ -192,6 +192,28 @@ const schema = z
     UPLOADS_ABANDONED_AFTER_HOURS: z.coerce.number().int().positive().default(24),
     UPLOADS_COLLECT_EVERY_MS: z.coerce.number().int().positive().default(3_600_000),
     /**
+     * Cuánto cuerpo acepta una petición, en octetos.
+     *
+     * Un mega ya es enorme para lo que aquí viaja, que es JSON: **los archivos no atraviesan la
+     * API** —se suben directamente al almacenamiento con una autorización firmada—, así que ningún
+     * endpoint necesita aceptar cargas grandes. Cada ruta puede apretarlo más; ninguna lo afloja.
+     */
+    BODY_LIMIT_BYTES: z.coerce.number().int().positive().default(1_048_576),
+
+    /**
+     * Limitación de frecuencia genérica.
+     *
+     * Sin valor, se enciende salvo en pruebas. **No es pereza**: el contador vive en memoria y por
+     * proceso, así que dejarlo puesto en la suite haría que el resultado de una prueba dependiera
+     * de cuántas peticiones hicieron las anteriores en el mismo trabajador. Un fallo así aparece y
+     * desaparece según el orden de los archivos, y una suite en la que eso pasa deja de creerse.
+     * Las pruebas del limitador lo encienden a mano, con su propio reloj.
+     */
+    RATE_LIMIT_ENABLED: z.string().optional(),
+    RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
+    RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+
+    /**
      * Cuánto se recuerda una clave de idempotencia, y cada cuánto se barre lo vencido.
      *
      * No es una constante del dominio: lo que se está comprando es la ventana en la que un
@@ -260,6 +282,16 @@ if (!parsed.success) {
 export const env = parsed.data
 
 export const isProduction = env.NODE_ENV === "production"
+
+/**
+ * ¿Está encendida la limitación de frecuencia?
+ *
+ * Sin decisión explícita se enciende, salvo en pruebas. Ver el comentario de `RATE_LIMIT_ENABLED`.
+ */
+export const rateLimitEnabled =
+  env.RATE_LIMIT_ENABLED === undefined
+    ? env.NODE_ENV !== "test"
+    : env.RATE_LIMIT_ENABLED !== "false" && env.RATE_LIMIT_ENABLED !== "0"
 
 /** El detalle técnico de los errores sólo sale fuera de producción. */
 export const exposeErrorDetails = !isProduction

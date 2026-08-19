@@ -69,6 +69,14 @@ export interface RouteDefinition<C extends AnyRouteConfig = AnyRouteConfig> {
    * `openspec/specs/api-conventions/spec.md`, «Las mutaciones de dinero son idempotentes».
    */
   readonly idempotent?: boolean | undefined
+  /**
+   * Cuánto cuerpo acepta esta ruta, en octetos.
+   *
+   * Ausente toma el límite general. Se declara por ruta porque el requisito lo pide «acorde a lo
+   * que cada endpoint necesita»: la mayoría reciben un formulario y no hay motivo para que puedan
+   * recibir un mega.
+   */
+  readonly maxBodyBytes?: number | undefined
 }
 
 /**
@@ -84,6 +92,7 @@ export interface RegisteredRoute {
   // biome-ignore lint/suspicious/noExplicitAny: el manejador concreto es distinto en cada ruta.
   readonly handler: any
   readonly idempotent?: boolean | undefined
+  readonly maxBodyBytes?: number | undefined
 }
 
 const registry: RegisteredRoute[] = []
@@ -99,6 +108,7 @@ export function defineRoute<C extends AnyRouteConfig>(definition: {
   config: C
   handler: RouteHandler<C>
   idempotent?: boolean | undefined
+  maxBodyBytes?: number | undefined
 }): RouteDefinition<C> {
   assertScopedByCompany(definition.access, definition.config.path)
   assertIdempotencyHasActor(definition.access, definition.config.path, definition.idempotent)
@@ -108,6 +118,7 @@ export function defineRoute<C extends AnyRouteConfig>(definition: {
     config: createRoute(withIdempotencyHeader(definition.config, definition.idempotent)) as C,
     handler: definition.handler,
     ...(definition.idempotent === undefined ? {} : { idempotent: definition.idempotent }),
+    ...(definition.maxBodyBytes === undefined ? {} : { maxBodyBytes: definition.maxBodyBytes }),
   }
   registry.push(route)
   return route
@@ -209,12 +220,36 @@ export function mountRoutes(
   layers: readonly RouteLayer[],
 ): void {
   for (const route of routes) {
+    const method = route.config.method.toUpperCase()
+
     for (const layer of layers) {
       const middleware = layer(route)
-      if (middleware) app.use(toHonoPath(route.config.path), middleware)
+      if (middleware) app.use(toHonoPath(route.config.path), onlyFor(method, middleware))
     }
     app.openapi(route.config, route.handler)
   }
+}
+
+/**
+ * Acota una capa al verbo de su ruta.
+ *
+ * **El enrutador no sabe montar middleware por verbo**: `use` lo registra para todos los del mismo
+ * camino. Y un camino con varios verbos es lo normal —hoy hay cuarenta y siete, y en cuarenta de
+ * ellos los regímenes difieren: `GET` de lectura y `DELETE` de borrado sobre el mismo recurso—.
+ *
+ * Sin este filtro, cada ruta hereda las capas de sus hermanas. En una petición, el enrutador compone
+ * lo que casó **en orden de registro**, así que la herencia depende de en qué orden estén declaradas
+ * en la tabla: con la de lectura primero no se nota, y con la de borrado primero **la lectura exige
+ * el permiso de borrar**. Comprobado: una ruta pública declarada después de una autenticada sobre el
+ * mismo camino respondía `401`.
+ *
+ * El modo de fallo es cerrado —una ruta gana guardianes, nunca los pierde: el suyo se registra
+ * siempre justo antes de su manejador—, así que no abre nada. Pero significa que **el permiso que
+ * una ruta exige de verdad no es el que declara**, y que reordenar la tabla de rutas cambia la
+ * autorización sin tocar ninguna declaración. Ver `HALLAZGOS.md` H-127.
+ */
+function onlyFor(method: string, middleware: MiddlewareHandler): MiddlewareHandler {
+  return (c, next) => (c.req.method.toUpperCase() === method ? middleware(c, next) : next())
 }
 
 /**

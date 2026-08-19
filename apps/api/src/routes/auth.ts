@@ -46,6 +46,7 @@ import {
   type SessionCredentials,
 } from "../auth/sessions.ts"
 import { env, isProduction } from "../env.ts"
+import { clientIp } from "../runtime/request.ts"
 import { AUTHENTICATED, defineRoute, PUBLIC } from "../runtime/route.ts"
 
 // ─── Cookies ─────────────────────────────────────────────────────────────────
@@ -677,24 +678,6 @@ export const changePasswordRoute = defineRoute({
   },
 })
 
-// ─── Ayuda ───────────────────────────────────────────────────────────────────
-
-/**
- * Dirección del cliente, o `undefined` si no se sabe.
- *
- * Devuelve ausencia y no una cadena centinela. `"unknown"` se compara como si fuera una dirección
- * real, y quien la usara para agrupar acabaría metiendo en el mismo saco a todo el que llegue sin
- * ella — que es exactamente el defecto que tenía el limitador de intentos.
- *
- * El servicio va detrás de un proxy, así que la dirección llega por encabezado. **Sólo es de fiar
- * si un proxy de confianza lo escribe**: un cliente directo puede poner ahí lo que quiera. Hoy la
- * aplicación web es la que lo reenvía; cuando haya un balanceador delante habrá que decidir a
- * cuántos saltos hacer caso, y ese día esta función es el único punto que cambia.
- */
-function clientIp(c: Context): string | undefined {
-  const forwarded = c.req.header("x-forwarded-for")
-  const first = forwarded?.split(",")[0]?.trim()
-  if (first) return first
-
-  return c.req.header("x-real-ip")?.trim() || undefined
-}
+// La dirección del solicitante ya no se lee aquí: la comparten este registro y el limitador de
+// frecuencia del armazón, y dos copias acabarían con criterios distintos de a qué salto hacer caso.
+// Ver `apps/api/src/runtime/request.ts`.

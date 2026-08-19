@@ -247,10 +247,6 @@ export function idempotencyFor(route: RegisteredRoute): MiddlewareHandler | null
   const method = route.config.method.toUpperCase()
 
   return async (c, next) => {
-    // El middleware se monta por camino, y un camino puede tener más de un verbo. Sin esto, la
-    // lectura del mismo recurso pasaría por aquí y leería un encabezado que no es suyo.
-    if (c.req.method.toUpperCase() !== method) return next()
-
     const raw = c.req.header(IDEMPOTENCY_HEADER)
     if (!raw) return next()
 

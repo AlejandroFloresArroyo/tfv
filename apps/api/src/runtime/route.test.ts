@@ -265,6 +265,61 @@ describe("aplicación", () => {
   })
 })
 
+describe("cada capa se queda en su verbo", () => {
+  /**
+   * Regresión de un defecto **que dependía del orden de la tabla de rutas**.
+   *
+   * El enrutador no sabe montar middleware por verbo: `use` lo registra para todos los del mismo
+   * camino. Y un camino con varios verbos es lo normal —hoy hay cuarenta y siete, y en cuarenta de
+   * ellos los regímenes difieren—. Sin acotar la capa a su verbo, cada ruta heredaba los guardianes
+   * de sus hermanas, y como el enrutador compone en **orden de registro**, con la ruta estricta
+   * declarada primero la laxa quedaba exigiendo lo que nunca declaró.
+   *
+   * Falla cerrado, así que no abrió nada. Lo que rompía es más sutil y peor de diagnosticar: el
+   * permiso que una ruta exige de verdad no era el que declara, y reordenar la tabla cambiaba la
+   * autorización sin tocar ninguna declaración. Ver `HALLAZGOS.md` H-127.
+   */
+  it("una lectura pública no hereda el guardián de la escritura del mismo camino", async () => {
+    const escribir = defineRoute({
+      access: AUTHENTICATED,
+      config: {
+        method: "post",
+        path: "/probe/compartido",
+        summary: "Escritura autenticada",
+        responses: {
+          200: {
+            description: "ok",
+            content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
+          },
+        },
+      },
+      handler: (c) => c.json({ ok: true }, 200),
+    })
+
+    const leer = defineRoute({
+      access: PUBLIC("Sonda de prueba, no se monta en la aplicación real"),
+      config: {
+        method: "get",
+        path: "/probe/compartido",
+        summary: "Lectura pública",
+        responses: {
+          200: {
+            description: "ok",
+            content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
+          },
+        },
+      },
+      handler: (c) => c.json({ ok: true }, 200),
+    })
+
+    // La estricta **primero**, que es el orden con el que el defecto se manifestaba.
+    const probeApp = createApp([escribir, leer])
+
+    expect((await probeApp.request("/probe/compartido")).status).toBe(200)
+    expect((await probeApp.request("/probe/compartido", { method: "POST" })).status).toBe(401)
+  })
+})
+
 describe("el guardián alcanza a las rutas con parámetros", () => {
   /**
    * Regresión de un defecto **silencioso** del propio andamiaje.
