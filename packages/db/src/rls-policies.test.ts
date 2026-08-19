@@ -48,6 +48,7 @@ const seed = {
   networkB: newId(),
   locationB: newId(),
   categoryG: newId(),
+  ratesA: newId(),
   sessionAna: newId(),
   sessionBeto: newId(),
   sessionCliente: newId(),
@@ -130,6 +131,10 @@ async function sow() {
 
     insert into global_categories (id, name) values ('${s.categoryG}', 'Cine');
 
+    -- Sólo A configura sus tarifas de envío: B se queda con el cuadro por omisión, que es la
+    -- situación normal y la que hace visible el aislamiento de esta tabla.
+    insert into shipping_rates (id, company_id) values ('${s.ratesA}', '${s.companyA}');
+
     insert into sessions
       (id, user_id, chain_id, access_token_hash, refresh_token_hash, access_expires_at, expires_at,
        revoked_at)
@@ -210,7 +215,8 @@ describe("cobertura", () => {
     // El número es una alarma a propósito: añadir una tabla obliga a pasar por aquí, y por aquí es
     // donde se recuerda que una tabla nueva **no hereda** la política de plataforma —la 0005 la
     // repartió con un bucle que corrió una sola vez—. Así se descubrió que faltaba en `prospects`.
-    expect(tablas.length).toBe(94)
+    // 95 desde la 0020, que añade `shipping_rates` con sus dos políticas.
+    expect(tablas.length).toBe(95)
     expect(tablas.filter((t) => !t.rls).map((t) => t.relname)).toEqual([])
     expect(tablas.filter((t) => t.politicas === 0).map((t) => t.relname)).toEqual([])
   })
@@ -255,6 +261,42 @@ describe("aislamiento entre arrendatarios", () => {
         ),
       ),
     )
+  })
+})
+
+// ─── Tarifas de envío ────────────────────────────────────────────────────────
+
+describe("el cuadro de tarifas de envío", () => {
+  it("sólo lo ve su propia empresa", async () => {
+    expect(await countAs(seed.ana, "shipping_rates")).toBe(1)
+    expect(await countAs(seed.beto, "shipping_rates")).toBe(0)
+  })
+
+  it("no lo ve el comprador, que no es miembro de la empresa", async () => {
+    // Lo que el comprador tiene que poder ver es el importe ya calculado de su compra, no el cuadro
+    // con el que se calculó: es configuración interna del comercio.
+    expect(await countAs(seed.cliente, "shipping_rates")).toBe(0)
+  })
+
+  it("no se cambia la tarifa de otra empresa", async () => {
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.beto), (tx) =>
+        tx.execute(
+          sql.raw(`insert into shipping_rates (id, company_id)
+                 values ('${newId()}', '${seed.companyA}')`),
+        ),
+      ),
+    )
+  })
+
+  it("la materialización del pedido sí lo alcanza, declarando la empresa", async () => {
+    // Es la vía por la que la rebanada 18 cobrará el envío: `withSystem` suma el alcance declarado
+    // a las membresías, así que la empresa nombrada entra y ninguna otra.
+    const visible = await withSystem("envios.estimar", [seed.companyA], (tx) =>
+      count(tx, "shipping_rates"),
+    )
+
+    expect(visible).toBe(1)
   })
 })
 

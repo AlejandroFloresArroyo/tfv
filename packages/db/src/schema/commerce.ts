@@ -16,13 +16,14 @@
  * Vía hasta la empresa: columna directa en la compra y sus derivados.
  */
 
-import type { ShippingQuote } from "@tfv/contracts"
+import type { ShippingQuote, ShippingThreshold } from "@tfv/contracts"
 import { relations, sql } from "drizzle-orm"
 import {
   boolean,
   index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -236,6 +237,76 @@ export const payments = pgTable(
 )
 
 // ─── Envío ───────────────────────────────────────────────────────────────────
+
+/**
+ * Cuadro de tarifas de envío de una empresa.
+ *
+ * Ver `openspec/specs/shipping-rates/spec.md`, requisito «Las tarifas son datos configurables».
+ * Rebanada 17.
+ *
+ * Existe para que cambiar una tarifa **no sea un despliegue**. Antes las tarifas y el tipo de
+ * cambio eran constantes del código, y además duplicadas en el navegador (`DEFECTS.md` M-11): un
+ * ajuste de precio pedía dos despliegues coordinados y, entre uno y otro, la estimación que veía el
+ * comprador no era lo que se le cobraba.
+ *
+ * **Una fila por empresa.** Sin fila, el cálculo usa el cuadro de la spec
+ * (`DEFAULT_SHIPPING_RATES`), de modo que una empresa recién dada de alta puede cobrar envíos antes
+ * de que nadie entre a configurarlos.
+ *
+ * La recolección no tiene columnas: la spec la fija en cero, así que no es una tarifa que se pueda
+ * cambiar sin dejar de ser recolección.
+ *
+ * Los umbrales van en JSON y no en columnas porque son una **lista**: hoy la spec define dos tramos
+ * de distancia y dos de cantidad, y en columnas fijas un tercer tramo sería una migración. La forma
+ * es la que consume el motor, `ShippingThreshold[]`, sin traducción por medio.
+ *
+ * Vía hasta la empresa: columna directa.
+ */
+export const shippingRates = pgTable(
+  "shipping_rates",
+  {
+    id: primaryId(),
+    companyId: reference("company_id")
+      .references(() => companies.id, { onDelete: "cascade" })
+      .notNull(),
+
+    /** Moneda en la que están escritas estas tarifas. */
+    currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+    /** El que declara la paquetería. Cinco mil hoy. */
+    volumetricDivisor: integer("volumetric_divisor").notNull().default(5000),
+
+    localBase: money("local_base").notNull().default("99.00"),
+    localPerKilogram: money("local_per_kilogram").notNull().default("20.00"),
+    nationalBase: money("national_base").notNull().default("199.00"),
+    nationalPerKilogram: money("national_per_kilogram").notNull().default("30.00"),
+    internationalBase: money("international_base").notNull().default("499.00"),
+    internationalPerKilogram: money("international_per_kilogram").notNull().default("60.00"),
+
+    /** Tramos de distancia, en kilómetros. Excluyentes entre sí. Sólo en envíos nacionales. */
+    distanceSurcharges: jsonb("distance_surcharges")
+      .$type<readonly ShippingThreshold[]>()
+      .notNull()
+      .default(sql`'[{"over":500,"amount":"40.00"},{"over":1000,"amount":"80.00"}]'::jsonb`),
+    /** Tramos por número de artículos. Excluyentes entre sí. */
+    itemSurcharges: jsonb("item_surcharges")
+      .$type<readonly ShippingThreshold[]>()
+      .notNull()
+      .default(sql`'[{"over":3,"amount":"20.00"},{"over":10,"amount":"50.00"}]'::jsonb`),
+
+    /**
+     * Moneda y tipo a los que convertir el costo, cuando el cobro no va en la de las tarifas.
+     *
+     * Nulos mientras nadie los fije, que es lo que hace que no haya conversión por omisión. El tipo
+     * que se aplicó **se guarda con cada envío** (`checkouts.shipping_breakdown`), no se deduce de
+     * aquí: esta fila cambia, y un cobro de hace tres meses tiene que seguir siendo explicable.
+     */
+    exchangeCurrency: varchar("exchange_currency", { length: 3 }),
+    exchangeRate: numeric("exchange_rate", { precision: 16, scale: 6 }),
+
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("shipping_rates_company_unique").on(table.companyId)],
+)
 
 export const shipmentStatus = pgEnum("shipment_status", [
   "pending",
