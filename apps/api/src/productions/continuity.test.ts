@@ -14,6 +14,8 @@
  * Requiere la base local levantada: `pnpm db:up`.
  */
 
+import type { AddressInfo } from "node:net"
+import { serve } from "@hono/node-server"
 import { newId } from "@tfv/contracts"
 import { closeConnection, db } from "@tfv/db"
 import {
@@ -37,7 +39,7 @@ import {
   users,
 } from "@tfv/db/schema"
 import { eq, sql } from "drizzle-orm"
-import { afterAll, beforeEach, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { routes } from "../routes/index.ts"
 import { createApp } from "../runtime/app.ts"
 
@@ -50,8 +52,32 @@ async function reset() {
   )
 }
 
+/**
+ * Un servidor de verdad, en un puerto que pide el sistema operativo.
+ *
+ * El recorrido completo del final del archivo no llama al manejador ni a `app.request`: abre un
+ * socket y habla HTTP contra él. Es la diferencia entre «el código hace lo que dice» y «esto
+ * funciona»: por aquí pasan el enrutado, los guardianes, la validación del cuerpo, la negociación
+ * de la cookie y la serialización, que es donde se esconden los fallos que ninguna prueba de
+ * unidad ve.
+ *
+ * Puerto `0`, así que nunca es el 3000 ni el 5000 de nadie.
+ */
+let server: ReturnType<typeof serve>
+let origin = ""
+
+beforeAll(async () => {
+  const port = await new Promise<number>((resolve) => {
+    server = serve({ fetch: app.fetch, port: 0, hostname: "127.0.0.1" }, (info) =>
+      resolve((info as AddressInfo).port),
+    )
+  })
+  origin = `http://127.0.0.1:${port}`
+})
+
 beforeEach(reset)
 afterAll(async () => {
+  await new Promise<void>((resolve) => server.close(() => resolve()))
   await reset()
   await closeConnection()
 })
@@ -1379,5 +1405,183 @@ describe("consulta de la continuidad de un personaje", () => {
     )
 
     expect(response.status).toBe(404)
+  })
+})
+
+// ─── El bloque entero, contra un servidor de verdad ──────────────────────────
+
+/** Una petición por HTTP, contra el socket. Nada de `app.request` aquí. */
+async function over(method: string, path: string, body?: unknown, cookie?: string) {
+  return fetch(`${origin}${path}`, {
+    method,
+    headers: { "Content-Type": "application/json", ...(cookie ? { cookie } : {}) },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  })
+}
+
+describe("el día de rodaje, de principio a fin y por la red", () => {
+  it("se programa, se reparte, se anota, se viste y se consulta", async () => {
+    // No es la suma de las pruebas de arriba: es el orden en el que ocurren. Cada paso usa lo que
+    // devolvió el anterior, así que un contrato que no encaje entre dos rutas cae aquí y en ningún
+    // otro sitio.
+    const email = `rodaje-completo@ejemplo.mx`
+    await over("POST", "/auth/register", { email, password: PASSWORD, name: "Script" })
+    await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.email, email))
+
+    const login = await over("POST", "/auth/login", { email, password: PASSWORD })
+    const cookie = login.headers
+      .getSetCookie()
+      .find((raw) => raw.startsWith("tfv_session="))
+      ?.split(";")[0]
+    expect(cookie).toBeDefined()
+
+    const company = (await (
+      await over("POST", "/companies", { name: "Rodaje SA" }, cookie)
+    ).json()) as {
+      id: string
+    }
+    await enableService(company.id, "productions")
+
+    const production = (await (
+      await over("POST", `/companies/${company.id}/productions`, { name: "La Casa" }, cookie)
+    ).json()) as { id: string }
+
+    // Escena y personajes: los escriben otras rebanadas, así que se siembran.
+    const { chapterId, sceneId } = await sowScene(production.id, "Interior cocina")
+    const cast = await Promise.all(
+      ["Marta", "Julián", "La vecina", "El perro"].map((name) => sowCharacter(production.id, name)),
+    )
+
+    const base = `/companies/${company.id}/productions/${production.id}/recordings`
+
+    // 1. Nace en borrador.
+    const created = await over("POST", base, { name: "Jornada 1", sceneId }, cookie)
+    expect(created.status).toBe(201)
+    const recording = (await created.json()) as Recording
+    expect(recording.status).toBe("draft")
+
+    // 2. Se le asigna reparto de cuatro y pasa a en curso.
+    const opened = await over(
+      `POST`,
+      `${base}/${recording.id}/characters`,
+      { characterIds: cast },
+      cookie,
+    )
+    expect(opened.status).toBe(200)
+    const withCast = (await opened.json()) as RecordingDetail
+    expect(withCast.status).toBe("ongoing")
+    expect(withCast.continuities).toHaveLength(4)
+
+    // 3. Se vuelve a asignar uno de los cuatro: no aparece una quinta continuidad.
+    const again = await over(
+      "POST",
+      `${base}/${recording.id}/characters`,
+      { characterIds: [cast[0]] },
+      cookie,
+    )
+    expect(again.status).toBe(200)
+    expect(((await again.json()) as RecordingDetail).continuities).toHaveLength(4)
+
+    // 4. Se le cuelga utilería de los dos tipos a Marta.
+    const marta = withCast.continuities.find((row) => row.characterId === cast[0])
+    const continuity = `${base}/${recording.id}/continuities/${marta?.id}`
+
+    const chaqueta = await sowItem(production.id, "Chaqueta de mezclilla")
+    const botas = await sowItem(production.id, "Botas cafés")
+    const sombrero = await sowItem(production.id, "Sombrero")
+    const reloj = await sowItem(production.id, "Reloj de pulso")
+    const referencia = await sowVideo(production.id, "Referencia del piloto")
+    const prueba = await sowVideo(production.id, "Prueba de cámara")
+
+    for (const itemId of [chaqueta, botas, sombrero]) {
+      expect((await over("POST", `${continuity}/items`, { itemId }, cookie)).status).toBe(201)
+    }
+    for (const videoId of [referencia, prueba]) {
+      expect((await over("POST", `${continuity}/videos`, { videoId }, cookie)).status).toBe(201)
+    }
+
+    // 5. Se reconcilian los artículos, y los videos no se mueven.
+    const reconciled = await over(
+      "PUT",
+      `${continuity}/items`,
+      { itemIds: [chaqueta, reloj] },
+      cookie,
+    )
+    expect(reconciled.status).toBe(200)
+    const afterItems = (await reconciled.json()) as Continuity
+
+    expect(
+      afterItems.props
+        .filter((row) => row.kind === "item")
+        .map((row) => row.name)
+        .sort(),
+    ).toEqual(["Chaqueta de mezclilla", "Reloj de pulso"])
+    expect(
+      afterItems.props
+        .filter((row) => row.kind === "video")
+        .map((row) => row.name)
+        .sort(),
+    ).toEqual(["Prueba de cámara", "Referencia del piloto"])
+
+    // 6. Se anota lo que no cabe en ninguna estructura.
+    expect(
+      (
+        await over(
+          "POST",
+          `${base}/${recording.id}/notes`,
+          { body: "El perro no quiso entrar al plano hasta la toma 7" },
+          cookie,
+        )
+      ).status,
+    ).toBe(201)
+
+    // 7. La vista completa lo enseña todo, de una sola vez.
+    const view = await over("GET", `${base}/${recording.id}`, undefined, cookie)
+    expect(view.status).toBe(200)
+    const detail = (await view.json()) as RecordingDetail
+
+    expect(detail.status).toBe("ongoing")
+    expect(detail.scene?.id).toBe(sceneId)
+    expect(detail.scene?.chapter.id).toBe(chapterId)
+    expect(detail.continuities).toHaveLength(4)
+    expect(detail.continuities.map((row) => row.characterName).sort()).toEqual([
+      "El perro",
+      "Julián",
+      "La vecina",
+      "Marta",
+    ])
+    expect(
+      detail.continuities
+        .find((row) => row.characterId === cast[0])
+        ?.props.map((row) => row.name)
+        .sort(),
+    ).toEqual([
+      "Chaqueta de mezclilla",
+      "Prueba de cámara",
+      "Referencia del piloto",
+      "Reloj de pulso",
+    ])
+    expect(detail.notes.map((row) => row.body)).toEqual([
+      "El perro no quiso entrar al plano hasta la toma 7",
+    ])
+
+    // 8. El historial del personaje lo ve desde el otro lado.
+    const history = await over(
+      "GET",
+      `/companies/${company.id}/productions/${production.id}/characters/${cast[0]}/continuity`,
+      undefined,
+      cookie,
+    )
+    expect(history.status).toBe(200)
+    const revision = (await history.json()) as CharacterHistory
+    expect(revision.characterName).toBe("Marta")
+    expect(revision.recordings).toHaveLength(1)
+    expect(revision.recordings[0]?.props).toHaveLength(4)
+
+    // 9. Y la jornada se cierra **sin** que la continuidad esté completa: tres de los cuatro
+    //    personajes no tienen ni una pieza registrada, y el día de rodaje se acabó igual.
+    const closed = await over("POST", `${base}/${recording.id}/close`, {}, cookie)
+    expect(closed.status).toBe(200)
+    expect(((await closed.json()) as Recording).status).toBe("completed")
   })
 })
