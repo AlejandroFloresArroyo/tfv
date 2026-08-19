@@ -32,11 +32,21 @@
 
 ## Retirada de alcance
 
-- [ ] **Retirar el modelo, los esquemas y las rutas de reservas**
-- [ ] Delta de requisitos `REMOVED` en `locations-directory`
+- [~] **Retirar el modelo, los esquemas y las rutas de reservas** — **no aplicable**: viven en
+      `locations/reservations` de `tfv-backend/`, que no está en este árbol y que la regla 1
+      prohíbe tocar (`DEFECTS.md` L-12). Aquí la retirada se cumple **no construyéndolas**, y lo
+      que lo garantiza es la prueba de más abajo: que no exista ninguna ruta de reservas
+- [x] Delta de requisitos `REMOVED` en `locations-directory` — escrito en
+      `proposal.md:22-31`, con el motivo y con qué haría falta si algún día se quisieran de
+      verdad, y recogido en la propia spec (`openspec/specs/locations-directory/spec.md:14`). Es
+      una tarea de contrato: el artefacto **es** la prueba, no hay suite que la ejerza
 - [ ] Resolver la referencia colgante asociada
-- [ ] **Retirar las dos rutas que filtran por un campo inexistente**
-- [ ] Verificar que ninguna pantalla del frontend las consumía
+- [~] **Retirar las dos rutas que filtran por un campo inexistente** — **no aplicable**: están en
+      `locations/location/schemas.ts` de `tfv-backend/`, fuera de este árbol (`DEFECTS.md` L-09).
+      La pila nueva no las reimplementa, que es la forma que aquí tiene de retirarlas
+- [~] Verificar que ninguna pantalla del frontend las consumía — **no aplicable**: las pantallas
+      son `tfv-frontend/`, que no está en este árbol. La comprobación ya se hizo al levantar el
+      sistema y su resultado está escrito en `proposal.md`: ninguna las consumía
 
 ## Verificación
 

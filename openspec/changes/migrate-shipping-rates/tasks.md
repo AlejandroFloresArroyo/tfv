@@ -4,8 +4,12 @@
 
 - [x] Cálculo en el servidor
 - [x] Endpoint de estimación consumido por la interfaz
-- [ ] **Retirar la copia del algoritmo del código del navegador**
-- [ ] Retirar la copia del cálculo de distancia
+- [~] **Retirar la copia del algoritmo del código del navegador** — **no aplicable**: la copia vive
+      en `tfv-frontend/`, que no está en este árbol y que la regla 1 prohíbe tocar. La pila nueva
+      no tiene ninguna: el cálculo es `packages/contracts/src/shipping.ts` y el navegador pide la
+      estimación al servidor
+- [~] Retirar la copia del cálculo de distancia — **no aplicable**, por lo mismo: `haversineKm`
+      existe una sola vez, en `packages/contracts/src/shipping.ts:214`, y `apps/web` no la importa
 
 > Las dos copias viven en `tfv-frontend/`, que la regla 1 de `IMPLEMENTATION.md` deja intacto
 > —es la referencia y sigue en producción—. En la pila nueva **no hay ninguna**: el navegador pide

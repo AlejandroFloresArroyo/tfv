@@ -54,6 +54,7 @@ import type { UploadVariant } from "@tfv/contracts/media"
 import { withElevated } from "@tfv/db"
 import { type UploadVariants, uploads } from "@tfv/db/schema"
 import { eq } from "drizzle-orm"
+import { type BucketReport, ensureBucket } from "./bucket.ts"
 import { authorizeWrite, publicUrl } from "./storage.ts"
 
 /** El prefijo de lo que no es de ninguna empresa. Ningún identificador de empresa puede valer esto. */
@@ -182,6 +183,8 @@ export interface EnsureReport {
   readonly rows: number
   /** Cuántos objetos hubo que escribir. Cero cuando ya estaban todos. */
   readonly written: number
+  /** El depósito en el que se escribieron, dejado puesto y comprobado antes de escribir nada. */
+  readonly bucket: BucketReport
 }
 
 /**
@@ -197,6 +200,10 @@ export interface EnsureReport {
  * sube una foto.
  */
 export async function ensurePlaceholders(): Promise<EnsureReport> {
+  // Primero el depósito: escribir por el camino del navegador da por hecho que hay dónde, y hasta
+  // ahora ese «dónde» existía porque alguien lo creó a mano (`HALLAZGOS.md` H-136). Con esto, la
+  // única vía que deja marcadores en producción deja también el depósito que los sostiene.
+  const bucket = await ensureBucket()
   let written = 0
 
   for (const placeholder of PLACEHOLDERS) {
@@ -250,5 +257,5 @@ export async function ensurePlaceholders(): Promise<EnsureReport> {
     return tx.select({ id: uploads.id }).from(uploads).where(eq(uploads.isPlaceholder, true))
   })
 
-  return { rows: rows.length, written }
+  return { rows: rows.length, written, bucket }
 }

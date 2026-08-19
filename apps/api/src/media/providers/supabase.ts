@@ -15,7 +15,7 @@
  */
 
 import { InternalError } from "@tfv/contracts"
-import type { StorageProvider, WriteAuthorization } from "../provider.ts"
+import type { BucketSetup, StorageProvider, WriteAuthorization } from "../provider.ts"
 
 export interface SupabaseStorageConfig {
   /** Raíz de la API de almacenamiento, hasta `/storage/v1` incluido. */
@@ -89,6 +89,90 @@ export function createSupabaseProvider(config: SupabaseStorageConfig): StoragePr
 
   return {
     name: "supabase",
+
+    /**
+     * El depósito, con su lectura pública y su tope de tamaño.
+     *
+     * Aquí las dos cosas son **propiedades del depósito** y se declaran en la misma llamada, así que
+     * esta operación puede dejarlo todo puesto. Lo que no puede declarar es CORS: lo resuelve el
+     * servicio de almacenamiento para todos sus depósitos a la vez —responde a cualquier origen— y
+     * no hay nada por depósito que poner. Eso es justo lo que hace peligrosa la mudanza a S3, donde
+     * un depósito recién creado no responde a ninguno; por eso la comprobación de `bucket.ts`
+     * pregunta con un preflight en lugar de fiarse de esto.
+     */
+    async ensureBucket({ maxObjectBytes }): Promise<BucketSetup> {
+      const current = await fetch(`${config.url}/bucket/${config.bucket}`, {
+        headers: { Authorization: `Bearer ${serviceKey()}` },
+      })
+
+      // **El estado de la respuesta no dice que no está**: preguntar por un depósito inexistente
+      // responde `400` con un cuerpo que dice `404`. Mirar el estado y sólo el estado convertiría
+      // «no está» en «no se pudo consultar», que es el mensaje que manda a revisar la credencial
+      // cuando lo que hay que hacer es crear el depósito.
+      const body = (await current.json().catch(() => ({}))) as {
+        public?: boolean
+        file_size_limit?: number | null
+        code?: string
+        statusCode?: string
+      }
+
+      if (!current.ok && (body.code === "NoSuchBucket" || body.statusCode === "404")) {
+        const created = await fetch(`${config.url}/bucket`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${serviceKey()}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: config.bucket,
+            name: config.bucket,
+            public: true,
+            file_size_limit: maxObjectBytes,
+          }),
+        })
+
+        if (!created.ok) {
+          throw new InternalError(
+            `No se pudo crear el depósito «${config.bucket}» (${created.status}): ${await created.text()}`,
+          )
+        }
+
+        return {
+          bucket: config.bucket,
+          created: true,
+          notes: [`creado de lectura pública, con tope de ${maxObjectBytes} bytes por objeto`],
+        }
+      }
+
+      if (!current.ok) {
+        throw new InternalError(
+          `No se pudo consultar el depósito «${config.bucket}» (${current.status}). ` +
+            "Revisa STORAGE_URL y la credencial de servicio.",
+        )
+      }
+
+      const notes: string[] = []
+
+      // Reparar, no sólo comprobar: un depósito privado sirve para escribir y no para leer, y el
+      // síntoma es una galería entera de recuadros rotos sin nada en los registros del servicio.
+      if (body.public !== true) notes.push("estaba privado: pasa a ser de lectura pública")
+      if ((body.file_size_limit ?? null) !== maxObjectBytes) {
+        notes.push(`tope de tamaño puesto en ${maxObjectBytes} bytes por objeto`)
+      }
+
+      if (notes.length > 0) {
+        const updated = await fetch(`${config.url}/bucket/${config.bucket}`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${serviceKey()}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ public: true, file_size_limit: maxObjectBytes }),
+        })
+
+        if (!updated.ok) {
+          throw new InternalError(
+            `No se pudo corregir el depósito «${config.bucket}» (${updated.status}): ${await updated.text()}`,
+          )
+        }
+      }
+
+      return { bucket: config.bucket, created: false, notes }
+    },
 
     async authorizeWrite(path: string, contentType: string): Promise<WriteAuthorization> {
       const response = await fetch(

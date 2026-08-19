@@ -34,8 +34,9 @@
  */
 
 import { InternalError } from "@tfv/contracts"
-import type { StorageProvider, WriteAuthorization } from "../provider.ts"
+import type { BucketSetup, StorageProvider, WriteAuthorization } from "../provider.ts"
 import {
+  payloadHash,
   presignedUrl,
   type S3Credentials,
   signedRequestHeaders,
@@ -160,6 +161,83 @@ export function createS3Provider(config: S3StorageConfig): StorageProvider {
 
   return {
     name: "s3",
+
+    /**
+     * Crea el depósito si no está, y **no promete nada más**.
+     *
+     * Lo que el protocolo de S3 da aquí es `HeadBucket` y `CreateBucket`. Lo que hace falta además
+     * —lectura pública y CORS— no son propiedades del depósito sino **políticas** suyas, y ponerlas
+     * desde aquí sería escribir dos documentos firmados que ningún servidor al alcance de estas
+     * pruebas sabe interpretar: la pila local ignora `?policy` y `?cors` y responde a los dos como
+     * si fueran otra creación. Código que no se puede ejercer, en el camino de dejar puesto un
+     * depósito de producción, es exactamente donde no conviene tenerlo.
+     *
+     * Así que las dos las pone `aws.ts` con la herramienta del proveedor, y lo que este módulo hace
+     * es no mentir: el informe dice qué falta, y la comprobación de `bucket.ts` —leer un objeto sin
+     * credencial, preguntar el preflight— se planta si no está puesto. Esa comprobación **sí** vale
+     * igual contra AWS que contra la pila local, porque mira desde donde mira el navegador.
+     *
+     * El tope de tamaño por objeto no existe en S3 en ninguna forma que se pueda declarar en el
+     * depósito: se recibe para cumplir la interfaz y se informa de que allí no se hace cumplir
+     * (`HALLAZGOS.md` H-161).
+     */
+    async ensureBucket({ maxObjectBytes }): Promise<BucketSetup> {
+      const url = bucketUrl()
+      const pendientes = [
+        "la lectura pública es una política del depósito: ponla con `pnpm --filter @tfv/api bucket --aws`",
+        `el tope de ${maxObjectBytes} bytes por objeto no se puede declarar en un depósito de S3`,
+      ]
+
+      const head = await fetch(url, {
+        method: "HEAD",
+        headers: signedRequestHeaders({
+          method: "HEAD",
+          url,
+          query: [],
+          credentials: credentials(),
+        }),
+      })
+
+      if (head.ok) return { bucket: config.bucket, created: false, notes: pendientes }
+
+      if (head.status !== 404) {
+        throw new InternalError(
+          `No se pudo consultar el depósito «${config.bucket}» (${head.status}). ` +
+            "Revisa el punto de acceso y la credencial.",
+        )
+      }
+
+      // La región sólo viaja cuando no es la de fábrica: `us-east-1` con `LocationConstraint`
+      // explícito es la única combinación que AWS rechaza, y es además la que trae la variable por
+      // omisión, así que sin esta salvedad crear el depósito falla justo en el caso más común.
+      const body =
+        config.region === "us-east-1"
+          ? ""
+          : "<CreateBucketConfiguration " +
+            'xmlns="http://s3.amazonaws.com/doc/2006-03-01/">' +
+            `<LocationConstraint>${config.region}</LocationConstraint>` +
+            "</CreateBucketConfiguration>"
+
+      const created = await fetch(url, {
+        method: "PUT",
+        headers: signedRequestHeaders({
+          method: "PUT",
+          url,
+          query: [],
+          credentials: credentials(),
+          payloadHash: payloadHash(body),
+        }),
+        ...(body === "" ? {} : { body }),
+      })
+
+      if (!created.ok) {
+        throw new InternalError(
+          `No se pudo crear el depósito «${config.bucket}» (${created.status}): ${await created.text()}`,
+        )
+      }
+
+      return { bucket: config.bucket, created: true, notes: pendientes }
+    },
 
     authorizeWrite(path: string, contentType: string): Promise<WriteAuthorization> {
       const expiresAt = new Date(Date.now() + config.expiresInSeconds * 1000).toISOString()
