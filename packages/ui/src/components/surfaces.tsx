@@ -173,6 +173,9 @@ export function Rail({
         // utilidad que escribe la forma abreviada `border-bottom` no se cancela de forma fiable
         // con `border-b-0`, porque las dos viven en la misma capa y gana el orden del archivo.
         "flex flex-row gap-0 overflow-x-auto max-laptop:rule-b",
+        // En tacto el raíl se desplaza, y sin anclaje la última clave queda cortada a media
+        // palabra: se lee como un fallo de maquetación, no como «hay más a la derecha».
+        "snap-x snap-mandatory scroll-px-4 max-laptop:pr-4",
         "laptop:w-44 laptop:shrink-0 laptop:flex-col laptop:overflow-visible laptop:rule-r",
         className,
       )}
@@ -201,7 +204,7 @@ export function RailKey({
       type="button"
       aria-current={active ? "true" : undefined}
       className={cn(
-        "group flex shrink-0 items-center gap-2 px-3 text-left apparatus",
+        "group flex shrink-0 snap-start items-center gap-2 px-3 text-left apparatus",
         "h-[var(--control-h)] whitespace-nowrap",
         "transition-colors duration-150 ease-[--ease-out-soft]",
         active ? "text-content" : "text-content-muted hover:text-content",

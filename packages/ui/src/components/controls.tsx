@@ -171,6 +171,9 @@ export function Switch({ label, className, id: given, required, ...rest }: Switc
         // Una vía de dos posiciones, cuadrada. La píldora con disco del sistema anterior era la
         // única forma redonda que quedaba en pantalla, y en este mundo no hay ninguna.
         "relative h-6 w-11 shrink-0 rule-field bg-panel-sunken",
+        // El bloque no ocupa media vía exacta: deja un canal visible alrededor. Sin ese canal los
+        // dos tonos se leen como dos cuadros pegados y no como una pieza dentro de una guía, que
+        // es justo la duda que tiene quien abre la aplicación por primera vez.
         "transition-colors duration-150 ease-[--ease-out-soft]",
         "data-[state=checked]:border-accent data-[state=checked]:bg-accent",
         "disabled:cursor-not-allowed disabled:opacity-50",
@@ -182,9 +185,9 @@ export function Switch({ label, className, id: given, required, ...rest }: Switc
         className={cn(
           // Un solo eje y sin rebote: el bloque llega a su posición y se queda. Un interruptor que
           // se pasa de tope y vuelve es la firma del software de consumo.
-          "block h-full w-1/2 bg-content",
-          "translate-x-0 transition-transform duration-150 ease-[--ease-out-soft]",
-          "data-[state=checked]:translate-x-full data-[state=checked]:bg-on-accent",
+          "absolute inset-y-0.5 left-0.5 block w-[calc(50%-0.125rem)] bg-content",
+          "transition-[left] duration-150 ease-[--ease-out-soft]",
+          "data-[state=checked]:left-1/2 data-[state=checked]:bg-on-accent",
         )}
       />
     </SwitchPrimitive.Root>
