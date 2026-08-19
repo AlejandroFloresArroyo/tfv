@@ -224,7 +224,9 @@ describe("cobertura", () => {
     // donde se recuerda que una tabla nueva **no hereda** la política de plataforma —la 0005 la
     // repartió con un bucle que corrió una sola vez—. Así se descubrió que faltaba en `prospects`.
     // 95 desde la 0020, que añade `shipping_rates` con sus dos políticas.
-    expect(tablas.length).toBe(95)
+    // 96 desde la 0026, que añade `idempotency_keys` con **tres**: la de su dueño, la de sistema
+    // —para que el barrido de caducadas alcance las de todo el mundo— y la de plataforma.
+    expect(tablas.length).toBe(96)
     expect(tablas.filter((t) => !t.rls).map((t) => t.relname)).toEqual([])
     expect(tablas.filter((t) => t.politicas === 0).map((t) => t.relname)).toEqual([])
   })
