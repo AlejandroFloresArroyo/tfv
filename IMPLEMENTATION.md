@@ -185,7 +185,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 08 | `migrate-media-storage` | 🟡 | **Subida directa entera**: autorización de escritura acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión sobre el mismo registro, confirmación que dice qué se escribió, y validación de nombre, tipo y coherencia. Del lado del cliente, el selector con vista previa, reducción y reintento por objeto. Falta que las pantallas lo usen, y el recolector espera al despachador de trabajos (09) |
+| 08 | `migrate-media-storage` | 🟡 | **Subida directa entera y usada**: autorización acotada al objeto y con caducidad, cinco objetos por imagen y por video, reemisión, confirmación que dice qué se escribió, y el selector con vista previa, reducción y reintento por objeto. La **sustitución de colecciones diferencia** —L-01— y las pantallas del almacén ya suben: galería del producto, e imagen única de almacén y ubicación. Faltan los marcadores de posición como activos propios y la ejecución del recolector, que espera al despachador de trabajos (09) |
 | 09 | `migrate-activity-and-notifications` | ⬜ | |
 | 10 | `migrate-identity-and-companies` | 🟡 | Empresas, membresías, roles, direcciones, contrapartes, taxonomía global y **prospectos**. Faltan las dos taxonomías que cuelgan de entidades que aún no existen, y las pantallas de prospecto —el formulario público es de la 19 y la bandeja necesita un área de administración de plataforma |
 | 11 | `migrate-subscriptions-and-billing` | ⬜ | |
@@ -2538,3 +2538,92 @@ lecturas firmadas y caducas.
 742 pruebas antes de la última fusión y las cinco suites en verde después. La base de pruebas
 compartida volvió a morder: dos ejecuciones simultáneas se pisan y producen fallos en archivos que
 nadie ha tocado (H-12). Se perdió una vuelta de diagnóstico por eso, en los dos lados.
+
+### 2026-08-19 · Las fotos del catálogo, de punta a punta
+
+La rebanada 08 tenía servidor y cliente y **ninguna pantalla los usaba**. Ahora se sube una foto
+desde el asistente de alta, desde la ficha del producto, y desde el alta y la edición de un almacén
+y de una ubicación. Con ellas entra la corrección que faltaba del bloque de correcciones.
+
+**La galería del producto es una tabla, y la portada es una marca**
+
+`warehouse_products` no tenía columna de imagen. El almacén, la ubicación y la categoría sí, pero la
+spec habla de «un producto con las imágenes A, B y C»: una columna no sirve. La forma es la de
+`pixit_product_images` con una marca de portada añadida, porque **reordenar y elegir portada son dos
+decisiones distintas**: atarlas obliga a arrastrar una foto hasta el principio para que sea la que
+se enseña, que es justo lo que nadie quiere hacer con una galería de doce. Una portada por producto,
+garantizada por un índice único parcial y no por quien envía.
+
+**L-01, dicho como lo que es**
+
+Al sustituir una colección, la implementación anterior **intersecaba** en vez de diferenciar:
+borraba los que seguían estando y dejaba huérfanos los retirados. Actualizar de A, B, C a A, D
+borraba A —la que se quería conservar— y dejaba B y C ocupando almacenamiento para siempre. Las dos
+mitades del error se compensan en el recuento, y por eso nadie lo vio: seguían quedando dos
+archivos. La prueba mira **las dos listas**.
+
+Tres razones para no borrar, y las tres se comprueban: sigue en la colección, lo referencia otra
+entidad, o es un marcador de posición. La segunda no la responde una lista escrita a mano de las
+**treinta y dos** columnas que hoy apuntan a `uploads` —esa lista se queda vieja en silencio la
+primera vez que alguien añada una entidad con foto— sino el motor, que tiene las claves foráneas en
+su catálogo. Va `security definer` porque la pregunta cruza tablas de otros arrendatarios: una
+comprobación que no las ve responde «no la referencia nadie» justo antes de borrar la foto de otro.
+
+Vive en `apps/api/src/media/` y no dentro del catálogo, porque lo llaman ya cuatro sitios y copiar
+**esta** regla en concreto es copiar el defecto que corrige.
+
+**Y el defecto que sólo aparece usando la pantalla**
+
+Subir una foto, quitarla, y pedir su dirección: seguía respondiendo. El endpoint de borrado del
+proveedor recibe un campo llamado `prefixes` y **no borra por prefijo**, borra por clave exacta.
+`removeObjects` le pasaba `empresa/archivo`, el almacenamiento respondía `200`, y los cinco objetos
+se quedaban ahí sin fila en la base que los reclamara — así que ni el recolector volvería a mirarlos.
+Afectaba también a la recolección de subidas abandonadas. Ahora se pregunta primero qué hay bajo el
+prefijo y se borra por clave, que además resuelve que las extensiones no se puedan dar por sabidas.
+Es H-62, y leyendo el código era correcto.
+
+Con él, otros dos que tampoco se leen: la ficha pintaba las fotos recién subidas con una dirección
+vacía hasta recargar —ahora la galería se rehace con la respuesta del servidor— y la vista previa
+del selector se rompía al cambiar de paso del asistente, sólo en desarrollo, porque el ciclo de
+comprobación de React revoca las direcciones recién creadas y la marca de «de éste ya me ocupé»
+sobrevive a esa limpieza (H-63).
+
+**Una pantalla terminada a la que no enlazaba nadie**
+
+`products/new` aparecía una sola vez en toda la aplicación: dentro de su propia página. El asistente
+de alta de producto estaba entero —cinco pasos, sus permisos, su guarda— y la única forma de llegar
+era escribir la dirección. Es H-61, y es el mismo motivo por el que este encargo pide abrir el
+navegador: no se ve leyendo código.
+
+**Subir va después de guardar, siempre**
+
+La escritura va directa al almacenamiento y puede fallar por su cuenta. Al revés, una foto caída se
+lleva por delante los cinco pasos que la persona acaba de rellenar; así, lo peor que pasa es un
+producto creado sin fotos, y añadirlas desde su ficha ya funciona. Y una tanda con fallos no se da
+por buena: se guarda lo que sí subió y se dice cuántas quedan por reintentar, porque revertir
+tiraría las que sí llegaron.
+
+**Quitar la imagen y no tocarla no son lo mismo**
+
+Omitir el campo la deja como está; `null` la retira. Confundirlos hace que guardar el nombre de un
+almacén le borre la foto, y nadie relaciona lo uno con lo otro. Es una función pura con sus cuatro
+casos probados, igual que el resto de lo que decide algo: mover una foto, quitarla y saber qué
+portada queda viven en `~/lib/gallery.ts` y el componente sólo cablea eventos.
+
+**El permiso que no inventé**
+
+El catálogo de 255 claves **no tiene ninguna de archivos**. La galería va con
+`warehouses.products.edit_info` —las fotos son la información del producto dicha en imágenes, donde
+ya viven el nombre y la descripción— y las imágenes del almacén y de la ubicación con las de su
+edición, que ya existen. Anotado como H-64: añadir claves propias amplía la superficie de
+autorización y es decisión de producto.
+
+**Comprobado**
+
+Los seis paquetes, Biome, y **789 pruebas** de vitest —160 de contratos, 62 de base, 97 del sistema
+de diseño, 74 de web y 396 de API—, con veinticinco nuevas. Y en el navegador, sobre la base de
+desarrollo y devolviéndola a como estaba: se creó un producto con su foto desde el asistente, se le
+añadieron dos más desde la ficha, se cambió la portada, se reordenó y se quitó una — y el objeto de
+la retirada dejó de responder. La imagen de un almacén y la de una ubicación, lo mismo, incluida la
+retirada. Los cinco objetos por imagen se sirven con su tipo: el original en `png` y sus derivados
+en `jpg`.
