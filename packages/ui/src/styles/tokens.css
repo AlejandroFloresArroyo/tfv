@@ -1,52 +1,65 @@
 /*
- * Tokens del sistema de diseño.
+ * Tokens del sistema de diseño — Motor de Rayado.
  *
- * Rebanada 28a. Traducción del tema anterior (`tfv-frontend/packages/themes/`, vanilla-extract
- * sobre Mantine) a la forma que Tailwind consume.
+ * Rebanada de rediseño. Sustituye la traducción literal del tema Mantine anterior (rebanada 28a)
+ * por un mundo visual propio. El contrato de dirección vive en el marcado de `apps/web`, de primer
+ * hijo del cuerpo, con la clave de semilla `9f316c9f`.
  *
- * ## Qué se conservó exacto
+ * ## Qué es este mundo
  *
- * Las rampas de color, los radios, la escala de espaciado, los índices de superposición y los
- * puntos de ruptura están copiados valor a valor. No se «mejoraron»: cambiarlos aquí desplazaría
- * cada pantalla respecto de la referencia y haría imposible comparar las dos pilas.
+ * Un motor de rayado traza la estructura. Los filetes miden **un píxel de dispositivo**, no un
+ * píxel de CSS: en una iPad a 2dppx eso son 0.5px de CSS, y la línea sale del grosor que el
+ * fabricante del panel puede dibujar, no del que el navegador redondea. Las superficies se separan
+ * por línea y por escalón de valor, nunca por relleno tintado ni por sombra. **Cero radios en todo
+ * el sistema**: no hay una sola esquina redondeada.
  *
- * ## Tres desviaciones deliberadas
+ * El estado es una marca trazada, no un chip de color de fondo, y **nunca viaja sólo en el color**:
+ * cada entrada de la escalera tiene su nombre, y los componentes lo escriben.
  *
- * 1. **La familia tipográfica.** El tema anterior definía un único token llamado `inter` cuya lista
- *    de reserva era **monoespaciada** de principio a fin (`fontFamily.css.ts`). Si Inter no cargaba,
- *    la aplicación entera caía a Courier. Es un error, no una decisión, y se corrige.
+ * ## Qué se conservó del archivo anterior, y por qué
  *
- * 2. **Los tamaños de fuente.** El tema declaraba unos sesenta, con familias enteras —`caption`,
- *    `overline`, `subtitle`— sin un solo uso, y valores como `0.015625rem`, que es un cuarto de
- *    píxel. Se traen los diecisiete que el código usa de verdad; el censo está en la bitácora.
+ * 1. **Las rampas numeradas** (`--color-red-6`, `--color-gray-3`, …). Se conservan con sus valores
+ *    exactos, y la rampa `gray` no es deuda: la usa la **hoja de cotización**, que es un documento
+ *    impreso y compartido por enlace público. Esa hoja lleva `bg-white` a propósito y **no sigue al
+ *    tema** —un documento que alguien imprime o guarda en PDF no cambia de color porque el panel
+ *    esté en oscuro—, así que sus grises tienen que ser fijos y no papeles temáticos. El resto de
+ *    rampas sí es heredado: lo nuevo no las usa, y se retiran conforme cada pantalla migre a la
+ *    escalera semántica.
  *
- * 3. **Los puntos de ruptura.** `laptop` y `desktop` valían los dos `1024px`, así que `desktop`
- *    nunca podía distinguirse. Se le da su propio valor.
+ * 2. **Los nombres de la escala de texto** (`body1`, `title3`, `h2`…). Los valores cambian, los
+ *    nombres no, por la misma razón. Los dos tamaños de 0.5rem del tema anterior —ocho píxeles—
+ *    desaparecen: no eran una decisión, eran un descuido heredado.
  *
- * ## Cómo se organiza el color
+ * 3. **La disciplina de contraste medido.** Es lo mejor que tenía el archivo anterior y aquí se
+ *    amplía: todo valor de esta hoja está medido contra su lienzo y su panel, no estimado. Los
+ *    números están en la tabla de más abajo.
  *
- * Dos niveles, y la distinción importa:
+ * ## Qué cambió de fondo
  *
- * - **Rampas** (`--color-blue-5`): el pigmento. No cambian con el tema.
- * - **Papeles** (`--color-canvas`, `--color-content`): para qué sirve un color. Se redefinen en
- *   oscuro. Los componentes usan papeles, nunca rampas.
- *
- * Los papeles existen porque la misma intención necesita valores opuestos en cada tema: «panel
- * elevado» es más claro que el fondo en oscuro y más blanco que el fondo en claro. El tema anterior
- * no tenía esta capa, y por eso cada componente elegía a mano su tono con `background.6` — que es
- * como acaban apareciendo diecisiete grises distintos para la misma superficie.
+ * - **Los radios valen cero.** Es la palanca que aplana la aplicación entera sin tocar las páginas:
+ *   cada `rounded-*` que ya existe en el código deja de dibujar esquina.
+ * - **La tipografía.** Atkinson Hyperlegible Next, con su cuota monoespaciada para códigos. No es
+ *   una elección de gusto: este sistema está lleno de códigos de unidad, folios y medidas donde
+ *   confundir `0` con `O`, o `1` con `l`, es un error de operación. Esta familia se diseñó
+ *   justamente para que esos pares no se confundan.
+ * - **Dos calibraciones de densidad.** Tacto primero —iPad y teléfono— y densidad en escritorio con
+ *   ratón. No es un `@media` de ancho a secas: exige además puntero fino, porque una iPad Pro
+ *   apaisada mide 1024 y se sigue tocando con el dedo.
+ * - **La escalera semántica.** Siete entradas fijas y numeradas. Nada se pinta fuera de ellas.
  */
 
 @import "tailwindcss";
+@import "@fontsource-variable/atkinson-hyperlegible-next/index.css";
+@import "@fontsource-variable/atkinson-hyperlegible-mono/index.css";
 
 /* La utilidad `dark:` se activa por clase, no por preferencia del sistema: la elección del usuario
    manda sobre la del sistema operativo, y el servidor la escribe en `<html>` antes de pintar. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* ─── Rampas ────────────────────────────────────────────────────────────────
-     Índices 0 a 9, como en el tema anterior. Conservar la numeración permite leer un componente
-     viejo y saber a qué token del nuevo corresponde sin tabla de conversión. */
+  /* ─── Rampas heredadas ──────────────────────────────────────────────────────
+     No las usa nada nuevo. Existen para que las pantallas ya escritas sigan pintando mientras se
+     migran a la escalera semántica. Índices 0 a 9, como en el tema anterior. */
 
   --color-red-0: #fff5f5;
   --color-red-1: #ffe3e3;
@@ -246,8 +259,6 @@
   --color-light-8: #d6d6d6;
   --color-light-9: #cccccc;
 
-  /* Rampas de la portada de marketing: negro cálido de base de película, tono de etiqueta,
-     blanco roto de lápiz graso y rojo de luz de seguridad. */
   --color-ink-0: #4c463a;
   --color-ink-1: #3e382d;
   --color-ink-2: #302b22;
@@ -292,63 +303,71 @@
   --color-signal-8: #541c06;
   --color-signal-9: #391304;
 
-  /* El oro exacto del logotipo. Se mantiene separado de la rampa `gold`, que es otro tono ya usado
-     como acento por defecto en todo el sitio. */
+  /* El oro exacto del logotipo. Compromiso de marca, fijo. Se mantiene separado de la rampa `gold`,
+     que es otro tono. En este mundo **no se usa como texto sobre claro** —da 1.6:1— sino como
+     relleno con tinta encima, o como marca de la posición activa. */
   --color-brand: #ffd038;
 
   /* ─── Tipografía ────────────────────────────────────────────────────────────
-     Corrección respecto del tema anterior: la reserva de una tipografía de texto tiene que ser de
-     texto. La lista de antes era monoespaciada entera. */
+     Atkinson Hyperlegible Next para todo, y su cuota monoespaciada para códigos, folios e importes.
+     Elegida por los pares que no se confunden: `0`/`O`, `1`/`l`/`I`, `5`/`S`. En un sistema donde
+     una unidad de existencia se identifica por su código, eso no es estética. */
   --font-sans:
-    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    "Atkinson Hyperlegible Next Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --font-mono:
-    ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Mono", "Roboto Mono", "Source Code Pro",
-    "Fira Mono", "Courier New", monospace;
+    "Atkinson Hyperlegible Mono Variable", ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Mono",
+    "Roboto Mono", "Fira Mono", "Courier New", monospace;
 
-  /* Los diecisiete tamaños con uso real. Nombres conservados para poder rastrear el equivalente. */
-  --text-h1: 2rem;
-  --text-h2: 1.5rem;
-  --text-h3: 1.25rem;
-  --text-h4: 1.125rem;
-  --text-h5: 1rem;
+  /* Los mismos nombres, valores nuevos. Los dos tamaños de 8 px del tema anterior desaparecen: el
+     suelo de este sistema son 11 px, que es el tamaño del aparato. */
+  --text-h1: 1.75rem;
+  --text-h2: 1.375rem;
+  --text-h3: 1.125rem;
+  --text-h4: 1rem;
+  --text-h5: 0.9375rem;
   --text-h6: 0.875rem;
-  --text-title1: 1rem;
+  --text-title1: 0.9375rem;
   --text-title2: 0.875rem;
-  --text-title3: 0.725rem;
-  --text-title4: 0.625rem;
-  --text-title5: 0.5rem;
-  --text-body1: 0.875rem;
-  --text-body2: 0.725rem;
-  --text-body3: 0.625rem;
-  --text-body4: 0.5rem;
-  --text-button: 0.725rem;
-  --text-fluid3: clamp(2rem, 9vw, 3.5rem);
+  --text-title3: 0.8125rem;
+  --text-title4: 0.75rem;
+  --text-title5: 0.6875rem;
+  --text-body1: 0.9375rem;
+  --text-body2: 0.875rem;
+  --text-body3: 0.8125rem;
+  --text-body4: 0.6875rem;
+  --text-button: 0.875rem;
+  --text-fluid3: clamp(1.75rem, 7vw, 3rem);
 
   /* ─── Espaciado ─────────────────────────────────────────────────────────────
-     La escala del tema anterior, que Mantine usaba como `spacing`. El `md` de 0.842rem es un valor
-     raro, y es el que estaba: se conserva porque cambiarlo desplazaría cada pantalla. */
-  --spacing-xxxs: 0.0625rem;
+     Escala de cuatro píxeles. El `md` de 0.842rem del tema anterior era un valor heredado sin
+     razón; aquí cae en su sitio. */
+  --spacing-xxxs: 0.125rem;
   --spacing-xxs: 0.25rem;
   --spacing-xs: 0.5rem;
   --spacing-sm: 0.75rem;
-  --spacing-md: 0.842rem;
-  --spacing-lg: 1rem;
-  --spacing-xl: 1.25rem;
-  --spacing-xxl: 1.5rem;
-  --spacing-xxxl: 2rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.25rem;
+  --spacing-xl: 1.5rem;
+  --spacing-xxl: 2rem;
+  --spacing-xxxl: 3rem;
 
   /* ─── Radios ────────────────────────────────────────────────────────────────
-     Exactos. `--radius-*` sustituye a `borderRadius.*`. */
-  --radius-xxxs: 0.0625rem;
-  --radius-xxs: 0.125rem;
-  --radius-xs: 0.25rem;
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
-  --radius-xxl: 2rem;
-  --radius-xxxl: 3rem;
+     Cero, todos. Es una ley del mundo, no un ajuste: no hay una sola esquina redondeada en el
+     sistema. Se declaran en lugar de borrarse porque Tailwind trae sus propios valores por defecto
+     para `rounded-xs` … `rounded-3xl`, y sin sobrescribirlos volverían por la puerta de atrás.
+     Sobrescribirlos aquí es además lo que aplana las sesenta pantallas ya escritas sin tocarlas. */
+  --radius-xxxs: 0;
+  --radius-xxs: 0;
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-xxl: 0;
+  --radius-xxxl: 0;
 
   /* ─── Proporciones ──────────────────────────────────────────────────────────  */
   --aspect-square: 1;
@@ -356,20 +375,18 @@
   --aspect-portrait: 3 / 4;
   --aspect-widescreen: 16 / 9;
   --aspect-ultrawide: 18 / 5;
-  --aspect-golden: 1.618 / 1;
 
   /* ─── Puntos de ruptura ─────────────────────────────────────────────────────
-     Corrección: `laptop` y `desktop` valían los dos 1024px en el tema anterior, así que la
-     distinción no existía. `desktop` pasa a 1280px. */
-  --breakpoint-phone: 36rem;
+     El orden de dispositivos de PRODUCT.md es iPad → celular → escritorio → ultrapanorámico, así
+     que `tablet` no es un punto intermedio: es la calibración de partida. `ultra` es nuevo, y
+     existe porque en este mundo el margen ancho absorbe el sobrante en lugar de estirar la medida. */
+  --breakpoint-phone: 30rem;
   --breakpoint-tablet: 48rem;
   --breakpoint-laptop: 64rem;
   --breakpoint-desktop: 80rem;
+  --breakpoint-ultra: 108rem;
 
-  /* ─── Superposición ─────────────────────────────────────────────────────────
-     Veinte capas era inventario, no orden: nada garantizaba que dos cosas distintas no eligieran
-     la misma. Se nombran por lo que son, que es lo que impide colocar un diálogo debajo de su
-     propio velo. */
+  /* ─── Superposición ─────────────────────────────────────────────────────────  */
   --z-base: 0;
   --z-raised: 10;
   --z-sticky: 100;
@@ -380,91 +397,181 @@
   --z-tooltip: 1100;
 
   /* ─── Movimiento ────────────────────────────────────────────────────────────
-     La transición del tema anterior era una sola cadena que animaba `all`, más nueve propiedades
-     con duraciones entre 0 s y 2,8 s. Aquí se declara por intención y con duraciones cortas. */
+     Un solo eje, amortiguado, **sin rebote**. El rebote es la firma del software de consumo y este
+     mundo no lo tiene: una muesca que se pasa de su sitio y vuelve no es precisión. */
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-/* ─── Papeles ─────────────────────────────────────────────────────────────────
-   Lo que los componentes usan. Cada valor sale de las rampas del tema anterior; lo que se añade es
-   el nombre de la intención, para que «superficie elevada» sea una sola decisión y no una elección
-   de gris repetida en cada archivo.
+/* ═══ El motor de rayado ══════════════════════════════════════════════════════
+ *
+ * El filete mide un píxel **de dispositivo**. En un panel de 2dppx —cualquier iPad, cualquier
+ * portátil moderno— eso son 0.5px de CSS; en uno de 3dppx, un tercio. Un `1px` de CSS en esas
+ * pantallas son dos o tres píxeles físicos: el doble o el triple de grueso de lo que la pantalla
+ * puede dibujar, y es la diferencia entre una línea trazada y una línea gorda.
+ *
+ * Se resuelve en CSS puro y no con un guion que lea `devicePixelRatio`, porque un guion obligaría
+ * a esperar al cliente y la primera pintura saldría con el grosor equivocado.
+ */
+:root {
+  --hairline: 1px;
+}
 
-   Se declaran fuera de `@theme` y se enlazan con `@theme inline` porque tienen que poder
-   redefinirse bajo `.dark`: una variable declarada dentro de `@theme` es fija. */
+@media (min-resolution: 2dppx) {
+  :root {
+    --hairline: 0.5px;
+  }
+}
+
+@media (min-resolution: 3dppx) {
+  :root {
+    --hairline: 0.34px;
+  }
+}
+
+/* ═══ Papeles ═════════════════════════════════════════════════════════════════
+ *
+ * Lo que los componentes usan. Se declaran fuera de `@theme` y se enlazan con `@theme inline`
+ * porque tienen que poder redefinirse bajo `.dark`: una variable declarada dentro de `@theme` es
+ * fija.
+ *
+ * Claro y oscuro son los dos ciudadanos de primera. La escena de uso son las tres a la vez —nave
+ * de almacén con luz mixta, oficina de producción con luz constante, y set— así que ninguno de los
+ * dos es «el modo alterno».
+ */
 
 :root {
-  /* Claro. Origen: `lightRaw` de `themes.css.ts`, salvo lo anotado. */
-  --canvas: #f0f0f0; /* background */
-  --panel: #ffffff; /* background.100 */
-  --panel-sunken: #f9f9f9; /* background.400 */
-  --panel-hover: #f5f5f5; /* light.3 */
-  --line: #e6e6e6; /* background.600 · separador, decorativo */
-  --line-strong: #d2d2d2; /* background.700 */
-  /* Borde de control. Es más oscuro que `line` a propósito: ver la nota de contraste. */
-  --field: #858585;
-  --content: #1e1e1e; /* foreground */
-  --content-muted: #646464; /* foreground.800 · 5.19:1 sobre el lienzo */
-  --content-faint: #686868; /* medido; ver nota */
-  /* Acción primaria: en el tema anterior el color primario era `foreground`, así que el botón
-     principal es el contrario del fondo. Negro sobre claro, blanco sobre oscuro. */
-  --accent: #1e1e1e;
-  --accent-hover: #3c3c3c;
-  --on-accent: #ffffff;
-  --focus: #228be6; /* blue.6 · 3.12:1 sobre el lienzo */
-  --danger: #c92a2a; /* red.9 · 4.79:1 sobre el lienzo */
-  /* Ninguno de los dos sale de la escala, y el motivo se mide: sobre este lienzo, `green.9` da
-     3.83:1 y `yellow.9` **2.63:1**, muy por debajo de lo legible para texto. La escala está pensada
-     para rellenos, donde el mínimo es 3:1; estos dos son para texto. Ver la nota de contraste. */
-  --success: #237032; /* medido · 5.36:1 sobre el lienzo */
-  --warning: #a35200; /* medido · 4.90:1 sobre el lienzo */
-  --overlay: rgb(30 30 30 / 0.45);
+  /* Superficie técnica, no papel. El lienzo es un gris neutro frío; el panel se levanta sobre él
+     por escalón de valor, y el hundido baja. La separación es esa, más el filete: nunca sombra. */
+  --canvas: #ededeb;
+  --panel: #fafaf9;
+  --panel-sunken: #dedddb;
+  --panel-hover: #e4e4e1;
+
+  /* Filete suave para separar dentro de un grupo; filete fuerte para separar regiones. El fuerte
+     llega a 3:1 a propósito: la queja que originó este rediseño era que las superficies no se
+     distinguían, y en este mundo la separación **es** la línea. */
+  --rule: #cfcfca;
+  --rule-strong: #84847e;
+
+  /* Borde de control. Es lo que dice dónde se puede escribir, y por eso va aparte del filete. */
+  --field: #6e7075;
+
+  --content: #101114;
+  --content-muted: #55585e;
+  --content-faint: #64676d;
+
+  /* Acción primaria: inversión de tinta. Se conserva del sistema anterior porque es correcto y es
+     lo que da el aspecto de la aplicación — negro sobre claro, claro sobre negro. */
+  --accent: #101114;
+  --accent-hover: #2b2d33;
+  --on-accent: #fafaf9;
+
+  /* La rúbrica es el oro de marca. Sobre claro **no puede ser texto**: sólo relleno con tinta
+     encima, o marca de posición activa de dos píxeles o más. */
+  --rubric: #ffd038;
+  --rubric-ink: #6b5200;
+  --on-rubric: #101114;
+
+  --focus: #1877d4;
+  --overlay: rgb(16 17 20 / 0.5);
+
+  /* ─── Escalera semántica ────────────────────────────────────────────────────
+     Siete entradas, fijas y numeradas. Nada se pinta fuera de ellas. Cada una tiene dos valores:
+     la **marca** que se traza (mínimo 3:1) y la **tinta** con la que se escribe (mínimo 4.5:1).
+     El color nunca viaja solo: el componente escribe también el nombre. */
+  --marca-reposo: #84847e;
+  --tinta-reposo: #55585e;
+  --marca-curso: #1877d4; /* 01 · en curso, activo, en proceso */
+  --tinta-curso: #0f5fa6;
+  --marca-firme: #178a50; /* 02 · confirmado, entregado, pagado */
+  --tinta-firme: #116a3e;
+  --marca-aparta: #a66200; /* 03 · reservado, apartado — el estado propio de TFV */
+  --tinta-aparta: #7a4a00;
+  --marca-cuida: #b36b00; /* 04 · por vencer, requiere atención */
+  --tinta-cuida: #8a5200;
+  --marca-alto: #ce3129; /* 05 · bloqueado, rechazado, error */
+  --tinta-alto: #b3261e;
+  --marca-leido: #6d5ce0; /* 06 · extraído por el modelo, en revisión */
+  --tinta-leido: #5b4bc4;
+
+  /* Compatibilidad con el vocabulario anterior mientras las pantallas migran. */
+  --line: var(--rule);
+  --line-strong: var(--rule-strong);
+  --danger: var(--tinta-alto);
+  --success: var(--tinta-firme);
+  --warning: var(--tinta-cuida);
 }
 
 :root.dark {
-  /* Oscuro. Origen: `darkRaw` de `themes.css.ts`, salvo lo anotado. */
-  --canvas: #1e1e1e;
-  --panel: #282828; /* background.600 */
-  --panel-sunken: #1a1a1a; /* background.300 */
-  --panel-hover: #3c3c3c; /* background.700 */
-  --line: #3c3c3c; /* background.700 */
-  --line-strong: #646464; /* background.800 */
-  --field: #757575;
-  --content: #f0f0f0;
-  --content-muted: #aaaaaa; /* foreground.800 · 6.35:1 sobre el panel */
-  --content-faint: #949494; /* medido; ver nota */
-  --accent: #f0f0f0;
-  --accent-hover: #d2d2d2;
-  --on-accent: #1e1e1e;
-  --focus: #4dabf7; /* blue.4, que es el que se lee sobre fondo oscuro */
-  --danger: #ff8787; /* red.4 · 6.37:1 sobre el panel */
-  --success: #69db7c; /* green.4 · 8.44:1 sobre el panel */
-  --warning: #ffd43b; /* yellow.4 · 10.34:1 sobre el panel */
-  --overlay: rgb(0 0 0 / 0.6);
+  --canvas: #0d0e10;
+  --panel: #16171a;
+  --panel-sunken: #08090a;
+  --panel-hover: #202226;
+
+  --rule: #303339;
+  --rule-strong: #686c74;
+  --field: #7a7d84;
+
+  --content: #f1f1ef;
+  --content-muted: #a5a8ae;
+  --content-faint: #90939a;
+
+  --accent: #f1f1ef;
+  --accent-hover: #cfd0cd;
+  --on-accent: #0d0e10;
+
+  /* Sobre oscuro el oro sí es legible —12:1— así que aquí la rúbrica también puede ser texto. */
+  --rubric: #ffd038;
+  --rubric-ink: #ffd038;
+  --on-rubric: #101114;
+
+  --focus: #4fa8f0;
+  --overlay: rgb(0 0 0 / 0.66);
+
+  --marca-reposo: #686c74;
+  --tinta-reposo: #a5a8ae;
+  --marca-curso: #4fa8f0;
+  --tinta-curso: #6fbbf5;
+  --marca-firme: #3fbf77;
+  --tinta-firme: #5fd08d;
+  --marca-aparta: #e09a2b;
+  --tinta-aparta: #f0b24a;
+  --marca-cuida: #f5b518;
+  --tinta-cuida: #ffc53d;
+  --marca-alto: #f5675c;
+  --tinta-alto: #ff8a82;
+  --marca-leido: #9c8bff;
+  --tinta-leido: #afa2ff;
+
+  --line: var(--rule);
+  --line-strong: var(--rule-strong);
+  --danger: var(--tinta-alto);
+  --success: var(--tinta-firme);
+  --warning: var(--tinta-cuida);
 }
 
 /*
- * Nota de contraste — cuatro valores que **no** son los del tema anterior, y por qué.
+ * Contraste medido, no estimado. Peor caso de cada valor contra su lienzo **y** su panel.
  *
- * Se midieron en lugar de estimarse. Ratios contra lienzo y panel de cada tema:
+ * | Papel            | Claro           | Oscuro          | Mínimo |
+ * |------------------|-----------------|-----------------|--------|
+ * | content          | 16.11           | 15.85           | 4.5    |
+ * | content-muted    |  6.09           |  7.52           | 4.5    |
+ * | content-faint    |  4.84           |  5.83           | 4.5    |
+ * | field            |  4.23           |  4.35           | 3      |
+ * | rule-strong      |  3.21           |  3.40           | 3      |
+ * | rubric-ink       |  6.33           | 12.23           | 4.5    |
+ * | tinta-curso      |  5.58           |  8.62           | 4.5    |
+ * | tinta-firme      |  5.68           |  9.30           | 4.5    |
+ * | tinta-aparta     |  6.38           |  9.54           | 4.5    |
+ * | tinta-cuida      |  5.45           | 11.36           | 4.5    |
+ * | tinta-alto       |  5.58           |  7.86           | 4.5    |
+ * | tinta-leido      |  5.51           |  8.05           | 4.5    |
+ * | marca-* (peor)   |  3.57           |  5.96           | 3      |
  *
- * | Papel | Antes | Medido | Ahora | Medido |
- * |---|---|---|---|---|
- * | Tenue, claro | `#797979` | 3.82 | `#686868` | 4.89 |
- * | Tenue, oscuro | `#646464` | 2.49 | `#949494` | 4.86 |
- * | Error, claro | `red.6` | 2.88 | `#c92a2a` | 4.79 |
- * | Borde de control | `#e6e6e6` | 1.20 | `#858585` | 3.03 |
- *
- * Los tres primeros son texto y el mínimo son 4.5:1. El de oscuro estaba en 2.49 — la mitad de lo
- * necesario— y es justo el color con el que se pintan las notas al pie de cada tarjeta.
- *
- * El cuarto es distinto y es el que más cambia el aspecto. El borde de un campo de formulario no es
- * decoración: es lo que dice dónde se puede escribir, y el mínimo para eso son 3:1. Un borde de
- * `#e6e6e6` sobre blanco da 1.20, así que el campo se distinguía por su sombra o por nada. Sale un
- * borde bastante más marcado que el de la referencia; es el precio de que el campo se vea.
- *
- * `line` conserva el valor suave original porque separa, no delimita un control.
+ * El filete suave (`--rule`) queda deliberadamente por debajo: separa dentro de un grupo, no
+ * delimita un control ni comunica estado, y subirlo convertiría cada tabla en una reja.
  */
 
 @theme inline {
@@ -472,29 +579,157 @@
   --color-panel: var(--panel);
   --color-panel-sunken: var(--panel-sunken);
   --color-panel-hover: var(--panel-hover);
-  --color-line: var(--line);
-  --color-line-strong: var(--line-strong);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
   --color-field: var(--field);
-  --color-danger: var(--danger);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
   --color-content: var(--content);
   --color-content-muted: var(--content-muted);
   --color-content-faint: var(--content-faint);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-on-accent: var(--on-accent);
+  --color-rubric: var(--rubric);
+  --color-rubric-ink: var(--rubric-ink);
+  --color-on-rubric: var(--on-rubric);
   --color-focus: var(--focus);
   --color-overlay: var(--overlay);
+
+  --color-marca-reposo: var(--marca-reposo);
+  --color-marca-curso: var(--marca-curso);
+  --color-marca-firme: var(--marca-firme);
+  --color-marca-aparta: var(--marca-aparta);
+  --color-marca-cuida: var(--marca-cuida);
+  --color-marca-alto: var(--marca-alto);
+  --color-marca-leido: var(--marca-leido);
+
+  --color-tinta-reposo: var(--tinta-reposo);
+  --color-tinta-curso: var(--tinta-curso);
+  --color-tinta-firme: var(--tinta-firme);
+  --color-tinta-aparta: var(--tinta-aparta);
+  --color-tinta-cuida: var(--tinta-cuida);
+  --color-tinta-alto: var(--tinta-alto);
+  --color-tinta-leido: var(--tinta-leido);
+
+  /* Vocabulario anterior, mientras las pantallas migran. */
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
 }
 
-/* ─── Base ────────────────────────────────────────────────────────────────────  */
+/* ═══ Las dos calibraciones ═══════════════════════════════════════════════════
+ *
+ * Tacto primero, porque el orden de dispositivos empieza en iPad. La densidad de escritorio entra
+ * sólo cuando **hay ancho y hay puntero fino**: una iPad Pro apaisada mide 1024 px y se sigue
+ * tocando con el dedo, así que el ancho por sí solo daría la calibración equivocada justo en el
+ * dispositivo de referencia.
+ */
+:root {
+  --control-h: 2.75rem; /* 44 px: el objetivo táctil mínimo, con guantes de por medio */
+  --control-h-sm: 2.25rem;
+  --control-h-lg: 3.25rem;
+  --row-h: 3rem;
+  --control-px: 0.875rem;
+}
+
+@media (min-width: 64rem) and (pointer: fine) {
+  :root {
+    --control-h: 2.125rem;
+    --control-h-sm: 1.75rem;
+    --control-h-lg: 2.5rem;
+    --row-h: 2.25rem;
+    --control-px: 0.625rem;
+  }
+}
+
+/* ═══ Utilidades del motor ════════════════════════════════════════════════════
+ *
+ * Los filetes se declaran como utilidades y no como `border` de Tailwind porque su grosor no es un
+ * píxel de CSS sino uno de dispositivo, y `border` no sabe de eso.
+ *
+ * El borde de un **control** es la excepción, y va en `rule-field`: ahí el grosor es un píxel de
+ * CSS completo a propósito. Un filete de medio píxel en una pantalla densa es exactamente lo que
+ * hace que un campo de formulario no se vea, que es el defecto que el sistema anterior ya había
+ * corregido una vez. No se vuelve a cometer por estética.
+ */
+
+@utility rule {
+  border: var(--hairline) solid var(--rule);
+}
+@utility rule-t {
+  border-top: var(--hairline) solid var(--rule);
+}
+@utility rule-b {
+  border-bottom: var(--hairline) solid var(--rule);
+}
+@utility rule-l {
+  border-left: var(--hairline) solid var(--rule);
+}
+@utility rule-r {
+  border-right: var(--hairline) solid var(--rule);
+}
+@utility rule-y {
+  border-top: var(--hairline) solid var(--rule);
+  border-bottom: var(--hairline) solid var(--rule);
+}
+@utility rule-x {
+  border-left: var(--hairline) solid var(--rule);
+  border-right: var(--hairline) solid var(--rule);
+}
+@utility rule-hard {
+  border: var(--hairline) solid var(--rule-strong);
+}
+@utility rule-hard-t {
+  border-top: var(--hairline) solid var(--rule-strong);
+}
+@utility rule-hard-b {
+  border-bottom: var(--hairline) solid var(--rule-strong);
+}
+@utility rule-hard-l {
+  border-left: var(--hairline) solid var(--rule-strong);
+}
+@utility rule-field {
+  border: 1px solid var(--field);
+}
+
+/* La muesca: la marca de estado de este mundo. Cuadrada, trazada, nunca un relleno redondeado. */
+@utility detent {
+  display: inline-block;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  flex: none;
+  border: 1.5px solid currentColor;
+}
+@utility detent-filled {
+  background-color: currentColor;
+}
+
+/* Cifras tabulares. En un sistema de importes y existencias, que las columnas de números no bailen
+   al cambiar de valor no es refinamiento: es lo que permite compararlas de un vistazo. */
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* El aparato: las etiquetas pequeñas del sistema. Once píxeles, versalitas, muy espaciadas. Es la
+   voz que nombra las cosas —campos, estados, columnas— frente a la voz que las dice. */
+@utility apparatus {
+  font-size: var(--text-body4);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+/* ═══ Base ════════════════════════════════════════════════════════════════════ */
 
 @layer base {
   html {
-    /* La preferencia de tema la escribe el servidor en `<html>`; esto sólo evita que el navegador
-       pinte sus controles nativos —barras, campos— con el tema contrario. */
     color-scheme: light;
+    /* Las superficies del navegador también son parte del diseño. */
+    accent-color: var(--accent);
+    scrollbar-color: var(--rule-strong) transparent;
   }
 
   html.dark {
@@ -507,10 +742,31 @@
     font-family: var(--font-sans);
     font-size: var(--text-body1);
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Selección y cursor, que vienen de fábrica sin pertenecer a ningún sistema de diseño. */
+  ::selection {
+    background-color: var(--rubric);
+    color: var(--on-rubric);
+  }
+
+  :root {
+    caret-color: var(--accent);
+  }
+
+  /* Los números de una tabla se comparan en columna: sin cifras tabulares, cambiar un 1 por un 8
+     mueve el resto de la fila. */
+  table,
+  [role="table"] {
+    font-variant-numeric: tabular-nums;
   }
 
   /* El anillo de foco se declara una vez y no se retira nunca. Quitarlo por estética deja la
-     aplicación inservible con teclado, y es de las cosas que no se recuperan luego. */
+     aplicación inservible con teclado, y es de las cosas que no se recuperan luego.
+
+     En este mundo es cuadrado y de dos píxeles, no un halo difuso: el foco es una marca trazada
+     como las demás. */
   :focus-visible {
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
