@@ -124,10 +124,10 @@ Lo construido hasta ahora, medido y no estimado:
 | Rebanadas | 19 de 30 empezadas, **ninguna cerrada del todo** |
 | Código sin pruebas | 75 036 líneas |
 | Código de prueba | 24 853 líneas |
-| Pruebas | **1310** de vitest — 296 contratos, 87 datos, 707 API, 101 web, 119 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
-| Esquema | 96 tablas · 290 índices · 50 enumerados · 6 comprobaciones · 41 únicos parciales · 236 claves foráneas |
-| Aislamiento | 212 políticas · 96/96 tablas · 0 con identidad cruda |
-| Migraciones | 24, replicadas desde cero en cada verificación |
+| Pruebas | **1457** de vitest — 393 contratos, 87 datos, 757 API, 101 web, 119 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
+| Esquema | 97 tablas · 290 índices · 50 enumerados · 6 comprobaciones · 41 únicos parciales · 236 claves foráneas |
+| Aislamiento | 215 políticas · 97/97 tablas · 0 con identidad cruda |
+| Migraciones | 25, replicadas desde cero en cada verificación |
 | Rutas | **220** registradas, 159 con permiso declarado, 18 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
 | Pantallas | 62, en español e inglés (1649 mensajes, sin desalinear) |

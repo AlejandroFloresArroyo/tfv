@@ -191,6 +191,9 @@ async function expireSubscriptionGrace(): Promise<string> {
 async function expireAbandonedCheckouts(): Promise<string> {
   const { expired, released } = await sweepExpiredCheckouts()
   return `${expired} compras caducadas, ${released} unidades devueltas al catálogo`
+}
+
+/**
  * Caduca las claves de idempotencia.
  *
  * La retención es la mitad que hace falta escribir: sin ella, la tabla guarda **cuerpos de

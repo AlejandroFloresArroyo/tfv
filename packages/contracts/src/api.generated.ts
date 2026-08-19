@@ -1075,6 +1075,543 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /companies/{companyId}/productions": {
+    /** Listar las producciones de una empresa */
+    params: {
+      companyId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_startsOn?: string | Array<string>
+      sort_endsOn?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      isPublished?: string | Array<string>
+      startsOn?: string | Array<string>
+      endsOn?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        companyId: string
+        name: string
+        description: string
+        slug: string | null
+        isPublished: boolean
+        startsOn: string | null
+        endsOn: string | null
+        imageUploadId: string | null
+        imageUrl: string | null
+        imageThumbnailUrl: string | null
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions": {
+    /** Crear una producción */
+    params: {
+      companyId: string
+    }
+    body: {
+      name: string
+      description?: string
+      startsOn?: string | null
+      endsOn?: string | null
+      isPublished?: boolean
+      imageUploadId?: string | null
+    }
+    response: {
+      id: string
+      companyId: string
+      name: string
+      description: string
+      slug: string | null
+      isPublished: boolean
+      startsOn: string | null
+      endsOn: string | null
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}": {
+    /** Ver una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    response: {
+      id: string
+      companyId: string
+      name: string
+      description: string
+      slug: string | null
+      isPublished: boolean
+      startsOn: string | null
+      endsOn: string | null
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}": {
+    /** Editar una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name?: string
+      description?: string
+      startsOn?: string | null
+      endsOn?: string | null
+      isPublished?: boolean
+      slug?: string
+      imageUploadId?: string | null
+    }
+    response: {
+      id: string
+      companyId: string
+      name: string
+      description: string
+      slug: string | null
+      isPublished: boolean
+      startsOn: string | null
+      endsOn: string | null
+      imageUploadId: string | null
+      imageUrl: string | null
+      imageThumbnailUrl: string | null
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}": {
+    /** Dar de baja una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    response: undefined
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/categories": {
+    /** Listar categorías; sin «parentId», las raíces */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      parentId?: string
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        parentId: string | null
+        roleId: string | null
+        roleName: string | null
+        name: string
+        description: string
+        slug: string | null
+        color: string | null
+        icon: string | null
+        childCount: number
+        createdAt: string
+        updatedAt: string
+      }>
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/categories": {
+    /** Crear una categoría de la producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      description?: string
+      parentId?: string | null
+      roleId?: string | null
+      color?: string
+      icon?: string
+    }
+    response: {
+      id: string
+      productionId: string
+      parentId: string | null
+      roleId: string | null
+      roleName: string | null
+      name: string
+      description: string
+      slug: string | null
+      color: string | null
+      icon: string | null
+      childCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/categories/{categoryId}": {
+    /** Ver una categoría de la producción */
+    params: {
+      companyId: string
+      productionId: string
+      categoryId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      parentId: string | null
+      roleId: string | null
+      roleName: string | null
+      name: string
+      description: string
+      slug: string | null
+      color: string | null
+      icon: string | null
+      childCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/categories/{categoryId}": {
+    /** Editar una categoría; «roleId» nulo la desvincula de su equipo */
+    params: {
+      companyId: string
+      productionId: string
+      categoryId: string
+    }
+    body: {
+      name?: string
+      description?: string
+      parentId?: string | null
+      roleId?: string | null
+      color?: string | null
+      icon?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      parentId: string | null
+      roleId: string | null
+      roleName: string | null
+      name: string
+      description: string
+      slug: string | null
+      color: string | null
+      icon: string | null
+      childCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/categories/{categoryId}": {
+    /** Eliminar una categoría y su subárbol */
+    params: {
+      companyId: string
+      productionId: string
+      categoryId: string
+    }
+    response: undefined
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/categories/{categoryId}/path": {
+    /** El camino desde la raíz hasta una categoría */
+    params: {
+      companyId: string
+      productionId: string
+      categoryId: string
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        parentId: string | null
+        roleId: string | null
+        roleName: string | null
+        name: string
+        description: string
+        slug: string | null
+        color: string | null
+        icon: string | null
+        childCount: number
+        createdAt: string
+        updatedAt: string
+      }>
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/categories/{categoryId}/scope": {
+    /** Qué se lleva por delante eliminar la categoría */
+    params: {
+      companyId: string
+      productionId: string
+      categoryId: string
+    }
+    response: {
+      categories: number
+      items: number
+      videos: number
+      tasks: number
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/panel": {
+    /** Resumen de la producción: desglose y presupuesto */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    response: {
+      chapters: number
+      scenes: number
+      recordings: {
+        draft: number
+        ongoing: number
+        completed: number
+      }
+      workflows: {
+        pending: number
+        in_progress: number
+        rescheduled: number
+        completed: number
+        cancelled: number
+      }
+      budget: {
+        anchored: string
+        spent: string
+        difference: string
+      }
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/scope": {
+    /** Qué se lleva por delante dar de baja la producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    response: {
+      scripts: number
+      chapters: number
+      scenes: number
+      characters: number
+      sets: number
+      videos: number
+      items: number
+      recordings: number
+      workflows: number
+      purchaseOrders: number
+      openPurchaseOrders: number
+      unreturnedOrders: number
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/workflows": {
+    /** Listar los planes de trabajo de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_scheduledFor?: string | Array<string>
+      sort_code?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      status?: string | Array<string>
+      responsibleId?: string | Array<string>
+      sceneId?: string | Array<string>
+      scheduledFor?: string | Array<string>
+      aggregates?: string
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        sceneId: string | null
+        code: string
+        observations: string
+        status: "pending" | "in_progress" | "rescheduled" | "completed" | "cancelled"
+        scheduledFor: string
+        endsAt: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        taskCount: number
+        tasksByStatus?: {
+          pending: number
+          in_progress: number
+          completed: number
+          incomplete: number
+        }
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/workflows": {
+    /** Crear un plan de trabajo; nace pendiente */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      scheduledFor: string
+      endsAt?: string | null
+      observations?: string
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      sceneId: string | null
+      code: string
+      observations: string
+      status: "pending" | "in_progress" | "rescheduled" | "completed" | "cancelled"
+      scheduledFor: string
+      endsAt: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      taskCount: number
+      tasksByStatus?: {
+        pending: number
+        in_progress: number
+        completed: number
+        incomplete: number
+      }
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/workflows/{workflowId}": {
+    /** Ver un plan de trabajo */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+    }
+    query?: {
+      aggregates?: string
+    }
+    response: {
+      id: string
+      productionId: string
+      sceneId: string | null
+      code: string
+      observations: string
+      status: "pending" | "in_progress" | "rescheduled" | "completed" | "cancelled"
+      scheduledFor: string
+      endsAt: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      taskCount: number
+      tasksByStatus?: {
+        pending: number
+        in_progress: number
+        completed: number
+        incomplete: number
+      }
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/workflows/{workflowId}": {
+    /** Editar un plan; cambiar fecha y estado a la vez es reprogramarlo */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+    }
+    body: {
+      scheduledFor?: string
+      endsAt?: string | null
+      observations?: string
+      responsibleId?: string | null
+      status?: "pending" | "in_progress" | "rescheduled" | "completed" | "cancelled"
+    }
+    response: {
+      id: string
+      productionId: string
+      sceneId: string | null
+      code: string
+      observations: string
+      status: "pending" | "in_progress" | "rescheduled" | "completed" | "cancelled"
+      scheduledFor: string
+      endsAt: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      taskCount: number
+      tasksByStatus?: {
+        pending: number
+        in_progress: number
+        completed: number
+        incomplete: number
+      }
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/workflows/{workflowId}": {
+    /** Eliminar un plan de trabajo y sus tareas */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+    }
+    response: undefined
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/scope": {
+    /** Qué se lleva por delante eliminar el plan */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+    }
+    response: {
+      tasks: number
+    }
+  }
+
   "GET /companies/{companyId}/providers": {
     /** Listar proveedores */
     params: {
@@ -6072,6 +6609,323 @@ export interface ApiEndpoints {
     response: undefined
   }
 
+  "GET /companies/{companyId}/websites/{websiteId}/customizations": {
+    /** Listar las personalizaciones de un sitio */
+    params: {
+      companyId: string
+      websiteId: string
+    }
+    response: {
+      items: Array<{
+        id: string
+        websiteId: string
+        name: string
+        color: string
+        bannerUploadId: string | null
+        bannerUrl: string | null
+        isPrimary: boolean
+        isActive: boolean
+        startsAt: string | null
+        endsAt: string | null
+        sections: Array<{
+          kind: string
+          show: boolean
+          position?: number
+          title?: string
+          description?: string
+          icon?: string
+          props?: Record<string, unknown>
+          styles?: Record<string, string>
+          items?: Array<{
+            code: string
+            title?: string
+            description?: string
+            icon?: string
+            avatar?: string
+            image?: string
+          }>
+          buttons?: Array<{
+            code: string
+            label: string
+            icon?: string
+            value?: string
+            action: "link" | "scroll" | "app"
+            variant: "filled" | "outline" | "light"
+          }>
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+    }
+  }
+
+  "POST /companies/{companyId}/websites/{websiteId}/customizations": {
+    /** Crear una personalización */
+    params: {
+      companyId: string
+      websiteId: string
+    }
+    body: {
+      name: string
+      color?: string
+      bannerUploadId?: string | null
+      isPrimary?: boolean
+      startsAt?: string | null
+      endsAt?: string | null
+      sections?: Array<{
+        kind: string
+        show: boolean
+        position?: number
+        title?: string
+        description?: string
+        icon?: string
+        props?: Record<string, unknown>
+        styles?: Record<string, string>
+        items?: Array<{
+          code: string
+          title?: string
+          description?: string
+          icon?: string
+          avatar?: string
+          image?: string
+        }>
+        buttons?: Array<{
+          code: string
+          label: string
+          icon?: string
+          value?: string
+          action: "link" | "scroll" | "app"
+          variant: "filled" | "outline" | "light"
+        }>
+      }>
+    }
+    response: {
+      id: string
+      websiteId: string
+      name: string
+      color: string
+      bannerUploadId: string | null
+      bannerUrl: string | null
+      isPrimary: boolean
+      isActive: boolean
+      startsAt: string | null
+      endsAt: string | null
+      sections: Array<{
+        kind: string
+        show: boolean
+        position?: number
+        title?: string
+        description?: string
+        icon?: string
+        props?: Record<string, unknown>
+        styles?: Record<string, string>
+        items?: Array<{
+          code: string
+          title?: string
+          description?: string
+          icon?: string
+          avatar?: string
+          image?: string
+        }>
+        buttons?: Array<{
+          code: string
+          label: string
+          icon?: string
+          value?: string
+          action: "link" | "scroll" | "app"
+          variant: "filled" | "outline" | "light"
+        }>
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/websites/{websiteId}/customizations/{customizationId}": {
+    /** Ver una personalización */
+    params: {
+      companyId: string
+      websiteId: string
+      customizationId: string
+    }
+    response: {
+      id: string
+      websiteId: string
+      name: string
+      color: string
+      bannerUploadId: string | null
+      bannerUrl: string | null
+      isPrimary: boolean
+      isActive: boolean
+      startsAt: string | null
+      endsAt: string | null
+      sections: Array<{
+        kind: string
+        show: boolean
+        position?: number
+        title?: string
+        description?: string
+        icon?: string
+        props?: Record<string, unknown>
+        styles?: Record<string, string>
+        items?: Array<{
+          code: string
+          title?: string
+          description?: string
+          icon?: string
+          avatar?: string
+          image?: string
+        }>
+        buttons?: Array<{
+          code: string
+          label: string
+          icon?: string
+          value?: string
+          action: "link" | "scroll" | "app"
+          variant: "filled" | "outline" | "light"
+        }>
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/websites/{websiteId}/customizations/{customizationId}": {
+    /** Modificar una personalización, su contenido o el orden de sus secciones */
+    params: {
+      companyId: string
+      websiteId: string
+      customizationId: string
+    }
+    body: {
+      name?: string
+      color?: string
+      bannerUploadId?: string | null
+      isPrimary?: boolean
+      startsAt?: string | null
+      endsAt?: string | null
+      sections?: Array<{
+        kind: string
+        show: boolean
+        position?: number
+        title?: string
+        description?: string
+        icon?: string
+        props?: Record<string, unknown>
+        styles?: Record<string, string>
+        items?: Array<{
+          code: string
+          title?: string
+          description?: string
+          icon?: string
+          avatar?: string
+          image?: string
+        }>
+        buttons?: Array<{
+          code: string
+          label: string
+          icon?: string
+          value?: string
+          action: "link" | "scroll" | "app"
+          variant: "filled" | "outline" | "light"
+        }>
+      }>
+    }
+    response: {
+      id: string
+      websiteId: string
+      name: string
+      color: string
+      bannerUploadId: string | null
+      bannerUrl: string | null
+      isPrimary: boolean
+      isActive: boolean
+      startsAt: string | null
+      endsAt: string | null
+      sections: Array<{
+        kind: string
+        show: boolean
+        position?: number
+        title?: string
+        description?: string
+        icon?: string
+        props?: Record<string, unknown>
+        styles?: Record<string, string>
+        items?: Array<{
+          code: string
+          title?: string
+          description?: string
+          icon?: string
+          avatar?: string
+          image?: string
+        }>
+        buttons?: Array<{
+          code: string
+          label: string
+          icon?: string
+          value?: string
+          action: "link" | "scroll" | "app"
+          variant: "filled" | "outline" | "light"
+        }>
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/websites/{websiteId}/customizations/{customizationId}": {
+    /** Dar de baja una personalización */
+    params: {
+      companyId: string
+      websiteId: string
+      customizationId: string
+    }
+    response: undefined
+  }
+
+  "GET /companies/{companyId}/websites/{websiteId}/page": {
+    /** Vista previa de la página de un sitio */
+    params: {
+      companyId: string
+      websiteId: string
+    }
+    query?: {
+      customizationId?: string
+    }
+    response: {
+      customizationId: string | null
+      name: string | null
+      color: string
+      bannerUrl: string | null
+      sections: Array<{
+        kind: "hero" | "categories" | "products" | "about" | "features" | "testimonials" | "faq" | "footer"
+        show: boolean
+        position: number
+        title?: string
+        description?: string
+        icon?: string
+        props?: Record<string, unknown>
+        styles?: Record<string, string>
+        items?: Array<{
+          code: string
+          title?: string
+          description?: string
+          icon?: string
+          avatar?: string
+          image?: string
+        }>
+        buttons?: Array<{
+          code: string
+          label: string
+          icon?: string
+          value?: string
+          action: "link" | "scroll" | "app"
+          variant: "filled" | "outline" | "light"
+        }>
+      }>
+    }
+  }
+
   "GET /health": {
     /** Comprobación de salud */
     response: {
@@ -6250,6 +7104,93 @@ export interface ApiEndpoints {
     response: undefined
   }
 
+  "GET /me/checkouts": {
+    /** Mis compras en curso */
+    response: Array<{
+      id: string
+      status: "pending" | "completed" | "canceled" | "expired"
+      type: string
+      storeSlug: string
+      storeName: string
+      lines: Array<{
+        kind: string
+        refId: string
+        name: string
+        unitPrice: string
+        quantity: number
+        total: string
+      }>
+      subtotal: string
+      shippingCost: string
+      total: string
+      currency: string
+      shippingMode: string
+      checkoutUrl: string | null
+      expiresAt: string | null
+      createdAt: string
+    }>
+  }
+
+  "GET /me/checkouts/{checkoutId}": {
+    /** Una compra mía */
+    params: {
+      checkoutId: string
+    }
+    response: {
+      id: string
+      status: "pending" | "completed" | "canceled" | "expired"
+      type: string
+      storeSlug: string
+      storeName: string
+      lines: Array<{
+        kind: string
+        refId: string
+        name: string
+        unitPrice: string
+        quantity: number
+        total: string
+      }>
+      subtotal: string
+      shippingCost: string
+      total: string
+      currency: string
+      shippingMode: string
+      checkoutUrl: string | null
+      expiresAt: string | null
+      createdAt: string
+    }
+  }
+
+  "POST /me/checkouts/{checkoutId}/cancellation": {
+    /** Desistir de la compra y liberar el inventario */
+    params: {
+      checkoutId: string
+    }
+    response: {
+      id: string
+      status: "pending" | "completed" | "canceled" | "expired"
+      type: string
+      storeSlug: string
+      storeName: string
+      lines: Array<{
+        kind: string
+        refId: string
+        name: string
+        unitPrice: string
+        quantity: number
+        total: string
+      }>
+      subtotal: string
+      shippingCost: string
+      total: string
+      currency: string
+      shippingMode: string
+      checkoutUrl: string | null
+      expiresAt: string | null
+      createdAt: string
+    }
+  }
+
   "GET /me/notification-preferences": {
     /** Por qué canales quiero enterarme */
     response: {
@@ -6363,6 +7304,93 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /me/orders": {
+    /** Mis pedidos, de todas las tiendas */
+    response: Array<{
+      id: string
+      reference: string
+      status: string
+      type: string
+      storeSlug: string
+      storeName: string
+      subtotal: string
+      shippingCost: string
+      total: string
+      currency: string
+      createdAt: string
+      lines: Array<{
+        kind: string
+        refId: string
+        name: string
+        unitPrice: string
+        quantity: number
+        total: string
+      }>
+      payment: {
+        status: string
+        method: string | null
+        grossAmount: string
+        receiptUrl: string | null
+        refundedAmount: string
+      } | null
+      shipment: {
+        id: string
+        mode: string
+        status: string
+        cost: string
+        carrier: string
+        trackingNumber: string | null
+        estimatedDeliveryAt: string | null
+        deliveredAt: string | null
+      } | null
+    }>
+  }
+
+  "GET /me/orders/{orderId}": {
+    /** Un pedido mío */
+    params: {
+      orderId: string
+    }
+    response: {
+      id: string
+      reference: string
+      status: string
+      type: string
+      storeSlug: string
+      storeName: string
+      subtotal: string
+      shippingCost: string
+      total: string
+      currency: string
+      createdAt: string
+      lines: Array<{
+        kind: string
+        refId: string
+        name: string
+        unitPrice: string
+        quantity: number
+        total: string
+      }>
+      payment: {
+        status: string
+        method: string | null
+        grossAmount: string
+        receiptUrl: string | null
+        refundedAmount: string
+      } | null
+      shipment: {
+        id: string
+        mode: string
+        status: string
+        cost: string
+        carrier: string
+        trackingNumber: string | null
+        estimatedDeliveryAt: string | null
+        deliveredAt: string | null
+      } | null
+    }
+  }
+
   "GET /me/push-devices": {
     /** Mis navegadores registrados */
     response: {
@@ -6439,6 +7467,132 @@ export interface ApiEndpoints {
     /** ¿Le queda al solicitante el plan gratuito? */
     response: {
       available: boolean
+    }
+  }
+
+  "GET /platform/activity": {
+    /** Lo que ha hecho la administración de plataforma */
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      action?: string | Array<string>
+      entity?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        action: "create" | "update" | "delete"
+        entity: string
+        entityId: string | null
+        entityLabel: string
+        title: string
+        description: string
+        performedBy: string
+        createdAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "GET /platform/companies": {
+    /** Padrón de empresas, de sólo lectura */
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        name: string
+        description: string
+        email: string | null
+        commissionRate: string
+        memberCount: number
+        createdAt: string
+        deletedAt: string | null
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "GET /platform/companies/{companyId}/members": {
+    /** Quién lleva una empresa, sin entrar en ella */
+    params: {
+      companyId: string
+    }
+    response: {
+      items: Array<{
+        id: string
+        userId: string
+        email: string
+        name: string
+        lastname: string
+        isOwner: boolean
+        isActive: boolean
+      }>
+    }
+  }
+
+  "GET /platform/users": {
+    /** Padrón de cuentas, de sólo lectura */
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_email?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      isActive?: string | Array<string>
+      isPlatformAdmin?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        email: string
+        username: string
+        name: string
+        lastname: string
+        isActive: boolean
+        isPlatformAdmin: boolean
+        emailVerified: boolean
+        companyCount: number
+        lastLoginAt: string | null
+        createdAt: string
+        deletedAt: string | null
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
     }
   }
 
@@ -6789,6 +7943,121 @@ export interface ApiEndpoints {
     } | {
       status: "unavailable"
       reason: "subscription" | "service"
+    }
+  }
+
+  "POST /public/sites/{slug}/cart": {
+    /** Valorar un carrito contra el catálogo publicado */
+    params: {
+      slug: string
+    }
+    body: {
+      type?: "sale" | "rent"
+      items: Array<{
+        kind: "warehouse_measurement" | "pixit_product" | "pixit_mosaic"
+        refId: string
+        quantity: number
+      }>
+    }
+    response: {
+      storeSlug: string
+      storeName: string
+      lines: Array<{
+        kind: "warehouse_measurement"
+        refId: string
+        productId: string
+        productName: string
+        measurementName: string
+        name: string
+        unitPrice: string
+        quantity: number
+        total: string
+        available: number
+        coverUrl: string | null
+      }>
+      subtotal: string
+    }
+  }
+
+  "POST /public/sites/{slug}/checkout": {
+    /** Apartar el inventario y abrir la sesión de pago */
+    params: {
+      slug: string
+    }
+    headers?: {
+      "idempotency-key"?: string
+    }
+    body: {
+      type?: "sale" | "rent"
+      mode: "local" | "national" | "international" | "pickup"
+      items: Array<{
+        kind: "warehouse_measurement" | "pixit_product" | "pixit_mosaic"
+        refId: string
+        quantity: number
+      }>
+      toAddressId?: string
+    }
+    response: {
+      id: string
+      status: "pending" | "completed" | "canceled" | "expired"
+      type: string
+      storeSlug: string
+      storeName: string
+      lines: Array<{
+        kind: string
+        refId: string
+        name: string
+        unitPrice: string
+        quantity: number
+        total: string
+      }>
+      subtotal: string
+      shippingCost: string
+      total: string
+      currency: string
+      shippingMode: string
+      checkoutUrl: string | null
+      expiresAt: string | null
+      createdAt: string
+    }
+  }
+
+  "GET /public/sites/{slug}/page": {
+    /** Las secciones que sirve la portada de una tienda */
+    params: {
+      slug: string
+    }
+    response: {
+      customizationId: string | null
+      name: string | null
+      color: string
+      bannerUrl: string | null
+      sections: Array<{
+        kind: "hero" | "categories" | "products" | "about" | "features" | "testimonials" | "faq" | "footer"
+        show: boolean
+        position: number
+        title?: string
+        description?: string
+        icon?: string
+        props?: Record<string, unknown>
+        styles?: Record<string, string>
+        items?: Array<{
+          code: string
+          title?: string
+          description?: string
+          icon?: string
+          avatar?: string
+          image?: string
+        }>
+        buttons?: Array<{
+          code: string
+          label: string
+          icon?: string
+          value?: string
+          action: "link" | "scroll" | "app"
+          variant: "filled" | "outline" | "light"
+        }>
+      }>
     }
   }
 
