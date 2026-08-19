@@ -127,6 +127,13 @@
       "when": 1787102707630,
       "tag": "0017_cola_de_trabajos_y_bandeja",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787180000000,
+      "tag": "0018_descuento_de_suscripcion",
+      "breakpoints": true
     }
   ]
 }

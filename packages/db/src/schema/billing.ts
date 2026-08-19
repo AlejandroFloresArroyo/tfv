@@ -125,6 +125,23 @@ export const companySubscriptions = pgTable(
      */
     gracePeriodEndsAt: timestamp("grace_period_ends_at", { withTimezone: true, mode: "date" }),
 
+    /**
+     * El descuento aplicado, y por qué.
+     *
+     * **Vive en la suscripción, no se recalcula en cada ciclo.** La implementación anterior
+     * sincronizaba los asientos en cada renovación reescribiendo las líneas de la suscripción, y en
+     * el camino borraba descuentos y códigos promocionales (`DEFECTS.md` M-07): quien contrataba
+     * con un quince por ciento lo perdía al mes siguiente, sin que nadie lo tocara ni se enterara.
+     *
+     * Guardado aquí, la sincronización de asientos no tiene por qué mirarlo, que es exactamente la
+     * propiedad que hacía falta.
+     */
+    discountPercent: percent("discount_percent"),
+    /** El código que lo concedió, cuando lo escribió una persona. */
+    promotionCode: varchar("promotion_code", { length: 60 }),
+    /** Su referencia en el procesador, para reconocerlo al reconciliar. */
+    externalDiscountId: varchar("external_discount_id", { length: 120 }),
+
     externalSubscriptionId: varchar("external_subscription_id", { length: 120 }),
     externalCustomerId: varchar("external_customer_id", { length: 120 }),
     externalPriceId: varchar("external_price_id", { length: 120 }),
@@ -138,6 +155,15 @@ export const companySubscriptions = pgTable(
       .where(sql`status <> 'canceled'`),
     uniqueIndex("company_subscriptions_external_unique").on(table.externalSubscriptionId),
     index("company_subscriptions_status_idx").on(table.status, table.periodEnd),
+    /**
+     * El barrido de la gracia.
+     *
+     * Busca suscripciones cuyo periodo de gracia venció sin cobro, y son siempre unas pocas entre
+     * todas las vigentes. Sin este índice el barrido recorre la tabla entera cada vez.
+     */
+    index("company_subscriptions_grace_idx")
+      .on(table.gracePeriodEndsAt)
+      .where(sql`grace_period_ends_at is not null`),
   ],
 )
 
