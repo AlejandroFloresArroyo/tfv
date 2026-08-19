@@ -14,6 +14,17 @@ import type { ReactNode } from "react"
  * que **no** lo es: las sesiones abiertas de una cuenta son las de sus dispositivos, un puñado como
  * mucho, y la spec de consulta las nombra entre los recursos sin búsqueda. Darles paginación sería
  * ceremonia sobre cuatro filas.
+ *
+ * ## Por qué en tacto no es una tabla
+ *
+ * Antes desbordaba a lo ancho con su propio desplazamiento horizontal. Eso esconde las **últimas**
+ * columnas, que en este sistema son justo las que importan —la tarifa y el estado— y las esconde
+ * **sin decirlo**: no hay nada en pantalla que anuncie que a la derecha hay más. Alguien mirando un
+ * teléfono ve una lista de nombres y concluye que no hay precios.
+ *
+ * Con el orden de dispositivos de PRODUCT.md —iPad, celular, escritorio— eso no se sostiene, así
+ * que por debajo de tableta cada fila se despliega en bloque, con el nombre de cada columna al lado
+ * de su valor. Es la misma información, sin desplazamiento lateral y sin nada escondido.
  */
 export function DataTable<T>({
   columns,
@@ -36,38 +47,52 @@ export function DataTable<T>({
   return (
     <div className="flex flex-col gap-2">
       <Panel className="overflow-hidden">
-        {/* La tabla desborda a lo ancho en un teléfono. Se le da su propio desplazamiento para que
-            la página no se mueva en horizontal completa. */}
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-140 border-collapse text-left">
-            <thead>
-              <tr className="border-b border-line">
+        {/* Tacto: una ficha por fila. El encabezado de cada columna acompaña a su valor, así que
+            ninguna columna se pierde por el borde. */}
+        <ul className="tablet:hidden">
+          {rows.map((row) => (
+            <li
+              key={rowKey(row)}
+              className="flex flex-col gap-1.5 px-4 py-3.5 not-last:border-edge not-last:border-b"
+            >
+              {columns.map((column) => (
+                <div key={column.header} className="flex items-baseline justify-between gap-4">
+                  <span className="legend shrink-0 text-content-faint">{column.header}</span>
+                  <span className="min-w-0 text-right text-body2 text-content">
+                    {column.cell(row)}
+                  </span>
+                </div>
+              ))}
+            </li>
+          ))}
+        </ul>
+
+        {/* Tableta en adelante: la tabla de verdad, que es donde la comparación en columna vale. */}
+        <table className="hidden w-full border-collapse text-left tablet:table">
+          <thead>
+            <tr className="border-edge border-b">
+              {columns.map((column) => (
+                <th key={column.header} className="px-4 py-3 legend text-content-faint">
+                  {column.header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={rowKey(row)} className="not-last:border-edge not-last:border-b">
                 {columns.map((column) => (
-                  <th
+                  <td
                     key={column.header}
-                    className="px-4 py-3 text-body3 font-semibold tracking-wide text-content-faint uppercase"
+                    className={`px-4 py-3 text-body2 text-content-muted ${column.className ?? ""}`}
                   >
-                    {column.header}
-                  </th>
+                    {column.cell(row)}
+                  </td>
                 ))}
               </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={rowKey(row)} className="border-b border-line last:border-0">
-                  {columns.map((column) => (
-                    <td
-                      key={column.header}
-                      className={`px-4 py-3 text-body2 text-content-muted ${column.className ?? ""}`}
-                    >
-                      {column.cell(row)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </Panel>
 
       {note ? <p className="px-1 text-body3 text-content-faint">{note}</p> : null}

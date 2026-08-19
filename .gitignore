@@ -36,3 +36,7 @@ supabase/.branches/
 
 # Los árboles de trabajo de los agentes, que viven dentro del repositorio.
 .claude/worktrees/
+
+# Directorio de trabajo de la herramienta de diseño: caché del detector, cargas de las
+# páginas de decisión y capturas de revisión. Todo regenerable, nada de ello es fuente.
+.impeccable/

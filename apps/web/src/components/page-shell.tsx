@@ -24,7 +24,9 @@ export function PageShell({
     >
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-h3 font-bold tracking-tight text-content">{title}</h1>
+          {/* La voz de display: en este mundo algo en la pantalla es grande y manda, y el título de
+            la página es ese algo. La expansión sale del eje de ancho de la propia familia. */}
+          <h1 className="display text-h2 text-content">{title}</h1>
           {subtitle ? <p className="mt-1 text-body1 text-content-muted">{subtitle}</p> : null}
         </div>
         {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}

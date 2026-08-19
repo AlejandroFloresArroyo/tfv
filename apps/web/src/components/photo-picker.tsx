@@ -218,8 +218,8 @@ export function SinglePhotoField({ photo, label }: { photo: SinglePhoto; label: 
       <p className="text-body3 font-semibold text-content">{label}</p>
 
       {photo.current === null ? null : (
-        <div className="flex items-center gap-3 rounded-sm border border-line bg-panel p-2">
-          <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xs bg-panel-sunken">
+        <div className="flex items-center gap-3 rounded-lg border border-edge bg-panel-raised p-2">
+          <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-md bg-panel-sunken">
             <Photo src={photo.current} className="size-full object-cover" />
           </span>
           <span className="min-w-0 flex-1 text-body3 text-content-muted">

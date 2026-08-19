@@ -23,11 +23,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
         <select
           ref={ref}
           className={cn(
-            "h-10 w-full appearance-none rounded-sm border border-field bg-panel pr-9 pl-3",
+            "h-[var(--control-h)] w-full appearance-none border border-edge-control rounded-lg bg-panel pr-9 pl-3",
             "text-body1 text-content",
-            "transition-colors duration-150",
-            "hover:border-content-muted",
-            "aria-invalid:border-danger",
+            "transition-colors duration-150 ease-[--ease-out-soft]",
+            "hover:border-content-faint",
+            "aria-invalid:border-[var(--luz-alto)]",
             "disabled:cursor-not-allowed disabled:opacity-60",
             className,
           )}
@@ -92,9 +92,11 @@ export function Checkbox({ label, hint, className, id: given, ...rest }: Checkbo
       id={id}
       {...(hintId ? { "aria-describedby": hintId } : {})}
       className={cn(
-        "grid size-4.5 shrink-0 place-items-center rounded-xs border border-field bg-panel",
-        "transition-colors duration-150",
-        "hover:border-content-muted",
+        // 20 px porque en tacto una casilla de 18 con guantes se falla, y aquí el tacto es la
+        // calibración de partida; el área sensible la da el `<label>`, que ya está atado.
+        "grid size-5 shrink-0 place-items-center rounded-md border border-edge-control bg-panel",
+        "transition-colors duration-150 ease-[--ease-out-soft]",
+        "hover:border-content-faint",
         "data-[state=checked]:border-accent data-[state=checked]:bg-accent",
         "data-[state=indeterminate]:border-accent data-[state=indeterminate]:bg-accent",
         "disabled:cursor-not-allowed disabled:opacity-50",
@@ -165,9 +167,12 @@ export function Switch({ label, className, id: given, required, ...rest }: Switc
       id={id}
       {...(required === undefined ? {} : { required })}
       className={cn(
-        "relative h-5.5 w-9.5 shrink-0 rounded-xl border border-transparent bg-line-strong",
-        "transition-colors duration-150",
-        "data-[state=checked]:bg-accent",
+        "relative h-6.5 w-11 shrink-0 rounded-full border border-edge-control bg-panel-sunken",
+        // El disco deja un canal visible alrededor: sin ese canal los dos tonos se leen como dos
+        // bloques pegados y no como una pieza dentro de una guía, que es justo la duda que tiene
+        // quien abre la aplicación por primera vez.
+        "transition-colors duration-200 ease-[--ease-out-soft]",
+        "data-[state=checked]:border-accent data-[state=checked]:bg-accent",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
@@ -175,9 +180,11 @@ export function Switch({ label, className, id: given, required, ...rest }: Switc
     >
       <SwitchPrimitive.Thumb
         className={cn(
-          "block size-4.5 rounded-full bg-panel shadow-sm",
-          "translate-x-0.5 transition-transform duration-150 ease-[--ease-out-soft]",
-          "data-[state=checked]:translate-x-4.5",
+          // Sin rebote: el disco llega a su tope y se queda. Un interruptor que se pasa y vuelve
+          // es la firma del software de consumo.
+          "absolute inset-y-0.5 left-0.5 block aspect-square rounded-full bg-content-muted",
+          "transition-[left,background-color] duration-200 ease-[--ease-out-soft]",
+          "data-[state=checked]:left-[calc(100%-1.375rem)] data-[state=checked]:bg-on-accent",
         )}
       />
     </SwitchPrimitive.Root>

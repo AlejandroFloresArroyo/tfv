@@ -1,52 +1,58 @@
 /*
- * Tokens del sistema de diseño.
+ * Tokens del sistema de diseño — Hoja de Llamado.
  *
- * Rebanada 28a. Traducción del tema anterior (`tfv-frontend/packages/themes/`, vanilla-extract
- * sobre Mantine) a la forma que Tailwind consume.
+ * Rebanada de rediseño, segunda dirección. Sustituye al «Motor de Rayado», que se descartó entero:
+ * era correcto y sin alma, y con su material arrancado se quedaba en un juego de componentes con
+ * el radio en cero. El contrato de dirección vive en el marcado de `apps/web`, de primer hijo del
+ * cuerpo.
  *
- * ## Qué se conservó exacto
+ * ## Qué es este mundo
  *
- * Las rampas de color, los radios, la escala de espaciado, los índices de superposición y los
- * puntos de ruptura están copiados valor a valor. No se «mejoraron»: cambiarlos aquí desplazaría
- * cada pantalla respecto de la referencia y haría imposible comparar las dos pilas.
+ * La **hoja de llamado** —el documento que toda la industria lee cada mañana— convertida en
+ * superficie de control. Su arquitectura es lo que se conserva: los hechos duros arriba, los
+ * bloques numerados debajo, y todo lo del día resuelto en una sola superficie. Lo que cambia es la
+ * materia: no es papel, es un panel oscuro iluminado.
  *
- * ## Tres desviaciones deliberadas
+ * El registro es retrofuturista, y su cromática **no es inventada**: son las temperaturas de color
+ * de un set. Tungsteno ámbar a 3200 K, HMI cian a 5600 K, la magenta de la hora mágica, el rojo de
+ * la luz de seguridad. Cada estado del sistema toma una de esas temperaturas, así que el color
+ * dice algo antes de que nadie lea la etiqueta.
  *
- * 1. **La familia tipográfica.** El tema anterior definía un único token llamado `inter` cuya lista
- *    de reserva era **monoespaciada** de principio a fin (`fontFamily.css.ts`). Si Inter no cargaba,
- *    la aplicación entera caía a Courier. Es un error, no una decisión, y se corrige.
+ * ## Las cuatro palancas, que van a la vez
  *
- * 2. **Los tamaños de fuente.** El tema declaraba unos sesenta, con familias enteras —`caption`,
- *    `overline`, `subtitle`— sin un solo uso, y valores como `0.015625rem`, que es un cuarto de
- *    píxel. Se traen los diecisiete que el código usa de verdad; el censo está en la bitácora.
+ * 1. **Color a escala de página.** Las tarjetas llevan degradado teñido de su temperatura, no un
+ *    acento de dos píxeles. El color se ve desde la puerta.
+ * 2. **Tipografía grande.** Archivo variable trae eje de ancho, así que la voz de display sale
+ *    expandida al 118% de la misma familia que el cuerpo: letra de panel de control sin recurrir a
+ *    una tipografía disfraz de ciencia ficción.
+ * 3. **Profundidad y material.** Capas con sombra suave y un filo superior claro —el canto de
+ *    vidrio— que es lo que separa una tarjeta de un rectángulo pintado.
+ * 4. **Movimiento de color, nunca de posición.** Al pasar el ratón cambian el degradado y el
+ *    borde. **Nada se desplaza ni se escala.** Es regla del brief y además es lo correcto: en una
+ *    rejilla densa, una tarjeta que se levanta al pasar por encima obliga a recalcular la posición
+ *    de todo lo que hay al lado.
  *
- * 3. **Los puntos de ruptura.** `laptop` y `desktop` valían los dos `1024px`, así que `desktop`
- *    nunca podía distinguirse. Se le da su propio valor.
+ * ## Qué se conserva de la iteración anterior
  *
- * ## Cómo se organiza el color
- *
- * Dos niveles, y la distinción importa:
- *
- * - **Rampas** (`--color-blue-5`): el pigmento. No cambian con el tema.
- * - **Papeles** (`--color-canvas`, `--color-content`): para qué sirve un color. Se redefinen en
- *   oscuro. Los componentes usan papeles, nunca rampas.
- *
- * Los papeles existen porque la misma intención necesita valores opuestos en cada tema: «panel
- * elevado» es más claro que el fondo en oscuro y más blanco que el fondo en claro. El tema anterior
- * no tenía esta capa, y por eso cada componente elegía a mano su tono con `background.6` — que es
- * como acaban apareciendo diecisiete grises distintos para la misma superficie.
+ * Nada de su aspecto. Sí su infraestructura, que era buena y no era mundo visual: las dos
+ * calibraciones de densidad, la disciplina de medir el contraste en vez de estimarlo, la escalera
+ * de estados con nombre, la cuota monoespaciada sin pares confundibles, y las rampas heredadas que
+ * la hoja de cotización impresa necesita fijas.
  */
 
 @import "tailwindcss";
+@import "@fontsource-variable/archivo/wdth.css";
+@import "@fontsource-variable/atkinson-hyperlegible-mono/index.css";
 
 /* La utilidad `dark:` se activa por clase, no por preferencia del sistema: la elección del usuario
    manda sobre la del sistema operativo, y el servidor la escribe en `<html>` antes de pintar. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* ─── Rampas ────────────────────────────────────────────────────────────────
-     Índices 0 a 9, como en el tema anterior. Conservar la numeración permite leer un componente
-     viejo y saber a qué token del nuevo corresponde sin tabla de conversión. */
+  /* ─── Rampas heredadas ──────────────────────────────────────────────────────
+     No las usa nada nuevo. La rampa `gray` no es deuda: la usa la **hoja de cotización**, que es un
+     documento impreso y compartido por enlace público, lleva `bg-white` a propósito y **no sigue al
+     tema** — un documento que alguien imprime no cambia de color porque el panel esté en oscuro. */
 
   --color-red-0: #fff5f5;
   --color-red-1: #ffe3e3;
@@ -246,8 +252,6 @@
   --color-light-8: #d6d6d6;
   --color-light-9: #cccccc;
 
-  /* Rampas de la portada de marketing: negro cálido de base de película, tono de etiqueta,
-     blanco roto de lápiz graso y rojo de luz de seguridad. */
   --color-ink-0: #4c463a;
   --color-ink-1: #3e382d;
   --color-ink-2: #302b22;
@@ -292,63 +296,80 @@
   --color-signal-8: #541c06;
   --color-signal-9: #391304;
 
-  /* El oro exacto del logotipo. Se mantiene separado de la rampa `gold`, que es otro tono ya usado
-     como acento por defecto en todo el sitio. */
+  /* El oro exacto del logotipo. Compromiso de marca, fijo. En este mundo por fin trabaja: es la
+     acción primaria y es el estado «apartado», que es el estado propio de TFV. */
   --color-brand: #ffd038;
 
-  /* ─── Tipografía ────────────────────────────────────────────────────────────
-     Corrección respecto del tema anterior: la reserva de una tipografía de texto tiene que ser de
-     texto. La lista de antes era monoespaciada entera. */
-  --font-sans:
-    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-  --font-mono:
-    ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Mono", "Roboto Mono", "Source Code Pro",
-    "Fira Mono", "Courier New", monospace;
+  /* ─── Temperaturas de set ───────────────────────────────────────────────────
+     Los tonos puros de los que salen los degradados. No son una paleta de marca inventada: son las
+     fuentes de luz con las que esta industria trabaja. */
+  --color-tungsteno: #ff9f45; /* 3200 K */
+  --color-hmi: #4fd8f5; /* 5600 K */
+  --color-magic: #ff6fa8; /* hora mágica */
+  --color-verde: #33d98a;
+  --color-seguridad: #ff5c4d; /* luz de seguridad */
 
-  /* Los diecisiete tamaños con uso real. Nombres conservados para poder rastrear el equivalente. */
-  --text-h1: 2rem;
-  --text-h2: 1.5rem;
-  --text-h3: 1.25rem;
+  /* ─── Tipografía ────────────────────────────────────────────────────────────
+     Archivo variable, con su eje de ancho: el cuerpo va al 100% y el display al 118%, así que la
+     voz de panel de control sale de la misma familia en vez de una tipografía de ciencia ficción.
+
+     La monoespaciada es Atkinson Hyperlegible Mono y sobrevive por una razón de producto, no de
+     estilo: este sistema está lleno de códigos de unidad y folios donde confundir `0` con `O`, o
+     `1` con `l`, es un error de operación. */
+  --font-sans:
+    "Archivo Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono:
+    "Atkinson Hyperlegible Mono Variable", ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Mono",
+    "Roboto Mono", "Fira Mono", "Courier New", monospace;
+
+  /* Los mismos nombres de siempre, para no reescribir sesenta pantallas. Los valores suben: este
+     mundo pide que algo en la pantalla sea grande. */
+  --text-h1: 2.25rem;
+  --text-h2: 1.75rem;
+  --text-h3: 1.3125rem;
   --text-h4: 1.125rem;
   --text-h5: 1rem;
-  --text-h6: 0.875rem;
+  --text-h6: 0.9375rem;
   --text-title1: 1rem;
-  --text-title2: 0.875rem;
-  --text-title3: 0.725rem;
-  --text-title4: 0.625rem;
-  --text-title5: 0.5rem;
-  --text-body1: 0.875rem;
-  --text-body2: 0.725rem;
-  --text-body3: 0.625rem;
-  --text-body4: 0.5rem;
-  --text-button: 0.725rem;
-  --text-fluid3: clamp(2rem, 9vw, 3.5rem);
+  --text-title2: 0.9375rem;
+  --text-title3: 0.875rem;
+  --text-title4: 0.8125rem;
+  --text-title5: 0.75rem;
+  --text-body1: 0.9375rem;
+  --text-body2: 0.875rem;
+  --text-body3: 0.8125rem;
+  --text-body4: 0.75rem;
+  --text-button: 0.9375rem;
+  --text-fluid3: clamp(2.25rem, 6vw, 4rem);
 
   /* ─── Espaciado ─────────────────────────────────────────────────────────────
-     La escala del tema anterior, que Mantine usaba como `spacing`. El `md` de 0.842rem es un valor
-     raro, y es el que estaba: se conserva porque cambiarlo desplazaría cada pantalla. */
-  --spacing-xxxs: 0.0625rem;
+     Más aire que antes. Un panel oscuro con tarjetas apretadas se lee sucio. */
+  --spacing-xxxs: 0.125rem;
   --spacing-xxs: 0.25rem;
   --spacing-xs: 0.5rem;
   --spacing-sm: 0.75rem;
-  --spacing-md: 0.842rem;
-  --spacing-lg: 1rem;
-  --spacing-xl: 1.25rem;
-  --spacing-xxl: 1.5rem;
-  --spacing-xxxl: 2rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-xxl: 2.5rem;
+  --spacing-xxxl: 4rem;
 
   /* ─── Radios ────────────────────────────────────────────────────────────────
-     Exactos. `--radius-*` sustituye a `borderRadius.*`. */
-  --radius-xxxs: 0.0625rem;
-  --radius-xxs: 0.125rem;
-  --radius-xs: 0.25rem;
+     Generosos. La iteración anterior los puso todos en cero y el resultado se leía como una hoja
+     de cálculo vieja; era el diagnóstico correcto y aquí se corrige. Se declaran también los
+     nombres de Tailwind para que las sesenta pantallas ya escritas hereden la curva sin tocarlas. */
+  --radius-xxxs: 0.125rem;
+  --radius-xxs: 0.25rem;
+  --radius-xs: 0.375rem;
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
-  --radius-xxl: 2rem;
-  --radius-xxxl: 3rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+  --radius-xxl: 1.5rem;
+  --radius-xxxl: 2rem;
 
   /* ─── Proporciones ──────────────────────────────────────────────────────────  */
   --aspect-square: 1;
@@ -356,20 +377,16 @@
   --aspect-portrait: 3 / 4;
   --aspect-widescreen: 16 / 9;
   --aspect-ultrawide: 18 / 5;
-  --aspect-golden: 1.618 / 1;
 
   /* ─── Puntos de ruptura ─────────────────────────────────────────────────────
-     Corrección: `laptop` y `desktop` valían los dos 1024px en el tema anterior, así que la
-     distinción no existía. `desktop` pasa a 1280px. */
-  --breakpoint-phone: 36rem;
+     iPad primero: la tablet es el dispositivo de referencia y el escritorio la ampliación. */
+  --breakpoint-phone: 30rem;
   --breakpoint-tablet: 48rem;
   --breakpoint-laptop: 64rem;
   --breakpoint-desktop: 80rem;
+  --breakpoint-ultra: 108rem;
 
-  /* ─── Superposición ─────────────────────────────────────────────────────────
-     Veinte capas era inventario, no orden: nada garantizaba que dos cosas distintas no eligieran
-     la misma. Se nombran por lo que son, que es lo que impide colocar un diálogo debajo de su
-     propio velo. */
+  /* ─── Superposición ─────────────────────────────────────────────────────────  */
   --z-base: 0;
   --z-raised: 10;
   --z-sticky: 100;
@@ -380,104 +397,177 @@
   --z-tooltip: 1100;
 
   /* ─── Movimiento ────────────────────────────────────────────────────────────
-     La transición del tema anterior era una sola cadena que animaba `all`, más nueve propiedades
-     con duraciones entre 0 s y 2,8 s. Aquí se declara por intención y con duraciones cortas. */
+     Amortiguado y sin rebote. Y una regla que es del brief: al pasar el ratón cambia el **color**,
+     nunca la posición. */
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-/* ─── Papeles ─────────────────────────────────────────────────────────────────
-   Lo que los componentes usan. Cada valor sale de las rampas del tema anterior; lo que se añade es
-   el nombre de la intención, para que «superficie elevada» sea una sola decisión y no una elección
-   de gris repetida en cada archivo.
-
-   Se declaran fuera de `@theme` y se enlazan con `@theme inline` porque tienen que poder
-   redefinirse bajo `.dark`: una variable declarada dentro de `@theme` es fija. */
+/* ═══ Papeles ═════════════════════════════════════════════════════════════════
+ *
+ * Oscuro es el punto de partida y claro es su par legítimo, no un modo alterno: la escena de uso
+ * son las tres a la vez —nave de almacén con luz mixta, oficina de producción, y set—, y bajo el
+ * sol de una nave a mediodía el tema claro tiene que funcionar igual de bien.
+ *
+ * Se declaran fuera de `@theme` y se enlazan con `@theme inline` porque tienen que poder
+ * redefinirse bajo `.dark`: una variable declarada dentro de `@theme` es fija.
+ *
+ * Todos los valores están **medidos** contra lienzo, panel y tarjeta elevada, no estimados. La
+ * tabla va al final del bloque.
+ */
 
 :root {
-  /* Claro. Origen: `lightRaw` de `themes.css.ts`, salvo lo anotado. */
-  --canvas: #f0f0f0; /* background */
-  --panel: #ffffff; /* background.100 */
-  --panel-sunken: #f9f9f9; /* background.400 */
-  --panel-hover: #f5f5f5; /* light.3 */
-  --line: #e6e6e6; /* background.600 · separador, decorativo */
-  --line-strong: #d2d2d2; /* background.700 */
-  /* Borde de control. Es más oscuro que `line` a propósito: ver la nota de contraste. */
-  --field: #858585;
-  --content: #1e1e1e; /* foreground */
-  --content-muted: #646464; /* foreground.800 · 5.19:1 sobre el lienzo */
-  --content-faint: #686868; /* medido; ver nota */
-  /* Acción primaria: en el tema anterior el color primario era `foreground`, así que el botón
-     principal es el contrario del fondo. Negro sobre claro, blanco sobre oscuro. */
-  --accent: #1e1e1e;
-  --accent-hover: #3c3c3c;
-  --on-accent: #ffffff;
-  --focus: #228be6; /* blue.6 · 3.12:1 sobre el lienzo */
-  --danger: #c92a2a; /* red.9 · 4.79:1 sobre el lienzo */
-  /* Ninguno de los dos sale de la escala, y el motivo se mide: sobre este lienzo, `green.9` da
-     3.83:1 y `yellow.9` **2.63:1**, muy por debajo de lo legible para texto. La escala está pensada
-     para rellenos, donde el mínimo es 3:1; estos dos son para texto. Ver la nota de contraste. */
-  --success: #237032; /* medido · 5.36:1 sobre el lienzo */
-  --warning: #a35200; /* medido · 4.90:1 sobre el lienzo */
-  --overlay: rgb(30 30 30 / 0.45);
+  /* La fuerza del degradado, por tema. Sobre blanco un teñido al 15% se disuelve y la tarjeta deja
+     de resaltar; sobre un lienzo casi negro el mismo 15% ya es un campo de color. Mismo material,
+     dos dosis. */
+  --tint-rest: 22%;
+  --tint-hot: 40%;
+
+  /* Claro. */
+  --canvas: #f1f2f6;
+  --panel: #ffffff;
+  --panel-raised: #f8f9fc;
+  --panel-sunken: #e7e9f0;
+
+  /* El borde vivo separa; el borde de control delimita algo que se puede tocar o escribir, y por
+     eso llega a 3:1 y el otro no. Subir el primero convertiría cada rejilla en una reja. */
+  --edge: #d8dce6;
+  --edge-control: #7c8496;
+
+  --content: #0b0d12;
+  --content-muted: #4a5162;
+  --content-faint: #5c6375;
+
+  /* Acción primaria: el oro de marca relleno, con tinta encima. 13.26:1. */
+  --accent: #ffd038;
+  --accent-hover: #ffdc63;
+  --on-accent: #0b0d12;
+
+  --focus: #0a6ea8;
+  --overlay: rgb(11 13 18 / 0.45);
+
+  --danger-fill: #b02418;
+  --on-danger: #ffffff;
+
+  /* ─── Escalera de estados, por temperatura de set ───────────────────────────
+     `tinta-*` es el color con el que se escribe (mínimo 4.5:1). `luz-*` es el tono puro del que
+     sale el degradado de la tarjeta, y no se usa nunca como texto. */
+  --luz-reposo: #8b93a5;
+  --luz-curso: #4fd8f5; /* HMI · en curso */
+  --luz-firme: #33d98a; /* aprobado, entregado, pagado */
+  --luz-aparta: #ffd038; /* apartado · el estado propio de TFV, en el oro de la marca */
+  --luz-cuida: #ff9f45; /* tungsteno · por vencer */
+  --luz-alto: #ff5c4d; /* luz de seguridad · bloqueado, rechazado */
+  --luz-leido: #ff6fa8; /* hora mágica · lo que el modelo extrajo, falta revisar */
+
+  --tinta-reposo: #4a5162;
+  --tinta-curso: #0a5f7a;
+  --tinta-firme: #0f6b45;
+  --tinta-aparta: #6e5300;
+  --tinta-cuida: #8a4a00;
+  --tinta-alto: #b02418;
+  --tinta-leido: #a3175c;
+
+  /* La superficie de paso del puntero. Papel real, no alias: la dirección correcta depende
+     del tema —en claro el hover baja hacia el hundido, en oscuro sube hacia el elevado— y ninguna
+     de las dos superficies fijas sirve para ambos. */
+  --panel-hover: var(--panel-sunken);
+
+  /* Vocabulario anterior, mientras las pantallas migran. */
+  --line: var(--edge);
+  --line-strong: var(--edge-control);
+  --field: var(--edge-control);
+  --danger: var(--tinta-alto);
+  --success: var(--tinta-firme);
+  --warning: var(--tinta-cuida);
 }
 
 :root.dark {
-  /* Oscuro. Origen: `darkRaw` de `themes.css.ts`, salvo lo anotado. */
-  --canvas: #1e1e1e;
-  --panel: #282828; /* background.600 */
-  --panel-sunken: #1a1a1a; /* background.300 */
-  --panel-hover: #3c3c3c; /* background.700 */
-  --line: #3c3c3c; /* background.700 */
-  --line-strong: #646464; /* background.800 */
-  --field: #757575;
-  --content: #f0f0f0;
-  --content-muted: #aaaaaa; /* foreground.800 · 6.35:1 sobre el panel */
-  --content-faint: #949494; /* medido; ver nota */
-  --accent: #f0f0f0;
-  --accent-hover: #d2d2d2;
-  --on-accent: #1e1e1e;
-  --focus: #4dabf7; /* blue.4, que es el que se lee sobre fondo oscuro */
-  --danger: #ff8787; /* red.4 · 6.37:1 sobre el panel */
-  --success: #69db7c; /* green.4 · 8.44:1 sobre el panel */
-  --warning: #ffd43b; /* yellow.4 · 10.34:1 sobre el panel */
-  --overlay: rgb(0 0 0 / 0.6);
+  --tint-rest: 15%;
+  --tint-hot: 32%;
+
+  /* Oscuro. El lienzo no es negro puro: lleva algo de azul para que las tarjetas tengan de dónde
+     despegarse, que es lo que hace que una capa se lea como capa. */
+  --canvas: #08090c;
+  --panel: #0f1117;
+  --panel-raised: #161922;
+  --panel-sunken: #05060a;
+
+  --edge: #2a2f3c;
+  --edge-control: #646d82;
+
+  --content: #f2f4f8;
+  --content-muted: #a9b0be;
+  --content-faint: #8a92a2;
+
+  --accent: #ffd038;
+  --accent-hover: #ffdc63;
+  --on-accent: #0b0d12;
+
+  --focus: #6fdcf5;
+  --overlay: rgb(2 3 5 / 0.72);
+
+  --danger-fill: #ff5c4d;
+  --on-danger: #16050b;
+
+  --luz-reposo: #8b93a5;
+  --luz-curso: #4fd8f5;
+  --luz-firme: #33d98a;
+  --luz-aparta: #ffd038;
+  --luz-cuida: #ff9f45;
+  --luz-alto: #ff5c4d;
+  --luz-leido: #ff6fa8;
+
+  --tinta-reposo: #a9b0be;
+  --tinta-curso: #6fdcf5;
+  --tinta-firme: #6ae8a8;
+  --tinta-aparta: #ffd038;
+  --tinta-cuida: #ffb067;
+  --tinta-alto: #ff8a80;
+  --tinta-leido: #ff8fbc;
+
+  --panel-hover: var(--panel-raised);
+
+  /* Vocabulario anterior, mientras las pantallas migran. */
+  --line: var(--edge);
+  --line-strong: var(--edge-control);
+  --field: var(--edge-control);
+  --danger: var(--tinta-alto);
+  --success: var(--tinta-firme);
+  --warning: var(--tinta-cuida);
 }
 
 /*
- * Nota de contraste — cuatro valores que **no** son los del tema anterior, y por qué.
+ * Contraste medido, peor caso de cada valor contra lienzo, panel y tarjeta elevada.
  *
- * Se midieron en lugar de estimarse. Ratios contra lienzo y panel de cada tema:
+ * | Papel          | Claro | Oscuro | Mínimo |
+ * |----------------|-------|--------|--------|
+ * | content        | 17.37 | 15.94  | 4.5    |
+ * | content-muted  |  7.10 |  8.06  | 4.5    |
+ * | content-faint  |  5.37 |  5.61  | 4.5    |
+ * | edge-control   |  3.35 |  3.39  | 3      |
+ * | tinta-curso    |  6.40 | 11.06  | 4.5    |
+ * | tinta-firme    |  5.85 | 11.47  | 4.5    |
+ * | tinta-aparta   |  6.47 | 11.98  | 4.5    |
+ * | tinta-cuida    |  6.13 |  9.75  | 4.5    |
+ * | tinta-alto     |  6.03 |  7.69  | 4.5    |
+ * | tinta-leido    |  6.62 |  8.28  | 4.5    |
  *
- * | Papel | Antes | Medido | Ahora | Medido |
- * |---|---|---|---|---|
- * | Tenue, claro | `#797979` | 3.82 | `#686868` | 4.89 |
- * | Tenue, oscuro | `#646464` | 2.49 | `#949494` | 4.86 |
- * | Error, claro | `red.6` | 2.88 | `#c92a2a` | 4.79 |
- * | Borde de control | `#e6e6e6` | 1.20 | `#858585` | 3.03 |
+ * Rellenos, medidos contra su propio texto: tinta sobre oro 13.26 · tinta sobre HMI 11.83 ·
+ * blanco sobre el rojo de seguridad claro 7.50.
  *
- * Los tres primeros son texto y el mínimo son 4.5:1. El de oscuro estaba en 2.49 — la mitad de lo
- * necesario— y es justo el color con el que se pintan las notas al pie de cada tarjeta.
- *
- * El cuarto es distinto y es el que más cambia el aspecto. El borde de un campo de formulario no es
- * decoración: es lo que dice dónde se puede escribir, y el mínimo para eso son 3:1. Un borde de
- * `#e6e6e6` sobre blanco da 1.20, así que el campo se distinguía por su sombra o por nada. Sale un
- * borde bastante más marcado que el de la referencia; es el precio de que el campo se vea.
- *
- * `line` conserva el valor suave original porque separa, no delimita un control.
+ * El borde vivo (`--edge`) queda a propósito por debajo: separa capas, no delimita un control, y
+ * subirlo dibujaría una reja alrededor de cada tarjeta.
  */
 
 @theme inline {
   --color-canvas: var(--canvas);
   --color-panel: var(--panel);
+  --color-panel-raised: var(--panel-raised);
   --color-panel-sunken: var(--panel-sunken);
   --color-panel-hover: var(--panel-hover);
-  --color-line: var(--line);
-  --color-line-strong: var(--line-strong);
-  --color-field: var(--field);
-  --color-danger: var(--danger);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
+  --color-edge: var(--edge);
+  --color-edge-control: var(--edge-control);
   --color-content: var(--content);
   --color-content-muted: var(--content-muted);
   --color-content-faint: var(--content-faint);
@@ -486,15 +576,312 @@
   --color-on-accent: var(--on-accent);
   --color-focus: var(--focus);
   --color-overlay: var(--overlay);
+  --color-danger-fill: var(--danger-fill);
+  --color-on-danger: var(--on-danger);
+
+  --color-luz-reposo: var(--luz-reposo);
+  --color-luz-curso: var(--luz-curso);
+  --color-luz-firme: var(--luz-firme);
+  --color-luz-aparta: var(--luz-aparta);
+  --color-luz-cuida: var(--luz-cuida);
+  --color-luz-alto: var(--luz-alto);
+  --color-luz-leido: var(--luz-leido);
+
+  --color-tinta-reposo: var(--tinta-reposo);
+  --color-tinta-curso: var(--tinta-curso);
+  --color-tinta-firme: var(--tinta-firme);
+  --color-tinta-aparta: var(--tinta-aparta);
+  --color-tinta-cuida: var(--tinta-cuida);
+  --color-tinta-alto: var(--tinta-alto);
+  --color-tinta-leido: var(--tinta-leido);
+
+  /* Vocabulario anterior, mientras las pantallas migran. */
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-field: var(--field);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
 }
 
-/* ─── Base ────────────────────────────────────────────────────────────────────  */
+/* ═══ Las dos calibraciones ═══════════════════════════════════════════════════
+ *
+ * Tacto primero, porque el orden de dispositivos empieza en iPad. La densidad de escritorio entra
+ * sólo cuando **hay ancho y hay puntero fino**: una iPad Pro apaisada mide 1024 px y se sigue
+ * tocando con el dedo, así que el ancho por sí solo daría la calibración equivocada justo en el
+ * dispositivo de referencia.
+ */
+:root {
+  --control-h: 2.75rem;
+  --control-h-sm: 2.25rem;
+  --control-h-lg: 3.25rem;
+  --row-h: 3rem;
+}
+
+@media (min-width: 64rem) and (pointer: fine) {
+  :root {
+    --control-h: 2.25rem;
+    --control-h-sm: 1.875rem;
+    --control-h-lg: 2.625rem;
+    --row-h: 2.375rem;
+  }
+}
+
+/* ═══ La tarjeta teñida ═══════════════════════════════════════════════════════
+ *
+ * La pieza central del mundo. Una tarjeta toma su temperatura de `--luz`, y de ahí sale su
+ * degradado: fuerte en la esquina superior izquierda, disuelto en el panel a media altura. Al
+ * pasar el ratón el degradado sube y el borde se tiñe — **y nada se mueve**.
+ *
+ * Que no se mueva no es sólo lo que pediste: en una rejilla densa, una tarjeta que se levanta al
+ * pasar por encima obliga al ojo a recolocar todo lo que tiene al lado, y con cuarenta tarjetas en
+ * pantalla eso es ruido, no vida.
+ *
+ * El filo superior claro —el `::before`— es lo que separa una tarjeta de un rectángulo pintado:
+ * imita el canto por el que entra la luz en un panel físico. Sin él, sobre un lienzo oscuro, el
+ * degradado solo se lee como una mancha.
+ */
+
+/*
+ * El teñido es una propiedad registrada, y eso no es un detalle de implementación.
+ *
+ * Un navegador **no sabe interpolar un `linear-gradient`**: poner `transition: background` sobre un
+ * degradado no lo funde, lo salta. Registrando el porcentaje como propiedad con tipo, lo que se
+ * anima es un número —que sí se interpola— y el degradado se recalcula en cada fotograma. Es la
+ * diferencia entre una tarjeta que se enciende y una que parpadea de un estado al otro.
+ */
+@property --tint-now {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
+@utility card {
+  position: relative;
+  isolation: isolate;
+  --tint-now: var(--tint-rest);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--edge);
+  background: linear-gradient(
+    158deg,
+    color-mix(in oklab, var(--luz, transparent) var(--tint-now), var(--panel)) 0%,
+    var(--panel) 58%
+  );
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.08),
+    0 8px 24px -12px rgb(0 0 0 / 0.28);
+  transition:
+    --tint-now 260ms var(--ease-out-soft),
+    border-color 260ms var(--ease-out-soft),
+    box-shadow 260ms var(--ease-out-soft);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset-inline: 1px;
+    inset-block-start: 0;
+    block-size: 1px;
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in oklab, var(--luz, #ffffff) 55%, transparent) 30%,
+      transparent 85%
+    );
+    opacity: 0.9;
+    pointer-events: none;
+  }
+}
+
+/* Sólo para tarjetas que se pueden pulsar. Una tarjeta de sólo lectura no reacciona: encender algo
+   que no lleva a ninguna parte es lo que enseña a la gente a desconfiar de las señales. */
+@utility card-live {
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    --tint-now: var(--tint-hot);
+    border-color: color-mix(in oklab, var(--luz, var(--edge)) 45%, var(--edge));
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.1),
+      0 10px 28px -12px rgb(0 0 0 / 0.34),
+      0 0 0 1px color-mix(in oklab, var(--luz, transparent) 22%, transparent);
+  }
+}
+
+/* ═══ El único momento animado del sistema ════════════════════════════════════
+ *
+ * El encendido. Al cargar la superficie, el teñido de cada tarjeta sube desde cero hasta su valor
+ * de reposo, escalonado por columnas. Es un panel de control alimentándose, y es **un solo
+ * momento**: no hay una entrada distinta por sección ni un efecto suelto en cada componente.
+ *
+ * El contenido está visible desde el primer fotograma. Lo que entra es la luz, no el dato: si la
+ * animación no corre —sin JavaScript, con movimiento reducido— la tarjeta ya está ahí, completa y
+ * con su color. Una entrada que esconde información no es una entrada, es un fallo con estilo.
+ */
+@keyframes encendido {
+  from {
+    --tint-now: 0%;
+  }
+  to {
+    --tint-now: var(--tint-rest);
+  }
+}
+
+@utility card-boot {
+  animation: encendido 620ms var(--ease-out-soft) backwards;
+}
+
+/*
+ * La respiración: el único movimiento continuo, y sólo se gana diciendo la verdad.
+ *
+ * Se pone **exclusivamente** en lo que de verdad está ocurriendo ahora mismo en el sistema —una
+ * extracción de guion corriendo en segundo plano, una reserva a punto de expirar—. Si se usara de
+ * adorno, en dos días nadie miraría la señal, que es lo contrario de que el sistema se sienta vivo.
+ */
+@keyframes respira {
+  0%,
+  100% {
+    --tint-now: var(--tint-rest);
+  }
+  50% {
+    --tint-now: var(--tint-hot);
+  }
+}
+
+@utility card-vivo {
+  animation: respira 3.6s var(--ease-in-out-soft) infinite;
+}
+
+/* Las temperaturas, como clase. Fijan `--luz` y de ahí cuelga todo lo demás. */
+@utility tint-reposo {
+  --luz: var(--luz-reposo);
+}
+@utility tint-curso {
+  --luz: var(--luz-curso);
+}
+@utility tint-firme {
+  --luz: var(--luz-firme);
+}
+@utility tint-aparta {
+  --luz: var(--luz-aparta);
+}
+@utility tint-cuida {
+  --luz: var(--luz-cuida);
+}
+@utility tint-alto {
+  --luz: var(--luz-alto);
+}
+@utility tint-leido {
+  --luz: var(--luz-leido);
+}
+
+/* ═══ Voces ══════════════════════════════════════════════════════════════════ */
+
+/* La voz de display: la misma familia, expandida. Es la letra de rótulo de panel de control, y
+   sale del eje de ancho de Archivo en vez de una tipografía disfraz de ciencia ficción. */
+@utility display {
+  font-stretch: 118%;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.08;
+}
+
+/* La leyenda: el nombre de campo de una hoja de llamado. Nombra columnas, estados y metadatos.
+   **No** se usa para etiquetas de formulario: en español son largas y en versalitas apretadas
+   dejan de leerse. El mundo manda en la leyenda; la tarea manda en el formulario. */
+@utility legend {
+  font-size: var(--text-body4);
+  font-weight: 600;
+  font-stretch: 108%;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+/* Cifras tabulares. En un sistema de importes y existencias, que las columnas no bailen al cambiar
+   de valor no es refinamiento: es lo que permite compararlas de un vistazo. */
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* ═══ Atmósfera ══════════════════════════════════════════════════════════════
+ *
+ * **En evaluación, no decidido.** Dos capas de fondo para probar si el tablero gana con ellas.
+ *
+ * Ninguna lleva imagen ni vídeo: son CSS puro, pesan cero y se adaptan al tema. Si al final se
+ * elige una fotografía, esto es la referencia contra la que hay que compararla — porque una imagen
+ * tiene que ganarse su peso frente a algo que no cuesta nada.
+ *
+ * Las dos van **detrás de todo** y nunca bajo un bloque de texto a más del 8%: en Operate la
+ * expresión no puede tapar la tarea, y un tablero que se lee peor con fondo es un tablero peor.
+ */
+
+/* El derrame: luz de set entrando por la esquina, en las temperaturas del sistema. Tungsteno
+   cálido arriba a la izquierda, HMI frío al fondo. No hay foco visible ni destello: es el spill,
+   no la fuente. */
+@utility atmos-derrame {
+  position: relative;
+
+  &::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        70rem 46rem at 8% -6%,
+        color-mix(in oklab, var(--color-tungsteno) 26%, transparent) 0%,
+        transparent 62%
+      ),
+      radial-gradient(
+        58rem 40rem at 96% 4%,
+        color-mix(in oklab, var(--color-hmi) 18%, transparent) 0%,
+        transparent 58%
+      ),
+      radial-gradient(
+        44rem 34rem at 62% 108%,
+        color-mix(in oklab, var(--color-magic) 14%, transparent) 0%,
+        transparent 60%
+      );
+    opacity: 0.5;
+  }
+}
+
+/* Sobre lienzo claro el derrame se rebaja: lo que sobre casi negro es atmósfera, sobre blanco es
+   una mancha de color encima del contenido. */
+:root:not(.dark) .atmos-derrame::before {
+  opacity: 0.24;
+}
+
+/* El grano. Turbulencia SVG, no una imagen: se genera en el navegador, no viaja por la red, y no
+   se repite de forma visible. Es lo que da cuerpo a una superficie oscura sin costar nada. */
+@utility atmos-grano {
+  &::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.16;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='160' height='160' filter='url(%23g)'/></svg>");
+  }
+}
+
+:root:not(.dark) .atmos-grano::after {
+  opacity: 0.07;
+}
+
+/* ═══ Base ════════════════════════════════════════════════════════════════════ */
 
 @layer base {
   html {
-    /* La preferencia de tema la escribe el servidor en `<html>`; esto sólo evita que el navegador
-       pinte sus controles nativos —barras, campos— con el tema contrario. */
     color-scheme: light;
+    accent-color: var(--accent);
+    scrollbar-color: var(--edge-control) transparent;
   }
 
   html.dark {
@@ -507,6 +894,22 @@
     font-family: var(--font-sans);
     font-size: var(--text-body1);
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Las superficies que no dibujamos también llevan el diseño encima. */
+  ::selection {
+    background-color: color-mix(in oklab, var(--accent) 40%, transparent);
+    color: var(--content);
+  }
+
+  :root {
+    caret-color: var(--accent);
+  }
+
+  table,
+  [role="table"] {
+    font-variant-numeric: tabular-nums;
   }
 
   /* El anillo de foco se declara una vez y no se retira nunca. Quitarlo por estética deja la
@@ -514,6 +917,7 @@
   :focus-visible {
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
+    border-radius: var(--radius-xs);
   }
 
   /* Respeta a quien pidió menos movimiento. No es una cortesía: para algunas personas la animación
@@ -521,7 +925,10 @@
 
      Las cuatro declaraciones llevan `!important` a propósito, y es de los pocos sitios donde está
      justificado: tiene que ganar a cualquier animación que un componente declare más adelante,
-     incluso a las que se declaren en línea. Sin ello, la preferencia sería una sugerencia. */
+     incluso a las que se declaren en línea. Sin ello, la preferencia sería una sugerencia.
+
+     Este mundo lo tiene fácil: como al pasar el ratón sólo cambia el color y nunca la posición, no
+     hay nada que marear. */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

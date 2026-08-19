@@ -35,6 +35,7 @@ export {
   Switch,
   type SwitchProps,
 } from "./components/controls.tsx"
+export { Counter, type CounterProps } from "./components/counter.tsx"
 export {
   Dialog,
   DialogClose,
@@ -85,9 +86,14 @@ export {
   Avatar,
   Badge,
   type BadgeTone,
+  Fact,
   Panel,
+  type PanelProps,
   Separator,
   Skeleton,
+  StatCard,
+  type StatCardProps,
+  type Tint,
 } from "./components/surfaces.tsx"
 export {
   Wizard,

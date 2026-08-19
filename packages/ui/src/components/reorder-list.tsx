@@ -85,7 +85,8 @@ export function ReorderList<T>({
               if (result.moved) commit(result.items)
             }}
             className={cn(
-              "flex items-start gap-2 rounded-lg border border-line bg-panel",
+              "flex items-start gap-2 rounded-lg border border-edge bg-panel",
+              // El anillo de la fila agarrada es la rúbrica: dice dónde estás, que es su trabajo.
               dragged && "opacity-60 ring-2 ring-accent",
               itemClassName,
             )}
@@ -103,7 +104,7 @@ export function ReorderList<T>({
                 event.preventDefault()
                 commit(move(items, index, nudge(index, delta, items.length)))
               }}
-              className="mt-1 shrink-0 cursor-grab rounded-md p-1.5 text-content-faint hover:bg-panel-hover hover:text-content focus-visible:outline-2 focus-visible:outline-focus/40 active:cursor-grabbing"
+              className="mt-1 shrink-0 cursor-grab rounded-md p-1.5 text-content-faint hover:bg-panel-hover hover:text-content active:cursor-grabbing"
             >
               <GripVertical className="size-4" aria-hidden="true" />
             </button>

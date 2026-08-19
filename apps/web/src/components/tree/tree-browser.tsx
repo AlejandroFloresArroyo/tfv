@@ -232,7 +232,7 @@ function TreeCard<T extends TreeNode>({
       className={
         current
           ? "flex items-center gap-1 rounded-sm bg-accent pr-1 text-on-accent"
-          : "flex items-center gap-1 rounded-sm border border-line bg-panel pr-1 transition-colors hover:bg-panel-hover"
+          : "flex items-center gap-1 rounded-lg border border-edge bg-panel-raised pr-1 transition-colors hover:bg-panel-hover"
       }
     >
       <Link

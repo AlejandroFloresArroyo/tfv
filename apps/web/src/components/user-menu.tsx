@@ -46,7 +46,7 @@ export function UserMenu({ profile }: { profile: Profile }) {
     <Menu>
       <MenuTrigger
         aria-label={t("shell.account")}
-        className="flex items-center gap-2 rounded-sm p-0.5 transition-colors hover:bg-panel-hover"
+        className="flex items-center gap-2 rounded-lg p-0.5 transition-colors hover:bg-panel-hover"
       >
         <Avatar name={fullName} />
       </MenuTrigger>
@@ -112,7 +112,7 @@ export function UserMenu({ profile }: { profile: Profile }) {
             event.preventDefault()
             void logout()
           }}
-          className="text-danger data-highlighted:bg-red-0 dark:data-highlighted:bg-red-9/25"
+          className="text-tinta-alto"
         >
           {t("shell.logout")}
         </MenuItem>

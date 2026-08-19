@@ -20,7 +20,7 @@ export async function TopBar({ profile, theme }: { profile: Profile; theme: Them
   const unread = counts.ok ? counts.data.unread : 0
 
   return (
-    <header className="sticky top-0 z-(--z-nav) border-b border-line bg-panel/85 backdrop-blur-sm">
+    <header className="sticky top-0 z-(--z-nav) border-edge border-b bg-panel/85 backdrop-blur-sm">
       <div className="mx-auto flex h-14 w-full max-w-(--breakpoint-desktop) items-center gap-3 px-4 tablet:px-6">
         <Link href="/dashboard" className="rounded-sm">
           <Logo />
@@ -49,7 +49,7 @@ export async function TopBar({ profile, theme }: { profile: Profile; theme: Them
           {unread > 0 ? (
             <span
               aria-hidden="true"
-              className="absolute top-1 right-1 size-2 rounded-full bg-accent"
+              className="absolute top-1 right-1 size-2 rounded-full bg-luz-cuida"
             />
           ) : null}
         </Link>

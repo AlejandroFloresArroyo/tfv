@@ -78,13 +78,13 @@ export function DialogContent({
       <Primitive.Content
         {...guards}
         className={cn(
-          "fixed z-(--z-dialog) flex flex-col gap-4 border border-line bg-panel p-5",
-          "shadow-xl shadow-black/20 dark:shadow-black/50",
-          // Teléfono: pegado abajo, a todo el ancho. Tableta en adelante: centrado.
-          "inset-x-0 bottom-0 max-h-[90dvh] overflow-y-auto rounded-t-lg",
+          "fixed z-(--z-dialog) flex flex-col gap-4 border border-edge bg-panel-raised p-6",
+          "shadow-[0_24px_64px_-16px_rgb(0_0_0/0.4)] dark:shadow-[0_24px_64px_-16px_rgb(0_0_0/0.8)]",
+          // Teléfono: pegado abajo, a todo el ancho, con las esquinas de arriba redondeadas — es
+          // la hoja que sube desde el borde. Tableta en adelante: centrado y redondeado entero.
+          "inset-x-0 bottom-0 max-h-[90dvh] overflow-y-auto rounded-t-2xl tablet:rounded-2xl",
           "tablet:inset-x-auto tablet:bottom-auto tablet:top-1/2 tablet:left-1/2",
           "tablet:w-[calc(100vw-2rem)] tablet:-translate-x-1/2 tablet:-translate-y-1/2",
-          "tablet:rounded-md",
           SIZES[size],
           className,
         )}
@@ -92,9 +92,7 @@ export function DialogContent({
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <Primitive.Title className="text-title1 font-bold text-content">
-              {title}
-            </Primitive.Title>
+            <Primitive.Title className="display text-h3 text-content">{title}</Primitive.Title>
             {description ? (
               <Primitive.Description className="mt-1 text-body2 text-content-muted">
                 {description}
@@ -105,7 +103,7 @@ export function DialogContent({
           {locked ? null : (
             <Primitive.Close
               aria-label={closeLabel}
-              className="-mr-1 -mt-1 grid size-8 shrink-0 place-items-center rounded-sm text-content-faint transition-colors hover:bg-panel-hover hover:text-content"
+              className="-mr-1 -mt-1 grid size-[var(--control-h-sm)] shrink-0 place-items-center rounded-lg text-content-faint transition-colors hover:bg-panel-hover hover:text-content"
             >
               <X className="size-4" aria-hidden="true" />
             </Primitive.Close>

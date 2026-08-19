@@ -95,6 +95,12 @@ con verdad:
 - **Cinco superficies con reglas de acceso distintas**: marketing (abierta), autenticación (sólo sin
   sesión), panel (con sesión), documento compartido (con enlace) y tienda pública (por subdominio).
 
+- **El orden de los dispositivos es una constante, no una consecuencia.** La prioridad confirmada
+  es **iPad → celular → escritorio → escritorio ultrapanorámico**. La tablet no es un tamaño
+  intermedio al que la interfaz se adapta: es el dispositivo de referencia, y el escritorio es la
+  ampliación. Cualquier decisión que sólo funcione con ratón y mil trescientos píxeles de ancho
+  contradice esto.
+
 ## Capabilities and Constraints
 
 **Contrato.** El comportamiento está especificado en `openspec/specs/` — 45 capabilities agrupadas

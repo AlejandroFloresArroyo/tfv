@@ -130,10 +130,10 @@ export function SearchSelect({
           disabled={disabled}
           {...aria}
           className={cn(
-            "flex h-10 flex-1 items-center gap-2 rounded-sm border border-field bg-panel px-3",
-            "text-left text-body1 transition-colors duration-150",
-            "hover:border-content-muted",
-            "aria-invalid:border-danger",
+            "flex h-[var(--control-h)] flex-1 items-center gap-2 rounded-lg border border-edge-control bg-panel px-3",
+            "text-left text-body1 transition-colors duration-200 ease-[--ease-out-soft]",
+            "hover:border-content-faint",
+            "aria-invalid:border-[var(--luz-alto)]",
             "disabled:cursor-not-allowed disabled:opacity-60",
             selected ? "text-content" : "text-content-faint",
             clearLabel !== undefined && selected ? "rounded-r-none border-r-0" : "",
@@ -150,8 +150,8 @@ export function SearchSelect({
             disabled={disabled}
             aria-label={clearLabel}
             className={cn(
-              "inline-flex h-10 items-center rounded-r-sm border border-field bg-panel px-3",
-              "text-content-muted transition-colors duration-150",
+              "inline-flex h-[var(--control-h)] items-center rounded-r-lg border border-edge-control bg-panel px-3",
+              "text-content-muted transition-colors duration-200 ease-[--ease-out-soft]",
               "hover:bg-panel-hover hover:text-content",
               "disabled:cursor-not-allowed disabled:opacity-60",
             )}
@@ -170,12 +170,13 @@ export function SearchSelect({
             search.current?.focus()
           }}
           className={cn(
-            "z-50 w-(--radix-popover-trigger-width) min-w-60 overflow-hidden rounded-sm",
-            "border border-line bg-panel shadow-lg",
+            "z-(--z-dialog) w-(--radix-popover-trigger-width) min-w-60 overflow-hidden rounded-xl",
+            "border border-edge bg-panel-raised",
+            "shadow-[0_12px_32px_-8px_rgb(0_0_0/0.28)] dark:shadow-[0_12px_32px_-8px_rgb(0_0_0/0.7)]",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0",
           )}
         >
-          <div className="flex items-center gap-2 border-b border-line px-3">
+          <div className="flex items-center gap-2 border-edge border-b px-3">
             <Search className="size-4 shrink-0 text-content-faint" aria-hidden="true" />
             <input
               ref={search}
@@ -218,7 +219,7 @@ export function SearchSelect({
                     onClick={() => choose(option)}
                     onMouseEnter={() => setActive(index)}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left",
+                      "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left",
                       index === active ? "bg-panel-hover" : "",
                     )}
                   >

@@ -183,10 +183,10 @@ export function FilePicker({
         onDragLeave={() => setOver(false)}
         onDrop={drop}
         className={cn(
-          "flex flex-col items-center gap-2 rounded-sm border border-dashed px-4 py-6 text-center",
+          "flex flex-col items-center gap-2 rounded-xl border border-dashed px-4 py-6 text-center",
           "transition-colors duration-150",
           "focus-within:border-focus focus-within:outline-2 focus-within:outline-focus/40",
-          over ? "border-accent bg-panel-hover" : "border-line-strong bg-panel-sunken",
+          over ? "border-accent bg-panel-hover" : "border-edge-control bg-panel-sunken",
           disabled ? "opacity-50" : "cursor-pointer",
         )}
       >
@@ -229,7 +229,7 @@ export function FilePicker({
               type="button"
               aria-label={labels.dismiss}
               onClick={() => setRejected([])}
-              className="grid size-5 shrink-0 place-items-center rounded-xs hover:bg-panel-hover"
+              className="grid size-5 shrink-0 place-items-center rounded-md hover:bg-panel-hover"
             >
               <X aria-hidden="true" className="size-3.5" />
             </button>
@@ -290,8 +290,8 @@ function Row({
   return (
     <li
       className={cn(
-        "flex items-center gap-3 rounded-sm border bg-panel p-2",
-        failed ? "border-red-3 dark:border-red-8" : "border-line",
+        "flex items-center gap-3 rounded-lg border bg-panel-raised p-2",
+        failed ? "border-[var(--luz-alto)]" : "border-edge",
       )}
     >
       <Thumbnail picked={picked} preview={preview} label={labels.noPreview} />
@@ -304,7 +304,7 @@ function Row({
           {phase === undefined ? null : (
             <>
               {" · "}
-              <span className={cn(failed ? "text-danger" : "")}>
+              <span className={cn(failed ? "text-tinta-alto" : "")}>
                 {done
                   ? labels.done
                   : failed
@@ -357,7 +357,7 @@ function Row({
         aria-label={labels.remove(picked.file.name)}
         onClick={onRemove}
         disabled={disabled}
-        className="grid size-7 shrink-0 place-items-center rounded-xs text-content-faint hover:bg-panel-hover hover:text-content disabled:pointer-events-none disabled:opacity-50"
+        className="grid size-7 shrink-0 place-items-center rounded-md text-content-faint hover:bg-panel-hover hover:text-content disabled:pointer-events-none disabled:opacity-50"
       >
         <X aria-hidden="true" className="size-4" />
       </button>
@@ -374,7 +374,7 @@ function Thumbnail({
   preview: Preview
   label: string
 }) {
-  const box = "grid size-12 shrink-0 place-items-center overflow-hidden rounded-xs bg-panel-sunken"
+  const box = "grid size-12 shrink-0 place-items-center overflow-hidden rounded-md bg-panel-sunken"
 
   if (preview.kind === "picture") {
     return (

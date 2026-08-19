@@ -15,7 +15,7 @@ export function AuthCard({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
-        <h1 className="text-h3 font-bold tracking-tight text-content">{title}</h1>
+        <h1 className="display text-h2 text-content">{title}</h1>
         {subtitle ? <p className="text-body1 text-content-muted">{subtitle}</p> : null}
       </div>
 
