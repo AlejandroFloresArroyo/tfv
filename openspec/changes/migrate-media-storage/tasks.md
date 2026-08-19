@@ -108,4 +108,8 @@
 - [x] Prueba: autorización de un objeto no sirve para otro
 - [x] Prueba: un derivado no se amplía por encima del original — `file-derivatives.test.ts`, sobre
       la política, que es donde se decide el tamaño
-- [ ] Prueba: la subida abandonada se recoge
+- [x] Prueba: la subida abandonada se recoge. De extremo a extremo y contra el almacenamiento de
+      verdad, en `media/uploads.test.ts`: se registra, se escriben sus cinco objetos, se envejece la
+      fila y la recolección se lleva registro y objetos. Con las tres fronteras que importan —la
+      subida en curso sobrevive a la misma pasada, el archivo referenciado conserva fila y objetos, y
+      el marcador de posición no se toca aunque esté vencido
