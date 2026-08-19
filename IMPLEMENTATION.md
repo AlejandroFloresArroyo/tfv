@@ -123,13 +123,13 @@ Lo construido hasta ahora, medido y no estimado:
 | Rebanadas | 10 de 30 empezadas, **ninguna cerrada del todo** |
 | Código sin pruebas | 31 130 líneas |
 | Código de prueba | 9 973 líneas |
-| Pruebas | **820** de vitest — 183 contratos, 59 datos, 408 API, 73 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
-| Esquema | 91 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
-| Aislamiento | 195 políticas · 91/91 tablas · 0 con identidad cruda |
-| Migraciones | 11, replicadas desde cero en cada verificación |
-| Rutas | **137** registradas, 104 con permiso declarado, 13 públicas y enumeradas |
+| Pruebas | **867** de vitest — 183 contratos, 62 datos, 432 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
+| Esquema | 93 tablas · 270 índices · 62 enumerados · 6 comprobaciones · 48 únicos parciales |
+| Aislamiento | 200 políticas · 93/93 tablas · 0 con identidad cruda |
+| Migraciones | 17, replicadas desde cero en cada verificación |
+| Rutas | **138** registradas, 105 con permiso declarado, 13 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 38, en español e inglés (1052 mensajes, sin desalinear) |
+| Pantallas | 38, en español e inglés (1085 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
