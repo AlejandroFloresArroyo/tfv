@@ -56,14 +56,30 @@ function expiryOf(token: string): string {
   }
 }
 
-/** Autoriza a escribir **ese** objeto y ninguno más. */
+/**
+ * Autoriza a escribir **ese** objeto y ninguno más.
+ *
+ * ## Por qué se pide poder sobrescribir
+ *
+ * El proveedor, por omisión, se **niega a firmar** una clave que ya existe: responde `409
+ * KeyAlreadyExists` en la firma, no en la escritura. Eso rompía el reintento por objeto, que es la
+ * razón de ser de la máquina de subida: escrito el original y caída la miniatura, volver a
+ * autorizar firma los cinco objetos —no sabe pedir cuatro— y el original ya ocupado hacía fallar
+ * la petición entera con un `500`. Ver `HALLAZGOS.md` H-132.
+ *
+ * Permitirlo no ensancha nada: la autorización sigue acotada a **una** clave, y esa clave la
+ * inventa la API a partir del identificador del archivo. Quien la recibe podía escribir ahí de
+ * todos modos; ahora además puede escribir ahí **dos veces**. Comprobado contra el almacenamiento:
+ * con el permiso de sobrescritura puesto, escribir en otra clave sigue respondiendo que la firma
+ * no vale.
+ */
 export async function authorizeWrite(
   path: string,
   contentType: string,
 ): Promise<WriteAuthorization> {
   const response = await fetch(
     `${env.STORAGE_URL}/object/upload/sign/${env.STORAGE_BUCKET}/${path}`,
-    { method: "POST", headers: { Authorization: `Bearer ${serviceKey()}` } },
+    { method: "POST", headers: { Authorization: `Bearer ${serviceKey()}`, "x-upsert": "true" } },
   )
 
   if (!response.ok) {
