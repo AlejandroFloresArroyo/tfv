@@ -108,9 +108,33 @@ interface Note {
   updatedAt: string
 }
 
+interface SceneRef {
+  id: string
+  name: string
+  index: number
+  chapter: { id: string; name: string; index: number }
+}
+
 interface RecordingDetail extends Recording {
+  scene: SceneRef | null
   continuities: Continuity[]
   notes: Note[]
+}
+
+interface CharacterHistory {
+  characterId: string
+  characterName: string
+  recordings: {
+    recordingId: string
+    recordingName: string
+    kind: string
+    status: string
+    sceneId: string | null
+    sceneName: string | null
+    chapterName: string | null
+    continuityId: string
+    props: Prop[]
+  }[]
 }
 
 function request(method: string, path: string, body?: unknown, cookie?: string) {
@@ -347,6 +371,17 @@ async function setVideos(
   )
   expect(response.status).toBe(200)
   return (await json<Continuity>(response)).props
+}
+
+async function characterContinuity(s: Stage, characterId: string) {
+  const response = await request(
+    "GET",
+    `/companies/${s.companyId}/productions/${s.productionId}/characters/${characterId}/continuity`,
+    undefined,
+    s.session.cookie,
+  )
+  expect(response.status).toBe(200)
+  return json<CharacterHistory>(response)
 }
 
 async function newNote(s: Stage, recordingId: string, body: string) {
@@ -1219,5 +1254,130 @@ describe("notas de la jornada", () => {
     )
 
     expect(response.status).toBe(403)
+  })
+})
+
+// ─── La jornada, de una sola vez ─────────────────────────────────────────────
+
+describe("vista completa de una jornada", () => {
+  it("enseña a qué escena y capítulo corresponde, y sus personajes con su utilería", async () => {
+    // Escenario: «La jornada se consulta de una vez».
+    const s = await stage()
+    const recording = await newRecording(s)
+    const marta = await sowCharacter(s.productionId, "Marta")
+    const [continuity] = (await assignCharacters(s, recording.id, [marta])).continuities
+    const item = await sowItem(s.productionId, "Chaqueta de mezclilla")
+    const video = await sowVideo(s.productionId, "Referencia del piloto")
+    await addItem(s, recording.id, continuity?.id as string, item)
+    await addVideo(s, recording.id, continuity?.id as string, video)
+
+    const detail = await recordingOf(s, recording.id)
+
+    expect(detail.scene?.id).toBe(s.sceneId)
+    expect(detail.scene?.name).toContain("Escena")
+    expect(detail.scene?.chapter.id).toBe(s.chapterId)
+    expect(detail.scene?.chapter.name).toContain("Capítulo")
+
+    expect(detail.continuities).toHaveLength(1)
+    expect(detail.continuities[0]?.characterName).toBe("Marta")
+    expect(detail.continuities[0]?.props.map((row) => row.name).sort()).toEqual([
+      "Chaqueta de mezclilla",
+      "Referencia del piloto",
+    ])
+  })
+
+  it("una jornada sin escena lo dice, en vez de callarse", async () => {
+    const s = await stage()
+    const recording = await json<Recording>(
+      await request("POST", recordingsPath(s), { name: "Sin escena" }, s.session.cookie),
+    )
+
+    const detail = await recordingOf(s, recording.id)
+
+    expect(detail.scene).toBeNull()
+  })
+})
+
+// ─── Cómo apareció un personaje a lo largo del rodaje ────────────────────────
+
+describe("consulta de la continuidad de un personaje", () => {
+  it("devuelve las cinco jornadas con la utilería registrada en cada una", async () => {
+    // Escenario: «Se revisa el historial de un personaje».
+    const s = await stage()
+    const marta = await sowCharacter(s.productionId, "Marta")
+    const item = await sowItem(s.productionId, "Chaqueta de mezclilla")
+
+    for (const number of [1, 2, 3, 4, 5]) {
+      const recording = await newRecording(s, { name: `Jornada ${number}` })
+      const [continuity] = (await assignCharacters(s, recording.id, [marta])).continuities
+      await addItem(s, recording.id, continuity?.id as string, item)
+    }
+
+    const history = await characterContinuity(s, marta)
+
+    expect(history.characterName).toBe("Marta")
+    expect(history.recordings).toHaveLength(5)
+    expect(history.recordings.map((row) => row.recordingName).sort()).toEqual([
+      "Jornada 1",
+      "Jornada 2",
+      "Jornada 3",
+      "Jornada 4",
+      "Jornada 5",
+    ])
+    for (const entry of history.recordings) {
+      expect(entry.props.map((row) => row.name)).toEqual(["Chaqueta de mezclilla"])
+      expect(entry.sceneId).toBe(s.sceneId)
+    }
+  })
+
+  it("no cuenta las jornadas de otro personaje", async () => {
+    const s = await stage()
+    const marta = await sowCharacter(s.productionId, "Marta")
+    const julian = await sowCharacter(s.productionId, "Julián")
+    const compartida = await newRecording(s, { name: "Compartida" })
+    await assignCharacters(s, compartida.id, [marta, julian])
+    const suya = await newRecording(s, { name: "Sólo de Julián" })
+    await assignCharacters(s, suya.id, [julian])
+
+    const history = await characterContinuity(s, marta)
+
+    expect(history.recordings.map((row) => row.recordingName)).toEqual(["Compartida"])
+  })
+
+  it("una jornada dada de baja deja de figurar en el historial", async () => {
+    // Consecuencia de que la baja de la jornada sea lógica y la de la continuidad física
+    // (`HALLAZGOS.md` H-187): la continuidad sobrevive en su tabla, así que **esta** consulta tiene
+    // que filtrar por la jornada. Sin el filtro, el historial enseñaría una jornada que ya no está.
+    const s = await stage()
+    const marta = await sowCharacter(s.productionId, "Marta")
+    const viva = await newRecording(s, { name: "Viva" })
+    const muerta = await newRecording(s, { name: "Dada de baja" })
+    await assignCharacters(s, viva.id, [marta])
+    await assignCharacters(s, muerta.id, [marta])
+
+    await request("DELETE", `${recordingsPath(s)}/${muerta.id}`, undefined, s.session.cookie)
+
+    const history = await characterContinuity(s, marta)
+
+    expect(history.recordings.map((row) => row.recordingName)).toEqual(["Viva"])
+  })
+
+  it("el personaje de otra producción no tiene historial aquí", async () => {
+    const s = await stage()
+    const own = await sowCharacter(s.productionId, "Marta")
+    const other = await newProduction(s.session, s.companyId, "Otra Serie")
+    const foreign = await sowCharacter(other.id, "Ajena")
+
+    // La propia primero: distingue «el personaje no vale» de «la ruta no existe».
+    await characterContinuity(s, own)
+
+    const response = await request(
+      "GET",
+      `/companies/${s.companyId}/productions/${s.productionId}/characters/${foreign}/continuity`,
+      undefined,
+      s.session.cookie,
+    )
+
+    expect(response.status).toBe(404)
   })
 })

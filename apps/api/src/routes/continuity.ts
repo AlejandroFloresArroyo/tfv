@@ -32,6 +32,7 @@ import {
   addContinuityVideo,
   addRecordingNote,
   assignCharacters,
+  characterContinuity,
   closeRecording,
   createContinuity,
   createRecording,
@@ -109,10 +110,38 @@ const noteSchema = z.object({
   updatedAt: z.string(),
 })
 
+const sceneSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  index: z.number().int(),
+  chapter: z.object({ id: z.string(), name: z.string(), index: z.number().int() }),
+})
+
 const recordingDetailSchema = recordingSchema.extend({
+  scene: sceneSchema.nullable(),
   continuities: z.array(continuitySchema),
   notes: z.array(noteSchema),
 })
+
+const characterHistorySchema = z.object({
+  characterId: z.string(),
+  characterName: z.string(),
+  recordings: z.array(
+    z.object({
+      recordingId: z.string(),
+      recordingName: z.string(),
+      kind: z.enum(RECORDING_KINDS),
+      status: z.enum(RECORDING_STATUSES),
+      sceneId: z.string().nullable(),
+      sceneName: z.string().nullable(),
+      chapterName: z.string().nullable(),
+      continuityId: z.string(),
+      props: z.array(propSchema),
+    }),
+  ),
+})
+
+const characterParams = productionParams.extend({ characterId: z.string() })
 
 const noteParams = recordingParams.extend({ noteId: z.string() })
 
@@ -148,8 +177,19 @@ function serializeNote(row: Awaited<ReturnType<typeof addRecordingNote>>) {
 function serializeDetail(row: Awaited<ReturnType<typeof getRecording>>) {
   return {
     ...serializeRecording(row),
+    scene: row.scene,
     continuities: row.continuities.map(serializeContinuity),
     notes: row.notes.map(serializeNote),
+  }
+}
+
+function serializeHistory(row: Awaited<ReturnType<typeof characterContinuity>>) {
+  return {
+    ...row,
+    recordings: row.recordings.map((entry) => ({
+      ...entry,
+      props: entry.props.map(serializeProp),
+    })),
   }
 }
 
@@ -528,6 +568,44 @@ export const deleteRecordingRoute = defineRoute({
     const params = c.req.valid("param")
     await deleteRecording(actorOf(c), params.companyId, params.productionId, params.recordingId)
     return c.body(null, 204)
+  },
+})
+
+// ─── Cómo apareció un personaje a lo largo del rodaje ────────────────────────
+
+/**
+ * El historial de un personaje.
+ *
+ * Cuelga del personaje y no de la jornada porque la pregunta es del personaje —«¿cómo iba Marta en
+ * marzo?»—, pero **lo que devuelve es continuidad**, así que la clave es
+ * `productions.continuities.view` y no una de personajes: quien no puede ver la continuidad de una
+ * jornada tampoco puede verla enumerada por personaje.
+ */
+export const characterContinuityRoute = defineRoute({
+  access: REQUIRES("productions.continuities.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/productions/{productionId}/characters/{characterId}/continuity",
+    summary: "Ver cómo apareció un personaje a lo largo del rodaje",
+    tags: ["Continuidad"],
+    request: { params: characterParams },
+    responses: {
+      200: {
+        description: "Las jornadas en las que aparece, con la utilería registrada en cada una",
+        content: { "application/json": { schema: characterHistorySchema } },
+      },
+      404: { description: "El personaje no existe en esta producción" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const history = await characterContinuity(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.characterId,
+    )
+    return c.json(serializeHistory(history), 200)
   },
 })
 

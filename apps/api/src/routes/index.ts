@@ -108,6 +108,7 @@ import {
   addContinuityVideoRoute,
   addRecordingNoteRoute,
   assignCharactersRoute,
+  characterContinuityRoute,
   closeRecordingRoute,
   createContinuityRoute,
   createRecordingRoute,
@@ -600,6 +601,10 @@ export const routes: readonly RegisteredRoute[] = [
   addContinuityVideoRoute,
   setContinuityVideosRoute,
   deleteContinuityRoute,
+
+  // Cómo apareció un personaje a lo largo del rodaje. Cuelga del personaje porque la pregunta es
+  // suya, pero lo que devuelve es continuidad, y ésa es la clave que exige.
+  characterContinuityRoute,
 
   // Pendiente: guion, capítulos y escenas (21); inventario, entregas y presupuesto (22); compras
   // a almacenes (23). Las tablas existen desde la `0002` y el panel ya las cuenta.

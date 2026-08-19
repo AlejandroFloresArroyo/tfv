@@ -159,8 +159,18 @@ export interface RecordingNoteRecord {
   readonly updatedAt: Date
 }
 
+/** La escena de la jornada con su capítulo, tal y como la vista completa la devuelve. */
+export interface SceneRef {
+  readonly id: string
+  readonly name: string
+  readonly index: number
+  readonly chapter: { readonly id: string; readonly name: string; readonly index: number }
+}
+
 /** La jornada con todo lo que cuelga de ella. Es lo que devuelve abrir una jornada. */
 export interface RecordingDetail extends RecordingRecord {
+  /** Nula cuando la jornada no tiene escena, o cuando la escena se dio de baja. */
+  readonly scene: SceneRef | null
   readonly continuities: readonly ContinuityRecord[]
   /**
    * Las notas, en el orden en que se escribieron.
@@ -586,6 +596,112 @@ export async function deleteContinuity(
   })
 }
 
+// ─── Cómo apareció un personaje a lo largo del rodaje ────────────────────────
+
+/** Una jornada en la que el personaje apareció, con lo que se le registró ese día. */
+export interface CharacterAppearance {
+  readonly recordingId: string
+  readonly recordingName: string
+  readonly kind: RecordingKind
+  readonly status: RecordingStatus
+  readonly sceneId: string | null
+  readonly sceneName: string | null
+  readonly chapterName: string | null
+  readonly continuityId: string
+  readonly props: readonly PropRecord[]
+}
+
+export interface CharacterHistory {
+  readonly characterId: string
+  readonly characterName: string
+  readonly recordings: readonly CharacterAppearance[]
+}
+
+/**
+ * Todas las jornadas en las que aparece un personaje, atravesando sus continuidades.
+ *
+ * «Esto es lo que permite revisar cómo apareció un personaje a lo largo del rodaje»: la pregunta
+ * que hace el script cuando en julio hay que enlazar con lo que se grabó en marzo.
+ *
+ * **Filtra las jornadas dadas de baja, y tiene que hacerlo explícitamente.** La baja de la jornada
+ * es lógica y la continuidad no tiene columna de baja, así que la fila de la continuidad sigue
+ * estando: sin `deleted_at is null` sobre la jornada, el historial enseñaría días que ya no
+ * existen (`HALLAZGOS.md` H-187).
+ */
+export async function characterContinuity(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  characterId: string,
+): Promise<CharacterHistory> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+
+    const [character] = await tx
+      .select({ id: productionCharacters.id, name: productionCharacters.name })
+      .from(productionCharacters)
+      .where(
+        and(
+          eq(productionCharacters.id, characterId),
+          eq(productionCharacters.productionId, productionId),
+          isNull(productionCharacters.deletedAt),
+        ),
+      )
+      .limit(1)
+
+    if (!character) throw new NotFoundError("El personaje no existe en esta producción")
+
+    const rows = await tx
+      .select({
+        continuityId: productionContinuities.id,
+        recordingId: productionRecordings.id,
+        recordingName: productionRecordings.name,
+        kind: productionRecordings.kind,
+        status: productionRecordings.status,
+        sceneId: productionRecordings.sceneId,
+        createdAt: productionRecordings.createdAt,
+        sceneName: productionScenes.name,
+        chapterName: productionChapters.name,
+      })
+      .from(productionContinuities)
+      .innerJoin(
+        productionRecordings,
+        eq(productionRecordings.id, productionContinuities.recordingId),
+      )
+      .leftJoin(productionScenes, eq(productionScenes.id, productionRecordings.sceneId))
+      .leftJoin(productionChapters, eq(productionChapters.id, productionScenes.chapterId))
+      .where(
+        and(
+          eq(productionContinuities.characterId, characterId),
+          eq(productionRecordings.productionId, productionId),
+          isNull(productionRecordings.deletedAt),
+        ),
+      )
+      .orderBy(productionRecordings.createdAt, productionRecordings.id)
+
+    const props = await propsOf(
+      tx,
+      rows.map((row) => row.continuityId),
+    )
+
+    return {
+      characterId: character.id,
+      characterName: character.name,
+      recordings: rows.map((row) => ({
+        recordingId: row.recordingId,
+        recordingName: row.recordingName,
+        kind: row.kind,
+        status: row.status,
+        sceneId: row.sceneId,
+        sceneName: row.sceneName,
+        chapterName: row.chapterName,
+        continuityId: row.continuityId,
+        props: props.get(row.continuityId) ?? [],
+      })),
+    }
+  })
+}
+
 // ─── Notas de la jornada ─────────────────────────────────────────────────────
 
 /**
@@ -865,8 +981,49 @@ async function detailOf(
 
   return {
     ...recording,
+    scene: await sceneOf(tx, row.sceneId),
     continuities: await decorateContinuities(tx, rows),
     notes: await decorateNotes(tx, notes),
+  }
+}
+
+/**
+ * La escena con su capítulo.
+ *
+ * Devuelve nulo también cuando la escena existe pero está dada de baja: la jornada conserva la
+ * referencia —el modelo la pone a nulo sólo cuando la fila se retira de verdad—, y enseñar una
+ * escena que ya nadie ve sería peor que decir que no hay.
+ */
+async function sceneOf(tx: Transaction, sceneId: string | null): Promise<SceneRef | null> {
+  if (sceneId === null) return null
+
+  const [row] = await tx
+    .select({
+      id: productionScenes.id,
+      name: productionScenes.name,
+      index: productionScenes.index,
+      chapterId: productionChapters.id,
+      chapterName: productionChapters.name,
+      chapterIndex: productionChapters.index,
+    })
+    .from(productionScenes)
+    .innerJoin(productionChapters, eq(productionChapters.id, productionScenes.chapterId))
+    .where(
+      and(
+        eq(productionScenes.id, sceneId),
+        isNull(productionScenes.deletedAt),
+        isNull(productionChapters.deletedAt),
+      ),
+    )
+    .limit(1)
+
+  if (!row) return null
+
+  return {
+    id: row.id,
+    name: row.name,
+    index: row.index,
+    chapter: { id: row.chapterId, name: row.chapterName, index: row.chapterIndex },
   }
 }
 
