@@ -179,7 +179,10 @@ La bandeja SHALL permitir filtrar por no leídas, leídas y archivadas, y SHALL 
 El sistema SHALL exponer el número de notificaciones sin leer de un usuario, y SHALL poder indicar
 cuántas han llegado desde la última vez que abrió la bandeja.
 
-El indicador de novedades SHALL reiniciarse cuando el contador disminuya.
+El indicador de novedades SHALL reiniciarse **al abrir la bandeja**, no al disminuir el contador de
+no leídas. Son dos preguntas distintas: haberlas visto pasar no es haberlas leído, y con la regla
+anterior —«se reinicia cuando el contador disminuya»— marcar una sola como leída borraba el aviso de
+las otras cuatro que acababan de llegar (ver `HALLAZGOS.md` H-73).
 
 #### Scenario: Llegan avisos mientras la bandeja está cerrada
 
@@ -276,11 +279,23 @@ Un asiento de actividad no SHALL poder modificarse ni eliminarse una vez escrito
 
 ### Requirement: Preferencias de canal por usuario
 
-Un usuario SHALL poder elegir por qué canales desea recibir cada categoría de notificación, y el
-sistema SHALL respetar esa elección.
+Un usuario SHALL poder elegir por qué canales **salientes** —empuje y correo— desea recibir cada
+categoría de notificación, y el sistema SHALL respetar esa elección.
+
+La bandeja no SHALL poder apagarse. Es el registro de lo ocurrido, no un aviso: lo que se elige es
+si además se avisa hacia fuera. Un requisito anterior la trataba como un canal más y, con ella
+apagada, una actividad de la que alguien forma parte de la audiencia no dejaría rastro **para él**
+en ninguna parte, mientras el resto de la empresa sí la vería — el mismo hecho, visible para unos e
+inexistente para otros (ver `HALLAZGOS.md` H-72).
 
 Las notificaciones críticas de cuenta —recuperación de contraseña y verificación de correo— SHALL
 entregarse siempre por correo, con independencia de las preferencias.
+
+#### Scenario: La bandeja no se apaga
+
+- **WHEN** un usuario intenta desactivar el canal de bandeja para una categoría
+- **THEN** la operación se rechaza
+- **AND** se le dice que la bandeja es el registro de lo ocurrido
 
 #### Scenario: Se desactiva el push de actividad
 
