@@ -407,6 +407,19 @@ export const warehouseStockUnits = pgTable(
      * alta— no una relación estructural: si la cotización desaparece, la marca sigue siendo cierta.
      */
     createdByQuoteId: reference("created_by_quote_id"),
+    /**
+     * Cuándo llegó de verdad el equipo que se acuñó.
+     *
+     * Acuñar es una prestación, no un defecto: cuando una cotización pide más de lo que hay en la
+     * nave, el almacén lo trae de fuera. Pero la marca de acuñada **no se limpia nunca**, así que
+     * sin esto la bandeja de descuadres acumula para siempre unidades cuyo equipo ya está en el
+     * estante, y acaba sin decir nada.
+     *
+     * Es una fecha y no un booleano que borre la marca: que la unidad se acuñara sigue siendo
+     * cierto para siempre y es lo que hace auditable el descuadre. Lo que cambia es que dejó de
+     * estar pendiente, y **cuándo** dejó de estarlo. Ver `DEFECTS.md` M-04.
+     */
+    arrivedAt: timestamp("arrived_at", { withTimezone: true, mode: "date" }),
 
     ...timestamps,
     ...softDelete,

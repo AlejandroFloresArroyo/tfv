@@ -69,6 +69,8 @@ interface Unit {
   id: string
   code: string
   status: string
+  createdByReservation: boolean
+  arrivedAt: string | null
 }
 
 interface Detail {
@@ -518,6 +520,98 @@ describe("todo cambio de estado deja rastro", () => {
     )
 
     expect(history.items[0]).toMatchObject({ actorId: null, actorName: null })
+  })
+})
+
+describe("lo acuñado que todavía no ha llegado", () => {
+  /**
+   * `DEFECTS.md` M-04, decidido el 2026-08-19: acuñar inventario que no está en la nave es
+   * **prestación**, porque el almacén lo trae de fuera. Estas pruebas cubren la otra mitad de esa
+   * decisión — que lo comprometido sin respaldo físico se pueda cerrar cuando llega.
+   */
+  async function minted(name: string): Promise<Unit> {
+    const detail = await newStocked(name, 0)
+    const measurementId = detail.measurements[0]?.id as string
+    const id = newId()
+    await db.insert(warehouseStockUnits).values({
+      id,
+      measurementId,
+      code: `ACU-${id.slice(-6)}`,
+      createdByReservation: true,
+    })
+    const [row] = await db
+      .select()
+      .from(warehouseStockUnits)
+      .where(eq(warehouseStockUnits.id, id))
+    return row as unknown as Unit
+  }
+
+  it("aparece en la bandeja mientras no llegue, y sale al confirmarlo", async () => {
+    await clearCatalog()
+    const unidad = await minted("Grúa prestada")
+
+    const antes = await json<{ items: Unit[] }>(
+      await request("GET", `${base}/pending-arrivals`, undefined, cookie),
+    )
+    expect(antes.items.map((one) => one.id)).toContain(unidad.id)
+
+    const confirmada = await json<{ items: Unit[] }>(
+      await request("POST", `${base}/pending-arrivals/confirm`, { unitIds: [unidad.id] }, cookie),
+    )
+    expect(confirmada.items[0]?.arrivedAt).not.toBeNull()
+
+    const despues = await json<{ items: Unit[] }>(
+      await request("GET", `${base}/pending-arrivals`, undefined, cookie),
+    )
+    expect(despues.items.map((one) => one.id)).not.toContain(unidad.id)
+  })
+
+  it("confirmar no borra la marca de acuñada", async () => {
+    // La decisión es explícita: que la unidad naciera de un compromiso sin respaldo sigue siendo
+    // cierto para siempre, y es lo que hace auditable el descuadre. Lo que cambia es que dejó de
+    // estar pendiente.
+    await clearCatalog()
+    const unidad = await minted("Cabezal prestado")
+
+    const confirmada = await json<{ items: Unit[] }>(
+      await request("POST", `${base}/pending-arrivals/confirm`, { unitIds: [unidad.id] }, cookie),
+    )
+
+    expect(confirmada.items[0]?.createdByReservation).toBe(true)
+  })
+
+  it("confirmar dos veces no mueve la fecha", async () => {
+    await clearCatalog()
+    const unidad = await minted("Trípode prestado")
+
+    await request("POST", `${base}/pending-arrivals/confirm`, { unitIds: [unidad.id] }, cookie)
+
+    // Se retrasa la fecha a mano antes de repetir. Comparar dos confirmaciones seguidas no
+    // probaría nada: pueden caer en el mismo milisegundo y coincidir sin que la guarda exista.
+    const llegada = new Date("2020-01-02T03:04:05.000Z")
+    await db
+      .update(warehouseStockUnits)
+      .set({ arrivedAt: llegada })
+      .where(eq(warehouseStockUnits.id, unidad.id))
+
+    const segunda = await json<{ items: Unit[] }>(
+      await request("POST", `${base}/pending-arrivals/confirm`, { unitIds: [unidad.id] }, cookie),
+    )
+
+    expect(segunda.items[0]?.arrivedAt).toBe(llegada.toISOString())
+  })
+
+  it("una unidad que no nació acuñada no está en la bandeja", async () => {
+    await clearCatalog()
+    const detail = await newStocked("Cámara propia", 2)
+    const propias = await unitsOf(detail.measurements[0]?.id as string)
+
+    const bandeja = await json<{ items: Unit[] }>(
+      await request("GET", `${base}/pending-arrivals`, undefined, cookie),
+    )
+
+    const ids = bandeja.items.map((one) => one.id)
+    for (const unidad of propias) expect(ids).not.toContain(unidad.id)
   })
 })
 

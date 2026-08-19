@@ -41,6 +41,8 @@ import {
   STOCK_STATUSES,
   stockQuery,
   unitHistory,
+  confirmArrival,
+  listPendingArrivals,
 } from "../warehouses/stock.ts"
 import { collectionQuery, pageSchema, queryOf, serializePage } from "./pagination.ts"
 
@@ -86,6 +88,8 @@ const unitSchema = z.object({
   code: z.string(),
   status: z.enum(STOCK_STATUSES),
   createdByReservation: z.boolean(),
+  /** Cuándo llegó lo que se acuñó. Nulo mientras siga pendiente. */
+  arrivedAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 })
@@ -140,8 +144,85 @@ function serializePrice(row: Awaited<ReturnType<typeof setPrice>>) {
 }
 
 function serializeUnit(row: Awaited<ReturnType<typeof createUnits>>[number]) {
-  return { ...row, createdAt: toInstant(row.createdAt), updatedAt: toInstant(row.updatedAt) }
+  return {
+    ...row,
+    arrivedAt: row.arrivedAt === null ? null : toInstant(row.arrivedAt),
+    createdAt: toInstant(row.createdAt),
+    updatedAt: toInstant(row.updatedAt),
+  }
 }
+
+/**
+ * Lo acuñado que sigue sin llegar, y su confirmación.
+ *
+ * Acuñar inventario que no está en la nave es prestación y no defecto (`DEFECTS.md` M-04): el
+ * almacén lo trae de fuera. Estas dos rutas son la otra mitad, la que cierra el círculo.
+ *
+ * Van con las claves de existencias que ya existen —ver es `products.view`, confirmar es
+ * `products.stock_edit`— porque confirmar una llegada es exactamente eso: tocar el estado de una
+ * unidad. El catálogo está cerrado en 255 y esto no pide una clave nueva.
+ */
+export const listPendingArrivalsRoute = defineRoute({
+  access: REQUIRES("warehouses.products.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/pending-arrivals",
+    summary: "Listar el equipo acuñado que todavía no ha llegado",
+    tags: ["Existencias"],
+    request: { params: warehouseParams },
+    responses: {
+      200: {
+        description: "Unidades nacidas de un compromiso sin respaldo físico, de la más vieja a la más nueva",
+        content: { "application/json": { schema: z.object({ items: z.array(unitSchema) }) } },
+      },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const items = await listPendingArrivals(actorOf(c), params.companyId, params.warehouseId)
+    return c.json({ items: items.map(serializeUnit) }, 200)
+  },
+})
+
+export const confirmArrivalRoute = defineRoute({
+  access: REQUIRES("warehouses.products.stock_edit"),
+  config: {
+    method: "post",
+    path: "/companies/{companyId}/warehouses/{warehouseId}/pending-arrivals/confirm",
+    summary: "Confirmar que el equipo acuñado llegó",
+    tags: ["Existencias"],
+    request: {
+      params: warehouseParams,
+      body: {
+        content: {
+          "application/json": {
+            schema: z.object({ unitIds: z.array(z.string()).min(1) }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description:
+          "Las unidades, ya con su fecha de llegada. **La marca de acuñada se conserva**: que " +
+          "naciera de un compromiso sigue siendo cierto y es lo que hace auditable el descuadre",
+        content: { "application/json": { schema: z.object({ items: z.array(unitSchema) }) } },
+      },
+      404: { description: "Alguna de las unidades no es de este almacén" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const { unitIds } = c.req.valid("json")
+    const items = await confirmArrival(
+      actorOf(c),
+      params.companyId,
+      params.warehouseId,
+      unitIds,
+    )
+    return c.json({ items: items.map(serializeUnit) }, 200)
+  },
+})
 
 // ─── Listas de precios ───────────────────────────────────────────────────────
 

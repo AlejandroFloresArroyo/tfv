@@ -233,6 +233,8 @@ import {
   listPriceListsRoute,
   listPricesRoute,
   listUnitsRoute,
+  listPendingArrivalsRoute,
+  confirmArrivalRoute,
   priceListScopeRoute,
   removePriceRoute,
   resolvePriceRoute,
@@ -433,6 +435,8 @@ export const routes: readonly RegisteredRoute[] = [
   resolvePriceRoute,
 
   listUnitsRoute,
+  listPendingArrivalsRoute,
+  confirmArrivalRoute,
   createUnitsRoute,
   changeUnitStatusRoute,
   deleteUnitsRoute,

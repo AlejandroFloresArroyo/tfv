@@ -182,6 +182,13 @@
       "when": 1787180900000,
       "tag": "0027_perfil_de_cobro_reutilizable",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1787158511293,
+      "tag": "0028_llegada_de_lo_acunado",
+      "breakpoints": true
     }
   ]
 }

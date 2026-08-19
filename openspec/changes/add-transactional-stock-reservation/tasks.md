@@ -2,7 +2,8 @@
 
 ## Decisión previa
 
-- [ ] Resolver `DEFECTS.md` M-04: ¿la creación de inventario es prestación o defecto?
+- [x] Resolver `DEFECTS.md` M-04: **prestación**. El almacén trae de fuera lo que no tiene; se
+      autoriza en el mostrador, la unidad queda marcada, y la llegada se confirma sin borrar la marca
 
 > Implementado el criterio adoptado en la spec —autorización explícita en la operación, con la
 > unidad marcada— y señalado en el código. Si negocio confirma que la creación automática es

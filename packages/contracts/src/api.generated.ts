@@ -2564,6 +2564,7 @@ export interface ApiEndpoints {
         code: string
         status: "available" | "in_quote" | "in_order" | "rented" | "sold" | "lost" | "damaged" | "robbed" | "incomplete" | "modified" | "expense"
         createdByReservation: boolean
+        arrivedAt: string | null
         createdAt: string
         updatedAt: string
       }>
@@ -2595,6 +2596,7 @@ export interface ApiEndpoints {
         code: string
         status: "available" | "in_quote" | "in_order" | "rented" | "sold" | "lost" | "damaged" | "robbed" | "incomplete" | "modified" | "expense"
         createdByReservation: boolean
+        arrivedAt: string | null
         createdAt: string
         updatedAt: string
       }>
@@ -2620,6 +2622,7 @@ export interface ApiEndpoints {
         code: string
         status: "available" | "in_quote" | "in_order" | "rented" | "sold" | "lost" | "damaged" | "robbed" | "incomplete" | "modified" | "expense"
         createdByReservation: boolean
+        arrivedAt: string | null
         createdAt: string
         updatedAt: string
       }>
@@ -3028,6 +3031,49 @@ export interface ApiEndpoints {
       unread: number
       createdAt: string
       updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/warehouses/{warehouseId}/pending-arrivals": {
+    /** Listar el equipo acuñado que todavía no ha llegado */
+    params: {
+      companyId: string
+      warehouseId: string
+    }
+    response: {
+      items: Array<{
+        id: string
+        measurementId: string
+        code: string
+        status: "available" | "in_quote" | "in_order" | "rented" | "sold" | "lost" | "damaged" | "robbed" | "incomplete" | "modified" | "expense"
+        createdByReservation: boolean
+        arrivedAt: string | null
+        createdAt: string
+        updatedAt: string
+      }>
+    }
+  }
+
+  "POST /companies/{companyId}/warehouses/{warehouseId}/pending-arrivals/confirm": {
+    /** Confirmar que el equipo acuñado llegó */
+    params: {
+      companyId: string
+      warehouseId: string
+    }
+    body: {
+      unitIds: Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        measurementId: string
+        code: string
+        status: "available" | "in_quote" | "in_order" | "rented" | "sold" | "lost" | "damaged" | "robbed" | "incomplete" | "modified" | "expense"
+        createdByReservation: boolean
+        arrivedAt: string | null
+        createdAt: string
+        updatedAt: string
+      }>
     }
   }
 
@@ -6402,6 +6448,7 @@ export interface ApiEndpoints {
       code: string
       status: "available" | "in_quote" | "in_order" | "rented" | "sold" | "lost" | "damaged" | "robbed" | "incomplete" | "modified" | "expense"
       createdByReservation: boolean
+      arrivedAt: string | null
       createdAt: string
       updatedAt: string
       measurementName: string

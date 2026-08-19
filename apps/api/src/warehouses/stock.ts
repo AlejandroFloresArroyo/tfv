@@ -114,6 +114,8 @@ export interface StockUnitRecord {
   readonly code: string
   readonly status: StockStatus
   readonly createdByReservation: boolean
+  /** Cuándo llegó de verdad lo que se acuñó. Nulo mientras siga pendiente. Ver `DEFECTS.md` M-04. */
+  readonly arrivedAt: Date | null
   readonly createdAt: Date
   readonly updatedAt: Date
 }
@@ -621,6 +623,116 @@ async function loadUnit(tx: Transaction, warehouseId: string, unitId: string) {
   return row
 }
 
+/**
+ * Lo acuñado que sigue sin llegar, por almacén.
+ *
+ * Acuñar es prestación (`DEFECTS.md` M-04): cuando una cotización pide más de lo que hay, el
+ * almacén lo trae de fuera. Esta es la otra mitad — la lista de lo comprometido que todavía no está
+ * en el estante.
+ *
+ * **No es un filtro de la colección de unidades y es a propósito.** La maquinaria genérica compara
+ * una columna con un valor, y esto son dos: nació acuñada **y** no ha llegado. Escribirlo como
+ * filtro habría pedido doblar esa maquinaria, que toma columnas enteras por un motivo bien
+ * explicado en `runtime/collection.ts`. Además, «pendientes de llegar» es una pregunta con nombre
+ * propio y merece una ruta que se pueda permisar y probar por sí sola.
+ */
+export async function listPendingArrivals(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+): Promise<StockUnitRecord[]> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+
+    const rows = await tx
+      .select({ unit: warehouseStockUnits })
+      .from(warehouseStockUnits)
+      .innerJoin(
+        warehouseMeasurements,
+        eq(warehouseMeasurements.id, warehouseStockUnits.measurementId),
+      )
+      .innerJoin(warehouseProducts, eq(warehouseProducts.id, warehouseMeasurements.productId))
+      .where(
+        and(
+          eq(warehouseProducts.warehouseId, warehouseId),
+          eq(warehouseStockUnits.createdByReservation, true),
+          isNull(warehouseStockUnits.arrivedAt),
+          isNull(warehouseStockUnits.deletedAt),
+        ),
+      )
+      .orderBy(warehouseStockUnits.createdAt)
+
+    return rows.map((row) => toRecord(row.unit))
+  })
+}
+
+/**
+ * Confirma que el equipo acuñado llegó.
+ *
+ * **No borra la marca de acuñada**, y eso no es un descuido: que la unidad naciera de un compromiso
+ * sin respaldo físico sigue siendo cierto para siempre, y es lo que hace auditable el descuadre. Lo
+ * que cambia es que deja de estar pendiente, con la fecha en que dejó de estarlo.
+ *
+ * Confirmar dos veces no mueve la fecha: la primera es la que vale, y volver a pulsar el botón no
+ * puede reescribir cuándo llegó algo.
+ */
+export async function confirmArrival(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  unitIds: readonly string[],
+): Promise<StockUnitRecord[]> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+
+    const units = await tx
+      .select({ id: warehouseStockUnits.id })
+      .from(warehouseStockUnits)
+      .innerJoin(
+        warehouseMeasurements,
+        eq(warehouseMeasurements.id, warehouseStockUnits.measurementId),
+      )
+      .innerJoin(warehouseProducts, eq(warehouseProducts.id, warehouseMeasurements.productId))
+      .where(
+        and(
+          eq(warehouseProducts.warehouseId, warehouseId),
+          inArray(warehouseStockUnits.id, [...unitIds]),
+          isNull(warehouseStockUnits.deletedAt),
+        ),
+      )
+
+    if (units.length !== unitIds.length) {
+      throw new NotFoundError("Alguna de las unidades no existe en este almacén")
+    }
+
+    const now = new Date()
+    await tx
+      .update(warehouseStockUnits)
+      .set({ arrivedAt: now, updatedAt: now })
+      .where(
+        and(
+          inArray(
+            warehouseStockUnits.id,
+            units.map((row) => row.id),
+          ),
+          isNull(warehouseStockUnits.arrivedAt),
+        ),
+      )
+
+    const updated = await tx
+      .select()
+      .from(warehouseStockUnits)
+      .where(
+        inArray(
+          warehouseStockUnits.id,
+          units.map((row) => row.id),
+        ),
+      )
+
+    return updated.map(toRecord)
+  })
+}
+
 function toRecord(row: typeof warehouseStockUnits.$inferSelect): StockUnitRecord {
   return {
     id: row.id,
@@ -628,6 +740,7 @@ function toRecord(row: typeof warehouseStockUnits.$inferSelect): StockUnitRecord
     code: row.code,
     status: row.status,
     createdByReservation: row.createdByReservation,
+    arrivedAt: row.arrivedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
