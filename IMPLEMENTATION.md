@@ -121,7 +121,7 @@ Lo construido hasta ahora, medido y no estimado:
 
 | | |
 |---|---|
-| Rebanadas | 19 de 30 empezadas, **ninguna cerrada del todo** |
+| Rebanadas | 20 de 30 empezadas, **ninguna cerrada del todo** |
 | Código sin pruebas | 31 130 líneas |
 | Código de prueba | 9 973 líneas |
 | Pruebas | **1097** de vitest — 256 contratos, 78 datos, 573 API, 93 web, 97 interfaz. Las de extremo a extremo no se volvieron a correr en esta tanda |
@@ -208,7 +208,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 20 | `migrate-productions-core` | ⬜ | |
+| 20 | `migrate-productions-core` | 🟡 | 7/44 más lo que no estaba en la lista. **La columna deja de estar en cero**: la producción entera —alta, ficha, fechas, publicación, panel y baja con su alcance—, su taxonomía con el rol que dirige el trabajo al equipo, y el flujo básico de los planes de trabajo. Faltan guion, capítulos y escenas (21), y jornadas, continuidad y catálogos, que son el grueso de la lista |
 | 21 | `add-durable-script-sync` | ⬜ | |
 | 22 | `migrate-productions-operations` | ⬜ | |
 | 23 | `add-transactional-procurement` | ⬜ | Converge las dos columnas |
@@ -2992,3 +2992,91 @@ máquina de estados en contratos, 7 de aislamiento en datos —incluida la polí
 en los tres lados— y 19 de extremo a extremo en la API. `pnpm check` y `pnpm lint` limpios. La
 pantalla, ejercitada en un navegador: bajar la base local de `99` a `49` y ver el cálculo siguiente
 pasar de `119.00` a `69.00` es el requisito «se cambia una tarifa sin desplegar», mirado.
+
+### 2026-08-19 · La columna que estaba en cero
+
+Rebanada **20 · `migrate-productions-core`**, de 0 a 7 de su lista más dos cosas que no figuraban en
+ella. Es la primera vez que el servicio de producciones existe: había veintiséis tablas desde la
+`0002` y **ninguna ruta llegaba a ellas**.
+
+**Lo que entra: la producción como entidad, su equipo y su panel**
+
+La producción con sus fechas, su publicación y su baja; la taxonomía que la organiza por
+departamentos; los planes de trabajo con sus cinco estados; y el panel, que es lo primero que se
+mira al abrir un rodaje. Veintiuna rutas.
+
+Queda fuera, y se dice: guion, capítulos y escenas —rebanada 21—; jornadas, continuidad, personajes,
+sets, videos, inventario de utilería y presupuesto —22 y 23—. El panel **cuenta** todas ellas
+porque sus tablas ya existen, así que el día que otra rebanada las llene el resumen no hay que
+tocarlo.
+
+**La comprobación de habilitación que no había que escribir**
+
+La spec pide que crear una producción exija el servicio contratado, y el almacén tiene esa
+comprobación en su manejador. Copiarla habría sido lo cómodo. No corre: desde la rebanada 11 la
+compuerta vive en el guardián y **deriva el servicio del primer nivel de la clave de permiso**, así
+que responde `403 service_not_enabled` antes de que exista el manejador. Se vio al escribir su
+prueba y ver que llegaba otra respuesta. Producciones no la lleva; las dos que quedan —en el almacén
+y en sitios— son código muerto que se lee como si protegiera (H-108).
+
+**Dos invariantes bajan al motor**
+
+La `0022` no crea tablas: pone las dos reglas que `production-management` enuncia como propiedades
+de la entidad. Que la fecha de fin no preceda al inicio, y que publicada exija identificador
+legible. El manejador las comprueba también, y no sobra: arriba se responde `422` con el motivo, y
+abajo se garantiza para quien escriba por la siembra, por el trasvase o a mano. Una producción que
+termina antes de empezar no da error en ninguna pantalla — da recuentos negativos meses después.
+
+**El equipo rentado sin devolver se lee del otro lado del mostrador**
+
+La spec impide dar de baja una producción con órdenes de compra en curso o equipo sin devolver. Lo
+segundo son **pedidos de almacén de otra empresa**, y se alcanzan porque la política de esa tabla
+admite explícitamente la vía de la orden de compra (`app.reaches_purchase_order`, `0005`). No se
+consulta la cotización del almacén, que es su documento interno: `delivered` ya significa que salió
+y no ha vuelto. Es la primera lectura entre arrendatarios de esta columna, y funciona porque el
+aislamiento está en dos capas y la segunda sabe quién puede ver qué.
+
+**El rol de una categoría, y una clave foránea que no basta**
+
+Una categoría de producción apunta a un rol, y ése es el mecanismo por el que el trabajo llega al
+departamento correcto. La clave foránea sola no lo acota: **se comprueba con los permisos del dueño
+de la tabla y se salta las políticas de fila**, así que el motor habría aceptado el rol de otra
+productora. Quien lo escribiera no podría leerlo de vuelta, pero la referencia entre arrendatarios
+quedaría escrita. Se corta en la capa que sabe de qué empresa es la producción, con su prueba —que
+falla con `201` si se quita la comprobación—.
+
+**Lo que la spec no decide, no se decide aquí**
+
+`production-workflows` enumera cinco estados y dice que un plan nace pendiente, pero **no declara
+qué transiciones son legales**, al revés que la cotización y el pedido de almacén, que las
+transcriben. Se admite cualquiera de los cinco, que es la lectura literal, y queda anotado (H-111).
+Escribir una tabla plausible habría fijado por nuestra cuenta una regla que nadie ha decidido, y la
+pagaría un jefe de producción al que la aplicación le dijera que no puede reabrir una jornada.
+
+Con él salieron otros dos desajustes del modelo de la 22: el código de un plan es único en toda la
+plataforma y no distingue las bajas (H-109), y la spec manda buscar planes «por nombre» cuando la
+tabla no tiene columna de nombre (H-110). Ninguno se toca: `productions-ops.ts` es de otro encargo.
+
+**El panel es la portada, al revés que en el almacén**
+
+Allí la portada es el catálogo, con tres razones escritas. Ninguna se da aquí: una producción no
+tiene catálogo, la dirección es nueva y no hay enlaces compartidos que reinterpretar, y lo primero
+que se pregunta al abrir un rodaje es cómo va. Quien no alcance el resumen —hace falta
+`productions.budgets.view`, que es la única de las cuatro cifras que no cubre ver la producción
+(H-112)— entra igual y ve la ficha.
+
+El presupuesto sale de la fórmula que `production-budget` transcribe, con la aritmética decimal del
+paquete compartido. No se inventa ninguna cifra más: las cuatro que la spec enumera y ninguna otra.
+
+**Verificación**
+
+`pnpm test --force` en verde con **1125**, 28 más que las 1097 de partida: 5 de motor en datos —los
+dos invariantes, comprobados también en su caso de frontera— y 23 de extremo a extremo en la API.
+`pnpm check` y `pnpm lint` limpios. Las pantallas, conducidas en un navegador contra la base de
+desarrollo: dar de alta, ver rechazar unas fechas invertidas, crear un equipo con su rol, anidar
+otro dentro, crear un plan, **reprogramarlo en una sola operación** y ver el panel pasar de «0
+planes» a «Reprogramado: 1».
+
+De ahí salió el último hallazgo, y no de leer código: un enlace seguido antes de tiempo dejó
+`undefined` en el camino y la respuesta fue `500`. Alcanza a las noventa rutas con parámetro de
+identificador, no sólo a éstas, así que no se corrige en un módulo (H-113).
