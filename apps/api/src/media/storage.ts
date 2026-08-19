@@ -92,17 +92,56 @@ export function publicUrl(path: string): string {
 }
 
 /**
- * Borra objetos del almacenamiento.
+ * Los objetos que cuelgan de un prefijo.
  *
- * La usa el recolector de subidas abandonadas. No falla si el objeto no existe: una subida que se
- * interrumpió antes de escribir nada deja registro y ningún objeto, y ése es justo el caso normal.
+ * Se pregunta en lugar de deducirse. Un archivo de imagen son cinco objetos con extensiones que no
+ * se pueden dar por sabidas —el original conserva la suya y los derivados llevan la del formato que
+ * el navegador supo escribir—, y de una subida interrumpida puede haber cualquier subconjunto.
+ * Adivinar la lista borra de menos y deja basura, que es exactamente el defecto que esto corrige.
  */
-export async function removeObjects(paths: readonly string[]): Promise<void> {
-  if (paths.length === 0) return
+async function objectsUnder(prefix: string): Promise<string[]> {
+  const response = await fetch(`${env.STORAGE_URL}/object/list/${env.STORAGE_BUCKET}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${serviceKey()}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ prefix, limit: 100 }),
+  })
+
+  if (!response.ok) return []
+
+  const entries = (await response.json()) as { name?: string; id?: string | null }[]
+
+  return (
+    entries
+      // Sin `id` es una carpeta, no un objeto: borrarla por su nombre no borra nada.
+      .filter((entry) => typeof entry.name === "string" && entry.id != null)
+      .map((entry) => `${prefix}/${entry.name}`)
+  )
+}
+
+/**
+ * Borra del almacenamiento todo lo que cuelga de esos prefijos.
+ *
+ * La usan la sustitución de archivos y el recolector de subidas abandonadas.
+ *
+ * **El nombre del parámetro del proveedor engaña**: su endpoint de borrado recibe `prefixes` y no
+ * borra por prefijo, sino por clave exacta. Pasarle `empresa/archivo` no toca
+ * `empresa/archivo/original.jpg`, y la operación responde `200` sin haber borrado nada — así que el
+ * registro desaparecía de la base y sus cinco objetos se quedaban ocupando almacenamiento para
+ * siempre. Se ve subiendo una foto y quitándola; leyendo el código, no. Ver `HALLAZGOS.md` H-62.
+ *
+ * Por eso primero se pregunta qué hay y luego se borra por clave. No falla si no hay nada: una
+ * subida que se interrumpió antes de escribir deja registro y ningún objeto, y ése es el caso
+ * normal del recolector.
+ */
+export async function removeObjects(prefixes: readonly string[]): Promise<void> {
+  if (prefixes.length === 0) return
+
+  const keys = (await Promise.all(prefixes.map(objectsUnder))).flat()
+  if (keys.length === 0) return
 
   await fetch(`${env.STORAGE_URL}/object/${env.STORAGE_BUCKET}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${serviceKey()}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ prefixes: [...paths] }),
+    body: JSON.stringify({ prefixes: keys }),
   })
 }
