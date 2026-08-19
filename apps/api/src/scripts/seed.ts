@@ -1389,7 +1389,7 @@ function report(
     "  ─────────────────────  ────────────────────────────────────────────",
     "  admin@tfv.dev          Administración de plataforma · las dos empresas",
     "  duena@tfv.dev          Propietaria · sólo Renta Fílmica del Norte",
-    `  almacenista@tfv.dev    Rol acotado · ${ROLES["Almacén"]?.length ?? 0} de ${PERMISSION_KEYS.length} permisos`,
+    `  almacenista@tfv.dev    Rol acotado · ${ROLES.Almacén?.length ?? 0} de ${PERMISSION_KEYS.length} permisos`,
     "  compradora@tfv.dev     Sin membresías · padrón único",
     "",
     `  Planes contratables: ${PLANS.length} (${planes} sembrados ahora; el nivel cero es el gratuito)`,
