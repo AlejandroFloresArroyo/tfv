@@ -299,9 +299,14 @@ export default function SistemaPage() {
 
       {/* ─── La cabecera de un llamado: los hechos duros del día ─────────────── */}
       <header className="px-5 pt-10 pb-8 tablet:px-8 laptop:px-12">
-        <span className="legend text-content-faint">Renta Fílmica del Norte · Almacén Centro</span>
-        <h1 className="display mt-2 text-fluid3 text-content">Hoja de llamado</h1>
-        <p className="mt-3 max-w-[62ch] text-body1 text-content-muted">
+        {/* El título va primero y solo: el antetítulo encima de un encabezado está vetado por el
+            piso de oficio y ningún brief lo recupera. El contexto baja a línea de apoyo, y de paso
+            declara en pantalla que los datos son de demostración. */}
+        <h1 className="display text-fluid3 text-content">Hoja de llamado</h1>
+        <p className="legend mt-3 text-content-faint">
+          Renta Fílmica del Norte · Almacén Centro · datos de demostración
+        </p>
+        <p className="mt-2 max-w-[62ch] text-body1 text-content-muted">
           Todo lo del día en una sola superficie. Cada estado toma una temperatura de set
           —tungsteno, HMI, hora mágica— así que el color dice algo antes de que nadie lea la
           etiqueta.
@@ -355,7 +360,7 @@ export default function SistemaPage() {
             alive
             label="Escenas extraídas"
             value={<Counter value={47} durationMs={1100} />}
-            trend="extrayendo del guion ahora"
+            trend="de 6 capítulos, sin revisar"
           />
         </div>
         <p className="mt-4 max-w-[68ch] text-body3 text-content-faint">
