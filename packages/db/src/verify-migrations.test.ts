@@ -83,14 +83,32 @@ async function baseCon(marcas: readonly number[], conTabla = true): Promise<stri
   return nombre
 }
 
+/**
+ * Recoger las bases de usar y tirar.
+ *
+ * Dos detalles, y los dos son por lo mismo: **un `drop database` espera a que no quede nadie
+ * conectado**, y aquí se encadenan varios seguidos.
+ *
+ * `with (force)` echa a quien quede en vez de esperarlo. Sin eso basta una conexión que el motor
+ * todavía no ha reciclado para que el borrado se quede colgado, y el fallo aparece en el gancho —
+ * lejos de la prueba que dejó la conexión abierta.
+ *
+ * Y el plazo se sube del predeterminado. Con la máquina ocupada —que en integración continua es la
+ * norma, no la excepción— diez segundos no alcanzan para varios borrados seguidos: observado el
+ * 2026-08-19 corriendo la suite entera con el entorno de desarrollo compilando al lado. Un gancho
+ * que caduca bajo carga es un parpadeo, y un parpadeo en la primera semana de integración continua
+ * es la forma más rápida de que nadie se la crea.
+ */
 afterAll(async () => {
   const root = admin()
   try {
-    for (const nombre of creadas) await root.unsafe(`drop database if exists "${nombre}"`)
+    for (const nombre of creadas) {
+      await root.unsafe(`drop database if exists "${nombre}" with (force)`)
+    }
   } finally {
     await root.end()
   }
-})
+}, 60_000)
 
 describe("el hueco de migraciones que db:migrate no vuelve a mirar", () => {
   it("una base al día no tiene nada que decir", async () => {
