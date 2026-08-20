@@ -33,7 +33,7 @@ export function MenuContent({
         className={cn(
           "z-(--z-dialog) min-w-56 overflow-hidden rounded-xl border border-edge bg-panel-raised p-1",
           "shadow-[0_12px_32px_-8px_rgb(0_0_0/0.28)] dark:shadow-[0_12px_32px_-8px_rgb(0_0_0/0.7)]",
-          "data-[state=open]:animate-in data-[state=open]:fade-in-0",
+          "data-[state=open]:enter-fade",
           className,
         )}
         {...rest}

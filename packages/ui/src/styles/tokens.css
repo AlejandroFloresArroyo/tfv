@@ -753,6 +753,37 @@
   --luz: var(--luz-leido);
 }
 
+/* ═══ Entradas ════════════════════════════════════════════════════════════════
+ *
+ * El vocabulario `animate-in`/`fade-in-0` heredado nunca compiló: era de un plugin que jamás
+ * estuvo instalado, así que cada «entrada» del sistema era un no-op silencioso. Éstas existen.
+ *
+ * Son cambios de estado explícitos —un menú que se pide, un cajón que se abre—, no hover: la regla
+ * del movimiento de color queda intacta, y con movimiento reducido la regla global las colapsa.
+ */
+
+@keyframes entra-desvanece {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes entra-izquierda {
+  from {
+    translate: -100% 0;
+  }
+}
+
+@utility enter-fade {
+  animation: entra-desvanece 160ms var(--ease-out-soft) both;
+}
+
+@utility enter-slide-left {
+  animation:
+    entra-izquierda 220ms var(--ease-out-soft) both,
+    entra-desvanece 220ms var(--ease-out-soft) both;
+}
+
 /* ═══ Voces ══════════════════════════════════════════════════════════════════ */
 
 /* La voz de display: la misma familia, expandida. Es la letra de rótulo de panel de control, y

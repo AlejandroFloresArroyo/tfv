@@ -24,9 +24,11 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   requirePlatformAdmin(profile)
 
   return (
-    <div className="mx-auto flex w-full max-w-(--breakpoint-desktop) flex-1 flex-col laptop:flex-row">
+    <div className="mx-auto flex w-full max-w-(--breakpoint-desktop) flex-1 flex-col">
       <PlatformNav />
-      <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+      {/* El rincón del asa se reserva abajo: sin esto, el final de una lista larga queda
+          escondido debajo de la pastilla. */}
+      <div className="flex min-w-0 flex-1 flex-col pb-20">{children}</div>
     </div>
   )
 }

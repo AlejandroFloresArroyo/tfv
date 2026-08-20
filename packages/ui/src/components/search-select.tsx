@@ -173,7 +173,7 @@ export function SearchSelect({
             "z-(--z-dialog) w-(--radix-popover-trigger-width) min-w-60 overflow-hidden rounded-xl",
             "border border-edge bg-panel-raised",
             "shadow-[0_12px_32px_-8px_rgb(0_0_0/0.28)] dark:shadow-[0_12px_32px_-8px_rgb(0_0_0/0.7)]",
-            "data-[state=open]:animate-in data-[state=open]:fade-in-0",
+            "data-[state=open]:enter-fade",
           )}
         >
           <div className="flex items-center gap-2 border-edge border-b px-3">

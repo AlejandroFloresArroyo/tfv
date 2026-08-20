@@ -27,6 +27,7 @@ import {
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
+import { FloatingNav } from "~/components/floating-nav.tsx"
 import { can } from "~/lib/can.ts"
 import { FALLBACK_SERVICE_ICON, isKnownService, SERVICE_ICONS } from "~/lib/services.ts"
 import type { ProfileCompany } from "~/lib/session.ts"
@@ -170,40 +171,42 @@ export function CompanyNav({
   }
 
   return (
-    <nav
-      aria-label={company.name}
-      className="shrink-0 border-edge border-b px-4 py-3 laptop:w-58 laptop:border-r laptop:border-b-0 laptop:px-3 laptop:py-5"
+    <FloatingNav
+      label={company.name}
+      header={
+        companies.length > 1 ? (
+          <Menu>
+            <MenuTrigger
+              className={cn(
+                "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left",
+                "transition-colors hover:bg-panel-hover",
+              )}
+            >
+              <span className="display min-w-0 flex-1 text-h4 text-content [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
+                {company.name}
+              </span>
+              <ChevronsUpDown className="size-4 shrink-0 text-content-faint" aria-hidden="true" />
+            </MenuTrigger>
+
+            <MenuContent align="start" className="w-64">
+              <MenuLabel>{t("shell.switchCompany")}</MenuLabel>
+              <MenuRadioGroup value={company.id} onValueChange={switchTo}>
+                {companies.map((candidate) => (
+                  <MenuRadioItem key={candidate.id} value={candidate.id}>
+                    {candidate.name}
+                  </MenuRadioItem>
+                ))}
+              </MenuRadioGroup>
+            </MenuContent>
+          </Menu>
+        ) : (
+          <p className="display px-2 py-1.5 text-h4 text-content [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
+            {company.name}
+          </p>
+        )
+      }
     >
-      {companies.length > 1 ? (
-        <Menu>
-          <MenuTrigger
-            className={cn(
-              "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left",
-              "transition-colors hover:bg-panel-hover",
-            )}
-          >
-            <span className="min-w-0 flex-1 truncate text-body2 font-bold text-content">
-              {company.name}
-            </span>
-            <ChevronsUpDown className="size-4 shrink-0 text-content-faint" aria-hidden="true" />
-          </MenuTrigger>
-
-          <MenuContent align="start" className="w-58">
-            <MenuLabel>{t("shell.switchCompany")}</MenuLabel>
-            <MenuRadioGroup value={company.id} onValueChange={switchTo}>
-              {companies.map((candidate) => (
-                <MenuRadioItem key={candidate.id} value={candidate.id}>
-                  {candidate.name}
-                </MenuRadioItem>
-              ))}
-            </MenuRadioGroup>
-          </MenuContent>
-        </Menu>
-      ) : (
-        <p className="truncate px-2.5 py-2 text-body2 font-bold text-content">{company.name}</p>
-      )}
-
-      <ul className="mt-2 flex gap-1 overflow-x-auto laptop:mt-4 laptop:flex-col laptop:overflow-visible">
+      <ul className="flex flex-col gap-1">
         <NavLink
           href={`/c/${company.id}`}
           active={section === ""}
@@ -213,7 +216,7 @@ export function CompanyNav({
         </NavLink>
 
         {company.services.length > 0 ? (
-          <li className="hidden pt-4 pb-1 laptop:block">
+          <li className="pt-4 pb-1">
             <span className="legend px-2.5 text-content-faint">{t("shell.services")}</span>
           </li>
         ) : null}
@@ -233,7 +236,7 @@ export function CompanyNav({
         })}
 
         {directory.length > 0 ? (
-          <li className="hidden pt-4 pb-1 laptop:block">
+          <li className="pt-4 pb-1">
             <span className="legend px-2.5 text-content-faint">{t("directory.title")}</span>
           </li>
         ) : null}
@@ -252,13 +255,12 @@ export function CompanyNav({
         {/*
           Configuración. Cada entrada se pinta sólo si su permiso la respalda, que es lo que pide
           `app-shell`: la navegación muestra «únicamente las secciones que el rol del usuario le
-          permite».
-
-          Y lo dice la misma spec dos líneas después: **ocultar no es proteger**. Quien escriba la
-          dirección a mano llega a un servidor que comprueba por su cuenta y responde `403`.
+          permite». Y lo dice la misma spec dos líneas después: **ocultar no es proteger**. Quien
+          escriba la dirección a mano llega a un servidor que comprueba por su cuenta y responde
+          `403`.
         */}
         {settings.length > 0 ? (
-          <li className="hidden pt-4 pb-1 laptop:block">
+          <li className="pt-4 pb-1">
             <span className="legend px-2.5 text-content-faint">{t("settings.title")}</span>
           </li>
         ) : null}
@@ -274,7 +276,7 @@ export function CompanyNav({
           </NavLink>
         ))}
       </ul>
-    </nav>
+    </FloatingNav>
   )
 }
 
@@ -290,15 +292,7 @@ function NavLink({
   children: React.ReactNode
 }) {
   return (
-    <li
-      className="shrink-0"
-      // En tacto la navegación es una fila que se desplaza, y la sección activa puede cargar
-      // recortada en el borde — justo la entrada que dice dónde estás. Se trae a la vista al
-      // montar; en escritorio la columna no desborda y esto no hace nada.
-      ref={(node) => {
-        if (active) node?.scrollIntoView({ inline: "nearest", block: "nearest" })
-      }}
-    >
+    <li>
       <Link
         href={href}
         // `aria-current` para que un lector de pantalla anuncie cuál es la sección activa. El color

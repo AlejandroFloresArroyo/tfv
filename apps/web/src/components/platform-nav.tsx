@@ -5,6 +5,7 @@ import { ArrowLeft, Building2, History, Inbox, Users } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
+import { FloatingNav } from "~/components/floating-nav.tsx"
 
 /**
  * Navegación del área de administración de plataforma.
@@ -46,15 +47,13 @@ export function PlatformNav() {
   ]
 
   return (
-    <nav
-      aria-label={t("platform.title")}
-      className="shrink-0 border-edge border-b px-4 py-3 laptop:w-58 laptop:border-r laptop:border-b-0 laptop:px-3 laptop:py-5"
+    <FloatingNav
+      label={t("platform.title")}
+      header={
+        <p className="display truncate px-2 py-1.5 text-h4 text-content">{t("platform.title")}</p>
+      }
     >
-      <p className="truncate px-2.5 py-2 text-body2 font-bold text-content">
-        {t("platform.title")}
-      </p>
-
-      <ul className="mt-2 flex gap-1 overflow-x-auto laptop:mt-4 laptop:flex-col laptop:overflow-visible">
+      <ul className="flex flex-col gap-1">
         {entries.map((entry) => (
           <NavLink
             key={entry.href}
@@ -70,7 +69,7 @@ export function PlatformNav() {
           La salida, explícita. Un área que atraviesa arrendatarios sin una vuelta visible al panel
           deja a quien entró sin saber si sigue mirando datos de todos o ya no.
         */}
-        <li className="hidden pt-4 laptop:block">
+        <li className="pt-4">
           <span className="legend px-2.5 text-content-faint">{t("platform.leave")}</span>
         </li>
         <NavLink
@@ -81,7 +80,7 @@ export function PlatformNav() {
           {t("shell.companies")}
         </NavLink>
       </ul>
-    </nav>
+    </FloatingNav>
   )
 }
 
@@ -97,15 +96,7 @@ function NavLink({
   children: React.ReactNode
 }) {
   return (
-    <li
-      className="shrink-0"
-      // En tacto la navegación es una fila que se desplaza, y la sección activa puede cargar
-      // recortada en el borde — justo la entrada que dice dónde estás. Se trae a la vista al
-      // montar; en escritorio la columna no desborda y esto no hace nada.
-      ref={(node) => {
-        if (active) node?.scrollIntoView({ inline: "nearest", block: "nearest" })
-      }}
-    >
+    <li>
       <Link
         href={href}
         // `aria-current` para que un lector de pantalla anuncie cuál es la sección activa. El color
