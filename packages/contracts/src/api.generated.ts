@@ -1246,6 +1246,201 @@ export interface ApiEndpoints {
     response: undefined
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/anchors": {
+    /** Listar las partidas presupuestadas de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_amount?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      categoryId?: string | Array<string>
+      responsibleId?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        name: string
+        description: string
+        amount: string
+        categoryId: string | null
+        categoryName: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        attachments: Array<{
+          id: string
+          uploadId: string
+          name: string
+          url: string
+          kind: string
+          createdAt: string
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/anchors": {
+    /** Registrar una partida presupuestada */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      description?: string
+      amount: string
+      categoryId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      amount: string
+      categoryId: string | null
+      categoryName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      attachments: Array<{
+        id: string
+        uploadId: string
+        name: string
+        url: string
+        kind: string
+        createdAt: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/anchors/{anchorId}": {
+    /** Consultar una partida presupuestada */
+    params: {
+      companyId: string
+      productionId: string
+      anchorId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      amount: string
+      categoryId: string | null
+      categoryName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      attachments: Array<{
+        id: string
+        uploadId: string
+        name: string
+        url: string
+        kind: string
+        createdAt: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/anchors/{anchorId}": {
+    /** Editar una partida presupuestada */
+    params: {
+      companyId: string
+      productionId: string
+      anchorId: string
+    }
+    body: {
+      name?: string
+      description?: string
+      amount?: string
+      categoryId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      amount: string
+      categoryId: string | null
+      categoryName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      attachments: Array<{
+        id: string
+        uploadId: string
+        name: string
+        url: string
+        kind: string
+        createdAt: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/anchors/{anchorId}": {
+    /** Dar de baja una partida presupuestada */
+    params: {
+      companyId: string
+      productionId: string
+      anchorId: string
+    }
+    response: undefined
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/anchors/{anchorId}/attachments": {
+    /** Colgar un comprobante de una partida */
+    params: {
+      companyId: string
+      productionId: string
+      anchorId: string
+    }
+    body: {
+      uploadId: string
+    }
+    response: {
+      id: string
+      uploadId: string
+      name: string
+      url: string
+      kind: string
+      createdAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/anchors/{anchorId}/attachments/{attachmentId}": {
+    /** Retirar un comprobante de una partida */
+    params: {
+      companyId: string
+      productionId: string
+      anchorId: string
+      attachmentId: string
+    }
+    response: undefined
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/breakdown": {
     /** La estructura completa de la producción, como índice navegable */
     params: {
@@ -1280,6 +1475,184 @@ export interface ApiEndpoints {
           updatedAt: string
         }>
       }>
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/budget": {
+    /** Consultar el presupuesto de una producción, derivado en el momento */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      anchor_page?: string | Array<string>
+      anchor_limit?: string | Array<string>
+      anchor_offset?: string | Array<string>
+      anchor_search?: string | Array<string>
+      anchor_sort_name?: string | Array<string>
+      anchor_sort_amount?: string | Array<string>
+      anchor_sort_createdAt?: string | Array<string>
+      anchor_categoryId?: string | Array<string>
+      anchor_responsibleId?: string | Array<string>
+      anchor_createdAt?: string | Array<string>
+      shopping_page?: string | Array<string>
+      shopping_limit?: string | Array<string>
+      shopping_offset?: string | Array<string>
+      shopping_search?: string | Array<string>
+      shopping_sort_name?: string | Array<string>
+      shopping_sort_amount?: string | Array<string>
+      shopping_sort_occurredOn?: string | Array<string>
+      shopping_sort_createdAt?: string | Array<string>
+      shopping_categoryId?: string | Array<string>
+      shopping_responsibleId?: string | Array<string>
+      shopping_providerId?: string | Array<string>
+      shopping_kind?: string | Array<string>
+      shopping_method?: string | Array<string>
+      shopping_isDeductible?: string | Array<string>
+      shopping_occurredOn?: string | Array<string>
+    }
+    response: {
+      anchors: Array<{
+        id: string
+        productionId: string
+        name: string
+        description: string
+        amount: string
+        categoryId: string | null
+        categoryName: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        attachments: Array<{
+          id: string
+          uploadId: string
+          name: string
+          url: string
+          kind: string
+          createdAt: string
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+      shoppings: Array<{
+        id: string
+        productionId: string
+        name: string
+        observations: string
+        amount: string
+        kind: "shopping" | "expense" | "payment" | "rent" | "transfer"
+        method: "cash" | "card" | "transfer"
+        cardLast4: string | null
+        isDeductible: boolean
+        occurredOn: string | null
+        providerId: string | null
+        providerName: string | null
+        categoryId: string | null
+        categoryName: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        warehouseOrderId: string | null
+        items: Array<{
+          id: string
+          name: string
+          code: string
+        }>
+        attachments: Array<{
+          id: string
+          uploadId: string
+          name: string
+          url: string
+          kind: string
+          createdAt: string
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+      filtered: {
+        totalPresupuestado: string
+        totalGastado: string
+        diferencia: string
+        isUnfavorable: boolean
+      }
+      overall: {
+        totalPresupuestado: string
+        totalGastado: string
+        diferencia: string
+        isUnfavorable: boolean
+      }
+      categories: Array<{
+        categoryId: string | null
+        categoryName: string | null
+        budgeted: string
+        spent: string
+        difference: string
+        isUnfavorable: boolean
+      }>
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/budget/document": {
+    /** Componer el documento del presupuesto de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    response: {
+      document: {
+        kind: "budget"
+        identity: {
+          productionName: string
+          startsOn: string | null
+          endsOn: string | null
+          generatedAt: string
+        }
+        issuer: {
+          name: string
+        }
+        production: {
+          id: string
+          name: string
+        }
+        anchors: Array<{
+          id: string
+          name: string
+          description: string
+          amount: string
+          categoryId: string | null
+          categoryName: string | null
+          responsibleName: string | null
+        }>
+        shoppings: Array<{
+          id: string
+          name: string
+          observations: string
+          amount: string
+          kind: "shopping" | "expense" | "payment" | "rent" | "transfer"
+          method: "cash" | "card" | "transfer"
+          cardLast4: string | null
+          isDeductible: boolean
+          occurredOn: string | null
+          providerName: string | null
+          categoryId: string | null
+          categoryName: string | null
+          responsibleName: string | null
+          itemCount: number
+        }>
+        amounts: {
+          totalPresupuestado: string
+          totalGastado: string
+          diferencia: string
+          isUnfavorable: boolean
+        }
+        categories: Array<{
+          categoryId: string | null
+          categoryName: string | null
+          budgeted: string
+          spent: string
+          difference: string
+          isUnfavorable: boolean
+        }>
+      }
+      reference: string
     }
   }
 
@@ -3917,6 +4290,316 @@ export interface ApiEndpoints {
         name: string
         code: string
         status: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/shoppings": {
+    /** Listar los gastos de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_amount?: string | Array<string>
+      sort_occurredOn?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      categoryId?: string | Array<string>
+      responsibleId?: string | Array<string>
+      providerId?: string | Array<string>
+      kind?: string | Array<string>
+      method?: string | Array<string>
+      isDeductible?: string | Array<string>
+      occurredOn?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        name: string
+        observations: string
+        amount: string
+        kind: "shopping" | "expense" | "payment" | "rent" | "transfer"
+        method: "cash" | "card" | "transfer"
+        cardLast4: string | null
+        isDeductible: boolean
+        occurredOn: string | null
+        providerId: string | null
+        providerName: string | null
+        categoryId: string | null
+        categoryName: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        warehouseOrderId: string | null
+        items: Array<{
+          id: string
+          name: string
+          code: string
+        }>
+        attachments: Array<{
+          id: string
+          uploadId: string
+          name: string
+          url: string
+          kind: string
+          createdAt: string
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/shoppings": {
+    /** Registrar un gasto; clasificarlo exige su propia clave */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      observations?: string
+      amount: string
+      kind?: "shopping" | "expense" | "payment" | "rent" | "transfer"
+      method?: "cash" | "card" | "transfer"
+      cardLast4?: string | null
+      isDeductible?: boolean
+      occurredOn?: string | null
+      providerId?: string | null
+      categoryId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      observations: string
+      amount: string
+      kind: "shopping" | "expense" | "payment" | "rent" | "transfer"
+      method: "cash" | "card" | "transfer"
+      cardLast4: string | null
+      isDeductible: boolean
+      occurredOn: string | null
+      providerId: string | null
+      providerName: string | null
+      categoryId: string | null
+      categoryName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      warehouseOrderId: string | null
+      items: Array<{
+        id: string
+        name: string
+        code: string
+      }>
+      attachments: Array<{
+        id: string
+        uploadId: string
+        name: string
+        url: string
+        kind: string
+        createdAt: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/shoppings/{shoppingId}": {
+    /** Consultar un gasto con sus artículos y sus facturas */
+    params: {
+      companyId: string
+      productionId: string
+      shoppingId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      observations: string
+      amount: string
+      kind: "shopping" | "expense" | "payment" | "rent" | "transfer"
+      method: "cash" | "card" | "transfer"
+      cardLast4: string | null
+      isDeductible: boolean
+      occurredOn: string | null
+      providerId: string | null
+      providerName: string | null
+      categoryId: string | null
+      categoryName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      warehouseOrderId: string | null
+      items: Array<{
+        id: string
+        name: string
+        code: string
+      }>
+      attachments: Array<{
+        id: string
+        uploadId: string
+        name: string
+        url: string
+        kind: string
+        createdAt: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/shoppings/{shoppingId}": {
+    /** Editar un gasto; la categoría lleva su propia clave */
+    params: {
+      companyId: string
+      productionId: string
+      shoppingId: string
+    }
+    body: {
+      name?: string
+      observations?: string
+      amount?: string
+      kind?: "shopping" | "expense" | "payment" | "rent" | "transfer"
+      method?: "cash" | "card" | "transfer"
+      cardLast4?: string | null
+      isDeductible?: boolean
+      occurredOn?: string | null
+      providerId?: string | null
+      categoryId?: string | null
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      observations: string
+      amount: string
+      kind: "shopping" | "expense" | "payment" | "rent" | "transfer"
+      method: "cash" | "card" | "transfer"
+      cardLast4: string | null
+      isDeductible: boolean
+      occurredOn: string | null
+      providerId: string | null
+      providerName: string | null
+      categoryId: string | null
+      categoryName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      warehouseOrderId: string | null
+      items: Array<{
+        id: string
+        name: string
+        code: string
+      }>
+      attachments: Array<{
+        id: string
+        uploadId: string
+        name: string
+        url: string
+        kind: string
+        createdAt: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/shoppings/{shoppingId}": {
+    /** Dar de baja un gasto; sus artículos vuelven al inventario sin compra */
+    params: {
+      companyId: string
+      productionId: string
+      shoppingId: string
+    }
+    response: undefined
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/shoppings/{shoppingId}/attachments": {
+    /** Colgar una factura de un gasto */
+    params: {
+      companyId: string
+      productionId: string
+      shoppingId: string
+    }
+    body: {
+      uploadId: string
+    }
+    response: {
+      id: string
+      uploadId: string
+      name: string
+      url: string
+      kind: string
+      createdAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/shoppings/{shoppingId}/attachments/{attachmentId}": {
+    /** Retirar una factura de un gasto */
+    params: {
+      companyId: string
+      productionId: string
+      shoppingId: string
+      attachmentId: string
+    }
+    response: undefined
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/shoppings/{shoppingId}/items": {
+    /** Establecer los artículos que incorporó una compra */
+    params: {
+      companyId: string
+      productionId: string
+      shoppingId: string
+    }
+    body: {
+      itemIds: Array<string>
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      observations: string
+      amount: string
+      kind: "shopping" | "expense" | "payment" | "rent" | "transfer"
+      method: "cash" | "card" | "transfer"
+      cardLast4: string | null
+      isDeductible: boolean
+      occurredOn: string | null
+      providerId: string | null
+      providerName: string | null
+      categoryId: string | null
+      categoryName: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      warehouseOrderId: string | null
+      items: Array<{
+        id: string
+        name: string
+        code: string
+      }>
+      attachments: Array<{
+        id: string
+        uploadId: string
+        name: string
+        url: string
+        kind: string
+        createdAt: string
       }>
       createdAt: string
       updatedAt: string
@@ -11373,6 +12056,60 @@ export interface ApiEndpoints {
             incomplete: number
           }
         }
+      } | {
+        kind: "budget"
+        identity: {
+          productionName: string
+          startsOn: string | null
+          endsOn: string | null
+          generatedAt: string
+        }
+        issuer: {
+          name: string
+        }
+        production: {
+          id: string
+          name: string
+        }
+        anchors: Array<{
+          id: string
+          name: string
+          description: string
+          amount: string
+          categoryId: string | null
+          categoryName: string | null
+          responsibleName: string | null
+        }>
+        shoppings: Array<{
+          id: string
+          name: string
+          observations: string
+          amount: string
+          kind: "shopping" | "expense" | "payment" | "rent" | "transfer"
+          method: "cash" | "card" | "transfer"
+          cardLast4: string | null
+          isDeductible: boolean
+          occurredOn: string | null
+          providerName: string | null
+          categoryId: string | null
+          categoryName: string | null
+          responsibleName: string | null
+          itemCount: number
+        }>
+        amounts: {
+          totalPresupuestado: string
+          totalGastado: string
+          diferencia: string
+          isUnfavorable: boolean
+        }
+        categories: Array<{
+          categoryId: string | null
+          categoryName: string | null
+          budgeted: string
+          spent: string
+          difference: string
+          isUnfavorable: boolean
+        }>
       }
     }
   }
