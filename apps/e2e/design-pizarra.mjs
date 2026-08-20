@@ -76,7 +76,7 @@ await p.waitForLoadState("networkidle")
 await p.waitForTimeout(800)
 const sigueAbierta = await p.evaluate(() => document.documentElement.getAttribute("data-pizarra"))
 log(
-  `  persistente: nace=${abierta === "abierta"} · sigue tras elegir=${sigueAbierta === "abierta"}`,
+  `  persistente: nace=${naceAbierta === "abierta"} · sigue tras elegir=${sigueAbierta === "abierta"}`,
 )
 await p.getByRole("button", { name: /renta fílmica/i }).click()
 await p.waitForTimeout(600)
