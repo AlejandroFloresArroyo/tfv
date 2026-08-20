@@ -103,8 +103,8 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 - [ ] Capítulos y escenas
 - [ ] Personajes, sets y videos
 - [ ] Jornadas con asignación de reparto y continuidad
-- [ ] Inventario de utilería con estados y etiquetas
-- [ ] Entregas con verificación pieza por pieza y **firma**
+- [x] Inventario de utilería con estados y etiquetas
+- [x] Entregas con verificación pieza por pieza y **firma** — falta la hoja del documento, que es de `HALLAZGOS.md` H-201
 - [ ] **Calendario de planes de trabajo con sus cuatro vistas**
 - [ ] Tareas, actividades, comentarios y adjuntos
 - [ ] Anclas y compras

@@ -65,15 +65,18 @@ import {
   updateVideo,
   videoQuery,
 } from "../productions/catalog.ts"
+import { DELIVERY_DIRECTIONS, DELIVERY_STATUSES } from "../productions/deliveries.ts"
 import {
   changeItemStatus,
   createItem,
   deleteItem,
   findItemByCode,
   getItem,
+  ITEM_EVENT_REASONS,
   ITEM_STATUSES,
   itemQuery,
   itemUsage,
+  listItemEvents,
   listItems,
   setItemImages,
   updateItem,
@@ -205,7 +208,11 @@ function serializeItem<T extends Awaited<ReturnType<typeof getItem>>>(row: T) {
 }
 
 function serializeUsage(usage: Awaited<ReturnType<typeof itemUsage>>) {
-  return { sets: [...usage.sets], recordings: [...usage.recordings] }
+  return {
+    deliveries: [...usage.deliveries],
+    sets: [...usage.sets],
+    recordings: [...usage.recordings],
+  }
 }
 
 // ─── Personajes ──────────────────────────────────────────────────────────────
@@ -980,11 +987,20 @@ export const itemUsageRoute = defineRoute({
     responses: {
       200: {
         description:
-          "Los sets que lo componen y las jornadas en que se usó, con la continuidad concreta. " +
-          "Las notas de entrega faltan: son de la rebanada 22 y todavía no existen",
+          "Las notas en que figura, los sets que lo componen y las jornadas en que se usó, con la " +
+          "continuidad concreta. Es lo que hay que consultar **antes** de eliminarlo o de cambiarle " +
+          "el estado, para no romper trabajo en curso",
         content: {
           "application/json": {
             schema: z.object({
+              deliveries: z.array(
+                z.object({
+                  id: z.string(),
+                  name: z.string(),
+                  status: z.enum(DELIVERY_STATUSES),
+                  direction: z.enum(DELIVERY_DIRECTIONS),
+                }),
+              ),
               sets: z.array(z.object({ id: z.string(), name: z.string() })),
               recordings: z.array(
                 z.object({
@@ -1004,6 +1020,65 @@ export const itemUsageRoute = defineRoute({
     const params = c.req.valid("param")
     const usage = await itemUsage(actorOf(c), params.companyId, params.productionId, params.itemId)
     return c.json(serializeUsage(usage), 200)
+  },
+})
+
+export const itemEventsRoute = defineRoute({
+  access: REQUIRES("productions.products.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/productions/{productionId}/items/{itemId}/events",
+    summary: "El historial de estado de un artículo",
+    tags: ["Producciones"],
+    request: { params: itemParams },
+    responses: {
+      200: {
+        description:
+          "La vida del artículo, **del último paso al primero**: quién lo movió, cuándo, desde " +
+          "dónde, hacia dónde y por qué. El primero no tiene estado de origen porque antes de " +
+          "existir no estaba en ninguno",
+        content: {
+          "application/json": {
+            schema: z.object({
+              items: z.array(
+                z.object({
+                  id: z.string(),
+                  itemId: z.string(),
+                  fromStatus: z.enum(ITEM_STATUSES).nullable(),
+                  toStatus: z.enum(ITEM_STATUSES),
+                  reason: z.enum(ITEM_EVENT_REASONS),
+                  actorId: z.string().nullable(),
+                  actorName: z.string().nullable(),
+                  causeId: z.string().nullable(),
+                  note: z.string().nullable(),
+                  occurredAt: z.string(),
+                }),
+              ),
+            }),
+          },
+        },
+      },
+      404: { description: "No existe, o está fuera del alcance del solicitante" },
+    },
+  },
+  handler: async (c) => {
+    const params = c.req.valid("param")
+    const events = await listItemEvents(
+      actorOf(c),
+      params.companyId,
+      params.productionId,
+      params.itemId,
+    )
+
+    return c.json(
+      {
+        items: events.map((event) => ({
+          ...event,
+          occurredAt: toInstant(event.occurredAt),
+        })),
+      },
+      200,
+    )
   },
 })
 
@@ -1096,6 +1171,11 @@ export const deleteItemRoute = defineRoute({
           "los sets ni las continuidades se eliminan",
       },
       404: { description: "No existe, o está fuera del alcance del solicitante" },
+      409: {
+        description:
+          "Figura en una nota de entrega sin cerrar. El mensaje **enumera cuáles**: decir sólo que " +
+          "está en una entrega obliga a buscarla entre veinte",
+      },
     },
   },
   handler: async (c) => {

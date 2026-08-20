@@ -235,6 +235,58 @@ export const productionItems = pgTable(
   ],
 )
 
+export const productionItemEventReason = pgEnum("production_item_event_reason", [
+  "manual",
+  "delivery",
+  "return",
+  "created",
+])
+
+/**
+ * Historial de estado por artículo.
+ *
+ * Calcado de `warehouse_stock_events`, y no por parecido superficial: es **el mismo problema**. Un
+ * objeto físico cambia de estado en manos de gente distinta, y lo que se pregunta cuando una
+ * chamarra vuelve rota no es quién la marcó rota —eso lo diría una columna de atribución— sino
+ * dónde estuvo y en qué estado salió de cada sitio. Eso sólo lo contesta el recorrido entero.
+ *
+ * El almacén ya lo resolvió así. Dos modelos distintos para «el objeto cambió de estado» es la
+ * asimetría que después cuesta el doble: dos consultas de historial, dos pantallas, dos formas de
+ * explicárselo a quien llega. Cierra `HALLAZGOS.md` H-171.
+ *
+ * `from_status` es nulo **sólo en el alta**: antes de existir el artículo no estaba en ningún
+ * estado, y escribir ahí `available` diría que hubo un cambio que no ocurrió.
+ */
+export const productionItemEvents = pgTable(
+  "production_item_events",
+  {
+    id: primaryId(),
+    itemId: reference("item_id")
+      .notNull()
+      .references(() => productionItems.id, { onDelete: "cascade" }),
+
+    fromStatus: productionItemStatus("from_status"),
+    toStatus: productionItemStatus("to_status").notNull(),
+    reason: productionItemEventReason("reason").notNull(),
+
+    actorId: reference("actor_id").references(() => users.id, { onDelete: "set null" }),
+    /**
+     * La nota de entrega que lo causó, cuando la hubo.
+     *
+     * Sin clave foránea, como `created_by_quote_id` en el almacén y por el mismo motivo: es
+     * metainformación de auditoría, no una relación estructural. Si la nota se da de baja, que el
+     * artículo saliera por ella sigue siendo cierto.
+     */
+    causeId: reference("cause_id"),
+    note: text("note"),
+
+    occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("production_item_events_item_idx").on(table.itemId, table.occurredAt)],
+)
+
 /** Un decorado, entendido como el conjunto de artículos que lo componen. */
 export const productionSets = pgTable(
   "production_sets",
@@ -315,6 +367,37 @@ export const deliveryStatusKind = pgEnum("production_delivery_status", [
   "canceled",
 ])
 
+/**
+ * Hacia dónde va la nota.
+ *
+ * Una nota de **salida** entrega artículos: al cerrarla quedan `delivered`. Una nota de
+ * **devolución** los recoge: al cerrarla cada línea dice en qué estado vuelve.
+ *
+ * Es una columna y no dos tablas porque **es el mismo documento y el mismo motor de cierre**: se
+ * compone una lista, se verifica pieza por pieza, se firma y se cierra. Lo único que cambia es a
+ * qué estado deja el artículo. Duplicar la entidad duplicaría el cierre atómico, la verificación y
+ * el documento, que es donde las dos copias se separan.
+ */
+export const deliveryDirection = pgEnum("production_delivery_direction", ["outbound", "inbound"])
+
+/**
+ * En qué estado vuelve un artículo por una nota de devolución.
+ *
+ * Los cinco destinos que una vuelta puede producir, de los ocho del artículo. `available` y
+ * `stored` no están: una devolución dice de qué manera volvió la cosa, no dónde se guarda después
+ * —eso es otro gesto, con su propio cambio de estado—. `delivered` tampoco, por razones obvias.
+ *
+ * Sin esto la vuelta marcaba todo igual, y una nota de doce artículos de los que uno viene roto
+ * obligaba a cerrarla y corregir ese uno a mano, que es exactamente el paso que se olvida.
+ */
+export const returnCondition = pgEnum("production_return_condition", [
+  "returned",
+  "damaged",
+  "incomplete",
+  "lost",
+  "robbed",
+])
+
 export const productionDeliveries = pgTable(
   "production_deliveries",
   {
@@ -326,6 +409,8 @@ export const productionDeliveries = pgTable(
     name: varchar("name", { length: 250 }).notNull(),
     description: text("description").notNull().default(""),
     status: deliveryStatusKind("status").notNull().default("pending"),
+    /** Salida o devolución. Por omisión salida: es lo que era toda nota antes de la 0030. */
+    direction: deliveryDirection("direction").notNull().default("outbound"),
     responsibleId: reference("responsible_id").references(() => users.id, { onDelete: "set null" }),
 
     /** Firmas de ambas partes. Inmutables una vez registradas. */
@@ -361,6 +446,15 @@ export const productionDeliveryLines = pgTable(
     isVerified: boolean("is_verified").notNull().default(false),
     verifiedById: reference("verified_by_id").references(() => users.id, { onDelete: "set null" }),
     verifiedAt: timestamp("verified_at", { withTimezone: true, mode: "date" }),
+
+    /**
+     * En qué estado vuelve esta pieza. **Sólo en una nota de devolución.**
+     *
+     * Nulo en una nota de salida, y nulo en una de devolución que todavía no verificó la línea: la
+     * condición se declara al verificar, que es el momento en que alguien tiene el objeto en la
+     * mano. Un valor por omisión aquí sería afirmar que volvió entera antes de que nadie la mirara.
+     */
+    returnCondition: returnCondition("return_condition"),
 
     ...timestamps,
   },
@@ -560,6 +654,14 @@ export const productionItemsRelations = relations(productionItems, ({ one, many 
   }),
   images: many(productionItemImages),
   deliveryLines: many(productionDeliveryLines),
+  events: many(productionItemEvents),
+}))
+
+export const productionItemEventsRelations = relations(productionItemEvents, ({ one }) => ({
+  item: one(productionItems, {
+    fields: [productionItemEvents.itemId],
+    references: [productionItems.id],
+  }),
 }))
 
 export const productionWorkflowsRelations = relations(productionWorkflows, ({ one, many }) => ({

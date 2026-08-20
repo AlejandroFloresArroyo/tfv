@@ -1,6 +1,6 @@
 "use client"
 
-import { CalendarDays, Clapperboard, FolderTree, Gauge } from "lucide-react"
+import { Armchair, CalendarDays, Clapperboard, FolderTree, Gauge, PackageCheck } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
@@ -23,18 +23,29 @@ import { useTranslations } from "next-intl"
  *
  * Lo que sí se hereda es la cautela: quien no pueda ver el resumen entra igual y ve la ficha —el
  * nombre, las fechas y la publicación—, no una página vacía.
+ *
+ * ## El orden de las pestañas es el del trabajo, no el del catálogo
+ *
+ * Panel, categorías, utilería, entregas, planes. Las dos del medio van seguidas porque son **el
+ * mismo objeto físico visto dos veces**: la utilería dice qué hay y las entregas dicen por dónde
+ * sale y cómo vuelve. Separarlas obligaría a cruzar la barra entera para pasar de una silla a la
+ * nota que se la llevó.
  */
 export function ProductionNav({
   companyId,
   productionId,
   canViewProductions,
   canViewCategories,
+  canViewItems,
+  canViewDeliveries,
   canViewWorkflows,
 }: {
   companyId: string
   productionId: string
   canViewProductions: boolean
   canViewCategories: boolean
+  canViewItems: boolean
+  canViewDeliveries: boolean
   canViewWorkflows: boolean
 }) {
   const t = useTranslations("productions")
@@ -50,6 +61,26 @@ export function ProductionNav({
             label: t("categories.title"),
             icon: FolderTree,
             active: pathname.startsWith(`${base}/categories`),
+          },
+        ]
+      : []),
+    ...(canViewItems
+      ? [
+          {
+            href: `${base}/items`,
+            label: t("items.title"),
+            icon: Armchair,
+            active: pathname.startsWith(`${base}/items`),
+          },
+        ]
+      : []),
+    ...(canViewDeliveries
+      ? [
+          {
+            href: `${base}/deliveries`,
+            label: t("deliveries.title"),
+            icon: PackageCheck,
+            active: pathname.startsWith(`${base}/deliveries`),
           },
         ]
       : []),

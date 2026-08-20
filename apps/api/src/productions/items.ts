@@ -23,15 +23,22 @@
  * | `* → Devuelto` | Volvió a su dueño y salió de las manos de la producción |
  * | `Devuelto → nada` | **El único terminal** |
  *
- * ## «Entregado» es inalcanzable, y eso es deliberado
+ * ## «Entregado» no se pone a mano, y eso es deliberado
  *
- * No se pone a mano **nunca**: se llega ahí completando una nota de entrega, que se verifica pieza
- * por pieza y la firman las dos partes. Las notas son de la rebanada 22 y **no entran en esta
- * ronda**, así que hoy ningún camino lleva a `delivered` — y es correcto que así sea. Un estado que
- * significa «lo firmó quien lo recibió» puesto con un botón sería exactamente la mentira que la
- * verificación por líneas existe para impedir.
+ * No está en la tabla de transiciones como destino de nada: se llega ahí **cerrando una nota de
+ * entrega verificada pieza por pieza**, y ése es el único camino. Un estado que significa «lo
+ * recibió quien lo recibió» puesto con un botón sería exactamente la mentira que la verificación
+ * por líneas existe para impedir.
  *
- * La prueba lo fija: `delivered` es el único estado sin entrada, y `returned` el único sin salida.
+ * La prueba lo fija: `delivered` es el único estado sin entrada en `TRANSITIONS`, y `returned` el
+ * único sin salida. El cierre de la nota no consulta `canTransition` sino `canDeliver`, que es su
+ * propia regla y vive al lado de la otra para que se lean juntas.
+ *
+ * ## Todo cambio deja rastro
+ *
+ * Cada paso de estado —el alta, el cambio a mano, el cierre de una nota— escribe una fila en
+ * `production_item_events` con quién, cuándo, desde dónde, hacia dónde y por qué. Cerró H-171, que
+ * describía el hueco: se sabía cuándo había pasado algo y no quién lo había hecho.
  *
  * ## El código se acuña, no se pide
  *
@@ -44,6 +51,7 @@
 
 import {
   buildPage,
+  ConflictError,
   NotFoundError,
   newId,
   type Page,
@@ -55,6 +63,7 @@ import { type Transaction, withRequester } from "@tfv/db"
 import {
   productionCategories,
   productionContinuities,
+  productionItemEvents,
   productionItemImages,
   productionItems,
   productionProps,
@@ -63,8 +72,9 @@ import {
   productionSets,
   productions,
   uploads,
+  users,
 } from "@tfv/db/schema"
-import { and, asc, count, eq, inArray, isNull, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import {
   assertUsableImages,
@@ -73,6 +83,7 @@ import {
   sweepObjects,
 } from "../media/collections.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
+import { type DeliveryUse, deliveriesOfItem, openDeliveriesHolding } from "./deliveries.ts"
 import { loadProduction } from "./productions.ts"
 
 /** En el orden del enumerado del motor, para que las dos listas se lean igual. */
@@ -125,6 +136,22 @@ export function transitionsFrom(from: ItemStatus): readonly ItemStatus[] {
   return TRANSITIONS[from]
 }
 
+/**
+ * Si un artículo puede entregarse. **La regla del único camino a `delivered`.**
+ *
+ * Vive aquí y no en `TRANSITIONS` porque no es una transición del cambio manual: si estuviera en la
+ * tabla, `changeItemStatus` la admitiría y `delivered` dejaría de significar «lo recibió alguien
+ * que lo verificó». Está escrita al lado para que las dos reglas se lean juntas y nadie las
+ * descubra por separado.
+ *
+ * Se puede entregar desde casi cualquier estado —una silla rota se entrega rota, y eso es
+ * información, no un error—. Las dos excepciones: `returned` es terminal, y ya salió de las manos
+ * de la producción; `delivered` no se entrega dos veces.
+ */
+export function canDeliver(from: ItemStatus): boolean {
+  return from !== "delivered" && from !== "returned"
+}
+
 // ─── Lo que viaja ────────────────────────────────────────────────────────────
 
 export interface ItemImageRecord {
@@ -160,15 +187,33 @@ export interface ItemLocation extends ItemRecord {
 /**
  * Dónde se está usando un artículo.
  *
- * La spec pide tres sitios —notas de entrega, sets y jornadas— y aquí van **dos**: las notas de
- * entrega son de la rebanada 22 y no existen todavía, así que enumerarlas devolvería siempre la
- * lista vacía y eso se lee como «no está en ninguna nota», que es una afirmación que hoy nadie
- * puede hacer. Se declara el hueco en lugar de rellenarlo con un cero.
+ * Los tres sitios que la spec nombra: notas de entrega, sets y jornadas. Las notas entraron con la
+ * rebanada 22 y son la mitad que faltaba — el hueco quedaba declarado aquí en lugar de rellenarse
+ * con una lista vacía, porque «no está en ninguna nota» era entonces una afirmación que nadie podía
+ * hacer.
  */
 export interface ItemUsage {
+  readonly deliveries: readonly DeliveryUse[]
   readonly sets: readonly { id: string; name: string }[]
   readonly recordings: readonly { id: string; name: string; continuityId: string }[]
 }
+
+/** Un paso en la vida de un objeto físico. */
+export interface ItemEventRecord {
+  readonly id: string
+  readonly itemId: string
+  readonly fromStatus: ItemStatus | null
+  readonly toStatus: ItemStatus
+  readonly reason: ItemEventReason
+  readonly actorId: string | null
+  readonly actorName: string | null
+  readonly causeId: string | null
+  readonly note: string | null
+  readonly occurredAt: Date
+}
+
+export const ITEM_EVENT_REASONS = ["manual", "delivery", "return", "created"] as const
+export type ItemEventReason = (typeof ITEM_EVENT_REASONS)[number]
 
 // ─── Consulta ────────────────────────────────────────────────────────────────
 
@@ -318,7 +363,7 @@ export async function findItemByCode(
 }
 
 /**
- * Dónde se está usando un artículo: sets y jornadas.
+ * Dónde se está usando un artículo: notas, sets y jornadas.
  *
  * «SHALL consultarse **antes** de eliminarlo o de cambiar su estado, para no romper trabajo en
  * curso», dice la spec, y por eso es una consulta propia y no un campo del detalle: se pregunta en
@@ -345,6 +390,8 @@ export async function itemUsage(
       .where(and(eq(productionSetItems.itemId, itemId), isNull(productionSets.deletedAt)))
       .orderBy(asc(productionSets.name))
 
+    const deliveries = await deliveriesOfItem(tx, itemId)
+
     const recordings = await tx
       .select({
         id: productionRecordings.id,
@@ -363,7 +410,77 @@ export async function itemUsage(
       .where(and(eq(productionProps.itemId, itemId), isNull(productionRecordings.deletedAt)))
       .orderBy(asc(productionRecordings.name))
 
-    return { sets, recordings }
+    return { deliveries, sets, recordings }
+  })
+}
+
+/**
+ * La vida de un artículo, del último paso al primero.
+ *
+ * Del más reciente al más antiguo porque la pregunta que trae a alguien aquí es «¿qué le pasó?», y
+ * lo que le pasó es lo último. Quien reconstruye el recorrido entero lo lee al revés una vez; quien
+ * sólo quiere saber quién lo marcó roto lo ve en la primera fila.
+ */
+export async function listItemEvents(
+  actor: Actor,
+  companyId: string,
+  productionId: string,
+  itemId: string,
+): Promise<readonly ItemEventRecord[]> {
+  return withRequester(actor, async (tx) => {
+    await loadProduction(tx, companyId, productionId)
+    await loadItem(tx, productionId, itemId)
+
+    const rows = await tx
+      .select({ event: productionItemEvents, actorName: users.name })
+      .from(productionItemEvents)
+      .leftJoin(users, eq(users.id, productionItemEvents.actorId))
+      .where(eq(productionItemEvents.itemId, itemId))
+      .orderBy(desc(productionItemEvents.occurredAt), desc(productionItemEvents.id))
+
+    return rows.map((row) => ({
+      id: row.event.id,
+      itemId: row.event.itemId,
+      fromStatus: row.event.fromStatus,
+      toStatus: row.event.toStatus,
+      reason: row.event.reason,
+      actorId: row.event.actorId,
+      actorName: row.actorName,
+      causeId: row.event.causeId,
+      note: row.event.note,
+      occurredAt: row.event.occurredAt,
+    }))
+  })
+}
+
+/**
+ * Firma un paso de estado en el historial del artículo.
+ *
+ * **Dentro de la transacción que lo provocó, siempre.** Recibe la `tx` en lugar de abrir la suya
+ * para que un cambio que se revierte no deje un evento afirmando que ocurrió — que es la forma en
+ * que una bitácora deja de merecer confianza.
+ */
+export async function recordItemEvent(
+  tx: Transaction,
+  event: {
+    readonly itemId: string
+    readonly fromStatus: ItemStatus | null
+    readonly toStatus: ItemStatus
+    readonly reason: ItemEventReason
+    readonly actorId: string
+    readonly causeId?: string | undefined
+    readonly note?: string | undefined
+  },
+): Promise<void> {
+  await tx.insert(productionItemEvents).values({
+    id: newId(),
+    itemId: event.itemId,
+    fromStatus: event.fromStatus,
+    toStatus: event.toStatus,
+    reason: event.reason,
+    actorId: event.actorId,
+    causeId: event.causeId ?? null,
+    note: event.note ?? null,
   })
 }
 
@@ -403,6 +520,17 @@ export async function createItem(
       .returning()
 
     if (!created) throw new Error("la inserción del artículo no devolvió fila")
+
+    // El primer paso, **sin estado de origen**: antes de existir no estaba en ninguno, y escribir
+    // ahí `available` afirmaría un cambio que no ocurrió.
+    await recordItemEvent(tx, {
+      itemId: created.id,
+      fromStatus: null,
+      toStatus: created.status,
+      reason: "created",
+      actorId: actor.userId,
+    })
+
     return detailOf(tx, productionId, created.id)
   })
 }
@@ -461,13 +589,11 @@ export async function updateItem(
  * pasar de devuelto a disponible» sin la lista se queda sin saber si el problema es el destino o el
  * origen.
  *
- * ## La atribución no se guarda, y no por descuido
+ * ## La atribución se guarda en el historial, no en el artículo
  *
- * La spec pide que el cambio «quede registrado con su autor y su instante». El instante lo da
- * `updated_at`; **el autor no tiene dónde escribirse**: `production_items` no lleva columna de
- * atribución y no existe una tabla de eventos del artículo —el almacén sí la tiene,
- * `warehouse_stock_events`, y ahí es donde se ve lo que falta aquí—. Queda anotado en
- * `HALLAZGOS.md` H-171 con lo que costaría cerrarlo, que es una migración.
+ * La spec pide que el cambio «quede registrado con su autor y su instante». Los dos van a
+ * `production_item_events`, en la misma transacción que el cambio: un paso que se revierte no deja
+ * un evento afirmando que ocurrió. Es lo que cerró H-171 con la `0030`.
  */
 export async function changeItemStatus(
   actor: Actor,
@@ -484,9 +610,9 @@ export async function changeItemStatus(
       const allowed = transitionsFrom(current.status)
       throw new UnprocessableError(
         allowed.length === 0
-          ? `Un artículo ${LABELS[current.status]} ya no cambia de estado: es el final del recorrido.`
-          : `Un artículo ${LABELS[current.status]} no puede pasar a ${LABELS[status]}. ` +
-              `Desde donde está sólo cabe: ${allowed.map((one) => LABELS[one]).join(", ")}.`,
+          ? `Un artículo ${STATUS_LABELS[current.status]} ya no cambia de estado: es el final del recorrido.`
+          : `Un artículo ${STATUS_LABELS[current.status]} no puede pasar a ${STATUS_LABELS[status]}. ` +
+              `Desde donde está sólo cabe: ${allowed.map((one) => STATUS_LABELS[one]).join(", ")}.`,
       )
     }
 
@@ -495,12 +621,25 @@ export async function changeItemStatus(
       .set({ status, updatedAt: new Date() })
       .where(eq(productionItems.id, itemId))
 
+    await recordItemEvent(tx, {
+      itemId,
+      fromStatus: current.status,
+      toStatus: status,
+      reason: "manual",
+      actorId: actor.userId,
+    })
+
     return detailOf(tx, productionId, itemId)
   })
 }
 
-/** Cómo se nombra cada estado en un mensaje dirigido a una persona. */
-const LABELS: Readonly<Record<ItemStatus, string>> = {
+/**
+ * Cómo se nombra cada estado en un mensaje dirigido a una persona.
+ *
+ * Exportada porque las notas de entrega redactan los suyos con los mismos nombres: dos listas de
+ * ocho adjetivos es como acaba habiendo un «dañado» en una pantalla y un «roto» en la de al lado.
+ */
+export const STATUS_LABELS: Readonly<Record<ItemStatus, string>> = {
   available: "disponible",
   stored: "almacenado",
   delivered: "entregado",
@@ -605,6 +744,17 @@ export async function setItemImages(
  * restricción `production_props_item_xor_video` exige artículo **o** video, nunca ninguno. Es lo que
  * la spec del video ya describe para su lado —«su referencia a ese video desaparece»— y la
  * continuidad sobrevive igual.
+ *
+ * ## Una nota sin cerrar lo retiene, y la barrera declarada no sujeta · H-172
+ *
+ * `production_delivery_lines.item_id` declara `ON DELETE restrict` y **eso no se dispara nunca**:
+ * el motor sólo lo evalúa ante un `DELETE` de la fila referenciada, y aquí lo que ocurre es este
+ * `UPDATE`. La restricción está escrita, se lee como si protegiera y no puede protegerte — que es
+ * la peor de las tres formas de no tener una comprobación.
+ *
+ * Así que vive aquí, en la aplicación, y **enumera**: el rechazo dice de qué notas se trata. «No se
+ * puede, está en una entrega» obliga a quien lo lee a buscar cuál entre veinte, que es el trabajo
+ * que el mensaje debería estarle ahorrando.
  */
 export async function deleteItem(
   actor: Actor,
@@ -615,6 +765,14 @@ export async function deleteItem(
   await withRequester(actor, async (tx) => {
     await loadProduction(tx, companyId, productionId)
     await loadItem(tx, productionId, itemId)
+
+    const holding = await openDeliveriesHolding(tx, itemId)
+    if (holding.length > 0) {
+      throw new ConflictError(
+        `Este artículo figura en ${holding.length === 1 ? "una nota de entrega sin cerrar" : `${holding.length} notas de entrega sin cerrar`}: ` +
+          `${holding.map((one) => `«${one.name}»`).join(", ")}. Quítalo de ${holding.length === 1 ? "ella" : "ellas"} o ciérralas antes de darlo de baja.`,
+      )
+    }
 
     await tx.delete(productionSetItems).where(eq(productionSetItems.itemId, itemId))
     await tx.delete(productionProps).where(eq(productionProps.itemId, itemId))

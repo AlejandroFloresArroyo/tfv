@@ -4,23 +4,23 @@
 
 - [x] Artículos con sus ocho estados y su código único
 - [x] Etiqueta legible por máquina y localización por código — el símbolo lo dibuja la pantalla (29); el servidor garantiza el viaje de ida y vuelta
-- [ ] Cambio de estado atribuido — **el cambio está hecho y probado contra su tabla de transiciones; la atribución no tiene dónde escribirse**: `production_items` no lleva columna de autor y no hay tabla de eventos del artículo. Cerrarlo es una migración y este árbol no tiene número. Ver `HALLAZGOS.md` H-171
-- [ ] Consulta de dónde se usa: notas, sets y jornadas — **sets y jornadas hechas**, con la continuidad concreta; las **notas** esperan a que existan las notas de entrega, en esta misma rebanada
+- [x] Cambio de estado atribuido — cerrado por la `0030` con `production_item_events`, calcada de `warehouse_stock_events`. El alta, el cambio a mano y el cierre de una nota firman su paso **dentro de la transacción que lo provocó**. Cierra `HALLAZGOS.md` H-171
+- [x] Consulta de dónde se usa: notas, sets y jornadas — los tres sitios, con la continuidad concreta
 - [x] Eliminar retira de sets y continuidades, sin eliminarlos
-- [ ] Impedir eliminar un artículo en una nota sin cerrar — **bloqueada**: las notas de entrega no existen todavía, así que no hay contra qué comprobarlo ni cómo probarlo. Y la red que parecía estar puesta no sujeta: el `ON DELETE restrict` de `production_delivery_lines` no se dispara nunca porque la baja del artículo es lógica (`HALLAZGOS.md` H-172)
+- [x] Impedir eliminar un artículo en una nota sin cerrar — la comprobación vive en la aplicación, **enumera las notas que lo retienen** y responde `409`. El `ON DELETE restrict` sigue sin sujetar nada y por eso no se usa. Cierra `HALLAZGOS.md` H-172
 - [x] Búsqueda y filtrado
 
 ## Notas de entrega
 
-- [ ] Nota con sus cuatro estados
-- [ ] Componer la lista de artículos pone la nota en curso
-- [ ] Verificación por línea, con verificador e instante
-- [ ] Deshacer la verificación borra la atribución
-- [ ] **Impedir el cierre con líneas pendientes, indicando cuántas**
-- [ ] **Cierre atómico que marca los artículos como entregados**
-- [ ] Firmas de ambas partes, inmutables
-- [ ] Documento y enlace público
-- [ ] Eliminar la nota devuelve sus artículos a disponible
+- [x] Nota con sus cuatro estados, y su dirección: salida o devolución
+- [x] Componer la lista de artículos pone la nota en curso — se diferencia en lugar de rehacer, así que una línea que sigue conserva su verificación
+- [x] Verificación por línea, con verificador e instante
+- [x] Deshacer la verificación borra la atribución
+- [x] **Impedir el cierre con líneas pendientes, indicando cuántas** — la cuenta va dentro del mensaje
+- [x] **Cierre atómico que marca los artículos como entregados** — y en una devolución, en el estado que declaró cada línea. `canDeliver` es el único camino a «entregado»; `changeItemStatus` sigue sin llegar ahí
+- [x] Firmas de ambas partes, inmutables — **y no bloquean el cierre**, que es decisión de producto contra la lectura literal de la spec: en un set se firma en papel y una nota que no se pudiera cerrar dejaría artículos atrapados en `delivered` para siempre. Razonado en la cabecera de `deliveries.ts`
+- [x] Documento y enlace público — el servidor compone la hoja y firma la referencia, reutilizando entera la maquinaria de la cotización. **La pantalla que lo dibuja no existe todavía**: `HALLAZGOS.md` H-201
+- [x] Eliminar la nota devuelve sus artículos a disponible — sólo los que **esta** nota dejó entregados y siguen estándolo, lo cual se lee de su historial
 
 ## Planes de trabajo
 
@@ -55,9 +55,9 @@
 
 ## Verificación
 
-- [ ] Prueba: no se cierra la nota con pendientes
-- [ ] Prueba: el cierre es atómico
-- [ ] Prueba: eliminar la nota devuelve los artículos
+- [x] Prueba: no se cierra la nota con pendientes
+- [x] Prueba: el cierre es atómico — comprobada además por mutación: separando las escrituras en transacciones propias, la prueba se pone roja
+- [x] Prueba: eliminar la nota devuelve los artículos
 - [ ] Prueba: un artículo cambia de compra y sale de la anterior
 - [ ] Prueba: el presupuesto refleja un gasto nuevo de inmediato
 - [ ] Prueba: una semana del calendario se comparte por enlace

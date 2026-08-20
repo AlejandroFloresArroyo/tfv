@@ -189,6 +189,7 @@ import {
   getItemRoute,
   getSetRoute,
   getVideoRoute,
+  itemEventsRoute,
   itemLabelRoute,
   itemUsageRoute,
   listCharactersRoute,
@@ -202,6 +203,22 @@ import {
   updateSetRoute,
   updateVideoRoute,
 } from "./production-catalog.ts"
+import {
+  cancelDeliveryRoute,
+  completeDeliveryRoute,
+  createDeliveryRoute,
+  deleteDeliveryRoute,
+  deliveryDocumentRoute,
+  findDeliveryLineRoute,
+  getDeliveryRoute,
+  listDeliveriesRoute,
+  removeDeliveryLineRoute,
+  setDeliveryItemsRoute,
+  setDeliveryResponsibleRoute,
+  signDeliveryRoute,
+  updateDeliveryRoute,
+  verifyDeliveryLineRoute,
+} from "./production-deliveries.ts"
 import {
   createProductionCategoryRoute,
   createProductionRoute,
@@ -659,11 +676,30 @@ export const routes: readonly RegisteredRoute[] = [
   createItemRoute,
   itemLabelRoute,
   itemUsageRoute,
+  itemEventsRoute,
   getItemRoute,
   updateItemRoute,
   changeItemStatusRoute,
   setItemImagesRoute,
   deleteItemRoute,
+
+  // Las notas de entrega. La localización de una línea por etiqueta va **antes** que la ficha de
+  // línea con parámetro, por lo mismo que la del artículo: `by-code` casaría con `{lineId}`.
+  findDeliveryLineRoute,
+
+  listDeliveriesRoute,
+  createDeliveryRoute,
+  getDeliveryRoute,
+  updateDeliveryRoute,
+  setDeliveryResponsibleRoute,
+  setDeliveryItemsRoute,
+  verifyDeliveryLineRoute,
+  removeDeliveryLineRoute,
+  completeDeliveryRoute,
+  cancelDeliveryRoute,
+  signDeliveryRoute,
+  deliveryDocumentRoute,
+  deleteDeliveryRoute,
 
   // El desglose del guion: guiones, capítulos y escenas.
   //

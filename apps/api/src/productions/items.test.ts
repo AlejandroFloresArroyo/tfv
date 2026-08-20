@@ -98,8 +98,9 @@ describe("la tabla de transiciones", () => {
   })
 
   it("«entregado» no tiene entrada, y es el único que no la tiene", () => {
-    // Deliberado: se llega ahí cerrando una nota de entrega, que se verifica pieza por pieza y se
-    // firma. Las notas son de la rebanada 22 y no entran en esta ronda, así que hoy es inalcanzable.
+    // Deliberado, y sigue siéndolo con las notas ya construidas: `changeItemStatus` no lleva ahí
+    // nunca. El único camino es cerrar una nota de salida verificada pieza por pieza, que consulta
+    // `canDeliver` y no esta tabla.
     const sinEntrada = ITEM_STATUSES.filter((to) =>
       ITEM_STATUSES.every((from) => !canTransition(from, to)),
     )
@@ -554,11 +555,13 @@ describe("dónde se está usando un artículo", () => {
     const s = await scene()
     const item = await newItem(s, { name: "Cojín" })
 
-    const usage = await json<{ sets: unknown[]; recordings: unknown[] }>(
+    const usage = await json<{ deliveries: unknown[]; sets: unknown[]; recordings: unknown[] }>(
       await request("GET", `${s.base}/items/${item.id}/usage`, undefined, s.session.cookie),
     )
 
-    expect(usage).toEqual({ sets: [], recordings: [] })
+    // Los tres sitios de la spec, los tres vacíos. Las notas de entrega entraron con la rebanada 22
+    // y hasta entonces el hueco quedaba declarado en lugar de rellenarse con una lista vacía.
+    expect(usage).toEqual({ deliveries: [], sets: [], recordings: [] })
   })
 })
 

@@ -3,10 +3,9 @@
  *
  * Ver `openspec/specs/pdf-documents/spec.md`.
  *
- * La spec describe **seis familias** de documentos. Aquí está la única que hoy tiene entidad detrás
- * —la cotización— y el reparto por el que entrarán las otras cinco: nota de entrega y plan de
- * trabajo con producciones (20 y 22), presupuesto con la 22, recibo de venta e instructivo de
- * armado con Pixit (24 a 26).
+ * La spec describe **seis familias** de documentos. Aquí están las dos que hoy tienen entidad detrás
+ * —la cotización y la nota de entrega— y el reparto por el que entrarán las otras cuatro: plan de
+ * trabajo y presupuesto con la 22, recibo de venta e instructivo de armado con Pixit (24 a 26).
  *
  * El reparto vive en un `switch` sobre la familia que trae la referencia firmada, y no en una tabla
  * de manejadores registrables, por lo mismo que el registro de rutas: **se lee de arriba abajo y
@@ -14,17 +13,19 @@
  * es un `404` como cualquier otro.
  */
 
-import { NotFoundError, type QuoteDocument } from "@tfv/contracts"
+import { type DeliveryNoteDocument, NotFoundError, type QuoteDocument } from "@tfv/contracts"
+import { deliveryNoteByReference } from "./delivery-notes.ts"
 import { quoteDocumentByReference } from "./quotes.ts"
 import { DOCUMENT_NOT_FOUND, verifyReference } from "./reference.ts"
 
 /**
  * Lo que se sirve por un enlace público.
  *
- * Hoy es sólo el documento de cotización. Cuando entren las demás familias, esto pasa a ser una
- * unión discriminada por `kind`, que es como el navegador elegirá qué dibujar.
+ * **Unión discriminada por `kind`**, que es como el navegador elige qué dibujar. Con dos miembros
+ * ya se comporta como tal: quien la consume tiene que mirar la etiqueta antes de leer nada, en vez
+ * de dar por hecho la cotización porque era la única.
  */
-export type PublicDocument = QuoteDocument
+export type PublicDocument = QuoteDocument | DeliveryNoteDocument
 
 /**
  * Resuelve el documento al que apunta una referencia pública.
@@ -41,7 +42,10 @@ export async function publicDocument(raw: string): Promise<PublicDocument> {
     case "quote":
       return quoteDocumentByReference(reference)
 
-    // Las otras cinco familias esperan a sus rebanadas. Mientras tanto, su referencia no se puede
+    case "delivery-note":
+      return deliveryNoteByReference(reference)
+
+    // Las otras cuatro familias esperan a sus rebanadas. Mientras tanto, su referencia no se puede
     // ni emitir —nadie llama a `signReference` con ellas— y aquí no hay nada que servir.
     default:
       throw new NotFoundError(DOCUMENT_NOT_FOUND)

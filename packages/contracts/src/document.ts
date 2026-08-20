@@ -34,9 +34,9 @@ import { slugify } from "./slug.ts"
  * Las seis familias de documentos que el sistema produce.
  *
  * Conjunto cerrado, como el catálogo de permisos: un documento nuevo se declara aquí y se ve en la
- * revisión. Hoy sólo la cotización tiene composición; las otras cinco esperan a las rebanadas que
- * traen sus entidades —nota de entrega y plan de trabajo a producciones (20 y 22), presupuesto a la
- * 22, recibo e instructivo a Pixit (24 a 26)—.
+ * revisión. Hoy tienen composición **dos**: la cotización y la nota de entrega. Las otras cuatro
+ * esperan a las rebanadas que traen sus entidades —plan de trabajo y presupuesto a la 22, recibo e
+ * instructivo a Pixit (24 a 26)—.
  */
 export const DOCUMENT_KINDS = [
   "quote",
@@ -235,6 +235,128 @@ export interface QuoteDocument {
   readonly terms: string | null
   readonly observations: string | null
   readonly message: string | null
+}
+
+// ─── Nota de entrega ─────────────────────────────────────────────────────────
+
+/**
+ * La identidad de una nota de entrega.
+ *
+ * No reutiliza `DocumentIdentity`: aquélla lleva folio, código y estado de cotización, y una nota
+ * de entrega no tiene ninguna de las tres. Forzarla dejaría tres campos vacíos en la hoja
+ * impresa, que es peor que no tenerlos.
+ */
+export interface DeliveryNoteIdentity {
+  readonly name: string
+  readonly description: string
+  readonly status: "pending" | "in_progress" | "completed" | "canceled"
+  readonly direction: "outbound" | "inbound"
+  /** Cuándo se compuso **este** documento. */
+  readonly generatedAt: string
+}
+
+/** Una pieza de la nota, tal y como aparece en la hoja. */
+export interface DeliveryNoteRow {
+  readonly lineId: string
+  readonly itemName: string
+  readonly itemCode: string
+  readonly categoryName: string | null
+  readonly itemStatus: string
+  readonly isVerified: boolean
+  readonly verifiedByName: string | null
+  readonly verifiedAt: string | null
+  /** En qué estado volvió. Sólo en una nota de devolución, y sólo si se verificó. */
+  readonly returnCondition: string | null
+}
+
+/**
+ * Las piezas agrupadas por su estado de verificación.
+ *
+ * «El documento SHALL agrupar los artículos por su estado de verificación», dice la spec, y la
+ * razón se ve en el papel: quien recibe la hoja quiere leer de un golpe qué se comprobó y qué no,
+ * no ir marcando una columna de casillas línea por línea.
+ */
+export interface DeliveryNoteGroup {
+  readonly isVerified: boolean
+  readonly lines: readonly DeliveryNoteRow[]
+}
+
+/**
+ * Las firmas, o su ausencia.
+ *
+ * `isSigned` existe para que la hoja pueda **decir que no está firmada** en vez de callarse. Una
+ * nota sin firma no es un error —se cierra con las líneas verificadas, ver `deliveries.ts`— pero es
+ * un dato que quien la recibe tiene derecho a leer.
+ */
+export interface DeliveryNoteSignatures {
+  readonly isSigned: boolean
+  readonly deliveredByName: string | null
+  readonly receiverName: string | null
+  readonly signedAt: string | null
+  readonly deliveredSignatureUrl: string | null
+  readonly receiverSignatureUrl: string | null
+}
+
+export interface DeliveryNoteCounts {
+  readonly total: number
+  readonly verified: number
+  readonly pending: number
+}
+
+export interface DeliveryNoteDocumentInput {
+  readonly identity: DeliveryNoteIdentity
+  readonly issuer: DocumentParty
+  readonly productionName: string
+  readonly responsibleName: string | null
+  readonly lines: readonly DeliveryNoteRow[]
+  readonly signatures: DeliveryNoteSignatures
+}
+
+export interface DeliveryNoteDocument {
+  readonly kind: "delivery-note"
+  readonly identity: DeliveryNoteIdentity
+  readonly issuer: DocumentParty
+  readonly productionName: string
+  readonly responsibleName: string | null
+  readonly groups: readonly DeliveryNoteGroup[]
+  readonly counts: DeliveryNoteCounts
+  readonly signatures: DeliveryNoteSignatures
+}
+
+/**
+ * Compone el documento de una nota de entrega.
+ *
+ * **Lo verificado primero.** En una nota que se firma delante de alguien, lo comprobado es lo que
+ * se está entregando y lo pendiente es lo que falta por revisar: el orden de la hoja es el orden de
+ * la conversación.
+ *
+ * Un grupo vacío **no se emite**. Una sección «verificadas» con cero filas en una hoja impresa se
+ * lee como un error de impresión, no como un cero.
+ */
+export function composeDeliveryNoteDocument(
+  input: DeliveryNoteDocumentInput,
+): DeliveryNoteDocument {
+  const verified = input.lines.filter((line) => line.isVerified)
+  const pending = input.lines.filter((line) => !line.isVerified)
+
+  const groups: DeliveryNoteGroup[] = []
+  if (verified.length > 0) groups.push({ isVerified: true, lines: verified })
+  if (pending.length > 0) groups.push({ isVerified: false, lines: pending })
+
+  return {
+    kind: "delivery-note",
+    identity: input.identity,
+    issuer: input.issuer,
+    productionName: input.productionName,
+    responsibleName: input.responsibleName,
+    groups,
+    counts: {
+      total: input.lines.length,
+      verified: verified.length,
+      pending: pending.length,
+    },
+    signatures: input.signatures,
+  }
 }
 
 /**

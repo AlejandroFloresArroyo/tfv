@@ -22,6 +22,7 @@ import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import { publicDocument } from "../documents/documents.ts"
 import { quoteDocument } from "../documents/quotes.ts"
+import { deliveryNoteDocumentSchema } from "../routes/production-deliveries.ts"
 import { defineRoute, PUBLIC, REQUIRES } from "../runtime/route.ts"
 import { QUOTE_STATUSES } from "../warehouses/quotes.ts"
 import { breakdownSchema, contactSchema, paymentTermsSchema, taxesSchema } from "./quotes.ts"
@@ -154,6 +155,10 @@ export const quoteDocumentRoute = defineRoute({
  * Devuelve **sólo el documento**: ni la empresa, ni el almacén, ni la entidad en crudo. Quien abre
  * el enlace ve la hoja y nada más, que es lo que la spec pide con «no ve navegación ni datos de la
  * empresa ajenos al documento».
+ *
+ * Lo que sale es la **unión** de las familias servidas, discriminada por `kind`. Con dos miembros
+ * ya obliga a mirar la etiqueta antes de leer nada, que es lo que impide que el navegador dé por
+ * hecho la cotización el día que entre la tercera.
  */
 export const publicDocumentRoute = defineRoute({
   access: PUBLIC(
@@ -170,7 +175,11 @@ export const publicDocumentRoute = defineRoute({
       200: {
         description: "El documento",
         content: {
-          "application/json": { schema: z.object({ document: quoteDocumentSchema }) },
+          "application/json": {
+            schema: z.object({
+              document: z.union([quoteDocumentSchema, deliveryNoteDocumentSchema]),
+            }),
+          },
         },
       },
     },
