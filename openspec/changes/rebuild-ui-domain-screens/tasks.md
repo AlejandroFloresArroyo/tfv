@@ -105,8 +105,8 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 - [ ] Jornadas con asignación de reparto y continuidad
 - [ ] Inventario de utilería con estados y etiquetas
 - [ ] Entregas con verificación pieza por pieza y **firma**
-- [ ] **Calendario de planes de trabajo con sus cuatro vistas**
-- [ ] Tareas, actividades, comentarios y adjuntos
+- [x] **Calendario de planes de trabajo con sus cuatro vistas** — bajo la pestaña de planes que ya existía, sin pestaña nueva. Pinta jornadas, planes y tareas; por debajo de tableta cambia la rejilla por una agenda de los días con algo. **Comprobado con `pnpm check`, `pnpm lint:ci` y la suite, no en un navegador**
+- [x] Tareas, actividades, comentarios y adjuntos — con el documento del plan y su enlace público, que faltaba por dibujar. **Igual: sin comprobación en navegador**
 - [ ] Anclas y compras
 - [ ] Presupuesto con gráficas y documento
 - [ ] Tienda interna y órdenes de compra

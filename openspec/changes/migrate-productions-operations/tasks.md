@@ -24,23 +24,23 @@
 
 ## Planes de trabajo
 
-- [ ] Plan con sus cinco estados, fecha y responsable
-- [ ] Asociación opcional a escena, con desvinculación
-- [ ] Tareas con sus cuatro estados, creador inmutable y responsable
-- [ ] Actividades con sus dos estados
-- [ ] Recuentos y desgloses por estado
-- [ ] Comentarios en planes y en tareas
-- [ ] Archivos adjuntos en tareas y actividades
-- [ ] Eliminación en cascada con enumeración previa
-- [ ] Documento y enlace público
+- [x] Plan con sus cinco estados, fecha y responsable — se adelantó con la rebanada 20 para que el panel pudiera resumirlos
+- [x] Asociación opcional a escena, con desvinculación — `null` desvincula y omitir deja como estaba; la escena se resuelve **contra la producción**, así que una de otra empresa responde `404`
+- [x] Tareas con sus cuatro estados, creador inmutable y responsable — el creador sale del actor y no aparece en ninguna entrada de edición
+- [x] Actividades con sus dos estados
+- [x] Recuentos y desgloses por estado — el desglose sólo cuando se pide, y **descontando las bajas lógicas**
+- [x] Comentarios en planes y en tareas
+- [x] Archivos adjuntos en tareas y actividades
+- [x] Eliminación en cascada con enumeración previa — el alcance del plan cuenta las cuatro cosas que se pierden, no sólo las tareas
+- [x] Documento y enlace público — reutiliza la referencia firmada; `work-plan` ya tenía su código de familia
 
 ## Calendario
 
-- [ ] Vistas por año, mes, semana y día
-- [ ] Vista y fecha en la dirección
-- [ ] Cambio de vista conservando la fecha
-- [ ] Filtrado de tareas dentro de los planes, por categoría y personaje
-- [ ] Consulta de planes por escena y por capítulo
+- [x] Vistas por año, mes, semana y día — y **la fecha la resuelve el servidor** cuando no viene en la dirección, con el motivo (antes, durante, después, vacío) para que la pantalla nunca pinte una rejilla vacía sin explicarla
+- [x] Vista y fecha en la dirección — sin fecha, la pantalla reescribe la dirección a la fecha resuelta
+- [x] Cambio de vista conservando la fecha
+- [x] Filtrado de tareas dentro de los planes, por categoría y personaje — los planes sin tareas coincidentes no aparecen
+- [x] Consulta de planes por escena y por capítulo — el filtro de capítulo salta el tramo escena → capítulo con una expresión
 
 ## Presupuesto
 
@@ -60,4 +60,4 @@
 - [ ] Prueba: eliminar la nota devuelve los artículos
 - [ ] Prueba: un artículo cambia de compra y sale de la anterior
 - [ ] Prueba: el presupuesto refleja un gasto nuevo de inmediato
-- [ ] Prueba: una semana del calendario se comparte por enlace
+- [x] Prueba: una semana del calendario se comparte por enlace — dos sesiones distintas de la misma empresa abren la misma dirección y obtienen el mismo rango y los mismos sucesos

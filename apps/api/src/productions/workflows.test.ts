@@ -156,8 +156,10 @@ async function stage(): Promise<Stage> {
    *
    * El identificador legible de una producción es único **en toda la plataforma**, pero quien
    * comprueba si está libre lo hace con las políticas del solicitante puestas: no ve la producción
-   * de otra empresa, propone el mismo y el índice único lo rechaza con un `500`. Ver `HALLAZGOS.md`
-   * H-224. Dos escenarios de esta prueba montan empresas distintas, así que aquí se esquiva.
+   * de otra empresa, propone el mismo y el índice único lo rechaza con un `500`. Está anotado desde
+   * la rebanada 20 (`HALLAZGOS.md` H-174) y **se ha vuelto a topar aquí**: dos escenarios de esta
+   * prueba montan empresas distintas, así que se esquiva nombrando cada producción de forma
+   * distinta, que es lo que ya hacían las pruebas de aquella tanda.
    */
   const created = await request(
     "POST",
