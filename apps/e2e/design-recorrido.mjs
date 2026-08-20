@@ -23,7 +23,9 @@ async function sesion(cuenta, esquema) {
   await p.getByRole("textbox", { name: /correo/i }).fill(cuenta)
   await p.locator('input[type="password"]').first().fill("Desarrollo.2026")
   await p.getByRole("button", { name: /entrar|iniciar|acceder/i }).click()
-  await p.waitForURL((u) => !u.pathname.includes("/login") && !u.pathname.includes("/dashboard"), { timeout: 30_000 })
+  await p.waitForURL((u) => !u.pathname.includes("/login") && !u.pathname.includes("/dashboard"), {
+    timeout: 30_000,
+  })
   await p.waitForLoadState("networkidle")
   // La base es viva y las membresías cambian: si la cuenta cae en el selector, se entra a la
   // primera empresa en vez de suponer el aterrizaje directo de la siembra original.

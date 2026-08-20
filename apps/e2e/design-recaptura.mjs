@@ -27,7 +27,9 @@ async function sesion(cuenta, esquema) {
   await p.getByRole("textbox", { name: /correo/i }).fill(cuenta)
   await p.locator('input[type="password"]').first().fill("Desarrollo.2026")
   await p.getByRole("button", { name: /entrar|iniciar|acceder/i }).click()
-  await p.waitForURL((u) => !u.pathname.includes("/login") && !u.pathname.includes("/dashboard"), { timeout: 30_000 })
+  await p.waitForURL((u) => !u.pathname.includes("/login") && !u.pathname.includes("/dashboard"), {
+    timeout: 30_000,
+  })
   await p.waitForLoadState("networkidle")
   // La base es viva y las membresías cambian: si la cuenta cae en el selector, se entra a la
   // primera empresa en vez de suponer el aterrizaje directo de la siembra original.
@@ -43,14 +45,20 @@ async function foto(p, nombre, requisito) {
   await p.evaluate(() => document.fonts.ready)
   await p.waitForTimeout(1000)
   // La captura se valida antes de aceptarse: si el texto exigido no está, se reintenta una vez.
-  const cuerpo = await p.locator("main").innerText().catch(() => "")
+  const cuerpo = await p
+    .locator("main")
+    .innerText()
+    .catch(() => "")
   if (requisito && !cuerpo.includes(requisito)) {
     log(`  ⟳ ${nombre}: falta «${requisito}», reintento tras recargar`)
     await p.reload({ waitUntil: "networkidle" })
     await p.waitForTimeout(1200)
   }
   await p.screenshot({ path: `${OUT}rec-${nombre}.png`, fullPage: true })
-  const final = await p.locator("main").innerText().catch(() => "")
+  const final = await p
+    .locator("main")
+    .innerText()
+    .catch(() => "")
   const ok = !requisito || final.includes(requisito)
   log(`  ${ok ? "✓" : "✗"} ${nombre}`)
   return ok
@@ -85,23 +93,32 @@ let fallos = 0
   await p.goto(`${BASE}/companies`, { waitUntil: "networkidle" })
   // Los href se recogen antes de navegar: un locator apunta a la página en la que nació, y en
   // cuanto se navega deja de responder.
-  const hrefs = await p.locator("main a[href^='/c/']").evaluateAll((nodos) =>
-    nodos.map((n) => n.getAttribute("href")),
-  )
+  const hrefs = await p
+    .locator("main a[href^='/c/']")
+    .evaluateAll((nodos) => nodos.map((n) => n.getAttribute("href")))
   let hallada = false
   for (const href of hrefs) {
     const empresa = href?.match(/^\/c\/([^/]+)/)?.[1]
     if (!empresa) continue
     await p.goto(`${BASE}/c/${empresa}/productions`, { waitUntil: "networkidle" })
-    if (new URL(p.url()).pathname.endsWith("/productions")) { hallada = true; break }
+    if (new URL(p.url()).pathname.endsWith("/productions")) {
+      hallada = true
+      break
+    }
   }
-  if (!hallada) { log("  ✗ ninguna empresa con producciones"); fallos++ }
+  if (!hallada) {
+    log("  ✗ ninguna empresa con producciones")
+    fallos++
+  }
   if (!(await foto(p, "duena-producciones", "Producciones"))) fallos++
   const prods = p.locator("main ul li a")
   if ((await prods.count()) > 0) {
     await prods.first().click()
     if (!(await foto(p, "duena-produccion", ""))) fallos++
-  } else { log("  ✗ sin producciones que abrir"); fallos++ }
+  } else {
+    log("  ✗ sin producciones que abrir")
+    fallos++
+  }
   await ctx.close()
 }
 
