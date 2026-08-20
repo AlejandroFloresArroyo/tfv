@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./activity": "./src/activity.ts",
     "./api-client": "./src/api-client.ts",
+    "./calendar": "./src/calendar.ts",
     "./billing": "./src/billing.ts",
     "./catalog": "./src/catalog.ts",
     "./checkout": "./src/checkout.ts",
@@ -24,7 +25,8 @@
     "./order-status": "./src/order-status.ts",
     "./order-chat": "./src/order-chat.ts",
     "./storefront": "./src/storefront.ts",
-    "./sections": "./src/sections.ts"
+    "./sections": "./src/sections.ts",
+    "./work-plan": "./src/work-plan.ts"
   },
   "scripts": {
     "check": "tsc --noEmit",

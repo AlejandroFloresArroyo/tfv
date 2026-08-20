@@ -1357,7 +1357,10 @@
     "shareHint": "Enlace público de sólo lectura, para quien no tiene cuenta:",
     "doesNotReconcile": "Los importes por línea no suman el total de líneas. Revisa la cotización antes de mandar este documento.",
     "linkGone": "Este enlace no lleva a ningún documento",
-    "linkGoneBody": "Puede que el documento se haya dado de baja, o que el enlace esté incompleto. Pídele uno nuevo a quien te lo mandó."
+    "linkGoneBody": "Puede que el documento se haya dado de baja, o que el enlace esté incompleto. Pídele uno nuevo a quien te lo mandó.",
+    "workPlan": "Plan de trabajo",
+    "workPlanDocument": "Documento del plan de trabajo",
+    "backToWorkPlan": "Volver al plan"
   },
   "storefront": {
     "accessories": "Accesorios",
@@ -1895,6 +1898,112 @@
         "completed": "Completado",
         "cancelled": "Cancelado"
       }
+    },
+    "calendar": {
+      "title": "Calendario",
+      "subtitle": "Jornadas, planes y tareas de {production}.",
+      "open": "Calendario",
+      "seeInCalendar": "Ver en el calendario",
+      "viewLabel": "Vista",
+      "view": {
+        "year": "Año",
+        "month": "Mes",
+        "week": "Semana",
+        "day": "Día"
+      },
+      "previous": "Periodo anterior",
+      "next": "Periodo siguiente",
+      "character": "Personaje",
+      "allCharacters": "Todos los personajes",
+      "category": "Categoría",
+      "allCategories": "Todas las categorías",
+      "landedBefore": "El rodaje todavía no empieza. Esto es lo primero programado: {date}.",
+      "landedAfter": "Ya pasó todo lo programado. Esto es lo último: {date}.",
+      "emptyTitle": "Todavía no hay nada programado",
+      "emptyBody": "Cuando esta producción tenga jornadas de rodaje, planes de trabajo o tareas con fecha, aparecerán aquí. Mientras tanto no hay ningún día que enseñar.",
+      "noneThisDay": "Nada programado este día",
+      "noneThisRange": "Nada programado en este periodo",
+      "noneShort": "—",
+      "dayEvents": "{count, plural, =0 {sin nada} one {# suceso} other {# sucesos}}"
+    },
+    "taskStatus": {
+      "pending": "Pendiente",
+      "in_progress": "En curso",
+      "completed": "Completada",
+      "incomplete": "Incompleta"
+    },
+    "activityStatus": {
+      "incomplete": "Incompleta",
+      "completed": "Completada"
+    },
+    "tasks": {
+      "title": "Tareas",
+      "empty": "Este plan todavía no tiene tareas.",
+      "create": "Nueva tarea",
+      "createTitle": "Nueva tarea",
+      "createBody": "Nace pendiente y con tu nombre como creador, que ya no se puede cambiar.",
+      "editTitle": "Editar la tarea",
+      "deleteTitle": "Eliminar la tarea",
+      "deleteActivities": "{count, plural, one {Elimina # actividad} other {Elimina # actividades}}",
+      "deleteComments": "{count, plural, one {Elimina # comentario} other {Elimina # comentarios}}",
+      "deleteAttachments": "{count, plural, one {Elimina # archivo} other {Elimina # archivos}}",
+      "document": "Documento",
+      "loading": "Abriendo la tarea…",
+      "title_": "Título",
+      "description": "Descripción",
+      "scheduledFor": "Fecha",
+      "endsAt": "Termina",
+      "category": "Categoría",
+      "categoryHint": "Clasificarla es dirigirla al departamento que le toca.",
+      "noCategory": "Sin categoría",
+      "character": "Personaje",
+      "noCharacter": "Sin personaje",
+      "status": "Estado",
+      "createdBy": "Creada por {name}",
+      "activityCount": "{count, plural, =0 {Sin actividades} one {# actividad} other {# actividades}}",
+      "commentCount": "{count, plural, =0 {Sin comentarios} one {# comentario} other {# comentarios}}",
+      "option": {
+        "pending": "Pendiente",
+        "in_progress": "En curso",
+        "completed": "Completada",
+        "incomplete": "Incompleta"
+      }
+    },
+    "activities": {
+      "title": "Actividades",
+      "empty": "Sin actividades todavía.",
+      "placeholder": "Un paso concreto de esta tarea…",
+      "newLabel": "Nueva actividad",
+      "remove": "Eliminar la actividad {title}",
+      "markCompleted": "Marcar {title} como completada",
+      "markIncomplete": "Marcar {title} como incompleta"
+    },
+    "comments": {
+      "title": "Comentarios",
+      "planTitle": "Comentarios del plan",
+      "empty": "Nadie ha comentado todavía.",
+      "placeholder": "Escribe un comentario…",
+      "newLabel": "Nuevo comentario",
+      "send": "Comentar",
+      "unknownAuthor": "Alguien"
+    },
+    "attachments": {
+      "title": "Archivos",
+      "empty": "Sin archivos adjuntos.",
+      "remove": "Quitar el archivo {name}"
+    },
+    "workPlanDocument": {
+      "label": "Plan de trabajo",
+      "scheduledFor": "Fecha",
+      "endsAt": "Termina",
+      "responsible": "Responsable",
+      "scene": "Escena",
+      "tasks": "Trabajo",
+      "week": "Semana del {from} al {to}",
+      "undated": "Sin fecha",
+      "noTasks": "Este plan no tiene tareas registradas.",
+      "activities": "{done} de {total} actividades",
+      "totals": "{total, plural, one {# tarea} other {# tareas}}, {completed} completadas"
     }
   },
   "platform": {

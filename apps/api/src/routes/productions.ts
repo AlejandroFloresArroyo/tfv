@@ -719,6 +719,8 @@ export const createWorkflowRoute = defineRoute({
               endsAt: instant.nullable().optional(),
               observations: z.string().max(4000).optional(),
               responsibleId: z.string().nullable().optional(),
+              /** La escena que se rueda ese día. Opcional: un plan puede existir sin ella. */
+              sceneId: z.string().nullable().optional(),
             }),
           },
         },
@@ -803,6 +805,8 @@ export const updateWorkflowRoute = defineRoute({
               observations: z.string().max(4000).optional(),
               responsibleId: z.string().nullable().optional(),
               status: z.enum(WORKFLOW_STATUSES).optional(),
+              /** `null` desvincula la escena; omitirla la deja como está. No son lo mismo. */
+              sceneId: z.string().nullable().optional(),
             }),
           },
         },

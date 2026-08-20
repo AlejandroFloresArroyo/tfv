@@ -1357,7 +1357,10 @@
     "shareHint": "Public read-only link, for people without an account:",
     "doesNotReconcile": "The line amounts do not add up to the lines total. Review the quotation before sending this document.",
     "linkGone": "This link does not lead to a document",
-    "linkGoneBody": "The document may have been removed, or the link may be incomplete. Ask whoever sent it for a new one."
+    "linkGoneBody": "The document may have been removed, or the link may be incomplete. Ask whoever sent it for a new one.",
+    "workPlan": "Work plan",
+    "workPlanDocument": "Work plan document",
+    "backToWorkPlan": "Back to the plan"
   },
   "storefront": {
     "accessories": "Accessories",
@@ -1895,6 +1898,112 @@
         "completed": "Completed",
         "cancelled": "Cancelled"
       }
+    },
+    "calendar": {
+      "title": "Calendar",
+      "subtitle": "Shooting days, work plans and tasks for {production}.",
+      "open": "Calendar",
+      "seeInCalendar": "See in the calendar",
+      "viewLabel": "View",
+      "view": {
+        "year": "Year",
+        "month": "Month",
+        "week": "Week",
+        "day": "Day"
+      },
+      "previous": "Previous period",
+      "next": "Next period",
+      "character": "Character",
+      "allCharacters": "All characters",
+      "category": "Category",
+      "allCategories": "All categories",
+      "landedBefore": "The shoot has not started yet. This is the first thing scheduled: {date}.",
+      "landedAfter": "Everything scheduled has already happened. This is the last of it: {date}.",
+      "emptyTitle": "Nothing scheduled yet",
+      "emptyBody": "Once this production has shooting days, work plans or dated tasks, they will show up here. For now there is no day to show.",
+      "noneThisDay": "Nothing scheduled this day",
+      "noneThisRange": "Nothing scheduled in this period",
+      "noneShort": "—",
+      "dayEvents": "{count, plural, =0 {nothing} one {# event} other {# events}}"
+    },
+    "taskStatus": {
+      "pending": "Pending",
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "incomplete": "Incomplete"
+    },
+    "activityStatus": {
+      "incomplete": "Incomplete",
+      "completed": "Completed"
+    },
+    "tasks": {
+      "title": "Tasks",
+      "empty": "This plan has no tasks yet.",
+      "create": "New task",
+      "createTitle": "New task",
+      "createBody": "It starts pending, with your name as its creator, which can no longer change.",
+      "editTitle": "Edit the task",
+      "deleteTitle": "Delete the task",
+      "deleteActivities": "{count, plural, one {Deletes # activity} other {Deletes # activities}}",
+      "deleteComments": "{count, plural, one {Deletes # comment} other {Deletes # comments}}",
+      "deleteAttachments": "{count, plural, one {Deletes # file} other {Deletes # files}}",
+      "document": "Document",
+      "loading": "Opening the task…",
+      "title_": "Title",
+      "description": "Description",
+      "scheduledFor": "Date",
+      "endsAt": "Ends",
+      "category": "Category",
+      "categoryHint": "Classifying it sends it to the department it belongs to.",
+      "noCategory": "No category",
+      "character": "Character",
+      "noCharacter": "No character",
+      "status": "Status",
+      "createdBy": "Created by {name}",
+      "activityCount": "{count, plural, =0 {No activities} one {# activity} other {# activities}}",
+      "commentCount": "{count, plural, =0 {No comments} one {# comment} other {# comments}}",
+      "option": {
+        "pending": "Pending",
+        "in_progress": "In progress",
+        "completed": "Completed",
+        "incomplete": "Incomplete"
+      }
+    },
+    "activities": {
+      "title": "Activities",
+      "empty": "No activities yet.",
+      "placeholder": "A concrete step of this task…",
+      "newLabel": "New activity",
+      "remove": "Delete the activity {title}",
+      "markCompleted": "Mark {title} as completed",
+      "markIncomplete": "Mark {title} as incomplete"
+    },
+    "comments": {
+      "title": "Comments",
+      "planTitle": "Plan comments",
+      "empty": "Nobody has commented yet.",
+      "placeholder": "Write a comment…",
+      "newLabel": "New comment",
+      "send": "Comment",
+      "unknownAuthor": "Someone"
+    },
+    "attachments": {
+      "title": "Files",
+      "empty": "No attached files.",
+      "remove": "Remove the file {name}"
+    },
+    "workPlanDocument": {
+      "label": "Work plan",
+      "scheduledFor": "Date",
+      "endsAt": "Ends",
+      "responsible": "Responsible",
+      "scene": "Scene",
+      "tasks": "Work",
+      "week": "Week of {from} to {to}",
+      "undated": "Undated",
+      "noTasks": "This plan has no recorded tasks.",
+      "activities": "{done} of {total} activities",
+      "totals": "{total, plural, one {# task} other {# tasks}}, {completed} completed"
     }
   },
   "platform": {

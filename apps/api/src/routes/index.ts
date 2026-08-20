@@ -147,7 +147,7 @@ import {
   updateProviderRoute,
   updateUserAddressRoute,
 } from "./directory.ts"
-import { publicDocumentRoute, quoteDocumentRoute } from "./documents.ts"
+import { publicDocumentRoute, quoteDocumentRoute, workPlanDocumentRoute } from "./documents.ts"
 import { health } from "./health.ts"
 import {
   deleteMessageRoute,
@@ -219,6 +219,30 @@ import {
   updateDeliveryRoute,
   verifyDeliveryLineRoute,
 } from "./production-deliveries.ts"
+import {
+  attachToActivityRoute,
+  attachToTaskRoute,
+  createActivityRoute,
+  createTaskCommentRoute,
+  createTaskRoute,
+  createWorkflowCommentRoute,
+  deleteActivityRoute,
+  deleteTaskCommentRoute,
+  deleteTaskRoute,
+  deleteWorkflowCommentRoute,
+  detachFromActivityRoute,
+  detachFromTaskRoute,
+  getTaskRoute,
+  listTasksRoute,
+  listWorkflowCommentsRoute,
+  plansWithTasksRoute,
+  productionCalendarRoute,
+  taskScopeRoute,
+  updateActivityRoute,
+  updateTaskCommentRoute,
+  updateTaskRoute,
+  updateWorkflowCommentRoute,
+} from "./production-workflows.ts"
 import {
   createProductionCategoryRoute,
   createProductionRoute,
@@ -562,6 +586,7 @@ export const routes: readonly RegisteredRoute[] = [
 
   // El documento comercial y su enlace público. Ver `pdf-documents`.
   quoteDocumentRoute,
+  workPlanDocumentRoute,
   publicDocumentRoute,
 
   // Pedidos de almacén: la bandeja del operador. Aceptar genera la cotización.
@@ -647,6 +672,32 @@ export const routes: readonly RegisteredRoute[] = [
   updateWorkflowRoute,
   workflowScopeRoute,
   deleteWorkflowRoute,
+
+  // Lo que cuelga del plan: sus tareas, sus actividades, la conversación y los archivos.
+  listTasksRoute,
+  createTaskRoute,
+  getTaskRoute,
+  updateTaskRoute,
+  taskScopeRoute,
+  deleteTaskRoute,
+  createActivityRoute,
+  updateActivityRoute,
+  deleteActivityRoute,
+  listWorkflowCommentsRoute,
+  createWorkflowCommentRoute,
+  updateWorkflowCommentRoute,
+  deleteWorkflowCommentRoute,
+  createTaskCommentRoute,
+  updateTaskCommentRoute,
+  deleteTaskCommentRoute,
+  attachToTaskRoute,
+  detachFromTaskRoute,
+  attachToActivityRoute,
+  detachFromActivityRoute,
+
+  // El calendario: jornadas, planes y tareas en un solo flujo fechado.
+  productionCalendarRoute,
+  plansWithTasksRoute,
 
   // Los catálogos del rodaje: quién aparece, con qué se viste un decorado y cómo debía verse algo.
   listCharactersRoute,

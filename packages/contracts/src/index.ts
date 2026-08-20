@@ -9,6 +9,7 @@
 
 export * from "./activity.ts"
 export * from "./api-client.ts"
+export * from "./calendar.ts"
 export * from "./checkout.ts"
 export * from "./computed.ts"
 export * from "./document.ts"
@@ -30,3 +31,4 @@ export * from "./shipping.ts"
 export * from "./shipping-status.ts"
 export * from "./slug.ts"
 export * from "./storefront.ts"
+export * from "./work-plan.ts"

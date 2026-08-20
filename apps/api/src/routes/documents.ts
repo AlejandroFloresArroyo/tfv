@@ -3,7 +3,8 @@
  *
  * Ver `openspec/specs/pdf-documents/spec.md`.
  *
- * Son dos, y la diferencia entre ellas es todo lo que hay que entender de esta superficie:
+ * Son de dos clases, y la diferencia entre ellas es todo lo que hay que entender de esta
+ * superficie:
  *
  * - La del **panel** exige el permiso de ver la cotización y devuelve, además del documento, la
  *   referencia con la que se comparte. Quien mira el documento es quien lo va a mandar.
@@ -17,11 +18,18 @@
  */
 
 import { z } from "@hono/zod-openapi"
-import { DOCUMENT_KINDS, RENT_FREQUENCIES, TRADE_TYPES } from "@tfv/contracts"
+import {
+  DOCUMENT_KINDS,
+  RENT_FREQUENCIES,
+  TASK_STATUSES,
+  TRADE_TYPES,
+  WORK_PLAN_STATUSES,
+} from "@tfv/contracts"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
 import { publicDocument } from "../documents/documents.ts"
 import { quoteDocument } from "../documents/quotes.ts"
+import { workPlanDocument } from "../documents/work-plans.ts"
 import { deliveryNoteDocumentSchema } from "../routes/production-deliveries.ts"
 import { defineRoute, PUBLIC, REQUIRES } from "../runtime/route.ts"
 import { QUOTE_STATUSES } from "../warehouses/quotes.ts"
@@ -101,10 +109,91 @@ const quoteDocumentSchema = z.object({
   message: z.string().nullable(),
 })
 
+// ─── El plan de trabajo ──────────────────────────────────────────────────────
+
+const workPlanTaskSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  status: z.enum(TASK_STATUSES),
+  /** Día civil `AAAA-MM-DD`. Nulo en las que no llevan fecha, que van al final de la hoja. */
+  day: z.string().nullable(),
+  scheduledFor: z.string().nullable(),
+  endsAt: z.string().nullable(),
+  responsibleName: z.string().nullable(),
+  categoryName: z.string().nullable(),
+  characterName: z.string().nullable(),
+  activityCount: z.number().int(),
+  completedActivities: z.number().int(),
+})
+
+const workPlanDocumentSchema = z.object({
+  kind: z.literal(DOCUMENT_KINDS[3]),
+  identity: z.object({
+    code: z.string(),
+    status: z.enum(WORK_PLAN_STATUSES),
+    observations: z.string(),
+    scheduledFor: z.string(),
+    endsAt: z.string().nullable(),
+    generatedAt: z.string(),
+  }),
+  issuer: partySchema,
+  production: z.object({ id: z.string(), name: z.string() }),
+  scene: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      label: z.string(),
+      chapterName: z.string(),
+    })
+    .nullable(),
+  responsibleName: z.string().nullable(),
+  weeks: z
+    .array(
+      z.object({
+        from: z.string(),
+        to: z.string(),
+        days: z
+          .array(z.object({ day: z.string(), tasks: z.array(workPlanTaskSchema).readonly() }))
+          .readonly(),
+      }),
+    )
+    .readonly(),
+  undated: z.array(workPlanTaskSchema).readonly(),
+  totals: z.object({
+    tasks: z.number().int(),
+    byStatus: z.object(
+      Object.fromEntries(TASK_STATUSES.map((status) => [status, z.number().int()])) as Record<
+        (typeof TASK_STATUSES)[number],
+        z.ZodNumber
+      >,
+    ),
+  }),
+})
+
+/**
+ * Lo que puede salir por el enlace público, discriminado por familia.
+ *
+ * **`kind` es el discriminante y por eso va como literal en cada miembro**: el navegador elige qué
+ * hoja dibujar mirando ese campo, y una unión sin discriminante le obligaría a adivinar por la
+ * forma — que es como acaba dibujando una cotización con la plantilla de un plan.
+ */
+const publicDocumentSchema = z.discriminatedUnion("kind", [
+  quoteDocumentSchema,
+  deliveryNoteDocumentSchema,
+  workPlanDocumentSchema,
+])
+
 const quoteParams = z.object({
   companyId: z.string(),
   warehouseId: z.string(),
   quoteId: z.string(),
+})
+
+const workPlanParams = z.object({
+  companyId: z.string(),
+  productionId: z.string(),
+  workflowId: z.string(),
 })
 
 function actorOf(c: Parameters<Parameters<typeof defineRoute>[0]["handler"]>[0]): Actor {
@@ -150,6 +239,40 @@ export const quoteDocumentRoute = defineRoute({
 })
 
 /**
+ * El documento de un plan de trabajo, con su enlace.
+ *
+ * Va con `productions.workflows.view`, y por el mismo motivo que la cotización va con la suya: **el
+ * catálogo cerrado no tiene ninguna clave para compartir un documento**, así que añadir una es
+ * decisión de producto. El documento no enseña nada que la ficha del plan no enseñe ya; lo que sí
+ * concede de más es poder repartirlo fuera, y es la misma reserva anotada en `HALLAZGOS.md` H-61.
+ */
+export const workPlanDocumentRoute = defineRoute({
+  access: REQUIRES("productions.workflows.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/productions/{productionId}/workflows/{workflowId}/document",
+    summary: "Componer el documento de un plan de trabajo",
+    tags: ["Documentos"],
+    request: { params: workPlanParams },
+    responses: {
+      200: {
+        description: "El documento y la referencia con la que se comparte",
+        content: {
+          "application/json": {
+            schema: z.object({ document: workPlanDocumentSchema, reference: z.string() }),
+          },
+        },
+      },
+    },
+  },
+  handler: async (c) => {
+    const { companyId, productionId, workflowId } = c.req.valid("param")
+    const result = await workPlanDocument(actorOf(c), companyId, productionId, workflowId)
+    return c.json(result, 200)
+  },
+})
+
+/**
  * El documento por su enlace público.
  *
  * Devuelve **sólo el documento**: ni la empresa, ni el almacén, ni la entidad en crudo. Quien abre
@@ -173,13 +296,9 @@ export const publicDocumentRoute = defineRoute({
     request: { params: z.object({ reference: z.string() }) },
     responses: {
       200: {
-        description: "El documento",
+        description: "El documento, de la familia que sea",
         content: {
-          "application/json": {
-            schema: z.object({
-              document: z.union([quoteDocumentSchema, deliveryNoteDocumentSchema]),
-            }),
-          },
+          "application/json": { schema: z.object({ document: publicDocumentSchema }) },
         },
       },
     },

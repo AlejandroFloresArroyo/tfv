@@ -38,8 +38,17 @@ import {
   UnprocessableError,
 } from "@tfv/contracts"
 import { type Transaction, withRequester } from "@tfv/db"
-import { productionTasks, productionWorkflows, users } from "@tfv/db/schema"
-import { and, count, eq, inArray, isNull } from "drizzle-orm"
+import {
+  productionAttachments,
+  productionChapters,
+  productionComments,
+  productionScenes,
+  productionTaskActivities,
+  productionTasks,
+  productionWorkflows,
+  users,
+} from "@tfv/db/schema"
+import { and, count, eq, inArray, isNull, sql } from "drizzle-orm"
 import type { Actor } from "../companies/companies.ts"
 import { collectionConditions, collectionOrder, windowOf } from "../runtime/collection.ts"
 import { loadProduction } from "./productions.ts"
@@ -98,6 +107,15 @@ export const workflowQuery: QuerySchema = {
     status: { type: "enum", values: WORKFLOW_STATUSES, set: true, label: "Estado" },
     responsibleId: { type: "id", label: "Responsable" },
     sceneId: { type: "id", label: "Escena" },
+    /**
+     * Los planes de **cualquier escena de un capítulo**.
+     *
+     * El plan no apunta al capítulo: apunta a la escena, y la escena al capítulo. El filtro salta
+     * ese tramo con una expresión en lugar de obligar a quien pregunta a traerse antes la lista de
+     * escenas y mandarlas todas — que es lo que convierte «los planes del capítulo 3» en dos
+     * consultas y una dirección de cuatro mil caracteres.
+     */
+    chapterId: { type: "id", label: "Capítulo" },
     scheduledFor: { type: "date", range: true, label: "Fecha" },
   },
   searchable: ["code", "observations"],
@@ -113,6 +131,9 @@ const mapping = {
     status: productionWorkflows.status,
     responsibleId: productionWorkflows.responsibleId,
     sceneId: productionWorkflows.sceneId,
+    // El capítulo de la escena del plan. Un plan sin escena no tiene capítulo y no casa con
+    // ninguno, que es lo correcto: no pertenece a ninguna parte del guion.
+    chapterId: sql`(select s.chapter_id from production_scenes s where s.id = ${productionWorkflows.sceneId})`,
     scheduledFor: productionWorkflows.scheduledFor,
     code: productionWorkflows.code,
     createdAt: productionWorkflows.createdAt,
@@ -182,6 +203,8 @@ export interface CreateWorkflowInput {
   readonly endsAt?: string | null | undefined
   readonly observations?: string | undefined
   readonly responsibleId?: string | null | undefined
+  /** La escena que se rueda ese día. Opcional: «un plan SHALL poder existir sin ella». */
+  readonly sceneId?: string | null | undefined
 }
 
 export async function createWorkflow(
@@ -207,6 +230,7 @@ export async function createWorkflow(
         scheduledFor,
         endsAt,
         responsibleId: input.responsibleId ?? null,
+        sceneId: await resolveScene(tx, productionId, input.sceneId ?? null),
         // El estado no se recibe: la spec dice «un plan nace pendiente», y admitirlo en el alta
         // convertiría un invariante en un valor por omisión que cualquiera puede sobrescribir.
       })
@@ -223,6 +247,15 @@ export interface UpdateWorkflowInput {
   readonly observations?: string | undefined
   readonly responsibleId?: string | null | undefined
   readonly status?: WorkflowStatus | undefined
+  /**
+   * La escena del plan.
+   *
+   * `null` la **desvincula** y omitirla la deja como está. Son cosas distintas y por eso el tipo
+   * las distingue: sin la diferencia, guardar el formulario de observaciones desvincularía la
+   * escena sin que nadie lo pidiera. Es el escenario «se le retira la escena → el plan sigue
+   * existiendo sin escena», y desvincular no es eliminar nada.
+   */
+  readonly sceneId?: string | null | undefined
 }
 
 /**
@@ -252,6 +285,9 @@ export async function updateWorkflow(
     if (input.observations !== undefined) patch.observations = input.observations.trim()
     if (input.responsibleId !== undefined) patch.responsibleId = input.responsibleId
     if (input.status !== undefined) patch.status = input.status
+    if (input.sceneId !== undefined) {
+      patch.sceneId = await resolveScene(tx, productionId, input.sceneId)
+    }
 
     const scheduledFor =
       input.scheduledFor === undefined ? current.scheduledFor : requireDate(input.scheduledFor)
@@ -283,8 +319,24 @@ export async function updateWorkflow(
  */
 export interface WorkflowScope {
   readonly tasks: number
+  /** Las de todas sus tareas. Cuelgan dos niveles más abajo y se pierden igual. */
+  readonly activities: number
+  /** Los del plan y los de sus tareas, juntos: lo que se pierde es la conversación entera. */
+  readonly comments: number
+  readonly attachments: number
 }
 
+/**
+ * Lo que se pierde al eliminar un plan, contado de verdad.
+ *
+ * «La confirmación SHALL enumerar previamente lo que se perderá». Enumerar sólo las tareas decía
+ * media verdad: con ellas se van sus actividades, sus comentarios y sus archivos, y un adjunto que
+ * desaparece sin avisar es lo que hace que alguien lo vuelva a subir la semana siguiente.
+ *
+ * Las cuatro cifras **descuentan las bajas lógicas**. No es un detalle de estilo: contar filas ya
+ * borradas convierte la advertencia en un número inventado, y es exactamente el fallo que en la
+ * tanda anterior ninguna de cuarenta y seis pruebas cazó.
+ */
 export async function workflowScope(
   actor: Actor,
   companyId: string,
@@ -295,9 +347,73 @@ export async function workflowScope(
     await loadProduction(tx, companyId, productionId)
     await loadWorkflow(tx, productionId, workflowId)
 
-    const counts = await taskCounts(tx, [workflowId])
-    return { tasks: counts.get(workflowId)?.total ?? 0 }
+    const tasks = await tx
+      .select({ id: productionTasks.id })
+      .from(productionTasks)
+      .where(and(eq(productionTasks.workflowId, workflowId), isNull(productionTasks.deletedAt)))
+
+    const taskIds = tasks.map((row) => row.id)
+
+    const [activities, taskComments, planComments, attachments] = await Promise.all([
+      countOf(
+        tx
+          .select({ value: count() })
+          .from(productionTaskActivities)
+          .where(
+            taskIds.length === 0
+              ? sql`false`
+              : and(
+                  inArray(productionTaskActivities.taskId, taskIds),
+                  isNull(productionTaskActivities.deletedAt),
+                ),
+          ),
+      ),
+      countOf(
+        tx
+          .select({ value: count() })
+          .from(productionComments)
+          .where(
+            taskIds.length === 0
+              ? sql`false`
+              : and(
+                  inArray(productionComments.taskId, taskIds),
+                  isNull(productionComments.deletedAt),
+                ),
+          ),
+      ),
+      countOf(
+        tx
+          .select({ value: count() })
+          .from(productionComments)
+          .where(
+            and(
+              eq(productionComments.workflowId, workflowId),
+              isNull(productionComments.deletedAt),
+            ),
+          ),
+      ),
+      countOf(
+        tx
+          .select({ value: count() })
+          .from(productionAttachments)
+          .where(
+            taskIds.length === 0 ? sql`false` : inArray(productionAttachments.taskId, taskIds),
+          ),
+      ),
+    ])
+
+    return {
+      tasks: taskIds.length,
+      activities,
+      comments: taskComments + planComments,
+      attachments,
+    }
   })
+}
+
+/** El valor de un recuento, o cero. Los `select count()` devuelven una fila con un campo. */
+async function countOf(query: Promise<{ value: number }[]>): Promise<number> {
+  return (await query)[0]?.value ?? 0
 }
 
 export async function deleteWorkflow(
@@ -463,6 +579,41 @@ function assertOrdered(scheduledFor: Date | null, endsAt: Date | null): void {
   if (endsAt.getTime() < scheduledFor.getTime()) {
     throw new UnprocessableError("El plan no puede terminar antes de empezar")
   }
+}
+
+/**
+ * Que la escena sea **de esta producción**.
+ *
+ * El plan apunta a la escena y la escena cuelga de un capítulo, que es quien lleva la producción:
+ * nada en el modelo comprueba que las dos puntas coincidan. Sin esto, un plan podría programar la
+ * escena de otra empresa — la misma familia de fallo que la jornada rodando la escena ajena
+ * (`HALLAZGOS.md` H-188).
+ *
+ * `null` es «sin escena» y no un tropiezo: es como se desvincula.
+ */
+async function resolveScene(
+  tx: Transaction,
+  productionId: string,
+  sceneId: string | null,
+): Promise<string | null> {
+  if (sceneId === null) return null
+
+  const [row] = await tx
+    .select({ id: productionScenes.id })
+    .from(productionScenes)
+    .innerJoin(productionChapters, eq(productionChapters.id, productionScenes.chapterId))
+    .where(
+      and(
+        eq(productionScenes.id, sceneId),
+        eq(productionChapters.productionId, productionId),
+        isNull(productionScenes.deletedAt),
+        isNull(productionChapters.deletedAt),
+      ),
+    )
+    .limit(1)
+
+  if (!row) throw new NotFoundError("La escena no existe")
+  return row.id
 }
 
 export async function loadWorkflow(tx: Transaction, productionId: string, workflowId: string) {
