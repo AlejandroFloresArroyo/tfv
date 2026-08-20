@@ -87,6 +87,12 @@ export {
 export { PasswordInput, type PasswordInputProps } from "./components/password-input.tsx"
 export { ReorderList, type ReorderListProps } from "./components/reorder-list.tsx"
 export { SearchSelect, type SearchSelectProps } from "./components/search-select.tsx"
+export {
+  SignaturePad,
+  type SignaturePadHandle,
+  type SignaturePadLabels,
+  type SignaturePadProps,
+} from "./components/signature-pad.tsx"
 export { Spinner, type SpinnerProps } from "./components/spinner.tsx"
 export {
   Avatar,
