@@ -8,6 +8,12 @@
  */
 
 export {
+  BarChart,
+  type BarChartProps,
+  type ChartBar,
+  type ChartRow,
+} from "./components/bar-chart.tsx"
+export {
   Button,
   type ButtonProps,
   type ButtonSize,
@@ -141,6 +147,7 @@ export {
  * ayudantes del navegador también: sus nombres ya son suyos.
  */
 export * as browserMedia from "./lib/browser-media.ts"
+export { barRatios, MIN_BAR, shareOf } from "./lib/chart.ts"
 export { cn } from "./lib/cn.ts"
 export type {
   Derivative,
