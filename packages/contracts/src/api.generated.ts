@@ -1941,6 +1941,652 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/deliveries": {
+    /** Listar las notas de entrega de una producción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_status?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      status?: string | Array<string>
+      direction?: string | Array<string>
+      responsibleId?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        name: string
+        description: string
+        status: "pending" | "in_progress" | "completed" | "canceled"
+        direction: "outbound" | "inbound"
+        responsibleId: string | null
+        responsibleName: string | null
+        signedById: string | null
+        signedByName: string | null
+        signatureUploadId: string | null
+        receiverName: string | null
+        receiverSignatureUploadId: string | null
+        signedAt: string | null
+        isSigned: boolean
+        counts: {
+          total: number
+          verified: number
+          pending: number
+        }
+        lines: Array<{
+          id: string
+          deliveryId: string
+          itemId: string
+          itemName: string
+          itemCode: string
+          itemStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+          isVerified: boolean
+          verifiedById: string | null
+          verifiedByName: string | null
+          verifiedAt: string | null
+          returnCondition: "returned" | "damaged" | "incomplete" | "lost" | "robbed" | null
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/deliveries": {
+    /** Abrir una nota de entrega */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    body: {
+      name: string
+      description?: string
+      direction?: "outbound" | "inbound"
+      responsibleId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      status: "pending" | "in_progress" | "completed" | "canceled"
+      direction: "outbound" | "inbound"
+      responsibleId: string | null
+      responsibleName: string | null
+      signedById: string | null
+      signedByName: string | null
+      signatureUploadId: string | null
+      receiverName: string | null
+      receiverSignatureUploadId: string | null
+      signedAt: string | null
+      isSigned: boolean
+      counts: {
+        total: number
+        verified: number
+        pending: number
+      }
+      lines: Array<{
+        id: string
+        deliveryId: string
+        itemId: string
+        itemName: string
+        itemCode: string
+        itemStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+        isVerified: boolean
+        verifiedById: string | null
+        verifiedByName: string | null
+        verifiedAt: string | null
+        returnCondition: "returned" | "damaged" | "incomplete" | "lost" | "robbed" | null
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/deliveries/{deliveryId}": {
+    /** Ver una nota de entrega */
+    params: {
+      companyId: string
+      productionId: string
+      deliveryId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      status: "pending" | "in_progress" | "completed" | "canceled"
+      direction: "outbound" | "inbound"
+      responsibleId: string | null
+      responsibleName: string | null
+      signedById: string | null
+      signedByName: string | null
+      signatureUploadId: string | null
+      receiverName: string | null
+      receiverSignatureUploadId: string | null
+      signedAt: string | null
+      isSigned: boolean
+      counts: {
+        total: number
+        verified: number
+        pending: number
+      }
+      lines: Array<{
+        id: string
+        deliveryId: string
+        itemId: string
+        itemName: string
+        itemCode: string
+        itemStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+        isVerified: boolean
+        verifiedById: string | null
+        verifiedByName: string | null
+        verifiedAt: string | null
+        returnCondition: "returned" | "damaged" | "incomplete" | "lost" | "robbed" | null
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/deliveries/{deliveryId}": {
+    /** Editar el encabezado de una nota */
+    params: {
+      companyId: string
+      productionId: string
+      deliveryId: string
+    }
+    body: {
+      name?: string
+      description?: string
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      status: "pending" | "in_progress" | "completed" | "canceled"
+      direction: "outbound" | "inbound"
+      responsibleId: string | null
+      responsibleName: string | null
+      signedById: string | null
+      signedByName: string | null
+      signatureUploadId: string | null
+      receiverName: string | null
+      receiverSignatureUploadId: string | null
+      signedAt: string | null
+      isSigned: boolean
+      counts: {
+        total: number
+        verified: number
+        pending: number
+      }
+      lines: Array<{
+        id: string
+        deliveryId: string
+        itemId: string
+        itemName: string
+        itemCode: string
+        itemStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+        isVerified: boolean
+        verifiedById: string | null
+        verifiedByName: string | null
+        verifiedAt: string | null
+        returnCondition: "returned" | "damaged" | "incomplete" | "lost" | "robbed" | null
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/deliveries/{deliveryId}": {
+    /** Dar de baja una nota de entrega */
+    params: {
+      companyId: string
+      productionId: string
+      deliveryId: string
+    }
+    response: undefined
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/deliveries/{deliveryId}/cancellation": {
+    /** Cancelar una nota de entrega */
+    params: {
+      companyId: string
+      productionId: string
+      deliveryId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      status: "pending" | "in_progress" | "completed" | "canceled"
+      direction: "outbound" | "inbound"
+      responsibleId: string | null
+      responsibleName: string | null
+      signedById: string | null
+      signedByName: string | null
+      signatureUploadId: string | null
+      receiverName: string | null
+      receiverSignatureUploadId: string | null
+      signedAt: string | null
+      isSigned: boolean
+      counts: {
+        total: number
+        verified: number
+        pending: number
+      }
+      lines: Array<{
+        id: string
+        deliveryId: string
+        itemId: string
+        itemName: string
+        itemCode: string
+        itemStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+        isVerified: boolean
+        verifiedById: string | null
+        verifiedByName: string | null
+        verifiedAt: string | null
+        returnCondition: "returned" | "damaged" | "incomplete" | "lost" | "robbed" | null
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/deliveries/{deliveryId}/completion": {
+    /** Cerrar una nota de entrega */
+    params: {
+      companyId: string
+      productionId: string
+      deliveryId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      status: "pending" | "in_progress" | "completed" | "canceled"
+      direction: "outbound" | "inbound"
+      responsibleId: string | null
+      responsibleName: string | null
+      signedById: string | null
+      signedByName: string | null
+      signatureUploadId: string | null
+      receiverName: string | null
+      receiverSignatureUploadId: string | null
+      signedAt: string | null
+      isSigned: boolean
+      counts: {
+        total: number
+        verified: number
+        pending: number
+      }
+      lines: Array<{
+        id: string
+        deliveryId: string
+        itemId: string
+        itemName: string
+        itemCode: string
+        itemStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+        isVerified: boolean
+        verifiedById: string | null
+        verifiedByName: string | null
+        verifiedAt: string | null
+        returnCondition: "returned" | "damaged" | "incomplete" | "lost" | "robbed" | null
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/deliveries/{deliveryId}/document": {
+    /** Componer el documento de una nota de entrega */
+    params: {
+      companyId: string
+      productionId: string
+      deliveryId: string
+    }
+    response: {
+      document: {
+        kind: "delivery-note"
+        identity: {
+          name: string
+          description: string
+          status: "pending" | "in_progress" | "completed" | "canceled"
+          direction: "outbound" | "inbound"
+          generatedAt: string
+        }
+        issuer: {
+          name: string
+          taxId?: string
+          email?: string
+          phone?: string
+          address?: string
+          contacts: Array<unknown>
+        }
+        productionName: string
+        responsibleName: string | null
+        groups: Array<{
+          isVerified: boolean
+          lines: Array<{
+            lineId: string
+            itemName: string
+            itemCode: string
+            categoryName: string | null
+            itemStatus: string
+            isVerified: boolean
+            verifiedByName: string | null
+            verifiedAt: string | null
+            returnCondition: string | null
+          }>
+        }>
+        counts: {
+          total: number
+          verified: number
+          pending: number
+        }
+        signatures: {
+          isSigned: boolean
+          deliveredByName: string | null
+          receiverName: string | null
+          signedAt: string | null
+          deliveredSignatureUrl: string | null
+          receiverSignatureUrl: string | null
+        }
+      }
+      reference: string
+    }
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/deliveries/{deliveryId}/items": {
+    /** Componer la lista de artículos de una nota */
+    params: {
+      companyId: string
+      productionId: string
+      deliveryId: string
+    }
+    body: {
+      itemIds: Array<string>
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      status: "pending" | "in_progress" | "completed" | "canceled"
+      direction: "outbound" | "inbound"
+      responsibleId: string | null
+      responsibleName: string | null
+      signedById: string | null
+      signedByName: string | null
+      signatureUploadId: string | null
+      receiverName: string | null
+      receiverSignatureUploadId: string | null
+      signedAt: string | null
+      isSigned: boolean
+      counts: {
+        total: number
+        verified: number
+        pending: number
+      }
+      lines: Array<{
+        id: string
+        deliveryId: string
+        itemId: string
+        itemName: string
+        itemCode: string
+        itemStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+        isVerified: boolean
+        verifiedById: string | null
+        verifiedByName: string | null
+        verifiedAt: string | null
+        returnCondition: "returned" | "damaged" | "incomplete" | "lost" | "robbed" | null
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/deliveries/{deliveryId}/lines/by-code/{code}": {
+    /** Localizar la línea de una nota por la etiqueta del artículo */
+    params: {
+      companyId: string
+      productionId: string
+      deliveryId: string
+      code: string
+    }
+    response: {
+      id: string
+      deliveryId: string
+      itemId: string
+      itemName: string
+      itemCode: string
+      itemStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+      isVerified: boolean
+      verifiedById: string | null
+      verifiedByName: string | null
+      verifiedAt: string | null
+      returnCondition: "returned" | "damaged" | "incomplete" | "lost" | "robbed" | null
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/deliveries/{deliveryId}/lines/{lineId}": {
+    /** Quitar una pieza de una nota */
+    params: {
+      companyId: string
+      productionId: string
+      deliveryId: string
+      lineId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      status: "pending" | "in_progress" | "completed" | "canceled"
+      direction: "outbound" | "inbound"
+      responsibleId: string | null
+      responsibleName: string | null
+      signedById: string | null
+      signedByName: string | null
+      signatureUploadId: string | null
+      receiverName: string | null
+      receiverSignatureUploadId: string | null
+      signedAt: string | null
+      isSigned: boolean
+      counts: {
+        total: number
+        verified: number
+        pending: number
+      }
+      lines: Array<{
+        id: string
+        deliveryId: string
+        itemId: string
+        itemName: string
+        itemCode: string
+        itemStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+        isVerified: boolean
+        verifiedById: string | null
+        verifiedByName: string | null
+        verifiedAt: string | null
+        returnCondition: "returned" | "damaged" | "incomplete" | "lost" | "robbed" | null
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/deliveries/{deliveryId}/lines/{lineId}/verification": {
+    /** Verificar una pieza, o deshacer su verificación */
+    params: {
+      companyId: string
+      productionId: string
+      deliveryId: string
+      lineId: string
+    }
+    body: {
+      isVerified: boolean
+      returnCondition?: "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      status: "pending" | "in_progress" | "completed" | "canceled"
+      direction: "outbound" | "inbound"
+      responsibleId: string | null
+      responsibleName: string | null
+      signedById: string | null
+      signedByName: string | null
+      signatureUploadId: string | null
+      receiverName: string | null
+      receiverSignatureUploadId: string | null
+      signedAt: string | null
+      isSigned: boolean
+      counts: {
+        total: number
+        verified: number
+        pending: number
+      }
+      lines: Array<{
+        id: string
+        deliveryId: string
+        itemId: string
+        itemName: string
+        itemCode: string
+        itemStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+        isVerified: boolean
+        verifiedById: string | null
+        verifiedByName: string | null
+        verifiedAt: string | null
+        returnCondition: "returned" | "damaged" | "incomplete" | "lost" | "robbed" | null
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/deliveries/{deliveryId}/responsible": {
+    /** Fijar el responsable de una nota */
+    params: {
+      companyId: string
+      productionId: string
+      deliveryId: string
+    }
+    body: {
+      responsibleId: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      status: "pending" | "in_progress" | "completed" | "canceled"
+      direction: "outbound" | "inbound"
+      responsibleId: string | null
+      responsibleName: string | null
+      signedById: string | null
+      signedByName: string | null
+      signatureUploadId: string | null
+      receiverName: string | null
+      receiverSignatureUploadId: string | null
+      signedAt: string | null
+      isSigned: boolean
+      counts: {
+        total: number
+        verified: number
+        pending: number
+      }
+      lines: Array<{
+        id: string
+        deliveryId: string
+        itemId: string
+        itemName: string
+        itemCode: string
+        itemStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+        isVerified: boolean
+        verifiedById: string | null
+        verifiedByName: string | null
+        verifiedAt: string | null
+        returnCondition: "returned" | "damaged" | "incomplete" | "lost" | "robbed" | null
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PUT /companies/{companyId}/productions/{productionId}/deliveries/{deliveryId}/signatures": {
+    /** Registrar las firmas de una nota */
+    params: {
+      companyId: string
+      productionId: string
+      deliveryId: string
+    }
+    body: {
+      receiverName: string
+      signatureUploadId?: string | null
+      receiverSignatureUploadId?: string | null
+    }
+    response: {
+      id: string
+      productionId: string
+      name: string
+      description: string
+      status: "pending" | "in_progress" | "completed" | "canceled"
+      direction: "outbound" | "inbound"
+      responsibleId: string | null
+      responsibleName: string | null
+      signedById: string | null
+      signedByName: string | null
+      signatureUploadId: string | null
+      receiverName: string | null
+      receiverSignatureUploadId: string | null
+      signedAt: string | null
+      isSigned: boolean
+      counts: {
+        total: number
+        verified: number
+        pending: number
+      }
+      lines: Array<{
+        id: string
+        deliveryId: string
+        itemId: string
+        itemName: string
+        itemCode: string
+        itemStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+        isVerified: boolean
+        verifiedById: string | null
+        verifiedByName: string | null
+        verifiedAt: string | null
+        returnCondition: "returned" | "damaged" | "incomplete" | "lost" | "robbed" | null
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/items": {
     /** Listar el inventario de una producción */
     params: {
@@ -2108,6 +2754,29 @@ export interface ApiEndpoints {
     response: undefined
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/items/{itemId}/events": {
+    /** El historial de estado de un artículo */
+    params: {
+      companyId: string
+      productionId: string
+      itemId: string
+    }
+    response: {
+      items: Array<{
+        id: string
+        itemId: string
+        fromStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed" | null
+        toStatus: "available" | "stored" | "delivered" | "returned" | "damaged" | "incomplete" | "lost" | "robbed"
+        reason: "manual" | "delivery" | "return" | "created"
+        actorId: string | null
+        actorName: string | null
+        causeId: string | null
+        note: string | null
+        occurredAt: string
+      }>
+    }
+  }
+
   "PUT /companies/{companyId}/productions/{productionId}/items/{itemId}/images": {
     /** Sustituir la galería de un artículo */
     params: {
@@ -2199,6 +2868,12 @@ export interface ApiEndpoints {
       itemId: string
     }
     response: {
+      deliveries: Array<{
+        id: string
+        name: string
+        status: "pending" | "in_progress" | "completed" | "canceled"
+        direction: "outbound" | "inbound"
+      }>
       sets: Array<{
         id: string
         name: string
@@ -9857,6 +10532,52 @@ export interface ApiEndpoints {
         terms: string | null
         observations: string | null
         message: string | null
+      } | {
+        kind: "delivery-note"
+        identity: {
+          name: string
+          description: string
+          status: "pending" | "in_progress" | "completed" | "canceled"
+          direction: "outbound" | "inbound"
+          generatedAt: string
+        }
+        issuer: {
+          name: string
+          taxId?: string
+          email?: string
+          phone?: string
+          address?: string
+          contacts: Array<unknown>
+        }
+        productionName: string
+        responsibleName: string | null
+        groups: Array<{
+          isVerified: boolean
+          lines: Array<{
+            lineId: string
+            itemName: string
+            itemCode: string
+            categoryName: string | null
+            itemStatus: string
+            isVerified: boolean
+            verifiedByName: string | null
+            verifiedAt: string | null
+            returnCondition: string | null
+          }>
+        }>
+        counts: {
+          total: number
+          verified: number
+          pending: number
+        }
+        signatures: {
+          isSigned: boolean
+          deliveredByName: string | null
+          receiverName: string | null
+          signedAt: string | null
+          deliveredSignatureUrl: string | null
+          receiverSignatureUrl: string | null
+        }
       }
     }
   }
