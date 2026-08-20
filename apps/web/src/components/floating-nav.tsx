@@ -1,9 +1,9 @@
 "use client"
 
 import { cn, Drawer, DrawerContent, DrawerTrigger } from "@tfv/ui"
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { Clapperboard, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { usePathname } from "next/navigation"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 
 /**
@@ -48,6 +48,7 @@ export function FloatingNav({
   children: ReactNode
 }) {
   const t = useTranslations()
+  const locale = useLocale()
   const [open, setOpen] = useState(false)
   // En escritorio con puntero fino la pizarra es **persistente**: no-modal, se trabaja con ella
   // abierta, elegir no la cierra, y la elección se recuerda. En tacto sigue modal y autoescondida.
@@ -144,6 +145,7 @@ export function FloatingNav({
         label={label}
         closeLabel={t("shell.closeMenu")}
         closable={!always}
+        header={<Portada locale={locale} />}
         // Persistente: tocar fuera no cierra —se está trabajando al lado— y el foco no se roba al
         // abrir, porque abrir es el estado de reposo del escritorio, no una interrupción.
         // El foco vuelve al asa al cerrar —es lo accesible—, pero lo devolvemos nosotros con
@@ -164,5 +166,38 @@ export function FloatingNav({
         <nav aria-label={label}>{children}</nav>
       </DrawerContent>
     </Drawer>
+  )
+}
+
+/**
+ * La portada de la ventana: la fecha de hoy, como abre toda hoja de llamado.
+ *
+ * Es el dato real más barato que existe —ninguna petición, ningún invento— y hace que la ventana
+ * tenga cara aunque un rol acotado vea tres entradas. Sólo se monta en cliente (el contenido del
+ * cajón vive tras un portal que no se sirve), así que la fecha del navegador no pelea con ninguna
+ * del servidor.
+ */
+function Portada({ locale }: { locale: string }) {
+  const hoy = new Date()
+  const dia = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(hoy)
+  const fecha = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(hoy)
+  const anio = hoy.getFullYear()
+
+  return (
+    <div className="relative overflow-hidden border-edge border-b px-4 pt-4 pb-3">
+      {/* El derrame de la temperatura de la rúbrica, contenido en la portada. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(18rem_9rem_at_0%_0%,color-mix(in_oklab,var(--luz-aparta)_14%,transparent),transparent_70%)]"
+      />
+      <Clapperboard
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-3 -bottom-4 size-20 rotate-[-8deg] text-content/6"
+      />
+      <p className="legend relative text-content-faint">
+        {dia} · {anio}
+      </p>
+      <p className="display relative mt-0.5 text-h2 text-content">{fecha}</p>
+    </div>
   )
 }
