@@ -23,7 +23,7 @@ export default async function CompanyLayout({
   const company = requireCompany(profile, companyId)
 
   return (
-    <div className="mx-auto flex w-full max-w-(--breakpoint-desktop) flex-1 flex-col">
+    <div className="empuje-pizarra mx-auto flex w-full max-w-(--breakpoint-desktop) flex-1 flex-col">
       {/* La navegación es la pizarra flotante: no ocupa columna ni fila. El contenido tiene el
           ancho completo en todos los tamaños, que es la razón de ser del cajón. */}
       <CompanyNav company={company} companies={profile.companies} />

@@ -1,7 +1,7 @@
 "use client"
 
 import { cn, Drawer, DrawerContent, DrawerTrigger } from "@tfv/ui"
-import { Clapperboard } from "lucide-react"
+import { ChevronUp, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { type ReactNode, useEffect, useState } from "react"
@@ -51,6 +51,16 @@ export function FloatingNav({
   // biome-ignore lint/correctness/useExhaustiveDependencies: la ruta es el disparador, no una lectura.
   useEffect(() => setOpen(false), [pathname])
 
+  // El empuje: el estado del cajón se publica en `<html>` y el CSS de `empuje-pizarra` hace el
+  // resto. Va en la raíz y no en un contexto de React porque quien se mueve es un armazón de
+  // servidor que no puede suscribirse a nada.
+  useEffect(() => {
+    const raiz = document.documentElement
+    if (open) raiz.setAttribute("data-pizarra", "abierta")
+    else raiz.removeAttribute("data-pizarra")
+    return () => raiz.removeAttribute("data-pizarra")
+  }, [open])
+
   return (
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger
@@ -69,11 +79,25 @@ export function FloatingNav({
           "hover:bg-panel-hover data-[state=open]:border-accent data-[state=open]:text-tinta-aparta",
         )}
       >
-        <Clapperboard className="size-5 shrink-0" aria-hidden="true" />
+        {/* El icono dice lo que el botón hace —abrir o cerrar el panel lateral—, no lo que la
+            marca es: una claqueta sola era críptica. El estado lo refuerzan el intercambio del
+            icono y el giro de la flecha. */}
+        {open ? (
+          <PanelLeftClose className="size-5 shrink-0" aria-hidden="true" />
+        ) : (
+          <PanelLeftOpen className="size-5 shrink-0" aria-hidden="true" />
+        )}
         {/* En teléfono el nombre cede el sitio: la pastilla entera taparía la esquina de trabajo. */}
         <span className="hidden max-w-[13rem] truncate text-body2 font-semibold tablet:block">
           {label}
         </span>
+        <ChevronUp
+          aria-hidden="true"
+          className={cn(
+            "hidden size-4 shrink-0 text-content-faint transition-transform duration-200 ease-[--ease-out-soft] tablet:block",
+            open && "rotate-180",
+          )}
+        />
       </DrawerTrigger>
 
       <DrawerContent label={label} closeLabel={t("shell.closeMenu")} header={header}>

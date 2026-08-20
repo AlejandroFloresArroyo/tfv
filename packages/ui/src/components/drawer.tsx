@@ -6,15 +6,19 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react"
 import { cn } from "../lib/cn.ts"
 
 /**
- * Cajón lateral: un diálogo anclado al borde izquierdo.
+ * Ventana flotante de navegación: un diálogo que flota junto a su asa, no una barra.
  *
  * Envuelve el primitivo de Radix por las mismas razones que el diálogo: la trampa de foco, el
  * cierre con `Escape`, el foco devuelto al disparador y la página inerte detrás no se improvisan,
  * y hacerlos mal no se ve.
  *
- * El deslizamiento de entrada es **cambio de estado explícito**, no hover: la regla del mundo —al
- * pasar el ratón sólo cambia el color— queda intacta. Con movimiento reducido, la regla global lo
- * colapsa a un fotograma.
+ * Dos decisiones de forma:
+ *
+ * - **Es ventana, no barra.** Flota despegada de los bordes con su radio, su filo de luz y su
+ *   sombra de capa — la familia del menú y el diálogo, no un panel de borde a borde.
+ * - **El velo es transparente.** El contenido no se oscurece: se hace a un lado (el empuje vive en
+ *   `empuje-pizarra` y lo gobierna quien la abre). Tocar fuera sigue cerrando, porque el velo
+ *   sigue ahí atrapando el gesto; lo que ya no hace es teatro.
  */
 
 export const Drawer = Primitive.Root
@@ -39,23 +43,24 @@ export function DrawerContent({
 }: DrawerContentProps) {
   return (
     <Primitive.Portal>
-      <Primitive.Overlay className="fixed inset-0 z-(--z-overlay) bg-overlay" />
+      <Primitive.Overlay className="fixed inset-0 z-(--z-overlay) bg-transparent" />
 
       <Primitive.Content
         aria-label={label}
         className={cn(
-          "fixed inset-y-0 left-0 z-(--z-dialog) flex w-[19rem] max-w-[85vw] flex-col",
-          "border-edge border-r bg-panel-raised",
-          "shadow-[0_24px_64px_-16px_rgb(0_0_0/0.4)] dark:shadow-[0_24px_64px_-16px_rgb(0_0_0/0.8)]",
-          "data-[state=open]:enter-slide-left",
+          "fixed bottom-20 left-4 z-(--z-dialog) flex w-[19rem] max-w-[calc(100vw-2rem)] flex-col",
+          "max-h-[calc(100dvh-6.5rem)] overflow-hidden rounded-2xl",
+          "border border-edge bg-panel-raised/95 backdrop-blur-md",
+          "shadow-[0_24px_64px_-16px_rgb(0_0_0/0.45)] dark:shadow-[0_24px_64px_-16px_rgb(0_0_0/0.85)]",
+          "data-[state=open]:enter-rise",
           className,
         )}
         {...rest}
       >
-        {/* El canto de luz de las tarjetas, en el filo por el que entra el cajón. */}
+        {/* El filo superior de luz de las tarjetas: es lo que separa una ventana de un rectángulo. */}
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-edge-control to-transparent"
+          className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-edge-control to-transparent"
         />
 
         <div className="flex items-start justify-between gap-2 border-edge border-b p-4">

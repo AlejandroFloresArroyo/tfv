@@ -24,7 +24,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   requirePlatformAdmin(profile)
 
   return (
-    <div className="mx-auto flex w-full max-w-(--breakpoint-desktop) flex-1 flex-col">
+    <div className="empuje-pizarra mx-auto flex w-full max-w-(--breakpoint-desktop) flex-1 flex-col">
       <PlatformNav />
       {/* El rincón del asa se reserva abajo: sin esto, el final de una lista larga queda
           escondido debajo de la pastilla. */}

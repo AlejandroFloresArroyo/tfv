@@ -774,6 +774,15 @@
   }
 }
 
+/* La entrada de una ventana flotante: sube un poco y se asienta, como un menú de sistema. Sin
+   escala y sin rebote. */
+@keyframes entra-sube {
+  from {
+    opacity: 0;
+    translate: 0 0.75rem;
+  }
+}
+
 @utility enter-fade {
   animation: entra-desvanece 160ms var(--ease-out-soft) both;
 }
@@ -782,6 +791,24 @@
   animation:
     entra-izquierda 220ms var(--ease-out-soft) both,
     entra-desvanece 220ms var(--ease-out-soft) both;
+}
+
+@utility enter-rise {
+  animation: entra-sube 200ms var(--ease-out-soft) both;
+}
+
+/* El empuje de la pizarra: cuando el cajón está abierto, el contenido se hace a un lado en vez de
+   quedar debajo. Es transición de estado explícita —la abre un botón—, así que la regla del
+   movimiento de color en hover queda intacta; y con movimiento reducido colapsa a un fotograma.
+   En teléfono no hay empuje: correr 21rem en una pantalla de 24 no deja nada. */
+@utility empuje-pizarra {
+  transition: padding-left 280ms var(--ease-out-soft);
+
+  :root[data-pizarra="abierta"] & {
+    @media (min-width: 48rem) {
+      padding-left: 21rem;
+    }
+  }
 }
 
 /* ═══ Voces ══════════════════════════════════════════════════════════════════ */
