@@ -1,7 +1,8 @@
-import { ItemCard } from "@tfv/ui"
+import { Button, ItemCard } from "@tfv/ui"
 import { CalendarDays } from "lucide-react"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
+import Link from "next/link"
 import { getFormatter, getTranslations } from "next-intl/server"
 import { Collection, type PageEnvelope } from "~/components/collection/collection.tsx"
 import { type FilterSpec, toApiQuery, toSearchParams } from "~/components/collection/params.ts"
@@ -86,6 +87,21 @@ export default async function WorkflowsPage({
     <CreateWorkflow companyId={companyId} productionId={productionId} />
   ) : undefined
 
+  /**
+   * La entrada al calendario, que es la otra vista de esto mismo.
+   *
+   * Va aquí y no en la navegación de la producción: el calendario **es** la presentación natural de
+   * los planes, no una sección aparte, y la pestaña que ya existe lleva su icono desde el principio.
+   */
+  const toCalendar = (
+    <Button variant="secondary" size="sm" asChild>
+      <Link href={`/c/${companyId}/productions/${productionId}/workflows/calendar`}>
+        <CalendarDays className="size-4" aria-hidden="true" />
+        {t("productions.calendar.open")}
+      </Link>
+    </Button>
+  )
+
   return (
     <PageShell
       title={t("productions.workflows.title")}
@@ -96,7 +112,12 @@ export default async function WorkflowsPage({
             }),
           }
         : {})}
-      actions={create}
+      actions={
+        <>
+          {toCalendar}
+          {create}
+        </>
+      }
     >
       <ProductionNav
         companyId={companyId}
@@ -125,7 +146,14 @@ export default async function WorkflowsPage({
                   <CalendarDays className="size-4" aria-hidden="true" />
                 </span>
               }
-              title={format.dateTime(new Date(workflow.scheduledFor), { dateStyle: "full" })}
+              title={
+                <Link
+                  href={`/c/${companyId}/productions/${productionId}/workflows/${workflow.id}`}
+                  className="rounded-xs underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-focus"
+                >
+                  {format.dateTime(new Date(workflow.scheduledFor), { dateStyle: "full" })}
+                </Link>
+              }
               subtitle={workflow.observations || undefined}
               meta={
                 <>

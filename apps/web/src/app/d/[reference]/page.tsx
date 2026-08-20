@@ -1,9 +1,11 @@
 import { documentStamp, type QuoteDocument } from "@tfv/contracts/document"
+import type { WorkPlanDocument } from "@tfv/contracts/work-plan"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
 import { getTranslations } from "next-intl/server"
 import { DocumentActions } from "~/components/documents/document-actions.tsx"
 import { QuoteSheet } from "~/components/documents/quote-sheet.tsx"
+import { WorkPlanSheet } from "~/components/documents/work-plan-sheet.tsx"
 import { Logo } from "~/components/logo.tsx"
 import { apiGet } from "~/lib/api.server.ts"
 
@@ -32,7 +34,15 @@ export default async function PublicDocumentPage({
   const t = await getTranslations("documents")
   const { reference } = await params
 
-  const result = await apiGet<{ document: QuoteDocument }>(`/public/documents/${reference}`)
+  /**
+   * Lo que llega puede ser de **cualquier familia**, y `kind` es lo que lo dice.
+   *
+   * Se discrimina por ese campo y no por la forma: adivinar por la forma es como una cotización
+   * acaba dibujada con la plantilla de un plan el día que las dos coinciden en un par de campos.
+   */
+  const result = await apiGet<{ document: QuoteDocument | WorkPlanDocument }>(
+    `/public/documents/${reference}`,
+  )
 
   if (!result.ok) {
     // Un enlace roto no es un error del sistema: es un enlace que ya no lleva a ninguna parte, y a
@@ -57,10 +67,19 @@ export default async function PublicDocumentPage({
     <main className="min-h-dvh bg-canvas px-4 py-6 tablet:px-6 tablet:py-8">
       <div className="documento-fuera-de-la-hoja mx-auto mb-4 flex max-w-[210mm] flex-wrap items-center justify-between gap-3">
         <Logo />
-        <DocumentActions label={t("quote")} reference={document.identity.folio} />
+        <DocumentActions
+          label={document.kind === "work-plan" ? t("workPlan") : t("quote")}
+          reference={
+            document.kind === "work-plan" ? document.identity.code : document.identity.folio
+          }
+        />
       </div>
 
-      <QuoteSheet document={document} stamp={documentStamp("TFV", address, new Date())} />
+      {document.kind === "work-plan" ? (
+        <WorkPlanSheet document={document} stamp={documentStamp("TFV", address, new Date())} />
+      ) : (
+        <QuoteSheet document={document} stamp={documentStamp("TFV", address, new Date())} />
+      )}
 
       <p className="documento-fuera-de-la-hoja mx-auto mt-3 max-w-[210mm] text-body3 text-content-faint">
         {t("downloadHint")}

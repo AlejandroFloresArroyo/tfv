@@ -135,3 +135,146 @@ export interface RoleRow {
   id: string
   name: string
 }
+
+// ─── El tiempo de la producción: tareas y calendario ─────────────────────────
+
+/** Los dos estados de una actividad. */
+export const ACTIVITY_STATUSES = ["incomplete", "completed"] as const
+
+export type ActivityStatus = (typeof ACTIVITY_STATUSES)[number]
+
+export interface AttachmentRow {
+  id: string
+  uploadId: string
+  name: string
+  url: string
+  kind: string
+  createdAt: string
+}
+
+export interface CommentRow {
+  id: string
+  workflowId: string | null
+  taskId: string | null
+  body: string
+  authorId: string | null
+  authorName: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ActivityRow {
+  id: string
+  taskId: string
+  title: string
+  description: string
+  status: ActivityStatus
+  scheduledFor: string | null
+  endsAt: string | null
+  responsibleId: string | null
+  responsibleName: string | null
+  createdById: string | null
+  createdByName: string | null
+  attachments: AttachmentRow[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TaskRow {
+  id: string
+  workflowId: string
+  categoryId: string | null
+  categoryName: string | null
+  characterId: string | null
+  characterName: string | null
+  title: string
+  description: string
+  status: TaskStatus
+  scheduledFor: string | null
+  endsAt: string | null
+  responsibleId: string | null
+  responsibleName: string | null
+  /** Quién la creó. Inmutable: no aparece en ningún formulario de edición. */
+  createdById: string | null
+  createdByName: string | null
+  activityCount: number
+  activitiesByStatus?: Record<ActivityStatus, number>
+  attachmentCount: number
+  commentCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TaskDetailRow extends TaskRow {
+  activities: ActivityRow[]
+  comments: CommentRow[]
+  attachments: AttachmentRow[]
+}
+
+/** Lo que se pierde al eliminar una tarea. Lo cuenta el servidor. */
+export interface TaskScope {
+  activities: number
+  comments: number
+  attachments: number
+}
+
+/** Lo que se pierde al eliminar un plan. Cuatro cifras, no una. */
+export interface WorkflowScope {
+  tasks: number
+  activities: number
+  comments: number
+  attachments: number
+}
+
+/** Las cuatro vistas del calendario, de la más amplia a la más estrecha. */
+export const CALENDAR_VIEWS = ["year", "month", "week", "day"] as const
+
+export type CalendarView = (typeof CALENDAR_VIEWS)[number]
+
+/** Los tres tipos de suceso que caben en el calendario. */
+export const CALENDAR_KINDS = ["recording", "workflow", "task"] as const
+
+export type CalendarKind = (typeof CALENDAR_KINDS)[number]
+
+/**
+ * Por qué el calendario aterrizó donde aterrizó.
+ *
+ * Los cuatro son cuatro frases distintas en pantalla. El cuarto es el que evita la rejilla en
+ * blanco: cuando no hay nada programado se dice con palabras, no se dibuja un mes desierto.
+ */
+export const LANDING_REASONS = ["before", "during", "after", "empty"] as const
+
+export type LandingReason = (typeof LANDING_REASONS)[number]
+
+export interface CalendarEventRow {
+  kind: CalendarKind
+  id: string
+  /** Día civil `AAAA-MM-DD`. Es por el que se agrupa la rejilla. */
+  day: string
+  startsAt: string | null
+  endsAt: string | null
+  title: string
+  /** El estado propio de su tipo. Cada uno tiene los suyos y no se mezclan. */
+  status: string
+  workflowId: string | null
+  sceneId: string | null
+  sceneLabel: string | null
+  categoryId: string | null
+  categoryName: string | null
+  characterId: string | null
+  characterName: string | null
+  responsibleName: string | null
+}
+
+export interface CalendarData {
+  view: CalendarView
+  landing: { date: string; reason: LandingReason }
+  range: { from: string; to: string }
+  events: CalendarEventRow[]
+}
+
+/** Un personaje de la producción, para el filtro del calendario. */
+export interface CharacterRow {
+  id: string
+  name: string
+}
