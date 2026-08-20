@@ -4,7 +4,7 @@ import { cn, Drawer, DrawerContent, DrawerTrigger } from "@tfv/ui"
 import { ChevronUp, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
-import { type ReactNode, useEffect, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 
 /**
  * La pizarra flotante: la navegación del panel como cajón autoescondido.
@@ -30,6 +30,11 @@ import { type ReactNode, useEffect, useState } from "react"
  *   sube desde el borde en un teléfono.
  */
 
+const PREFERENCIA = "tfv_pizarra"
+
+/** La calibración de escritorio del sistema: ancho y puntero fino, las dos a la vez. */
+const ESCRITORIO = "(min-width: 64rem) and (pointer: fine)"
+
 export function FloatingNav({
   label,
   header,
@@ -43,13 +48,44 @@ export function FloatingNav({
 }) {
   const t = useTranslations()
   const [open, setOpen] = useState(false)
+  // En escritorio con puntero fino la pizarra es **persistente**: no-modal, se trabaja con ella
+  // abierta, elegir no la cierra, y la elección se recuerda. En tacto sigue modal y autoescondida.
+  const [persistent, setPersistent] = useState(false)
   const pathname = usePathname()
 
-  // Elegir un destino cierra el cajón. Se observa la ruta en lugar de envolver cada enlace: los
-  // enlaces ya existen en tres grupos distintos, y un envoltorio olvidado sería un cajón que a
-  // veces se queda abierto encima de la pantalla nueva.
+  useEffect(() => {
+    const media = window.matchMedia(ESCRITORIO)
+    const aplicar = () => {
+      setPersistent(media.matches)
+      // Al entrar al escritorio, la preferencia guardada decide; abierta salvo cierre recordado.
+      if (media.matches) setOpen(localStorage.getItem(PREFERENCIA) !== "cerrada")
+    }
+    aplicar()
+    media.addEventListener("change", aplicar)
+    return () => media.removeEventListener("change", aplicar)
+  }, [])
+
+  function cambiar(siguiente: boolean) {
+    setOpen(siguiente)
+    // Sólo el escritorio recuerda: en tacto el autoescondido es la regla y no hay nada que guardar.
+    if (persistent) localStorage.setItem(PREFERENCIA, siguiente ? "abierta" : "cerrada")
+  }
+
+  // Elegir un destino cierra el cajón **en tacto**. Se observa la ruta en lugar de envolver cada
+  // enlace: un envoltorio olvidado sería un cajón que a veces se queda abierto encima de la
+  // pantalla nueva. En escritorio persistente, elegir navega y la pizarra se queda.
+  //
+  // La primera pasada se salta a propósito: en el montaje este efecto corre en el mismo commit que
+  // el de arriba, con `persistent` todavía en falso, y cerraría lo que aquél acaba de abrir.
+  const primeraRuta = useRef(true)
   // biome-ignore lint/correctness/useExhaustiveDependencies: la ruta es el disparador, no una lectura.
-  useEffect(() => setOpen(false), [pathname])
+  useEffect(() => {
+    if (primeraRuta.current) {
+      primeraRuta.current = false
+      return
+    }
+    if (!persistent) setOpen(false)
+  }, [pathname])
 
   // El empuje: el estado del cajón se publica en `<html>` y el CSS de `empuje-pizarra` hace el
   // resto. Va en la raíz y no en un contexto de React porque quien se mueve es un armazón de
@@ -62,7 +98,9 @@ export function FloatingNav({
   }, [open])
 
   return (
-    <Drawer open={open} onOpenChange={setOpen}>
+    // No-modal en persistente: la página sigue viva al lado —sin trampa de foco ni velo—, que es
+    // la diferencia entre un panel con el que se trabaja y un diálogo que interrumpe.
+    <Drawer open={open} onOpenChange={cambiar} modal={!persistent}>
       <DrawerTrigger
         aria-label={label}
         title={t("shell.openMenu")}
@@ -100,7 +138,19 @@ export function FloatingNav({
         />
       </DrawerTrigger>
 
-      <DrawerContent label={label} closeLabel={t("shell.closeMenu")} header={header}>
+      <DrawerContent
+        label={label}
+        closeLabel={t("shell.closeMenu")}
+        header={header}
+        // Persistente: tocar fuera no cierra —se está trabajando al lado— y el foco no se roba al
+        // abrir, porque abrir es el estado de reposo del escritorio, no una interrupción.
+        {...(persistent
+          ? {
+              onInteractOutside: (event: Event) => event.preventDefault(),
+              onOpenAutoFocus: (event: Event) => event.preventDefault(),
+            }
+          : {})}
+      >
         <nav aria-label={label}>{children}</nav>
       </DrawerContent>
     </Drawer>

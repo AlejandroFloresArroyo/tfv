@@ -797,16 +797,20 @@
   animation: entra-sube 200ms var(--ease-out-soft) both;
 }
 
-/* El empuje de la pizarra: cuando el cajón está abierto, el contenido se hace a un lado en vez de
-   quedar debajo. Es transición de estado explícita —la abre un botón—, así que la regla del
-   movimiento de color en hover queda intacta; y con movimiento reducido colapsa a un fotograma.
-   En teléfono no hay empuje: correr 21rem en una pantalla de 24 no deja nada. */
+/* El empuje de la pizarra: el contenido se desliza como cuerpo rígido —translate, nunca padding—
+   y lo que no cabe sale por el borde derecho, al estilo de una ventana corrida en un gestor de
+   mosaico. No se redimensiona nada: el ancho del contenido es el mismo abierto que cerrado, que es
+   lo que mantiene cada línea de texto y cada tabla exactamente donde estaban.
+
+   Es transición de estado explícita —la abre un botón—, así que la regla del movimiento de color
+   en hover queda intacta; con movimiento reducido colapsa a un fotograma. En teléfono no hay
+   empuje: correr 21rem en una pantalla de 24 no deja nada. */
 @utility empuje-pizarra {
-  transition: padding-left 280ms var(--ease-out-soft);
+  transition: translate 280ms var(--ease-out-soft);
 
   :root[data-pizarra="abierta"] & {
     @media (min-width: 48rem) {
-      padding-left: 21rem;
+      translate: 21rem 0;
     }
   }
 }
@@ -920,6 +924,13 @@
 
   html.dark {
     color-scheme: dark;
+  }
+
+  /* Con la pizarra abierta, lo que el empuje saca por el borde se recorta en vez de generar una
+     barra de desplazamiento horizontal: el contenido corrido es un cuerpo fuera de cuadro, no una
+     página más ancha. */
+  :root[data-pizarra="abierta"] {
+    overflow-x: clip;
   }
 
   body {

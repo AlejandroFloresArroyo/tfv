@@ -25,6 +25,16 @@ if (!new URL(p.url()).pathname.startsWith("/c/")) {
   await p.waitForLoadState("networkidle")
 }
 
+/* En headless el puntero es fino incluso a tamaño iPad, así que la pizarra puede nacer abierta
+   donde en el dispositivo real (puntero grueso) nace cerrada. La sonda no supone: comprueba. */
+const abierta = () => p.locator("[role=dialog]").count().then((n) => n > 0)
+const abrir = async () => {
+  if (!(await abierta())) {
+    await p.getByRole("button", { name: /renta fílmica/i }).click()
+    await p.waitForTimeout(400)
+  }
+}
+
 const foto = async (nombre) => {
   await p.evaluate(() => document.fonts.ready)
   await p.waitForTimeout(900)
@@ -33,7 +43,7 @@ const foto = async (nombre) => {
 }
 
 await foto("apaisada-cerrada")
-await p.getByRole("button", { name: /renta fílmica/i }).click()
+await abrir()
 await foto("apaisada-abierta")
 
 // Elegir cierra el cajón y navega.
@@ -45,8 +55,39 @@ await foto("tras-elegir")
 await p.setViewportSize({ width: 834, height: 1194 })
 await p.emulateMedia({ colorScheme: "light" })
 await p.reload({ waitUntil: "networkidle" })
-await p.getByRole("button", { name: /renta fílmica/i }).click()
+await abrir()
 await foto("vertical-abierta-claro")
+
+// Escritorio con puntero fino: la pizarra nace abierta, elegir NO la cierra, y el empuje es
+// rígido (el contenido conserva su ancho: se mide antes y después).
+await p.setViewportSize({ width: 1440, height: 900 })
+await p.emulateMedia({ colorScheme: "dark" })
+// La preferencia pudo quedar escrita por los pasos táctiles simulados; el escritorio se prueba
+// desde el estado de fábrica.
+await p.evaluate(() => localStorage.removeItem("tfv_pizarra"))
+await p.reload({ waitUntil: "networkidle" })
+await p.waitForTimeout(1200)
+const naceAbierta = await p.evaluate(() => document.documentElement.getAttribute("data-pizarra"))
+const anchoAbierta = await p.evaluate(
+  () => document.querySelector("main")?.getBoundingClientRect().width,
+)
+await foto("escritorio-persistente")
+await p.getByRole("link", { name: /roles/i }).click()
+await p.waitForLoadState("networkidle")
+await p.waitForTimeout(800)
+const sigueAbierta = await p.evaluate(() => document.documentElement.getAttribute("data-pizarra"))
+log(
+  `  persistente: nace=${abierta === "abierta"} · sigue tras elegir=${sigueAbierta === "abierta"}`,
+)
+await p.getByRole("button", { name: /renta fílmica/i }).click()
+await p.waitForTimeout(600)
+const anchoCerrada = await p.evaluate(
+  () => document.querySelector("main")?.getBoundingClientRect().width,
+)
+log(
+  `  rígido: ancho abierta=${Math.round(anchoAbierta)} cerrada=${Math.round(anchoCerrada)} (deben ser iguales)`,
+)
+await foto("escritorio-cerrada")
 
 await navegador.close()
 log("listo")

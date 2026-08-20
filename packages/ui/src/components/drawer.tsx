@@ -48,8 +48,10 @@ export function DrawerContent({
       <Primitive.Content
         aria-label={label}
         className={cn(
-          "fixed bottom-20 left-4 z-(--z-dialog) flex w-[19rem] max-w-[calc(100vw-2rem)] flex-col",
-          "max-h-[calc(100dvh-6.5rem)] overflow-hidden rounded-2xl",
+          // Anclada justo debajo de la barra superior: en escritorio vive abierta la mayor parte del
+          // tiempo, y tapar la campana o la cuenta todo el día no es convivir con el cromo.
+          "fixed top-[4.25rem] left-4 z-(--z-dialog) flex w-[19rem] max-w-[calc(100vw-2rem)] flex-col",
+          "max-h-[calc(100dvh-10rem)] overflow-hidden rounded-2xl",
           "border border-edge bg-panel-raised/95 backdrop-blur-md",
           "shadow-[0_24px_64px_-16px_rgb(0_0_0/0.45)] dark:shadow-[0_24px_64px_-16px_rgb(0_0_0/0.85)]",
           "data-[state=open]:enter-rise",
