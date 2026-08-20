@@ -40,3 +40,6 @@ supabase/.branches/
 # Directorio de trabajo de la herramienta de diseño: caché del detector, cargas de las
 # páginas de decisión y capturas de revisión. Todo regenerable, nada de ello es fuente.
 .impeccable/
+
+# grafo de conocimiento (generado)
+graphify-out/
