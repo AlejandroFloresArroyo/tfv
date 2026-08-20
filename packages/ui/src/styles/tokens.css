@@ -810,7 +810,12 @@
 
   :root[data-pizarra="abierta"] & {
     @media (min-width: 48rem) {
-      translate: 21rem 0;
+      /* Sólo lo que falta: la ventana necesita 21rem junto al borde izquierdo del contenido, y el
+         margen libre del contenido centrado cuenta primero. En una pantalla ancha el margen ya
+         alcanza y el empuje es cero — el contenido no se mueve un píxel; en una estrecha, el
+         empuje es la diferencia exacta. Es lo que hace que se sienta «hacerle sitio» y no «lanzar
+         el contenido una cantidad fija». */
+      translate: clamp(0rem, calc(21rem - (100vw - min(100vw, 80rem)) / 2), 21rem) 0;
     }
   }
 }

@@ -47,12 +47,7 @@ export function PlatformNav() {
   ]
 
   return (
-    <FloatingNav
-      label={t("platform.title")}
-      header={
-        <p className="display truncate px-2 py-1.5 text-h4 text-content">{t("platform.title")}</p>
-      }
-    >
+    <FloatingNav label={t("platform.title")}>
       <ul className="flex flex-col gap-1">
         {entries.map((entry) => (
           <NavLink

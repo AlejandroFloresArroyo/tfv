@@ -35,15 +35,16 @@ const PREFERENCIA = "tfv_pizarra"
 /** La calibración de escritorio del sistema: ancho y puntero fino, las dos a la vez. */
 const ESCRITORIO = "(min-width: 64rem) and (pointer: fine)"
 
+/** Donde la ventana cabe en el margen del contenido sin empujar nada: 80rem de contenido más
+ *  21rem de ventana por lado. A partir de aquí es mobiliario, no diálogo: siempre abierta. */
+const SIEMPRE = "(min-width: 122rem)"
+
 export function FloatingNav({
   label,
-  header,
   children,
 }: {
   /** Nombre accesible del asa y del cajón. */
   label: string
-  /** La identidad de arriba del cajón: empresa y su selector, o el título del área. */
-  header: ReactNode
   children: ReactNode
 }) {
   const t = useTranslations()
@@ -51,25 +52,36 @@ export function FloatingNav({
   // En escritorio con puntero fino la pizarra es **persistente**: no-modal, se trabaja con ella
   // abierta, elegir no la cierra, y la elección se recuerda. En tacto sigue modal y autoescondida.
   const [persistent, setPersistent] = useState(false)
+  // «Siempre»: la pantalla es tan ancha que la ventana cabe sin empujar nada. Deja de ser algo que
+  // se abre y se cierra: es parte del mueble, sin asa y sin equis.
+  const [always, setAlways] = useState(false)
   const asa = useRef<HTMLButtonElement>(null)
   const pathname = usePathname()
 
   useEffect(() => {
-    const media = window.matchMedia(ESCRITORIO)
+    const escritorio = window.matchMedia(ESCRITORIO)
+    const siempre = window.matchMedia(SIEMPRE)
     const aplicar = () => {
-      setPersistent(media.matches)
-      // Al entrar al escritorio, la preferencia guardada decide; abierta salvo cierre recordado.
-      if (media.matches) setOpen(localStorage.getItem(PREFERENCIA) !== "cerrada")
+      setPersistent(escritorio.matches)
+      setAlways(siempre.matches)
+      // En «siempre», abierta sin consultar nada; en escritorio, la preferencia guardada decide.
+      if (siempre.matches) setOpen(true)
+      else if (escritorio.matches) setOpen(localStorage.getItem(PREFERENCIA) !== "cerrada")
     }
     aplicar()
-    media.addEventListener("change", aplicar)
-    return () => media.removeEventListener("change", aplicar)
+    escritorio.addEventListener("change", aplicar)
+    siempre.addEventListener("change", aplicar)
+    return () => {
+      escritorio.removeEventListener("change", aplicar)
+      siempre.removeEventListener("change", aplicar)
+    }
   }, [])
 
   function cambiar(siguiente: boolean) {
+    if (always && !siguiente) return // sin cierre en «siempre»: no hay equis y Escape se ignora
     setOpen(siguiente)
     // Sólo el escritorio recuerda: en tacto el autoescondido es la regla y no hay nada que guardar.
-    if (persistent) localStorage.setItem(PREFERENCIA, siguiente ? "abierta" : "cerrada")
+    if (persistent && !always) localStorage.setItem(PREFERENCIA, siguiente ? "abierta" : "cerrada")
   }
 
   // Elegir un destino cierra el cajón **en tacto**. Se observa la ruta en lugar de envolver cada
@@ -101,7 +113,7 @@ export function FloatingNav({
   return (
     // No-modal en persistente: la página sigue viva al lado —sin trampa de foco ni velo—, que es
     // la diferencia entre un panel con el que se trabaja y un diálogo que interrumpe.
-    <Drawer open={open} onOpenChange={cambiar} modal={!persistent}>
+    <Drawer open={open} onOpenChange={cambiar} modal={!persistent && !always}>
       {/* Sólo icono: el nombre de la empresa vive ahora en la barra superior, que es cromo que
           siempre está. El nombre accesible dice la acción —abrir o cerrar—, que es lo que un botón
           de icono debe decir. */}
@@ -110,6 +122,10 @@ export function FloatingNav({
         aria-label={open ? t("shell.closeMenu") : t("shell.openMenu")}
         title={open ? t("shell.closeMenu") : t("shell.openMenu")}
         className={cn(
+          // Abierta la ventana, el asa sobra: la equis es el único cierre y la ventana aprovecha
+          // toda la altura. En «siempre» ni siquiera existe.
+          "data-[state=open]:hidden",
+          always && "hidden",
           "fixed bottom-4 left-4 z-(--z-nav) grid size-12 place-items-center rounded-2xl",
           "border border-edge bg-panel/85 text-content backdrop-blur-sm",
           "shadow-[0_8px_24px_-12px_rgb(0_0_0/0.4)]",
@@ -127,7 +143,7 @@ export function FloatingNav({
       <DrawerContent
         label={label}
         closeLabel={t("shell.closeMenu")}
-        header={header}
+        closable={!always}
         // Persistente: tocar fuera no cierra —se está trabajando al lado— y el foco no se roba al
         // abrir, porque abrir es el estado de reposo del escritorio, no una interrupción.
         // El foco vuelve al asa al cerrar —es lo accesible—, pero lo devolvemos nosotros con
@@ -137,12 +153,13 @@ export function FloatingNav({
           event.preventDefault()
           asa.current?.focus({ preventScroll: true })
         }}
-        {...(persistent
+        {...(persistent || always
           ? {
               onInteractOutside: (event: Event) => event.preventDefault(),
               onOpenAutoFocus: (event: Event) => event.preventDefault(),
             }
           : {})}
+        {...(always ? { onEscapeKeyDown: (event: KeyboardEvent) => event.preventDefault() } : {})}
       >
         <nav aria-label={label}>{children}</nav>
       </DrawerContent>

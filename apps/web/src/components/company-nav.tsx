@@ -133,14 +133,7 @@ export function CompanyNav({ company }: { company: ProfileCompany }) {
   ].filter((entry) => can(company, entry.permission))
 
   return (
-    <FloatingNav
-      label={company.name}
-      header={
-        <p className="display px-2 py-1.5 text-h4 text-content [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
-          {company.name}
-        </p>
-      }
-    >
+    <FloatingNav label={company.name}>
       <ul className="flex flex-col gap-1">
         <NavLink
           href={`/c/${company.id}`}
