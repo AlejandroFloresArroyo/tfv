@@ -41,6 +41,7 @@ const seed = {
   recordingA: newId(),
   continuityA: newId(),
   itemA: newId(),
+  itemEventA: newId(),
   propA: newId(),
   counterpartyA: newId(),
   orderA: newId(),
@@ -115,6 +116,9 @@ async function sow() {
       values ('${s.itemA}', '${s.productionA}', 'Reloj', 'UTL-1');
     insert into production_props (id, continuity_id, item_id)
       values ('${s.propA}', '${s.continuityA}', '${s.itemA}');
+    -- El historial del artículo: tres saltos hasta la empresa, y ninguno nombrado en su política.
+    insert into production_item_events (id, item_id, to_status, reason)
+      values ('${s.itemEventA}', '${s.itemA}', 'stored', 'manual');
 
     insert into counterparties (id, company_id, role, alias, user_id)
       values ('${s.counterpartyA}', '${s.companyA}', 'client', 'Cliente', '${s.cliente}');
@@ -229,7 +233,10 @@ describe("cobertura", () => {
     // 95 desde la 0020, que añade `shipping_rates` con sus dos políticas.
     // 96 desde la 0026, que añade `idempotency_keys` con **tres**: la de su dueño, la de sistema
     // —para que el barrido de caducadas alcance las de todo el mundo— y la de plataforma.
-    expect(tablas.length).toBe(97)
+    // 98 desde la 0030, que añade `production_item_events`: el historial de estado del artículo,
+    // calcado de `warehouse_stock_events` y con su misma política —se apoya en la del artículo, que
+    // se apoya en la de la producción—.
+    expect(tablas.length).toBe(98)
     expect(tablas.filter((t) => !t.rls).map((t) => t.relname)).toEqual([])
     expect(tablas.filter((t) => t.politicas === 0).map((t) => t.relname)).toEqual([])
   })
@@ -252,6 +259,23 @@ describe("aislamiento entre arrendatarios", () => {
     // que se apoya en la del suyo. Si algún eslabón se rompiera, esto devolvería 1 para Beto.
     expect(await countAs(seed.ana, "production_props")).toBe(1)
     expect(await countAs(seed.beto, "production_props")).toBe(0)
+  })
+
+  it("el historial de un artículo no se lee ni se escribe desde otra empresa", async () => {
+    // `production_item_events` no menciona ninguna empresa: se apoya en la de `production_items`,
+    // que se apoya en la de `productions`. Es la misma forma que `warehouse_stock_events`, y si el
+    // eslabón del artículo se rompiera esto devolvería 1 para Beto.
+    expect(await countAs(seed.ana, "production_item_events")).toBe(1)
+    expect(await countAs(seed.beto, "production_item_events")).toBe(0)
+
+    // Y leer no es escribir: Beto tampoco puede **firmar** un cambio en el artículo de Ana, que es
+    // lo que convertiría el historial en un sitio donde plantar un rastro falso.
+    await expectRejectedByPolicy(
+      withRequester(identity(seed.beto), (tx) =>
+        tx.execute(sql.raw(`insert into production_item_events (id, item_id, to_status, reason)
+                 values ('${newId()}', '${seed.itemA}', 'lost', 'manual')`)),
+      ),
+    )
   })
 
   it("no se escribe en el almacén de otra empresa", async () => {
