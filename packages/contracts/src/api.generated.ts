@@ -1283,6 +1283,80 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/calendar": {
+    /** El calendario de la producción: jornadas, planes y tareas en un solo flujo */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      view?: "year" | "month" | "week" | "day"
+      date?: string
+      today?: string
+      characterId?: string
+      categoryId?: string
+      kinds?: string
+    }
+    response: {
+      view: "year" | "month" | "week" | "day"
+      landing: {
+        date: string
+        reason: "before" | "during" | "after" | "empty"
+      }
+      range: {
+        from: string
+        to: string
+      }
+      events: Array<{
+        kind: "recording" | "workflow" | "task"
+        id: string
+        day: string
+        startsAt: string | null
+        endsAt: string | null
+        title: string
+        status: string
+        workflowId: string | null
+        sceneId: string | null
+        sceneLabel: string | null
+        categoryId: string | null
+        categoryName: string | null
+        characterId: string | null
+        characterName: string | null
+        responsibleName: string | null
+      }>
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/calendar/plans": {
+    /** Planes con sus tareas filtradas; los que no tienen ninguna no aparecen */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      categoryId?: string
+      characterId?: string
+    }
+    response: {
+      items: Array<{
+        id: string
+        code: string
+        observations: string
+        status: string
+        scheduledFor: string | null
+        sceneId: string | null
+        tasks: Array<{
+          id: string
+          title: string
+          status: string
+          categoryId: string | null
+          characterId: string | null
+          scheduledFor: string | null
+        }>
+      }>
+    }
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/categories": {
     /** Listar categorías; sin «parentId», las raíces */
     params: {
@@ -3324,6 +3398,7 @@ export interface ApiEndpoints {
       status?: string | Array<string>
       responsibleId?: string | Array<string>
       sceneId?: string | Array<string>
+      chapterId?: string | Array<string>
       scheduledFor?: string | Array<string>
       aggregates?: string
     }
@@ -3371,6 +3446,7 @@ export interface ApiEndpoints {
       endsAt?: string | null
       observations?: string
       responsibleId?: string | null
+      sceneId?: string | null
     }
     response: {
       id: string
@@ -3441,6 +3517,7 @@ export interface ApiEndpoints {
       observations?: string
       responsibleId?: string | null
       status?: "pending" | "in_progress" | "rescheduled" | "completed" | "cancelled"
+      sceneId?: string | null
     }
     response: {
       id: string
@@ -3475,6 +3552,173 @@ export interface ApiEndpoints {
     response: undefined
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/comments": {
+    /** Leer los comentarios de un plan */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+    }
+    response: {
+      items: Array<{
+        id: string
+        workflowId: string | null
+        taskId: string | null
+        body: string
+        authorId: string | null
+        authorName: string | null
+        createdAt: string
+        updatedAt: string
+      }>
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/comments": {
+    /** Comentar un plan; el autor es quien escribe */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+    }
+    body: {
+      body: string
+    }
+    response: {
+      id: string
+      workflowId: string | null
+      taskId: string | null
+      body: string
+      authorId: string | null
+      authorName: string | null
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/comments/{commentId}": {
+    /** Editar un comentario de un plan */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      commentId: string
+    }
+    body: {
+      body: string
+    }
+    response: {
+      id: string
+      workflowId: string | null
+      taskId: string | null
+      body: string
+      authorId: string | null
+      authorName: string | null
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/comments/{commentId}": {
+    /** Eliminar un comentario de un plan */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      commentId: string
+    }
+    response: undefined
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/document": {
+    /** Componer el documento de un plan de trabajo */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+    }
+    response: {
+      document: {
+        kind: "work-plan"
+        identity: {
+          code: string
+          status: "pending" | "in_progress" | "rescheduled" | "completed" | "cancelled"
+          observations: string
+          scheduledFor: string
+          endsAt: string | null
+          generatedAt: string
+        }
+        issuer: {
+          name: string
+          taxId?: string
+          email?: string
+          phone?: string
+          address?: string
+          contacts: Array<{
+            name: string
+            phone?: string
+            position?: string
+          }>
+        }
+        production: {
+          id: string
+          name: string
+        }
+        scene: {
+          id: string
+          name: string
+          label: string
+          chapterName: string
+        } | null
+        responsibleName: string | null
+        weeks: Array<{
+          from: string
+          to: string
+          days: Array<{
+            day: string
+            tasks: Array<{
+              id: string
+              title: string
+              description: string
+              status: "pending" | "in_progress" | "completed" | "incomplete"
+              day: string | null
+              scheduledFor: string | null
+              endsAt: string | null
+              responsibleName: string | null
+              categoryName: string | null
+              characterName: string | null
+              activityCount: number
+              completedActivities: number
+            }>
+          }>
+        }>
+        undated: Array<{
+          id: string
+          title: string
+          description: string
+          status: "pending" | "in_progress" | "completed" | "incomplete"
+          day: string | null
+          scheduledFor: string | null
+          endsAt: string | null
+          responsibleName: string | null
+          categoryName: string | null
+          characterName: string | null
+          activityCount: number
+          completedActivities: number
+        }>
+        totals: {
+          tasks: number
+          byStatus: {
+            pending: number
+            in_progress: number
+            completed: number
+            incomplete: number
+          }
+        }
+      }
+      reference: string
+    }
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/scope": {
     /** Qué se lleva por delante eliminar el plan */
     params: {
@@ -3484,6 +3728,480 @@ export interface ApiEndpoints {
     }
     response: {
       tasks: number
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks": {
+    /** Listar las tareas de un plan */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_scheduledFor?: string | Array<string>
+      sort_title?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      status?: string | Array<string>
+      responsibleId?: string | Array<string>
+      categoryId?: string | Array<string>
+      characterId?: string | Array<string>
+      scheduledFor?: string | Array<string>
+      aggregates?: "true" | "false"
+    }
+    response: {
+      items: Array<{
+        id: string
+        workflowId: string
+        categoryId: string | null
+        categoryName: string | null
+        characterId: string | null
+        characterName: string | null
+        title: string
+        description: string
+        status: "pending" | "in_progress" | "completed" | "incomplete"
+        scheduledFor: string | null
+        endsAt: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        createdById: string | null
+        createdByName: string | null
+        activityCount: number
+        activitiesByStatus?: {
+          incomplete: number
+          completed: number
+        }
+        attachmentCount: number
+        commentCount: number
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks": {
+    /** Añadir una tarea a un plan; su creador queda fijado */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+    }
+    body: {
+      title: string
+      description?: string
+      categoryId?: string | null
+      characterId?: string | null
+      responsibleId?: string | null
+      scheduledFor?: string | null
+      endsAt?: string | null
+    }
+    response: {
+      id: string
+      workflowId: string
+      categoryId: string | null
+      categoryName: string | null
+      characterId: string | null
+      characterName: string | null
+      title: string
+      description: string
+      status: "pending" | "in_progress" | "completed" | "incomplete"
+      scheduledFor: string | null
+      endsAt: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      createdById: string | null
+      createdByName: string | null
+      activityCount: number
+      activitiesByStatus?: {
+        incomplete: number
+        completed: number
+      }
+      attachmentCount: number
+      commentCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}": {
+    /** Consultar una tarea con sus actividades, comentarios y adjuntos */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+    }
+    response: {
+      id: string
+      workflowId: string
+      categoryId: string | null
+      categoryName: string | null
+      characterId: string | null
+      characterName: string | null
+      title: string
+      description: string
+      status: "pending" | "in_progress" | "completed" | "incomplete"
+      scheduledFor: string | null
+      endsAt: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      createdById: string | null
+      createdByName: string | null
+      activityCount: number
+      activitiesByStatus?: {
+        incomplete: number
+        completed: number
+      }
+      attachmentCount: number
+      commentCount: number
+      createdAt: string
+      updatedAt: string
+      activities: Array<{
+        id: string
+        taskId: string
+        title: string
+        description: string
+        status: "incomplete" | "completed"
+        scheduledFor: string | null
+        endsAt: string | null
+        responsibleId: string | null
+        responsibleName: string | null
+        createdById: string | null
+        createdByName: string | null
+        attachments: Array<{
+          id: string
+          uploadId: string
+          name: string
+          url: string
+          kind: string
+          createdAt: string
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+      comments: Array<{
+        id: string
+        workflowId: string | null
+        taskId: string | null
+        body: string
+        authorId: string | null
+        authorName: string | null
+        createdAt: string
+        updatedAt: string
+      }>
+      attachments: Array<{
+        id: string
+        uploadId: string
+        name: string
+        url: string
+        kind: string
+        createdAt: string
+      }>
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}": {
+    /** Editar una tarea; el estado, el responsable y la categoría llevan su propia clave */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+    }
+    body: {
+      title?: string
+      description?: string
+      categoryId?: string | null
+      characterId?: string | null
+      responsibleId?: string | null
+      scheduledFor?: string | null
+      endsAt?: string | null
+      status?: "pending" | "in_progress" | "completed" | "incomplete"
+    }
+    response: {
+      id: string
+      workflowId: string
+      categoryId: string | null
+      categoryName: string | null
+      characterId: string | null
+      characterName: string | null
+      title: string
+      description: string
+      status: "pending" | "in_progress" | "completed" | "incomplete"
+      scheduledFor: string | null
+      endsAt: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      createdById: string | null
+      createdByName: string | null
+      activityCount: number
+      activitiesByStatus?: {
+        incomplete: number
+        completed: number
+      }
+      attachmentCount: number
+      commentCount: number
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}": {
+    /** Eliminar una tarea con sus actividades y comentarios */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+    }
+    response: undefined
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}/activities": {
+    /** Desglosar una tarea en actividades; nacen incompletas */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+    }
+    body: {
+      title: string
+      description?: string
+      responsibleId?: string | null
+      scheduledFor?: string | null
+      endsAt?: string | null
+    }
+    response: {
+      id: string
+      taskId: string
+      title: string
+      description: string
+      status: "incomplete" | "completed"
+      scheduledFor: string | null
+      endsAt: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      createdById: string | null
+      createdByName: string | null
+      attachments: Array<{
+        id: string
+        uploadId: string
+        name: string
+        url: string
+        kind: string
+        createdAt: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}/activities/{activityId}": {
+    /** Editar una actividad; el estado y el responsable llevan su propia clave */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+      activityId: string
+    }
+    body: {
+      title?: string
+      description?: string
+      responsibleId?: string | null
+      scheduledFor?: string | null
+      endsAt?: string | null
+      status?: "incomplete" | "completed"
+    }
+    response: {
+      id: string
+      taskId: string
+      title: string
+      description: string
+      status: "incomplete" | "completed"
+      scheduledFor: string | null
+      endsAt: string | null
+      responsibleId: string | null
+      responsibleName: string | null
+      createdById: string | null
+      createdByName: string | null
+      attachments: Array<{
+        id: string
+        uploadId: string
+        name: string
+        url: string
+        kind: string
+        createdAt: string
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}/activities/{activityId}": {
+    /** Eliminar una actividad */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+      activityId: string
+    }
+    response: undefined
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}/activities/{activityId}/attachments": {
+    /** Adjuntar un archivo a una actividad */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+      activityId: string
+    }
+    body: {
+      uploadId: string
+    }
+    response: {
+      id: string
+      uploadId: string
+      name: string
+      url: string
+      kind: string
+      createdAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}/activities/{activityId}/attachments/{attachmentId}": {
+    /** Retirar un adjunto de una actividad */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+      activityId: string
+      attachmentId: string
+    }
+    response: undefined
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}/attachments": {
+    /** Adjuntar un archivo a una tarea */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+    }
+    body: {
+      uploadId: string
+    }
+    response: {
+      id: string
+      uploadId: string
+      name: string
+      url: string
+      kind: string
+      createdAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}/attachments/{attachmentId}": {
+    /** Retirar un adjunto de una tarea */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+      attachmentId: string
+    }
+    response: undefined
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}/comments": {
+    /** Comentar una tarea; el autor es quien escribe */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+    }
+    body: {
+      body: string
+    }
+    response: {
+      id: string
+      workflowId: string | null
+      taskId: string | null
+      body: string
+      authorId: string | null
+      authorName: string | null
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "PATCH /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}/comments/{commentId}": {
+    /** Editar un comentario de una tarea */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+      commentId: string
+    }
+    body: {
+      body: string
+    }
+    response: {
+      id: string
+      workflowId: string | null
+      taskId: string | null
+      body: string
+      authorId: string | null
+      authorName: string | null
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "DELETE /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}/comments/{commentId}": {
+    /** Eliminar un comentario de una tarea */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+      commentId: string
+    }
+    response: undefined
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/workflows/{workflowId}/tasks/{taskId}/scope": {
+    /** Enumerar lo que se pierde al eliminar una tarea */
+    params: {
+      companyId: string
+      productionId: string
+      workflowId: string
+      taskId: string
+    }
+    response: {
+      activities: number
+      comments: number
+      attachments: number
     }
   }
 
@@ -9857,6 +10575,83 @@ export interface ApiEndpoints {
         terms: string | null
         observations: string | null
         message: string | null
+      } | {
+        kind: "work-plan"
+        identity: {
+          code: string
+          status: "pending" | "in_progress" | "rescheduled" | "completed" | "cancelled"
+          observations: string
+          scheduledFor: string
+          endsAt: string | null
+          generatedAt: string
+        }
+        issuer: {
+          name: string
+          taxId?: string
+          email?: string
+          phone?: string
+          address?: string
+          contacts: Array<{
+            name: string
+            phone?: string
+            position?: string
+          }>
+        }
+        production: {
+          id: string
+          name: string
+        }
+        scene: {
+          id: string
+          name: string
+          label: string
+          chapterName: string
+        } | null
+        responsibleName: string | null
+        weeks: Array<{
+          from: string
+          to: string
+          days: Array<{
+            day: string
+            tasks: Array<{
+              id: string
+              title: string
+              description: string
+              status: "pending" | "in_progress" | "completed" | "incomplete"
+              day: string | null
+              scheduledFor: string | null
+              endsAt: string | null
+              responsibleName: string | null
+              categoryName: string | null
+              characterName: string | null
+              activityCount: number
+              completedActivities: number
+            }>
+          }>
+        }>
+        undated: Array<{
+          id: string
+          title: string
+          description: string
+          status: "pending" | "in_progress" | "completed" | "incomplete"
+          day: string | null
+          scheduledFor: string | null
+          endsAt: string | null
+          responsibleName: string | null
+          categoryName: string | null
+          characterName: string | null
+          activityCount: number
+          completedActivities: number
+        }>
+        totals: {
+          tasks: number
+          byStatus: {
+            pending: number
+            in_progress: number
+            completed: number
+            incomplete: number
+          }
+        }
       }
     }
   }

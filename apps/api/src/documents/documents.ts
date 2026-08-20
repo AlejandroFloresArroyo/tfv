@@ -14,17 +14,19 @@
  * es un `404` como cualquier otro.
  */
 
-import { NotFoundError, type QuoteDocument } from "@tfv/contracts"
+import { NotFoundError, type QuoteDocument, type WorkPlanDocument } from "@tfv/contracts"
 import { quoteDocumentByReference } from "./quotes.ts"
 import { DOCUMENT_NOT_FOUND, verifyReference } from "./reference.ts"
+import { workPlanDocumentByReference } from "./work-plans.ts"
 
 /**
  * Lo que se sirve por un enlace público.
  *
- * Hoy es sólo el documento de cotización. Cuando entren las demás familias, esto pasa a ser una
- * unión discriminada por `kind`, que es como el navegador elegirá qué dibujar.
+ * Ya es la unión discriminada que se anunciaba: **`kind` es lo que el navegador mira** para elegir
+ * qué hoja dibujar, y añadir una familia es añadir un miembro aquí y un caso en el `switch`. Las
+ * cuatro que faltan esperan a sus rebanadas.
  */
-export type PublicDocument = QuoteDocument
+export type PublicDocument = QuoteDocument | WorkPlanDocument
 
 /**
  * Resuelve el documento al que apunta una referencia pública.
@@ -41,7 +43,10 @@ export async function publicDocument(raw: string): Promise<PublicDocument> {
     case "quote":
       return quoteDocumentByReference(reference)
 
-    // Las otras cinco familias esperan a sus rebanadas. Mientras tanto, su referencia no se puede
+    case "work-plan":
+      return workPlanDocumentByReference(reference)
+
+    // Las otras cuatro familias esperan a sus rebanadas. Mientras tanto, su referencia no se puede
     // ni emitir —nadie llama a `signReference` con ellas— y aquí no hay nada que servir.
     default:
       throw new NotFoundError(DOCUMENT_NOT_FOUND)

@@ -217,6 +217,50 @@ export async function assertUsableImages(
   }
 }
 
+/**
+ * Que los archivos existan, sean de esta empresa y estén subidos.
+ *
+ * Lo mismo que `assertUsableImages` **menos la última comprobación**: un adjunto de una tarea es un
+ * plano, una factura o una foto, y exigirle que sea imagen dejaría fuera justo lo que se adjunta.
+ *
+ * La regla de arrendamiento es la misma y se escribe una sola vez a propósito: el archivo no lleva
+ * empresa —lo explica `0015_confirmacion_de_archivos.sql`—, así que lo que lo acota es el prefijo
+ * de la clave de su objeto, y una segunda copia de esa comprobación es una copia que alguien
+ * actualiza sin actualizar la otra.
+ */
+export async function assertUsableFiles(
+  tx: Transaction,
+  companyId: string,
+  ids: readonly string[],
+): Promise<void> {
+  const wanted = [...new Set(ids)]
+  if (wanted.length === 0) return
+
+  const rows = await tx
+    .select({
+      id: uploads.id,
+      status: uploads.status,
+      storagePath: uploads.storagePath,
+      isPlaceholder: uploads.isPlaceholder,
+    })
+    .from(uploads)
+    .where(inArray(uploads.id, wanted))
+
+  const byId = new Map(rows.map((row) => [row.id, row]))
+
+  for (const id of wanted) {
+    const row = byId.get(id)
+    if (row === undefined) throw new NotFoundError("El archivo no existe")
+    // La misma respuesta para uno de otra empresa: distinguirla sería confirmar que existe.
+    if (!row.isPlaceholder && !row.storagePath.startsWith(`${companyId}/`)) {
+      throw new NotFoundError("El archivo no existe")
+    }
+    if (row.status !== "uploaded") {
+      throw new UnprocessableError("El archivo no llegó a subirse")
+    }
+  }
+}
+
 /** Las dos direcciones que una pantalla necesita de una imagen: la que se ve y la de celda. */
 export interface ImageRef {
   readonly url: string
