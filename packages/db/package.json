@@ -7,12 +7,14 @@
     ".": "./src/index.ts",
     "./schema": "./src/schema/index.ts",
     "./testing": "./testing.ts",
-    "./testing-setup": "./testing-setup.ts"
+    "./testing-setup": "./testing-setup.ts",
+    "./verify-migrations": "./verify-migrations.ts"
   },
   "scripts": {
     "check": "tsc --noEmit",
     "generate": "drizzle-kit generate",
-    "migrate": "drizzle-kit migrate",
+    "migrate": "drizzle-kit migrate && pnpm run verify-migrations",
+    "verify-migrations": "node --env-file-if-exists=../../.env --experimental-strip-types verify-migrations.ts",
     "push": "drizzle-kit push",
     "studio": "drizzle-kit studio",
     "test": "vitest run"

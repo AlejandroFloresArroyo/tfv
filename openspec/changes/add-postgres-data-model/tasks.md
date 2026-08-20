@@ -53,4 +53,9 @@
       que cubren las cuatro vías de concesión. Probada en `scripts/seed.test.ts:55-130`:
       sembrar deja el historial completo, sembrar dos veces no duplica y repara lo que sembró
       una versión anterior
-- [ ] Comprobación en integración continua de que el esquema y las migraciones no divergen
+- [x] Comprobación en integración continua de que el esquema y las migraciones no divergen —
+      `.github/workflows/ci.yml`, trabajo `estatico`: corre `drizzle-kit generate` y **falla si
+      aparece cualquier archivo**, que es lo que significa que alguien tocó el esquema sin generar su
+      migración. No necesita base: compara el esquema declarado contra la instantánea de la última
+      migración. Verificado en local en los dos sentidos. **Salvedad**: ninguna ejecución ha llegado
+      a arrancar todavía — la cuenta de GitHub está bloqueada por facturación (`HALLAZGOS.md` H-193)

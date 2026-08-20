@@ -1,0 +1,57 @@
+# La aplicación web en Railway, en el **mismo proyecto** que la API.
+#
+# ## Por qué aquí y no en un anfitrión de borde
+#
+# Lo que un anfitrión de borde compra —caché repartida, optimización de imágenes, revalidación
+# incremental— es de producción con tráfico. En un entorno de ensayo no compra nada, y a cambio son
+# dos tableros, dos facturas y dos sitios donde mirar cuando algo falla.
+#
+# Y hay un motivo que no es de comodidad: **el plan gratuito de Vercel es de uso no comercial**, y
+# esto es un producto comercial —vende desde una tienda pública y procesa cobros—, así que su entorno
+# de ensayo también lo es. Su propia definición cuenta como comercial «cualquier despliegue usado
+# para el beneficio económico de cualquiera que participe en su producción», y nombra expresamente
+# pedir o procesar pagos.
+#
+# ## La trampa que esto desactiva
+#
+# El reenvío de `/api/*` es una reescritura declarada en `next.config.ts`, y `API_ORIGIN` **se hornea
+# en el build**: se resuelve al compilar y se escribe en el manifiesto. Con la API en otro anfitrión,
+# esa variable es una dirección pública que aún no existe cuando se compila la primera vez y que
+# cambia entre despliegues; si se compila sin ella, el despliegue sale **mudo** —la web responde,
+# ninguna llamada llega— y no se entera nadie hasta abrirlo a mano.
+#
+# En el mismo proyecto de Railway los dos servicios se hablan por red privada, así que `API_ORIGIN`
+# apunta a un nombre interno **estable entre despliegues**: `http://api.railway.internal:8080`. Sigue
+# horneándose en el build —y por eso `turbo.json` la declara como `env` y no como `passThroughEnv`,
+# para que un cambio invalide la caché— pero ya no depende de una dirección que todavía no existe.
+#
+# El nombre `api` de esa dirección es **el nombre del servicio en Railway**. Si se le pone otro, hay
+# que cambiar la variable: está dicho en el guion de puesta en marcha.
+
+[build]
+builder = "RAILPACK"
+
+# El build de Next necesita el espacio de trabajo entero: consume `@tfv/contracts` y `@tfv/ui` como
+# fuente TypeScript, sin paso de emisión (`transpilePackages` en `next.config.ts`).
+buildCommand = "pnpm --filter @tfv/web build"
+
+watchPatterns = [
+  "apps/web/**",
+  "packages/contracts/**",
+  "packages/ui/**",
+  "package.json",
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
+]
+
+[deploy]
+# `next start` escucha en `PORT`, que es la variable que inyecta Railway.
+startCommand = "pnpm --filter @tfv/web start"
+
+# `/login` y no `/`: la portada redirige según haya sesión o no, y un chequeo de salud que sigue
+# redirecciones acaba midiendo otra pantalla. `/login` se sirve siempre y sin sesión.
+healthcheckPath = "/login"
+healthcheckTimeout = 300
+
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

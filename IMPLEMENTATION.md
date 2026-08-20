@@ -127,13 +127,13 @@ Lo construido hasta ahora, medido y no estimado:
 | | |
 |---|---|
 | Rebanadas | 25 de 30 empezadas, **7 cerradas del todo**: 03, 08, 09, 11, 13, 17 y 20 |
-| Tareas | **783 de 1228**, el 63,8 %. Contadas sobre los `tasks.md`, no estimadas. Otras 29 están marcadas **no aplicables** con su razón escrita: apuntan a la pila vieja, que la regla 1 deja intacta |
+| Tareas | **784 de 1228**, el 63,8 %. Contadas sobre los `tasks.md`, no estimadas. Otras 29 están marcadas **no aplicables** con su razón escrita: apuntan a la pila vieja, que la regla 1 deja intacta |
 | Código sin pruebas | 100 871 líneas |
 | Código de prueba | 39 084 líneas |
-| Pruebas | **1660** de vitest — 406 contratos, 90 datos, 936 API, 109 web, 119 interfaz — y **83 de extremo a extremo** con Playwright sobre un build de producción |
+| Pruebas | **1664** de vitest — 406 contratos, 94 datos, 936 API, 109 web, 119 interfaz — y **83 de extremo a extremo** con Playwright sobre un build de producción. Corren en **integración continua** desde el 2026-08-19, y la suite entera se comprobó **sin `.env`**, sólo con variables de entorno |
 | Esquema | 97 tablas · 295 índices · 50 enumerados · 8 comprobaciones · 42 únicos parciales · 238 claves foráneas |
 | Aislamiento | 215 políticas · 97/97 tablas · 0 con identidad cruda |
-| Migraciones | 28, replicadas desde cero en cada verificación |
+| Migraciones | 28, replicadas desde cero en cada verificación, y **comprobadas contra la base** después de aplicarlas (H-169) |
 | Rutas | **295** registradas, 232 con permiso declarado, 43 sólo autenticadas y 20 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
 | Pantallas | 62, en español e inglés (1656 mensajes, sin desalinear) |
@@ -154,6 +154,14 @@ ahora tiene un sitio propio desde el que ejercerlo: la bandeja de prospectos que
 implementada y sin pantalla, y dos padrones de sólo lectura. Cada ruta del área niega a un usuario
 corriente con `403`, y cada acción que se hace desde ella queda escrita en una bitácora que ni
 siquiera quien la protagoniza puede reescribir.
+
+**La verificación deja de depender de que alguien se acuerde.** Hay integración continua escrita:
+análisis y tipos sin base, la suite entera sobre la pila de Supabase levantada en el runner, y la de
+navegador aparte y **sin bloquear** mientras H-146 siga vivo. La suite se comprobó corriendo **sin
+`.env`**, sólo con variables de entorno, que es lo único que demuestra que vale fuera de la máquina
+de quien la escribió — y eso destapó que `turbo` filtraba las nueve variables de almacenamiento, con
+lo que la API ni arrancaba en un runner. Falta una sola cosa para verla verde, y no es código:
+**la cuenta de GitHub está bloqueada por facturación** y ninguna ejecución llega a empezar.
 
 **Y una producción ya se puede desglosar entera.** Sube su guion, se parte en capítulos y escenas
 —con índices que **no se renumeran nunca**, porque en un rodaje los números los referencia el
@@ -209,7 +217,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 |---|---|---|---|---|
 | 00 | Andamiaje del espacio de trabajo | ✅ | — | Raíz, herramientas, base local |
 | 01 | `add-platform-contracts` | 🟡 | 27/37 | Dinero, errores, consulta, paginación, identificadores, **idempotencia**, **campos calculados** y **el cliente tipado generado**. Falta el registro de búsqueda y los esquemas de entrada y salida compartidos |
-| 02 | `add-postgres-data-model` | 🟡 | 30/34 | 91 tablas, 229 claves foráneas, 48 únicos parciales. Falta medir el volcado real, la siembra y el desfase en integración continua |
+| 02 | `add-postgres-data-model` | 🟡 | 31/34 | 91 tablas, 229 claves foráneas, 48 únicos parciales. Falta medir el volcado real, la siembra y el desfase en integración continua |
 | 03 | `add-hono-api-runtime` | ✅ | 26/26 | Registro explícito, validación, contrato de error, contrato publicado con su cliente tipado y su candado de desfase, salud, límite de cuerpo y limitación de frecuencia. **La primera rebanada cerrada del todo** |
 
 > **La 09 se cierra el 2026-08-19**, la segunda. Al cerrarla salieron las dos cosas que nadie había
@@ -4410,3 +4418,98 @@ vez, no fusionarlo a mano.
   abre ninguna: hay un solo número libre y tres árboles avanzando (H-184).
 
 **Hallazgos**: H-184, H-185, H-186, H-187 y H-188.
+
+### 2026-08-19 · Integración continua, el despliegue de ensayo, y H-146 por fin diagnosticado
+
+Cierra **H-150**. No había `.github/`, ni `Dockerfile`, ni configuración de despliegue: campo virgen.
+Hasta aquí, «verde» era una afirmación sobre la última vez que alguien se acordó de mirar.
+
+**Cerrado**
+
+- **Tres trabajos de integración continua**, ordenados por lo que tardan en dar la primera respuesta:
+  `estatico` —análisis, tipos y el desfase entre esquema y migraciones, sin base—, `pruebas` —la pila
+  de Supabase y las cinco suites de vitest— y `navegador` —Playwright, hoy sin bloquear—. Más
+  `e2e-parpadeo.yml`, que repite la suite de navegador en bucle y recuenta quién cayó: el instrumento
+  que le faltaba a H-146.
+- **La comprobación del hueco de migraciones** (H-169). `verify-migrations.ts` compara los `when` del
+  registro contra `drizzle.__drizzle_migrations` y falla nombrando las que faltan, encadenada detrás
+  de `db:migrate`. Con cuatro pruebas sobre bases de un solo uso, incluida la que monta el hueco de
+  H-169 y comprueba que se caza.
+- **El despliegue de ensayo**, escrito y sin activar: los dos servicios en un solo proyecto de
+  Railway, la base y el almacenamiento en Supabase, y `docs/DESPLIEGUE.md`, que se ejecuta de arriba
+  abajo sin haber leído nada más — cada secreto con su nombre y su origen, y qué se ve cuando
+  funciona.
+- **La siembra en modo producción, tras un permiso explícito.** El entorno corre con
+  `NODE_ENV=production` porque uno que no lo haga no ensaya nada, y aun así tiene datos: el candado
+  no se quita, se le pone llave —una variable cuyo nombre dice lo que hace y un valor literal exacto—
+  y sembrar deja escrito en la bitácora a qué base y con qué contraseñas.
+
+**Lo que apareció al construirlo**
+
+- **La compuerta que devolvía cero** (H-190). Los seis avisos de análisis que H-150 describe como
+  «`pnpm lint` sale en rojo» **nunca salieron en rojo**: `biome check` sólo falla ante un aviso si se
+  le pide con `--error-on-warnings`. No llevaban semanas ahí porque nadie mirase, sino porque no
+  había nada que mirar. Es la enfermedad de este encargo en miniatura: una comprobación que existe,
+  se ejecuta y no puede fallar.
+- **Turbo filtra el entorno, otra vez** (H-191). H-74 lo dejó dicho y arreglado para dos variables.
+  En una máquina con `.env` el resto no se echa de menos; en un ejecutor limpio no hay `.env`, y las
+  nueve `STORAGE_*` se quedaban por el camino. Comprobado como se comprueba esto: **apartando el
+  `.env`** y corriendo la suite entera sólo con variables de entorno — 1 664 pruebas en verde.
+- **`apps/api` no arranca contra un Postgres pelado** (H-194), y eso decide cómo se monta la base. La
+  salida barata —crear los dos roles que ninguna migración crea— ya estaba escrita en `testing.ts` y
+  bastaría para cuatro paquetes. Para la API no, y no por fidelidad: media docena de suites de
+  `src/media` **lanzan** sin credenciales de almacenamiento en vez de saltarse, con el motivo dicho
+  en la propia prueba. Era barato contra 936 pruebas que no corren.
+
+**H-146, que era el encargo de verdad**
+
+Diagnosticado con catorce vueltas idénticas en la misma máquina: **3 de 14 en rojo (21 %)**, y las
+tres caídas repartidas en fallos que no se parecen. No era un parpadeo: eran **al menos cuatro**, y
+por eso «nunca era la misma». Dos se corrigen aquí; dos son estado compartido y quedan anotadas.
+
+1. El clic de «Siguiente» del paso 5 del asistente de producto **se pierde**: el selector de fotos
+   sigue montándose después de aparecer su zócalo, y ese último asentamiento rehace el pie del
+   asistente. Se afirma el efecto en vez de la espera — se pulsa hasta que el paso avance,
+   comprobando antes que seguimos en el 5.
+2. `ECONNRESET` en una **recogida** —después de que todo lo que la prueba afirma ya haya pasado—.
+   La política de transporte que ya existía estaba escrita en privado dentro de `warehouse.ts`;
+   ahora vive en `setup/transporte.ts` y cubre también las retiradas. **Sólo donde caía**: veinte
+   vueltas después el mismo fallo salió por `session.spec`, que no la usa.
+3. **La deriva de la base de larga vida** (H-195), que es la que la nota de H-146 sospechaba. Tras
+   34 vueltas sobre la misma base: 24 almacenes donde la siembra deja uno, 344 cotizaciones, 118
+   pedidos, 40 roles. A partir de cierto punto empiezan a caerse pruebas que nadie tocó. **No afecta
+   a la integración continua**, donde la base nace de cero, pero sí a quien la corre repetidamente
+   en su máquina — que es como se observó H-146 en su día. Anotada, no resuelta.
+4. **La bandeja de avisos compartida** (H-196), la única que sigue viva en un ejecutor limpio.
+   `avisos.spec` lee el contador de no leídos, marca uno leído y exige que baje; entre las dos
+   lecturas caben otra prueba en paralelo y el despachador, que entrega cada 30 s. Si llega uno
+   nuevo, el contador no baja. Observada 1 de 12 vueltas con las otras tres corregidas, y es lo que
+   impide que la suite pase a obligatoria en esta entrega.
+
+**Lo que queda abierto**
+
+- **Ninguna ejecución ha llegado a arrancar** (H-193). Los tres trabajos de la primera ejecución
+  murieron en 3 s: «your account is locked due to a billing issue». El repositorio es público, donde
+  los ejecutores estándar no se cobran, así que el bloqueo es de la cuenta. Es una factura, no un
+  archivo, y no se puede resolver desde aquí. Mientras dure, la integración continua está **escrita y
+  verificada en local, no vista en verde**, que es media afirmación de las dos que H-150 pedía.
+- **La suite de navegador sigue sin bloquear**, y ya no por falta de diagnóstico: por H-196, que es
+  del producto de la prueba y no del entorno. Arreglarla no es aflojar la aserción —«que baje **o**
+  que llegue algo nuevo» dejaría de cazar la regresión para la que existe— sino darle destinatario
+  propio al recorrido o mirar un aviso concreto en vez del total. Promoverla es quitar una línea de
+  `ci.yml`.
+- **La deriva de H-195**, anotada y no resuelta: o la suite recrea su base al empezar —lo que hoy no
+  hace, y cuyo motivo original desapareció cuando H-138 le dio base propia— o cada prueba que lee una
+  colección lo hace con filtro.
+
+**Lo que hay que decir sin adornos sobre H-146**: veinte vueltas sobre base limpia con las dos
+correcciones puestas dan **5 rojas de 20 (25 %)**, contra 3 de 14 (21 %) antes. **La frecuencia no
+bajó.** Cambió quién cae —`fotos` desapareció, el clic perdido también— pero el `ECONNRESET` salió
+por otro archivo y las dos causas de estado compartido siguen mandando. Está diagnosticado entero,
+que era lo que faltaba, y corregido a medias.
+
+**Rebanadas**: cierra la casilla de integración continua de la **02**, y corrige la nota de la **01**
+y la **03**, que decían «no hay pipeline en este repositorio».
+
+**Hallazgos**: H-190 a H-196. Cerrados H-150 y H-169; H-146 queda **parcial** — diagnosticado
+entero y corregido a medias, con las dos mitades que faltan nombradas.

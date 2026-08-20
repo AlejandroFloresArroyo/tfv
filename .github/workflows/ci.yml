@@ -1,0 +1,148 @@
+# La verificación del repositorio, en una máquina que no es la de nadie.
+#
+# ## Por qué existe
+#
+# `openspec/HALLAZGOS.md` H-150. Hasta aquí, «verde» era una afirmación sobre la última vez que
+# alguien se acordó de mirar. Y ya había costado: seis avisos de análisis repartidos por seis
+# paquetes mientras `IMPLEMENTATION.md` decía que quedaba limpio.
+#
+# ## Cómo está repartido, y por qué así
+#
+# Tres trabajos en vez de uno, ordenados por lo que tardan en dar la primera respuesta:
+#
+#   · `estatico`   — sin base, segundos. Análisis, tipos y el desfase entre esquema y migraciones.
+#   · `pruebas`    — la pila de Supabase y las cinco suites de vitest.
+#   · `navegador`  — Playwright, **sin bloquear**. El motivo está en su propio bloque.
+#
+# Separados porque un fallo de análisis no debería esperar cinco minutos a que arranque una base
+# para contarse, y porque cuando el trabajo largo falla conviene saber si el corto ya estaba en rojo.
+
+name: Integración continua
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+# Una rama, una ejecución. La clave usa `head_ref` cuando existe —el nombre de la rama en una
+# solicitud de fusión— y `ref` cuando no, de modo que el empuje y la solicitud de la **misma** rama
+# caen en el mismo grupo y no se ejecutan dos veces por lo mismo.
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  estatico:
+    name: Análisis, tipos y migraciones
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/entorno
+
+      # `biome ci` en vez de `biome check`, y con `--error-on-warnings`.
+      #
+      # `pnpm lint` a secas **devuelve cero con avisos**: por eso los seis de H-150 llevaban semanas
+      # ahí sin que nadie tuviera que ignorarlos a propósito. Una compuerta que no cierra es
+      # decoración, así que aquí se pide explícitamente que un aviso sea un fallo.
+      - name: Análisis y formato
+        run: pnpm lint:ci
+
+      - name: Tipos
+        run: pnpm check
+
+      # El esquema y las migraciones no divergen — rebanada 02.
+      #
+      # `drizzle-kit generate` no necesita base: compara el esquema declarado contra la instantánea
+      # de la última migración. Si sale un `.sql` nuevo es que alguien tocó el esquema sin generar su
+      # migración, y eso se descubría al desplegar. La comprobación es que **no aparezca nada**.
+      - name: El esquema y las migraciones no divergen
+        env:
+          # No se conecta a ninguna base; la configuración exige la variable, así que se le da una
+          # que no resuelve a propósito — si algún día intentara conectarse, se vería.
+          DATABASE_URL: postgresql://sin:usar@127.0.0.1:1/nada
+        run: |
+          set -euo pipefail
+          pnpm db:generate
+          if [ -n "$(git status --porcelain packages/db/drizzle)" ]; then
+            echo "::error::El esquema declarado no coincide con las migraciones. Corre \`pnpm db:generate\` y añade lo que salga."
+            git status --porcelain packages/db/drizzle
+            git diff -- packages/db/drizzle
+            exit 1
+          fi
+          echo "Sin desfase: el esquema y las migraciones dicen lo mismo."
+
+  pruebas:
+    name: Pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/entorno
+      - uses: ./.github/actions/supabase
+
+      # Las migraciones sobre la base que trae la pila, y el candado de H-169 detrás.
+      #
+      # Aquí la base nace de cero en cada ejecución, así que el hueco no puede existir y la
+      # comprobación no puede fallar: lo que se está ejerciendo es **el candado**, para que el día
+      # que se apunte a una base de larga vida ya se sepa que funciona y qué dice cuando no.
+      - name: Migrar y comprobar que no falta ninguna
+        run: pnpm db:migrate
+
+      # Las suites crean y migran **su propia** base (`tfv_test`), derivada de `DATABASE_URL`. Ver
+      # `packages/db/testing.ts`.
+      - name: Vitest
+        run: pnpm test
+
+  navegador:
+    name: Navegador (sin bloquear)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    # **No bloquea todavía, y ya no por falta de diagnóstico.**
+    #
+    # H-146 está diagnosticado (H-192): no era un parpadeo, eran **al menos cuatro** causas, que es
+    # por lo que «nunca era la misma». Reproducido 3 de 14 vueltas idénticas, y de ahí salieron dos
+    # que se corrigen en `apps/e2e` —un clic perdido en el asistente de producto y un `ECONNRESET` en
+    # una recogida sin reintento de transporte—.
+    #
+    # Quedan dos de estado compartido. Una es deriva de la base entre ejecuciones (H-195) y **aquí no
+    # aplica**: en el ejecutor la base nace de cero. La otra sí (H-196): la bandeja de avisos es de
+    # una persona y hay dieciséis pruebas escribiéndole, así que un aviso que llega entre dos
+    # lecturas del contador tumba `avisos.spec`. Observada 1 de 12 vueltas con las otras corregidas.
+    #
+    # Mientras eso viva, obligar aquí sería volver a poner la integración continua en rojo por algo
+    # que no es del producto — la enfermedad que este archivo viene a curar. Así que corre, se ve, y
+    # no manda. Para promoverla: quitar esta línea. La cacería que mide si ya se puede vive en
+    # `e2e-parpadeo.yml`.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/entorno
+      - uses: ./.github/actions/supabase
+
+      - name: Instalar Chromium
+        run: pnpm --filter @tfv/e2e exec playwright install --with-deps chromium
+
+      # La suite levanta su propia API y compila la web contra ella, en puertos deducidos del árbol
+      # de trabajo. No hace falta nada levantado de antemano.
+      - name: Playwright
+        run: pnpm test:e2e
+
+      - name: Guardar el informe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informe-navegador
+          path: |
+            apps/e2e/playwright-report/
+            apps/e2e/test-results/
+          retention-days: 7
+          if-no-files-found: ignore

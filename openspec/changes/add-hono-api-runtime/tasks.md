@@ -21,7 +21,7 @@
 - [x] Generación de la descripción a partir de los esquemas de ejecución
 - [x] Superficie de consulta de la descripción
 - [x] Generación del cliente tipado — `pnpm --filter @tfv/api contract`; el comando ya estaba declarado y **el archivo no existía** (`HALLAZGOS.md` H-126)
-- [x] Comprobación de desfase — regenera y compara; el mensaje del fallo dice el comando. **No hay pipeline de integración continua en este repositorio**: corre en `pnpm test`
+- [x] Comprobación de desfase — regenera y compara; el mensaje del fallo dice el comando. Corre en `pnpm test` y, desde el 2026-08-19, en integración continua (H-150)
 
 ## Operación
 

@@ -14,6 +14,7 @@
  */
 
 import { expect, test, WAREHOUSE_COMPANY } from "../setup/fixtures.ts"
+import { TRANSPORTE } from "../setup/transporte.ts"
 import { firstWarehouse } from "../setup/warehouse.ts"
 
 /** Marca de lo que crea este recorrido, para reconocerlo y retirarlo. */
@@ -41,12 +42,13 @@ async function limpiarRestos(
   const base = `/api/companies/${companyId}/warehouses/${warehouseId}/products`
   const response = await context.request.get(
     `${base}?search=${encodeURIComponent(PREFIJO)}&limit=50`,
+    TRANSPORTE,
   )
   if (!response.ok()) return
 
   const { items } = (await response.json()) as { items: { id: string; name: string }[] }
   for (const item of items.filter((row) => row.name.startsWith(PREFIJO))) {
-    await context.request.delete(`${base}/${item.id}`)
+    await context.request.delete(`${base}/${item.id}`, TRANSPORTE)
   }
 }
 
@@ -70,7 +72,7 @@ test("una foto se sube desde la ficha, manda como portada y deja de servirse al 
 
   // El producto se crea por la API a propósito: el alta por el asistente ya tiene su recorrido en
   // `nave-completa.spec.ts`, y repetirlo aquí sólo alargaría lo que esta prueba viene a mirar.
-  const creado = await context.request.post(base, { data: { name: nombre } })
+  const creado = await context.request.post(base, { ...TRANSPORTE, data: { name: nombre } })
   expect(creado.ok(), `no se pudo crear el producto: ${await creado.text()}`).toBe(true)
   const { id: productId } = (await creado.json()) as { id: string }
 
@@ -137,7 +139,9 @@ test("una foto se sube desde la ficha, manda como portada y deja de servirse al 
     .poll(async () => (await context.request.get(primera)).status(), { timeout: 15_000 })
     .not.toBe(200)
 
-  await context.request.delete(`${base}/${productId}`)
+  // La recogida, con reintento de transporte: es la llamada que caía con `ECONNRESET` una vuelta de
+  // cada catorce (H-146), después de un recorrido largo que deja la conexión en reposo.
+  await context.request.delete(`${base}/${productId}`, TRANSPORTE)
 })
 
 test("lo que el selector no admite lo dice por su nombre, y no lo sube", async ({
