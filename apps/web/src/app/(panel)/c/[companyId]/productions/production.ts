@@ -422,3 +422,111 @@ export interface CharacterRow {
   id: string
   name: string
 }
+
+// ─── Presupuesto ─────────────────────────────────────────────────────────────
+
+/** Los cinco tipos de gasto, en el orden en que el enumerado del motor los declara. */
+export const SHOPPING_KINDS = ["shopping", "expense", "payment", "rent", "transfer"] as const
+export type ShoppingKind = (typeof SHOPPING_KINDS)[number]
+
+/** Cómo se pagó. */
+export const SHOPPING_METHODS = ["cash", "card", "transfer"] as const
+export type ShoppingMethod = (typeof SHOPPING_METHODS)[number]
+
+/** Un archivo colgado de una partida o de un gasto: su comprobante, su factura. */
+export interface BudgetAttachmentRow {
+  id: string
+  uploadId: string
+  name: string
+  url: string
+  kind: string
+  createdAt: string
+}
+
+/** Una partida presupuestada: lo previsto. */
+export interface AnchorRow {
+  id: string
+  productionId: string
+  name: string
+  description: string
+  /** Cadena decimal. El dinero no pasa por `Number` en esta aplicación. */
+  amount: string
+  categoryId: string | null
+  categoryName: string | null
+  responsibleId: string | null
+  responsibleName: string | null
+  attachments: BudgetAttachmentRow[]
+  createdAt: string
+  updatedAt: string
+}
+
+/** Un artículo del inventario que entró con una compra. */
+export interface ShoppingItemRow {
+  id: string
+  name: string
+  code: string
+}
+
+/** Un gasto realizado: lo ejecutado. */
+export interface ShoppingRow {
+  id: string
+  productionId: string
+  name: string
+  observations: string
+  amount: string
+  kind: ShoppingKind
+  method: ShoppingMethod
+  /** Identificación **parcial** de la tarjeta. El número completo no existe en ninguna capa. */
+  cardLast4: string | null
+  isDeductible: boolean
+  occurredOn: string | null
+  providerId: string | null
+  providerName: string | null
+  categoryId: string | null
+  categoryName: string | null
+  responsibleId: string | null
+  responsibleName: string | null
+  /** El pedido de almacén que la originó. Lo escribe la 23. */
+  warehouseOrderId: string | null
+  items: ShoppingItemRow[]
+  attachments: BudgetAttachmentRow[]
+  createdAt: string
+  updatedAt: string
+}
+
+/** Los tres importes del presupuesto, y si la diferencia es desfavorable. */
+export interface BudgetAmounts {
+  totalPresupuestado: string
+  totalGastado: string
+  diferencia: string
+  isUnfavorable: boolean
+}
+
+export interface BudgetCategoryRow {
+  categoryId: string | null
+  categoryName: string | null
+  budgeted: string
+  spent: string
+  difference: string
+  isUnfavorable: boolean
+}
+
+/**
+ * El presupuesto tal y como llega: derivado, nunca almacenado.
+ *
+ * `filtered` es lo que se está mirando; `overall`, la producción entera. Los dos vienen en la misma
+ * respuesta para que el peso de una categoría se pueda leer sin perder de vista el conjunto.
+ */
+export interface BudgetData {
+  anchors: AnchorRow[]
+  shoppings: ShoppingRow[]
+  filtered: BudgetAmounts
+  overall: BudgetAmounts
+  categories: BudgetCategoryRow[]
+}
+
+/** Un proveedor de la empresa, para elegirlo en una compra. */
+export interface ProviderRow {
+  id: string
+  alias: string
+}

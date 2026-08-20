@@ -118,6 +118,9 @@ export default async function ProductionDeliveriesPage({
         canViewItems={can(company, "productions.products.view")}
         canViewDeliveries={can(company, "productions.deliveries.view")}
         canViewWorkflows={can(company, "productions.workflows.view")}
+        canViewBudget={can(company, "productions.budgets.view")}
+        canViewAnchors={can(company, "productions.anchors.view")}
+        canViewShoppings={can(company, "productions.shoppings.view")}
       />
 
       <Collection

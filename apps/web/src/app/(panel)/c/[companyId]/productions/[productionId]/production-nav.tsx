@@ -1,6 +1,14 @@
 "use client"
 
-import { Armchair, CalendarDays, Clapperboard, FolderTree, Gauge, PackageCheck } from "lucide-react"
+import {
+  Armchair,
+  CalendarDays,
+  Clapperboard,
+  FolderTree,
+  Gauge,
+  PackageCheck,
+  Wallet,
+} from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
@@ -26,10 +34,20 @@ import { useTranslations } from "next-intl"
  *
  * ## El orden de las pestañas es el del trabajo, no el del catálogo
  *
- * Panel, categorías, utilería, entregas, planes. Las dos del medio van seguidas porque son **el
- * mismo objeto físico visto dos veces**: la utilería dice qué hay y las entregas dicen por dónde
- * sale y cómo vuelve. Separarlas obligaría a cruzar la barra entera para pasar de una silla a la
- * nota que se la llevó.
+ * Panel, categorías, utilería, entregas, planes, presupuesto. Las dos del medio van seguidas porque
+ * son **el mismo objeto físico visto dos veces**: la utilería dice qué hay y las entregas dicen por
+ * dónde sale y cómo vuelve. Separarlas obligaría a cruzar la barra entera para pasar de una silla a
+ * la nota que se la llevó.
+ *
+ * ## El presupuesto es **una** pestaña, y por dentro son tres pantallas
+ *
+ * Anclas y compras no suben a la barra: son las dos colecciones de las que sale la resta, y desde
+ * ninguna de las dos por separado se entiende el número. La barra lleva el presupuesto y dentro hay
+ * una segunda barra con las tres.
+ *
+ * Por eso la pestaña recibe **los tres permisos y no uno ya resuelto**: quien no pueda ver el
+ * resumen pero sí las compras tiene que entrar igual, y aterrizar donde puede. Resolverlo fuera
+ * dejaría a cada pantalla decidiendo a dónde lleva la misma pestaña.
  */
 export function ProductionNav({
   companyId,
@@ -39,6 +57,9 @@ export function ProductionNav({
   canViewItems,
   canViewDeliveries,
   canViewWorkflows,
+  canViewBudget,
+  canViewAnchors,
+  canViewShoppings,
 }: {
   companyId: string
   productionId: string
@@ -47,10 +68,28 @@ export function ProductionNav({
   canViewItems: boolean
   canViewDeliveries: boolean
   canViewWorkflows: boolean
+  canViewBudget: boolean
+  canViewAnchors: boolean
+  canViewShoppings: boolean
 }) {
   const t = useTranslations("productions")
   const pathname = usePathname()
   const base = `/c/${companyId}/productions/${productionId}`
+
+  /**
+   * A dónde lleva la pestaña del presupuesto, y si lleva a alguna parte.
+   *
+   * Al resumen cuando se puede ver; si no, a la primera colección que sí. Apuntar siempre al
+   * resumen mandaría a un `403` a quien lleva las compras y no ve el conjunto — y un enlace que
+   * lleva a una puerta cerrada enseña a desconfiar de los demás.
+   */
+  const budgetLanding = canViewBudget
+    ? `${base}/budget`
+    : canViewAnchors
+      ? `${base}/budget/anchors`
+      : canViewShoppings
+        ? `${base}/budget/shoppings`
+        : null
 
   const entries = [
     { href: base, label: t("panel.tab"), icon: Gauge, active: pathname === base },
@@ -94,6 +133,16 @@ export function ProductionNav({
           },
         ]
       : []),
+    ...(budgetLanding === null
+      ? []
+      : [
+          {
+            href: budgetLanding,
+            label: t("budget.title"),
+            icon: Wallet,
+            active: pathname.startsWith(`${base}/budget`),
+          },
+        ]),
   ]
 
   return (

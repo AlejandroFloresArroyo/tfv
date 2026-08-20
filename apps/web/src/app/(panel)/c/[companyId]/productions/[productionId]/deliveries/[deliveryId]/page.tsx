@@ -1,6 +1,8 @@
 import { Callout, Panel, Separator } from "@tfv/ui"
+import { FileText } from "lucide-react"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
+import Link from "next/link"
 import { getFormatter, getTranslations } from "next-intl/server"
 import { ApiFailure } from "~/components/api-failure.tsx"
 import type { PageEnvelope } from "~/components/collection/collection.tsx"
@@ -54,11 +56,12 @@ export async function generateMetadata({
  * cuando ya se cerró. Los botones que no aplican **no salen** en lugar de salir apagados: un
  * control desactivado sin explicación deja a la gente intentándolo y preguntando por qué.
  *
- * ## Falta el enlace al documento, y falta a propósito
+ * ## El documento tiene enlace desde que tiene pantalla
  *
- * El servidor ya compone la hoja de la nota y firma su enlace público —está probado de extremo a
- * extremo—, pero **la pantalla que la dibuja no existe todavía**. No se pone aquí un enlace a una
- * ruta que responde 404: un enlace roto enseña a desconfiar de los demás. Ver `HALLAZGOS.md` H-201.
+ * Durante una rebanada este bloque no existió: el servidor componía la hoja y firmaba su enlace, y
+ * no había nada que la dibujara, así que **no se puso el enlace** en lugar de ponerlo apuntando a
+ * un `404` —un enlace roto enseña a desconfiar de los demás—. La hoja ya existe y el enlace vuelve.
+ * Cierra `HALLAZGOS.md` H-201.
  */
 export default async function DeliveryPage({
   params,
@@ -104,6 +107,9 @@ export default async function DeliveryPage({
       canViewItems={canViewItems}
       canViewDeliveries={can(company, "productions.deliveries.view")}
       canViewWorkflows={can(company, "productions.workflows.view")}
+      canViewBudget={can(company, "productions.budgets.view")}
+      canViewAnchors={can(company, "productions.anchors.view")}
+      canViewShoppings={can(company, "productions.shoppings.view")}
     />
   )
 
@@ -125,6 +131,14 @@ export default async function DeliveryPage({
       subtitle={t("productions.deliveries.detailSubtitle")}
       actions={
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/c/${companyId}/productions/${productionId}/deliveries/${deliveryId}/document`}
+            className="inline-flex h-9 items-center gap-2 rounded-sm border border-edge-control bg-panel px-3 text-body2 font-semibold text-content-muted transition-colors hover:bg-panel-hover hover:text-content"
+          >
+            <FileText className="size-4" aria-hidden="true" />
+            {t("documents.deliveryNote")}
+          </Link>
+
           {open && canCompose ? (
             <ComposeDelivery
               companyId={companyId}
