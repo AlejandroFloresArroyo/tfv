@@ -188,6 +188,26 @@ describe("tabla de rutas", () => {
       expect(["public", "authenticated", "permission"]).toContain(route.access.kind)
     }
   })
+
+  /**
+   * Un duplicado no cambia lo que responde el servicio —gana el primero, y quien lo escribe dos
+   * veces escribe lo mismo—, pero el registro **existe para leerse de arriba abajo y decir
+   * exactamente qué está servido**, y con el mismo camino escrito dos veces deja de decirlo.
+   *
+   * Y no lo caza nada más: el documento publicado tiene método y camino por clave, así que dos
+   * registros iguales se colapsan en uno antes de que la prueba de desfase del contrato los mire.
+   * Se coló uno al integrar el presupuesto. Ver `HALLAZGOS.md` H-235.
+   */
+  it("no registra dos veces el mismo método y camino", () => {
+    const veces = new Map<string, number>()
+    for (const { method, path } of describeRoutes(routes)) {
+      const clave = `${method} ${path}`
+      veces.set(clave, (veces.get(clave) ?? 0) + 1)
+    }
+
+    const repetidas = [...veces].filter(([, cuantas]) => cuantas > 1).map(([clave]) => clave)
+    expect(repetidas).toEqual([])
+  })
 })
 
 describe("contrato de error", () => {

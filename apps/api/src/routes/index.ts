@@ -608,9 +608,11 @@ export const routes: readonly RegisteredRoute[] = [
   deleteQuoteRoute,
 
   // El documento comercial y su enlace público. Ver `pdf-documents`.
+  //
+  // El del presupuesto **no va aquí**: vive con su bloque, como el de la nota de entrega, porque
+  // su camino cuelga de la producción y el orden importa ahí y no aquí.
   quoteDocumentRoute,
   workPlanDocumentRoute,
-  budgetDocumentRoute,
   publicDocumentRoute,
 
   // Pedidos de almacén: la bandeja del operador. Aceptar genera la cotización.

@@ -19,7 +19,7 @@
 - [x] **Impedir el cierre con líneas pendientes, indicando cuántas** — la cuenta va dentro del mensaje
 - [x] **Cierre atómico que marca los artículos como entregados** — y en una devolución, en el estado que declaró cada línea. `canDeliver` es el único camino a «entregado»; `changeItemStatus` sigue sin llegar ahí
 - [x] Firmas de ambas partes, inmutables — **y no bloquean el cierre**, que es decisión de producto contra la lectura literal de la spec: en un set se firma en papel y una nota que no se pudiera cerrar dejaría artículos atrapados en `delivered` para siempre. Razonado en la cabecera de `deliveries.ts`
-- [x] Documento y enlace público — el servidor compone la hoja y firma la referencia, reutilizando entera la maquinaria de la cotización. **La pantalla que lo dibuja no existe todavía**: `HALLAZGOS.md` H-201
+- [x] Documento y enlace público — el servidor compone la hoja y firma la referencia, reutilizando entera la maquinaria de la cotización, y **la pantalla que lo dibuja llegó con el presupuesto**: cierra `HALLAZGOS.md` H-201
 - [x] Eliminar la nota devuelve sus artículos a disponible — sólo los que **esta** nota dejó entregados y siguen estándolo, lo cual se lee de su historial
 
 ## Planes de trabajo
