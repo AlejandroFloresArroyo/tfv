@@ -27,9 +27,8 @@ if (!new URL(p.url()).pathname.startsWith("/c/")) {
 
 /* En headless el puntero es fino incluso a tamaño iPad, así que la pizarra puede nacer abierta
    donde en el dispositivo real (puntero grueso) nace cerrada. La sonda no supone: comprueba. */
-const abierta = () => p.locator("[role=dialog]").count().then((n) => n > 0)
 const abrir = async () => {
-  if (!(await abierta())) {
+  if ((await p.locator("[role=dialog]").count()) === 0) {
     await p.getByRole("button", { name: /renta fílmica/i }).click()
     await p.waitForTimeout(400)
   }
