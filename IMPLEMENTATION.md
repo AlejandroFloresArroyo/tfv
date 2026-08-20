@@ -126,26 +126,26 @@ Lo construido hasta ahora, medido y no estimado:
 
 | | |
 |---|---|
-| Rebanadas | 25 de 30 empezadas, **7 cerradas del todo**: 03, 08, 09, 11, 13, 17 y 20 |
-| Tareas | **818 de 1227**, el 66,7 %. Contadas sobre los `tasks.md`, no estimadas. Otras 30 llevan la marca de en parte: unas son **no aplicables** con su razón escrita —apuntan a la pila vieja, que la regla 1 deja intacta— y otras están escritas y **esperan una comprobación en navegador** |
-| Código sin pruebas | 114 837 líneas |
-| Código de prueba | 41 904 líneas |
-| Pruebas | **1768** de vitest — 433 contratos, 95 datos, 1012 API, 109 web, 119 interfaz — y **83 de extremo a extremo** con Playwright sobre un build de producción. Corren en **integración continua** desde el 2026-08-19, y la suite entera se comprobó **sin `.env`**, sólo con variables de entorno |
+| Rebanadas | 25 de 30 empezadas, **8 cerradas del todo**: 03, 08, 09, 11, 13, 17, 20 y 22 |
+| Tareas | **830 de 1227**, el 67,6 %. Contadas sobre los `tasks.md`, no estimadas. Otras 30 llevan la marca de en parte: unas son **no aplicables** con su razón escrita —apuntan a la pila vieja, que la regla 1 deja intacta— y otras están escritas y **esperan una comprobación en navegador** |
+| Código sin pruebas | 120 655 líneas |
+| Código de prueba | 43 116 líneas |
+| Pruebas | **1834** de vitest — 448 contratos, 95 datos, 1054 API, 109 web, 128 interfaz — y **83 de extremo a extremo** con Playwright sobre un build de producción. Corren en **integración continua** desde el 2026-08-19, y la suite entera se comprobó **sin `.env`**, sólo con variables de entorno |
 | Esquema | 98 tablas · 297 índices · 53 enumerados · 8 comprobaciones · 42 únicos parciales · 240 claves foráneas |
 | Aislamiento | 217 políticas · 98/98 tablas · 0 con identidad cruda |
 | Migraciones | 29, replicadas desde cero en cada verificación, y **comprobadas contra la base** después de aplicarlas (H-169) |
-| Rutas | **333** registradas, 270 con permiso declarado, 43 sólo autenticadas y 20 públicas y enumeradas |
+| Rutas | **350** registradas, 287 con permiso declarado, 43 sólo autenticadas y 20 públicas y enumeradas. **Sin repetir ninguna**, que desde el 2026-08-20 lo comprueba una prueba (H-235) |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 69, en español e inglés (1890 mensajes, sin desalinear) |
+| Pantallas | 75, en español e inglés (2005 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
 colecciones explorables**, **el almacén entero, del catálogo a las existencias** y, desde el 19 de
 agosto, **el área de administración de plataforma**, **la contratación de planes**, **el núcleo de
-producciones** y **su operación**. La parte ancha del trabajo que queda son el **guion asistido** y
-las **compras** de producciones —la operación se despachó el 20 de agosto y sólo le queda el
-presupuesto— y **Pixit y locaciones** (24–27, en pausa por decisión de producto): entre las dos
-suman 229 de las 409 tareas abiertas. De los servicios de plataforma sólo sigue en curso la 10, y le
+producciones** y **su operación entera**. La parte ancha del trabajo que queda son el **guion
+asistido** y las **compras** de producciones —la 22 se cerró el 20 de agosto, 44 de 44— y **Pixit y
+locaciones** (24–27, en pausa por decisión de producto): entre las dos suman 217 de las 397 tareas
+abiertas. De los servicios de plataforma sólo sigue en curso la 10, y le
 faltan dos taxonomías que cuelgan de entidades que aún no existen.
 
 **La plataforma ya tiene dónde administrarse, y deja rastro de hacerlo.** Un administrador de
@@ -178,9 +178,17 @@ nota del revés, con la condición declarada línea a línea, porque una caja de
 rotas y una perdida. `Entregado` **sigue sin poder ponerse a mano**, que era la mitad que faltaba
 para que el estado significara algo. Al lado, el calendario de la producción pinta **jornadas,
 planes y tareas** en un solo flujo y **nunca enseña una rejilla vacía**: sin fecha en la dirección,
-el servidor dice dónde está la acción y por qué aterriza ahí. Las cuatro pantallas nuevas están
-comprobadas con la suite y **no en un navegador**, que es lo que les falta y está escrito en su
-casilla.
+el servidor dice dónde está la acción y por qué aterriza ahí.
+
+**Y ya se sabe lo que costó.** El presupuesto es lo previsto contra lo ejecutado y **una resta que
+no se guarda en ninguna parte**: se suma al consultarla, con la misma función pura que usa el
+navegador, así que no hay total que pueda quedar desincronizado. Un filtro devuelve sus totales
+**junto a los de la producción entera**, que es lo que deja ver el peso de una categoría sin perder
+el conjunto, y un sobrecoste sale marcado como desfavorable con la palabra al lado del color. El
+número de tarjeta **no cabe en su tipo**: lo que se guarda es una identificación parcial y el
+completo no se puede convertir. Con eso **la rebanada 22 queda cerrada del todo**, y las seis
+pantallas del presupuesto son las primeras de esta tanda **comprobadas en un navegador de verdad**,
+no sólo con la suite.
 
 **Contratar ya cierra el círculo, que era lo que abría todo lo demás.** El plan se contrata de verdad: la
 sesión de pago lleva a la página del procesador —hoy un suplente que no mueve dinero y lo dice—, y
@@ -283,7 +291,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 |---|---|---|---|
 | 20 | `migrate-productions-core` | ✅ | 41/41. **Cerrada el 2026-08-19**, en una tanda de tres encargos en paralelo. La producción entera —alta, ficha, fechas, publicación, panel, taxonomía y planes—, los **catálogos del rodaje** —personajes, sets y biblioteca de videos—, el **desglose del guion** —guiones, capítulos y escenas, con índices que no se renumeran— y la **continuidad** —jornadas, reparto, utilería excluyente y el cuaderno del script—. Los dos defectos heredados, R-08 y R-09, comprobados contra el catálogo del motor: no existen en el modelo nuevo. Una prueba encadena los tres bloques hasta «¿dónde ha estado esta chamarra?» |
 | 21 | `add-durable-script-sync` | ⬜ | 0/33 |
-| 22 | `migrate-productions-operations` | 🟡 | 34/44. **Despachada el 2026-08-20 en dos encargos a la vez**, el objeto físico y el tiempo. El **inventario** se adelantó con la 20 —ocho estados, tabla de transiciones, etiqueta legible por máquina— y ahora tiene lo que le faltaba: **notas de entrega** con verificación pieza por pieza, firmas inmutables y cierre atómico, la **devolución como la misma nota con dirección** y no como otra entidad, y el **historial del artículo** que cierra H-171. `Entregado` sigue siendo **inalcanzable a mano**: el cierre no pasa por `canTransition`. Y el **tiempo**: planes, tareas, actividades, comentarios, adjuntos, el documento del plan con su enlace público, y el **calendario con sus cuatro vistas**, que pinta jornadas, planes y tareas en un solo flujo y nunca aterriza en una rejilla vacía sin explicarlo. Falta el **presupuesto entero** —anclas, compras y su reconciliación— y las dos pruebas que cuelgan de él |
+| 22 | `migrate-productions-operations` | ✅ | 44/44. **Cerrada el 2026-08-20**, en tres encargos: el objeto físico, el tiempo y el dinero. **Notas de entrega** con verificación pieza por pieza, firmas inmutables y cierre atómico, la **devolución como la misma nota con dirección** y el **historial del artículo** que cierra H-171 —`Entregado` sigue siendo inalcanzable a mano—. **Planes, tareas, actividades, comentarios y adjuntos**, con el **calendario de cuatro vistas** que pinta jornadas, planes y tareas en un solo flujo y nunca aterriza en una rejilla vacía sin decir por qué. Y el **presupuesto**: anclas contra compras, **lectura derivada sin total persistido**, totales del filtro junto a los generales, la identificación parcial de la tarjeta imposible de completar por tipo, y su documento. Las tres cosas que la 20 dejó abiertas aquí —H-171, H-172 y H-201— cerradas |
 | 23 | `add-transactional-procurement` | ⬜ | 2/43. Converge las dos columnas |
 
 ### Pixit y locaciones
@@ -300,7 +308,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
 | 28 | `rebuild-ui-foundation` | 🟡 | 58/70. Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial), con el **asistente por pasos**, el área de texto, el campo de importe y el selector con búsqueda. La **captura de firma** ya existe y la usa la nota de entrega —trazos normalizados, captura de puntero, sin subir nada—, pero queda en parte por lo mismo que el selector de archivos: **lo que toca `canvas` no está comprobado en un navegador**. De la 28e faltan el editor enriquecido y el mapa; de la 28d, la exploración de colecciones |
-| 29 | `rebuild-ui-domain-screens` | 🟡 | 22/56. Acceso, miembros, roles, contrapartes y direcciones (29a). La 29b **cierra el flujo del almacén**: alta y baja de almacén, los dos árboles editables, los **dos asistentes** de producto y de variante, la ficha corregible, existencias con etiquetas imprimibles, listas de precios con asignación masiva, **el panel del almacén** y el constructor de cotizaciones entero —sus cuatro bloques se guardan solos, y la ventana de fechas rehace los días que cobra cada línea antes de guardar—. El **documento de cotización y su enlace público** ya están; falta la conversación del pedido. La **29c estrena cuatro pantallas de producción** el 2026-08-20 —utilería con sus ocho estados y su etiqueta imprimible, entregas con verificación pieza por pieza y firma, el calendario con sus cuatro vistas y la ficha de una tarea con el documento de su plan—, y las cuatro llevan escrito lo mismo: **comprobadas con la suite, no en un navegador**. 29d–29e esperan a sus rebanadas de servidor |
+| 29 | `rebuild-ui-domain-screens` | 🟡 | 24/56. Acceso, miembros, roles, contrapartes y direcciones (29a). La 29b **cierra el flujo del almacén**: alta y baja de almacén, los dos árboles editables, los **dos asistentes** de producto y de variante, la ficha corregible, existencias con etiquetas imprimibles, listas de precios con asignación masiva, **el panel del almacén** y el constructor de cotizaciones entero —sus cuatro bloques se guardan solos, y la ventana de fechas rehace los días que cobra cada línea antes de guardar—. El **documento de cotización y su enlace público** ya están; falta la conversación del pedido. La **29c estrena cuatro pantallas de producción** el 2026-08-20 —utilería con sus ocho estados y su etiqueta imprimible, entregas con verificación pieza por pieza y firma, el calendario con sus cuatro vistas y la ficha de una tarea con el documento de su plan—, y las cuatro llevan escrito lo mismo: **comprobadas con la suite, no en un navegador**. Con el presupuesto llegan seis más —resumen con gráficas de SVG en línea sin librería nueva, partidas, gastos, ficha de gasto y las dos hojas públicas que faltaban—, y ésas **sí se abrieron en un navegador**. 29d–29e esperan a sus rebanadas de servidor |
 | 30 | `add-data-migration-and-cutover` | ⬜ | 1/50 |
 
 ## Lo siguiente
@@ -372,10 +380,6 @@ Lo que queda, sin orden acordado todavía:
   (H-121)—, y las dos superficies de plataforma que sus specs piden y sus rebanadas todavía no
   tienen: reprocesar un evento de cobro (`payment-webhooks`) y habilitar servicios de una empresa
   (`companies`).
-- **La hoja de la nota de entrega** (H-201). El servidor la compone entera y firma su enlace
-  público —está probado de extremo a extremo—, y la pantalla que la dibuja no existe, así que la
-  ficha no enseña el enlace: uno roto enseña a desconfiar de los demás. Es la gemela de la hoja de
-  cotización, que sí está.
 - **El idioma de los importes** (H-25): `es` agrupa a la europea y esto es un sistema mexicano. Es
   decisión de producto.
 
