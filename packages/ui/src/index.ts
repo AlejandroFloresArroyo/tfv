@@ -13,7 +13,17 @@ export {
   type ButtonSize,
   type ButtonVariant,
 } from "./components/button.tsx"
+export {
+  type CalendarCell,
+  CalendarGrid,
+  type CalendarGridProps,
+  type CalendarMonth,
+  type CalendarYearDay,
+  CalendarYearGrid,
+  type CalendarYearGridProps,
+} from "./components/calendar-grid.tsx"
 export { Callout, type CalloutProps, type CalloutTone } from "./components/callout.tsx"
+
 export {
   CollectionLayout,
   CollectionSkeleton,
