@@ -118,7 +118,12 @@ hablan el lenguaje de `query-and-pagination`, con la gramática cerrada y el sob
       `createImageBitmap` y el `<video>` no tiene prueba, ninguna pantalla lo usa todavía y los
       endpoints de subida no existían al escribirlo. Ver `H-51`, `H-52` y `H-53`
 - [ ] Editor de texto enriquecido con saneado
-- [ ] Captura de firma
+- [~] Captura de firma — `packages/ui/src/components/signature-pad.tsx`, y ya la usa la nota
+      de entrega de la 22. El orden de dispositivos manda: `touch-action: none`, captura de
+      puntero, y los trazos guardados como coordenadas normalizadas para que girar el aparato
+      no borre la firma. Devuelve el PNG cuando se le pide y no sube nada. **Falta
+      comprobarlo en un navegador**, como el selector de archivos: lo que toca `canvas` y los
+      eventos de puntero no tiene prueba
 - [ ] Selector de ubicación en mapa
 - [ ] Entradas con formato de importe y de teléfono — **falta la de teléfono**. La de importe está
       y bien probada: `packages/ui/src/lib/amount-input.ts` con diecisiete pruebas, incluida la

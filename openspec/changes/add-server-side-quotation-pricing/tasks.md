@@ -56,7 +56,9 @@
 - [x] Documento comercial con líneas que cuadran con el total
 - [x] Ventana de fechas y frecuencia en las cotizaciones de renta
 - [~] Espacio de firma, vacío si no está firmada. **El espacio se imprime**; capturar la
-      firma en pantalla espera al control de firma (28e) y al almacenamiento de ficheros (08)
+      firma en pantalla ya no espera a nada —el control de firma existe desde la 22 y el
+      almacenamiento de ficheros se cerró con la 08—: falta enchufarlo a la hoja de la
+      cotización, que es una pantalla y no un contrato
 - [x] Enlace público de sólo lectura
 
 ## Verificación

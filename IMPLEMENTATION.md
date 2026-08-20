@@ -127,26 +127,26 @@ Lo construido hasta ahora, medido y no estimado:
 | | |
 |---|---|
 | Rebanadas | 25 de 30 empezadas, **7 cerradas del todo**: 03, 08, 09, 11, 13, 17 y 20 |
-| Tareas | **784 de 1228**, el 63,8 %. Contadas sobre los `tasks.md`, no estimadas. Otras 29 están marcadas **no aplicables** con su razón escrita: apuntan a la pila vieja, que la regla 1 deja intacta |
-| Código sin pruebas | 100 871 líneas |
-| Código de prueba | 39 084 líneas |
-| Pruebas | **1664** de vitest — 406 contratos, 94 datos, 936 API, 109 web, 119 interfaz — y **83 de extremo a extremo** con Playwright sobre un build de producción. Corren en **integración continua** desde el 2026-08-19, y la suite entera se comprobó **sin `.env`**, sólo con variables de entorno |
-| Esquema | 97 tablas · 295 índices · 50 enumerados · 8 comprobaciones · 42 únicos parciales · 238 claves foráneas |
-| Aislamiento | 215 políticas · 97/97 tablas · 0 con identidad cruda |
-| Migraciones | 28, replicadas desde cero en cada verificación, y **comprobadas contra la base** después de aplicarlas (H-169) |
-| Rutas | **295** registradas, 232 con permiso declarado, 43 sólo autenticadas y 20 públicas y enumeradas |
+| Tareas | **818 de 1227**, el 66,7 %. Contadas sobre los `tasks.md`, no estimadas. Otras 30 llevan la marca de en parte: unas son **no aplicables** con su razón escrita —apuntan a la pila vieja, que la regla 1 deja intacta— y otras están escritas y **esperan una comprobación en navegador** |
+| Código sin pruebas | 114 837 líneas |
+| Código de prueba | 41 904 líneas |
+| Pruebas | **1768** de vitest — 433 contratos, 95 datos, 1012 API, 109 web, 119 interfaz — y **83 de extremo a extremo** con Playwright sobre un build de producción. Corren en **integración continua** desde el 2026-08-19, y la suite entera se comprobó **sin `.env`**, sólo con variables de entorno |
+| Esquema | 98 tablas · 297 índices · 53 enumerados · 8 comprobaciones · 42 únicos parciales · 240 claves foráneas |
+| Aislamiento | 217 políticas · 98/98 tablas · 0 con identidad cruda |
+| Migraciones | 29, replicadas desde cero en cada verificación, y **comprobadas contra la base** después de aplicarlas (H-169) |
+| Rutas | **333** registradas, 270 con permiso declarado, 43 sólo autenticadas y 20 públicas y enumeradas |
 | Permisos | **255** claves, comprobadas antes de cualquier efecto |
-| Pantallas | 62, en español e inglés (1656 mensajes, sin desalinear) |
+| Pantallas | 69, en español e inglés (1890 mensajes, sin desalinear) |
 
 **Dónde estamos de verdad**: los cimientos, la seguridad, la interfaz con formularios que escriben,
 **los datos maestros** —empresas, membresías, roles, direcciones, contrapartes y taxonomía—, **las
 colecciones explorables**, **el almacén entero, del catálogo a las existencias** y, desde el 19 de
-agosto, **el área de administración de plataforma**, **la contratación de planes** y **el núcleo de
-producciones**. La parte ancha del trabajo que queda son las tres rebanadas de producciones que
-siguen a la 20 —guion asistido, operación y compras— y **Pixit y locaciones** (24–27, en pausa por
-decisión de producto): entre las dos suman 259 de las 445 tareas abiertas. De los servicios de
-plataforma sólo sigue en curso la 10, y le faltan dos taxonomías que cuelgan de entidades que aún no
-existen.
+agosto, **el área de administración de plataforma**, **la contratación de planes**, **el núcleo de
+producciones** y **su operación**. La parte ancha del trabajo que queda son el **guion asistido** y
+las **compras** de producciones —la operación se despachó el 20 de agosto y sólo le queda el
+presupuesto— y **Pixit y locaciones** (24–27, en pausa por decisión de producto): entre las dos
+suman 229 de las 409 tareas abiertas. De los servicios de plataforma sólo sigue en curso la 10, y le
+faltan dos taxonomías que cuelgan de entidades que aún no existen.
 
 **La plataforma ya tiene dónde administrarse, y deja rastro de hacerlo.** Un administrador de
 plataforma puede mirar a través de todos los arrendatarios —eso existía desde la rebanada 05— y
@@ -170,6 +170,17 @@ qué llevaba puesto cada personaje. La utilería es **un artículo del inventari
 referencia, nunca las dos cosas ni ninguna**, sostenido en tres capas y no en una comprobación del
 manejador. Al final se puede preguntar lo que se pregunta de verdad tres meses después: dónde ha
 estado esta chamarra, en qué jornada y sobre quién.
+
+**Y lo que sale de esa producción ya se firma, y su tiempo ya se ve.** Una nota de entrega compone
+su lista, se verifica pieza por pieza con el código en la mano, la firman las dos partes y al
+cerrarse marca los artículos como entregados en una sola transacción — y la devolución es esa misma
+nota del revés, con la condición declarada línea a línea, porque una caja de doce vuelve con dos
+rotas y una perdida. `Entregado` **sigue sin poder ponerse a mano**, que era la mitad que faltaba
+para que el estado significara algo. Al lado, el calendario de la producción pinta **jornadas,
+planes y tareas** en un solo flujo y **nunca enseña una rejilla vacía**: sin fecha en la dirección,
+el servidor dice dónde está la acción y por qué aterriza ahí. Las cuatro pantallas nuevas están
+comprobadas con la suite y **no en un navegador**, que es lo que les falta y está escrito en su
+casilla.
 
 **Contratar ya cierra el círculo, que era lo que abría todo lo demás.** El plan se contrata de verdad: la
 sesión de pago lleva a la página del procesador —hoy un suplente que no mueve dinero y lo dice—, y
@@ -272,7 +283,7 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 |---|---|---|---|
 | 20 | `migrate-productions-core` | ✅ | 41/41. **Cerrada el 2026-08-19**, en una tanda de tres encargos en paralelo. La producción entera —alta, ficha, fechas, publicación, panel, taxonomía y planes—, los **catálogos del rodaje** —personajes, sets y biblioteca de videos—, el **desglose del guion** —guiones, capítulos y escenas, con índices que no se renumeran— y la **continuidad** —jornadas, reparto, utilería excluyente y el cuaderno del script—. Los dos defectos heredados, R-08 y R-09, comprobados contra el catálogo del motor: no existen en el modelo nuevo. Una prueba encadena los tres bloques hasta «¿dónde ha estado esta chamarra?» |
 | 21 | `add-durable-script-sync` | ⬜ | 0/33 |
-| 22 | `migrate-productions-operations` | 🟡 | 4/44. El **inventario de artículos** se adelantó con la 20, porque sin objetos no hay ni sets ni utilería que probar: alta con sus ocho estados y su tabla de transiciones, etiqueta legible por máquina con localización por código, fotos y búsqueda. `Entregado` queda **inalcanzable a propósito**: sólo lo pone una nota de entrega verificada, y las notas son de esta rebanada |
+| 22 | `migrate-productions-operations` | 🟡 | 34/44. **Despachada el 2026-08-20 en dos encargos a la vez**, el objeto físico y el tiempo. El **inventario** se adelantó con la 20 —ocho estados, tabla de transiciones, etiqueta legible por máquina— y ahora tiene lo que le faltaba: **notas de entrega** con verificación pieza por pieza, firmas inmutables y cierre atómico, la **devolución como la misma nota con dirección** y no como otra entidad, y el **historial del artículo** que cierra H-171. `Entregado` sigue siendo **inalcanzable a mano**: el cierre no pasa por `canTransition`. Y el **tiempo**: planes, tareas, actividades, comentarios, adjuntos, el documento del plan con su enlace público, y el **calendario con sus cuatro vistas**, que pinta jornadas, planes y tareas en un solo flujo y nunca aterriza en una rejilla vacía sin explicarlo. Falta el **presupuesto entero** —anclas, compras y su reconciliación— y las dos pruebas que cuelgan de él |
 | 23 | `add-transactional-procurement` | ⬜ | 2/43. Converge las dos columnas |
 
 ### Pixit y locaciones
@@ -288,8 +299,8 @@ Leyenda: ⬜ sin empezar · 🟡 en curso · ✅ terminada
 
 | # | Rebanada | Estado | Nota |
 |---|---|---|---|
-| 28 | `rebuild-ui-foundation` | 🟡 | 58/71. Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial), con el **asistente por pasos**, el área de texto, el campo de importe y el selector con búsqueda. De la 28e faltan el selector de archivos, el editor enriquecido, la firma y el mapa; de la 28d, la exploración de colecciones |
-| 29 | `rebuild-ui-domain-screens` | 🟡 | 18/56. Acceso, miembros, roles, contrapartes y direcciones (29a). La 29b **cierra el flujo del almacén**: alta y baja de almacén, los dos árboles editables, los **dos asistentes** de producto y de variante, la ficha corregible, existencias con etiquetas imprimibles, listas de precios con asignación masiva, **el panel del almacén** y el constructor de cotizaciones entero —sus cuatro bloques se guardan solos, y la ventana de fechas rehace los días que cobra cada línea antes de guardar—. El **documento de cotización y su enlace público** ya están; falta la conversación del pedido. 29c–29e esperan a sus rebanadas de servidor |
+| 28 | `rebuild-ui-foundation` | 🟡 | 58/70. Tokens, primitivos, superficies, transporte y **formularios que escriben** (28a·b·c·e·f, parcial), con el **asistente por pasos**, el área de texto, el campo de importe y el selector con búsqueda. La **captura de firma** ya existe y la usa la nota de entrega —trazos normalizados, captura de puntero, sin subir nada—, pero queda en parte por lo mismo que el selector de archivos: **lo que toca `canvas` no está comprobado en un navegador**. De la 28e faltan el editor enriquecido y el mapa; de la 28d, la exploración de colecciones |
+| 29 | `rebuild-ui-domain-screens` | 🟡 | 22/56. Acceso, miembros, roles, contrapartes y direcciones (29a). La 29b **cierra el flujo del almacén**: alta y baja de almacén, los dos árboles editables, los **dos asistentes** de producto y de variante, la ficha corregible, existencias con etiquetas imprimibles, listas de precios con asignación masiva, **el panel del almacén** y el constructor de cotizaciones entero —sus cuatro bloques se guardan solos, y la ventana de fechas rehace los días que cobra cada línea antes de guardar—. El **documento de cotización y su enlace público** ya están; falta la conversación del pedido. La **29c estrena cuatro pantallas de producción** el 2026-08-20 —utilería con sus ocho estados y su etiqueta imprimible, entregas con verificación pieza por pieza y firma, el calendario con sus cuatro vistas y la ficha de una tarea con el documento de su plan—, y las cuatro llevan escrito lo mismo: **comprobadas con la suite, no en un navegador**. 29d–29e esperan a sus rebanadas de servidor |
 | 30 | `add-data-migration-and-cutover` | ⬜ | 1/50 |
 
 ## Lo siguiente
@@ -361,6 +372,10 @@ Lo que queda, sin orden acordado todavía:
   (H-121)—, y las dos superficies de plataforma que sus specs piden y sus rebanadas todavía no
   tienen: reprocesar un evento de cobro (`payment-webhooks`) y habilitar servicios de una empresa
   (`companies`).
+- **La hoja de la nota de entrega** (H-201). El servidor la compone entera y firma su enlace
+  público —está probado de extremo a extremo—, y la pantalla que la dibuja no existe, así que la
+  ficha no enseña el enlace: uno roto enseña a desconfiar de los demás. Es la gemela de la hoja de
+  cotización, que sí está.
 - **El idioma de los importes** (H-25): `es` agrupa a la europea y esto es un sistema mexicano. Es
   decisión de producto.
 
@@ -4513,3 +4528,226 @@ y la **03**, que decían «no hay pipeline en este repositorio».
 
 **Hallazgos**: H-190 a H-196. Cerrados H-150 y H-169; H-146 queda **parcial** — diagnosticado
 entero y corregido a medias, con las dos mitades que faltan nombradas.
+
+### 2026-08-20 · Por dónde sale, y cómo vuelve
+
+La 20 dejó una producción con objetos físicos dentro —ocho estados y una tabla de transiciones
+probada celda a celda— y **un estado al que ningún camino llevaba**: `Entregado` sólo lo pone una
+nota de entrega verificada, y las notas eran de esta rebanada. Dejó también tres tareas del
+inventario sin marcar y dos hallazgos que sólo se podían cerrar desde aquí. Esto es ese cierre.
+
+**Dos decisiones que van contra la lectura literal de la spec**
+
+Las dos están escritas en la cabecera de `deliveries.ts`, donde se leen antes que el código:
+
+- **Las firmas no bloquean el cierre.** La nota se cierra con las líneas verificadas. En un set se
+  firma en papel constantemente, y una nota que no se puede cerrar deja artículos atrapados en
+  `delivered` para siempre. Lo que sí se cumple entero es la otra mitad: **una vez escritas son
+  inmutables**, y el documento dice si se firmó y quién.
+- **`delivered` sigue siendo inalcanzable a mano.** El cierre no consulta `canTransition` sino
+  `canDeliver`, que es su propia regla y vive al lado de la otra para que se lean juntas. Poner ese
+  estado con un botón sería exactamente la mentira que la verificación por líneas existe para
+  impedir.
+
+**La devolución es la misma nota, del revés**
+
+`production_deliveries.direction` —salida o devolución— es **una columna y no una segunda entidad**,
+porque es el mismo documento y el mismo motor de cierre: se compone una lista, se verifica pieza por
+pieza, se firma y se cierra. Lo único que cambia es a qué estado deja el artículo. Duplicar la
+entidad habría duplicado el cierre atómico, la verificación, las firmas y el documento — y ahí es
+donde las dos copias acaban separándose. Cada línea lleva además su `return_condition`, porque una
+caja de doce vuelve con dos rotas y una perdida, no con las doce iguales.
+
+**El historial, y H-171 cerrado por los dos lados**
+
+`production_item_events` es `warehouse_stock_events` calcada. **Tabla y no columna de atribución**:
+con columna se sabe quién hizo el último cambio; con tabla se reconstruye el recorrido entero, que
+es lo que se pregunta cuando una chamarra vuelve rota — por dónde pasó y en qué estado salió de cada
+sitio, no quién la marcó. El alta, el cambio a mano y el cierre de la nota firman su paso **dentro
+de la transacción que lo provocó**.
+
+**H-172, y el gemelo que apareció al cerrarlo**
+
+Dar de baja un artículo que figura en una nota sin cerrar responde `409` y **enumera las notas que
+lo retienen**. La comprobación vive en la aplicación porque en el motor no puede vivir: el
+`ON DELETE restrict` de las líneas no se dispara nunca contra una baja lógica. Al escribirlo apareció
+el gemelo, del otro lado de la misma relación: dar de baja **la nota** tampoco dispara su cascada,
+por lo mismo. Es H-203, y la lección que deja es más ancha que el caso — **toda cascada declarada
+sobre una tabla con borrado lógico es decorativa**, y este esquema tiene varias.
+
+**La pantalla está pensada para alguien de pie, con una tableta y una caja abierta**
+
+El campo de código encabeza el bloque de verificación y un lector de códigos lo alimenta sin
+integración ninguna. Cada línea dice quién la verificó sin abrir nada. En una devolución la condición
+se declara **al marcar**, que es cuando alguien tiene el objeto en la mano. La utilería se filtra por
+estado en múltiple, porque la pregunta real no es «enséñame los perdidos» sino «enséñame lo que no
+está bien», y la etiqueta imprimible sale en negro sobre blanco fijo: la hoja impresa no sigue al
+tema, como la de cotización.
+
+**La firma, que destraba de paso la 14**
+
+Un primitivo nuevo, y el orden de dispositivos manda en él más que en ninguna otra pantalla: una
+firma se hace con el dedo sobre una tableta, no con ratón. `touch-action: none` para que el primer
+trazo hacia abajo sea una firma y no un desplazamiento de la página, captura de puntero para que el
+trazo siga vivo si el dedo sale del lienzo, y los trazos guardados como **coordenadas normalizadas**
+para que girar el aparato no borre la firma a media rúbrica. No sube nada: devuelve el PNG cuando se
+le pide. Y **no es obligatorio**, porque firmar exige un pulso y un puntero y el sistema no puede
+exigir ninguno de los dos.
+
+**Lo que se encontró**
+
+- **H-203, el gemelo de H-172**, arriba. Es el que importa de los cuatro.
+- **H-200**: `productions.delivery_products.searching` es una de las 255 y ninguna operación la
+  ejerce. No se le inventa una ruta.
+- **H-201**: el servidor compone la hoja de la nota y firma su enlace público —probado de extremo a
+  extremo—, y **la pantalla que la dibuja no existe**. La ficha no pone un enlace a una ruta que
+  responde `404`: un enlace roto enseña a desconfiar de los demás.
+- **H-202**: la etiqueta del artículo de producción y la hoja de etiquetas del almacén repiten
+  andamiaje de impresión y no coinciden.
+
+**Lo que trae la migración**
+
+La `0030`, con tres cosas del mismo asunto: la tabla de eventos, la dirección de la nota y la
+condición de vuelta por línea. Sus políticas de aislamiento van **escritas a mano**: el ayudante
+`app.__policy_tenant` es andamiaje de la `0005` y se elimina al final de ella, así que se copia la
+forma y no la llamada. La cobertura pasa a 98 tablas, y el aislamiento del historial se prueba en los
+dos sentidos: leer el de otra empresa, y firmar en él.
+
+**Verificación**
+
+`pnpm check` limpio, `pnpm lint:ci` sin incidencias nuevas y la suite entera en verde en su propio
+árbol de trabajo, contra una base de pruebas suya: **967 pruebas de API** —31 más que las 936 de
+partida— y 109 de web. Las de entregas corren **contra un servidor de verdad**, con su serialización,
+su cookie y su guardián, no contra el manejador. El cierre atómico está comprobado además **por
+mutación**: separando las escrituras en transacciones propias, la prueba se pone roja.
+
+**Rebanadas**: quince casillas de la **22** —el bloque de notas de entrega entero, las tres del
+inventario que esperaban a que las notas existieran y tres pruebas— y dos de la **29c**. Deja la
+captura de firma de la **28e** escrita y en parte, y con ella **destraba la firma de la 14**, que
+llevaba desde su rebanada esperando a este control.
+
+**Hallazgos**: H-200 a H-203. **Cerrados H-171 y H-172**, los dos que la 20 dejó abiertos aquí.
+
+### 2026-08-20 · El tiempo de una producción
+
+El plan de trabajo ya sabía contar sus tareas desde la 20 —el panel las resumía— y **las tareas no
+existían**. Esto las escribe, con sus actividades, sus comentarios, sus adjuntos, su documento con
+enlace público, y el calendario, que es la otra vista de lo mismo. **Ninguna migración**: todas las
+tablas estaban puestas desde la `0002`, hasta el índice que el calendario usa.
+
+**El calendario lleva los días de rodaje, y por eso se usa**
+
+La spec sólo nombra los planes. El calendario pinta **jornadas, planes y tareas** por una razón de
+oficio, y es la que decide si esta pantalla se abre dos veces: un calendario de producción sin los
+días de rodaje no es el calendario de la producción, es la lista de pendientes del equipo de arte.
+Quien lo abre quiere ver cuándo se rueda y qué hay que tener listo antes.
+
+Por eso la respuesta es **un solo flujo de sucesos fechados, cada uno con su tipo**, y no tres listas
+que la pantalla entrelace. Entrelazar por fecha en el cliente es la vía por la que un día acaba
+enseñando sus tareas encima de su jornada.
+
+**Nunca una rejilla vacía**
+
+Es la regla que gobierna la superficie. Sin fecha en la petición, **el servidor resuelve dónde está
+la acción** y responde con la fecha de aterrizaje **y el motivo** —antes del periodo, dentro,
+después, o sin nada—. El cliente no puede resolverlo solo: no sabe dónde están los sucesos sin
+preguntar, y para cuando lo sabe ya pintó el mes equivocado. La pantalla dice el motivo con palabras,
+porque un mes desierto y un fallo de carga se ven exactamente igual.
+
+Y los días de aterrizaje se calculan **con los filtros puestos**. Resolver la fecha con todos los
+sucesos y luego filtrar aterriza en un día donde lo filtrado no aparece — una rejilla vacía por otro
+camino. Los dos recorridos, el de los extremos y el del rango, comparten condiciones a propósito.
+
+**Un filtro actúa sobre lo que lleva ese concepto y deja pasar el resto**
+
+El personaje lo llevan las jornadas —por su continuidad— y las tareas; la categoría, sólo las tareas.
+Un plan de trabajo no tiene ni una cosa ni la otra, así que sigue apareciendo: esconderlo escondería
+la jornada de trabajo entera por filtrar un departamento.
+
+**La dirección es lo que estás mirando**
+
+Sin fecha significa «llévame donde está la acción», y al aterrizar la pantalla **reescribe la
+dirección** a la fecha resuelta para que se pueda pegar en un chat y abrirse igual. Se reescribe con
+`replaceState` y no navegando: navegar volvería a pedir lo que ya está delante. Por debajo de tableta
+la rejilla se cambia por una agenda de los días con algo — siete columnas con texto no caben en un
+teléfono, y desplazarlas en horizontal escondería media semana sin anunciarlo.
+
+**La rejilla no sabe qué día es hoy**
+
+El primitivo nuevo no calcula el mes, no llama a `Date` ni una vez y recibe casillas ya resueltas: la
+aritmética de días civiles vive en los contratos, donde se prueba sin navegador. En la casilla **el
+color nunca viaja solo** —cada suceso escribe el nombre de su estado al lado de su punto de
+temperatura, y eso decide el alto de la fila—, y la vista de año **no finge estados**: a esa escala
+no cabe el nombre de ninguno, así que dice lo único que puede decir con honestidad, dónde se acumula
+el trabajo, con tres escalones de densidad y la cifra exacta en el nombre accesible.
+
+**Las claves finas se exigen encima de la gruesa, y sólo cuando el cuerpo trae el campo**
+
+Quien corrige el título de una tarea no puede darla por completada. El creador se enseña y no se
+edita: no hay campo para él en ningún formulario, sale del actor. Y lo que cuelga de cada tarea se
+pide al desplegarla, no al pintar la lista.
+
+**El documento reutiliza lo que ya había**
+
+`work-plan` tenía su código de familia en `DOCUMENT_KINDS` desde el primer día y ahora tiene
+manejador. La hoja agrupa las tareas por semana y por día —que es como se lee una hoja de llamado— y
+las que no llevan fecha van al final en vez de desaparecer del papel. Las reglas de impresión, que
+vivían dentro de la hoja de cotización, quedan extraídas a un solo sitio y la del plan las reutiliza:
+va sin temperaturas, porque el papel no tiene tema y la fotocopiadora de la oficina de producción
+tampoco.
+
+**Lo que se encontró — los cuatro son del tiempo, y tres son migraciones**
+
+- **H-220: la jornada de rodaje no tiene fecha propia.** `production_recordings` no lleva ninguna
+  columna de fecha programada, y una jornada **es** un día. El calendario la sitúa por su fecha de
+  alta, que es lo único que hay, con el desajuste escrito en la cabecera del módulo para que nadie lo
+  confunda con una fecha de rodaje. En una producción que da de alta sus jornadas conforme las
+  programa las dos fechas coinciden lo bastante; en una que las cargue todas de golpe, no.
+- **H-221: el día civil sale en tiempo universal porque no hay zona horaria que consultar.** Ni la
+  producción, ni la empresa, ni el usuario tienen columna. Se resuelve en universal, que es lo único
+  que hace que un enlace compartido enseñe lo mismo a quien lo abre — que es literalmente lo que la
+  spec pide. El **aterrizaje** sí respeta a quien mira, porque «hoy» a las once de la noche en México
+  ya es mañana en universal; el reparto de los sucesos en las casillas no, y no debe.
+- **H-222: la exclusión entre plan y tarea no la sujeta el motor.** Un comentario cuelga de un plan
+  **o** de una tarea, las dos columnas admiten nulo y no hay restricción. Lo ata la aplicación de la
+  forma que no depende de acordarse —hay un camino por tipo, y el tipo interno no puede expresar «las
+  dos» ni «ninguna»—, que es la misma disciplina de la utilería con una capa menos.
+- **H-223: no hay clave de permiso de calendario, y no se inventa ninguna.** El catálogo cerrado de
+  255 no tiene ninguna, igual que no tenía de «panel» (H-112) ni de «compartir un documento» (H-61).
+  El calendario no es un recurso: es una vista de tres que sí lo son. Se exige
+  `productions.workflows.view`, la del recurso que le da nombre; lo que eso concede de más queda
+  anotado.
+
+**Verificación**
+
+`pnpm check` limpio, `pnpm lint:ci` sin incidencias nuevas y la suite entera en verde en su propio
+árbol, contra una base creada para él: **981 pruebas de API**, 45 más que las 936 de partida, más las
+del calendario y las del documento del plan en contratos, que se prueban sin navegador porque son
+funciones puras. La que resume la tanda es la de compartir: **dos sesiones distintas de la misma
+empresa abren la misma dirección y obtienen el mismo rango y los mismos sucesos**, que es lo que la
+spec pide con «quien la abra ve esa misma semana».
+
+**La integración**
+
+Las dos ramas nacieron del mismo commit y se fusionaron el 2026-08-20, la del objeto físico primero.
+La segunda trajo **siete conflictos y ninguno mecánico**: las dos tocaron la misma costura de
+documentos generados —la unión pública gana su tercera familia y el `switch` sus tres casos—, el
+registro de rutas, la capa de tipos de la web, el registro de hallazgos y las casillas de la 29c. El
+cliente tipado **no se resolvió a mano: se regeneró**, 333 endpoints.
+
+Y una que el texto no delataba y sí el compilador: la barra de secciones de una producción ganó dos
+pestañas con la otra rama —utilería y entregas— y **sus propiedades no son opcionales a propósito**,
+precisamente para que una pantalla que se olvide de pasar un permiso no pierda la pestaña en
+silencio. Las dos pantallas nuevas del calendario no compilaban. Es la señal funcionando: se
+olvidaron, y no compiló.
+
+Sobre el árbol ya integrado, `pnpm test --force` sin nada en caché: **1768 pruebas en verde** —433
+contratos, 95 datos, 1012 API, 109 web y 119 interfaz—, `pnpm check` en cero y `pnpm lint:ci` en
+cero.
+
+**Rebanadas**: quince casillas de la **22** —los nueve puntos de los planes de trabajo, las cinco del
+calendario y una prueba— y dos de la **29c**. Con las de la otra rama, la 22 pasa de **4/44 a 34/44**
+y sólo le queda el presupuesto.
+
+**Hallazgos**: H-220 a H-223, **ninguno cerrado**: tres piden migración y el cuarto es una decisión
+de producto sobre el catálogo de permisos, que está cerrado.
