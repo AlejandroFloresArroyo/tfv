@@ -272,8 +272,10 @@ describe("aislamiento entre arrendatarios", () => {
     // lo que convertiría el historial en un sitio donde plantar un rastro falso.
     await expectRejectedByPolicy(
       withRequester(identity(seed.beto), (tx) =>
-        tx.execute(sql.raw(`insert into production_item_events (id, item_id, to_status, reason)
-                 values ('${newId()}', '${seed.itemA}', 'lost', 'manual')`)),
+        tx.execute(
+          sql.raw(`insert into production_item_events (id, item_id, to_status, reason)
+                 values ('${newId()}', '${seed.itemA}', 'lost', 'manual')`),
+        ),
       ),
     )
   })
