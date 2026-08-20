@@ -9,6 +9,7 @@
 
 export * from "./activity.ts"
 export * from "./api-client.ts"
+export * from "./budget.ts"
 export * from "./calendar.ts"
 export * from "./checkout.ts"
 export * from "./computed.ts"

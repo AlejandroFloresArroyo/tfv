@@ -15,10 +15,10 @@ import { Paperclip, Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useFormatter, useTranslations } from "next-intl"
 import { useCallback, useState, useTransition } from "react"
+import { Attachments } from "~/components/attachments.tsx"
 import { type ItemAction, ItemActions } from "~/components/collection/item-actions.tsx"
 import { ConfirmDestructive } from "~/components/confirm-destructive.tsx"
 import { FormDialog } from "~/components/form-dialog.tsx"
-import { PhotoPicker, usePhotoUploads } from "~/components/photo-picker.tsx"
 import { optional, text } from "~/components/use-submit.ts"
 import { api } from "~/lib/api.client.ts"
 import {
@@ -61,13 +61,6 @@ const TASK_TONE = {
   // Cerrada sin terminar: pide atención, no está bloqueada.
   incomplete: "cuida",
 } as const
-
-/** Lo que se puede adjuntar a una tarea: documentos y fotos, no sólo imágenes. */
-const ATTACHMENT_POLICY = {
-  accept: ["image", "document", "file"] as const,
-  maxBytes: 25 * 1024 * 1024,
-  maxFiles: 10,
-}
 
 function tasksPath(companyId: string, productionId: string, workflowId: string) {
   return `/companies/${companyId}/productions/${productionId}/workflows/${workflowId}/tasks`
@@ -617,7 +610,6 @@ export function TaskCard({
 
               <Attachments
                 companyId={companyId}
-                productionId={productionId}
                 base={`${tasksPath(companyId, productionId, workflowId)}/${task.id}/attachments`}
                 attachments={detail.attachments}
                 canManage={permissions.canEdit}
@@ -776,108 +768,6 @@ function Activities({
           >
             {common("add")}
           </Button>
-        </div>
-      ) : null}
-    </section>
-  )
-}
-
-// ─── Adjuntos ────────────────────────────────────────────────────────────────
-
-export function Attachments({
-  companyId,
-  base,
-  attachments,
-  canManage,
-  onChanged,
-}: {
-  companyId: string
-  productionId: string
-  base: string
-  attachments: readonly { id: string; name: string; url: string }[]
-  canManage: boolean
-  onChanged: () => Promise<void>
-}) {
-  const t = useTranslations("productions.attachments")
-  const common = useTranslations("common")
-  const uploads = usePhotoUploads(companyId)
-  const [busy, setBusy] = useState(false)
-
-  /**
-   * Subir y luego colgar, en dos pasos y en ese orden.
-   *
-   * El archivo llega antes al almacenamiento y **después** se le dice a la tarea que existe. Al
-   * revés dejaría filas apuntando a archivos que nunca terminaron de subir, que es exactamente el
-   * hueco roto que la spec de archivos prohíbe enseñar.
-   */
-  async function attach() {
-    setBusy(true)
-    try {
-      const outcome = await uploads.run()
-      for (const uploadId of outcome.uploaded) {
-        await api(base, { method: "POST", body: { uploadId } })
-      }
-      uploads.reset()
-      await onChanged()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function detach(attachmentId: string) {
-    setBusy(true)
-    try {
-      await api(`${base}/${attachmentId}`, { method: "DELETE" })
-      await onChanged()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <section>
-      <h4 className="legend text-content-muted">{t("title")}</h4>
-
-      {attachments.length === 0 ? (
-        <p className="mt-2 text-body3 text-content-faint">{t("empty")}</p>
-      ) : (
-        <ul className="mt-2 flex flex-col gap-1.5">
-          {attachments.map((attachment) => (
-            <li key={attachment.id} className="flex items-center gap-2">
-              <Paperclip className="size-3.5 shrink-0 text-content-faint" aria-hidden="true" />
-              <a
-                href={attachment.url}
-                target="_blank"
-                rel="noreferrer"
-                className="min-w-0 flex-1 truncate text-body3 text-content underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-focus"
-              >
-                {attachment.name}
-              </a>
-              {canManage ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void detach(attachment.id)}
-                  aria-label={t("remove", { name: attachment.name })}
-                  className="rounded-md p-1 text-content-faint transition-colors hover:text-tinta-alto focus-visible:outline-2 focus-visible:outline-focus"
-                >
-                  <Trash2 className="size-3.5" aria-hidden="true" />
-                </button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {canManage ? (
-        <div className="mt-3 flex flex-col gap-2">
-          <PhotoPicker uploads={uploads} policy={ATTACHMENT_POLICY} disabled={busy} />
-          {uploads.files.length > 0 ? (
-            <Button size="sm" variant="secondary" disabled={busy} onClick={() => void attach()}>
-              {busy ? <Spinner /> : null}
-              {common("add")}
-            </Button>
-          ) : null}
         </div>
       ) : null}
     </section>

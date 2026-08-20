@@ -103,18 +103,37 @@ function describeFilter(definition: QuerySchema["filters"][string]): string {
  * lee por su cuenta porque no filtran ni ordenan nada. Hay que nombrarlos aquí porque el análisis
  * rechaza lo que no reconoce, y esa severidad es deseable — es lo que hace que un filtro mal
  * escrito devuelva `400` en vez de la colección entera.
+ *
+ * `prefix` es para las rutas que llevan **dos colecciones en la misma petición** —hoy sólo el
+ * presupuesto, con sus anclas y sus compras—. Con prefijo se toman las claves que lo llevan, se les
+ * quita, y **se descarta el resto**: sin descartarlo, la gramática de las anclas vería
+ * `shopping_method` y respondería `400` a una petición correcta.
  */
 export function queryOf(
   c: Context,
   schema: QuerySchema,
   except: readonly string[] = [],
+  prefix = "",
 ): ParsedQuery {
-  if (except.length === 0) return parseQuery(schema, c.req.queries())
+  if (except.length === 0 && prefix === "") return parseQuery(schema, c.req.queries())
 
-  const queries = { ...c.req.queries() }
+  const queries = withoutPrefix(c.req.queries(), prefix)
   for (const key of except) delete queries[key]
 
   return parseQuery(schema, queries)
+}
+
+function withoutPrefix(
+  queries: Record<string, string[]>,
+  prefix: string,
+): Record<string, string[]> {
+  if (prefix === "") return { ...queries }
+
+  const taken: Record<string, string[]> = {}
+  for (const [key, value] of Object.entries(queries)) {
+    if (key.startsWith(prefix)) taken[key.slice(prefix.length)] = value
+  }
+  return taken
 }
 
 /** Serializa una página aplicando la conversión de cada elemento. */

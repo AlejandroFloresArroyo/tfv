@@ -147,7 +147,12 @@ import {
   updateProviderRoute,
   updateUserAddressRoute,
 } from "./directory.ts"
-import { publicDocumentRoute, quoteDocumentRoute, workPlanDocumentRoute } from "./documents.ts"
+import {
+  budgetDocumentRoute,
+  publicDocumentRoute,
+  quoteDocumentRoute,
+  workPlanDocumentRoute,
+} from "./documents.ts"
 import { health } from "./health.ts"
 import {
   deleteMessageRoute,
@@ -174,6 +179,24 @@ import {
   platformCompanyMembersRoute,
   platformUsersRoute,
 } from "./platform.ts"
+import {
+  attachToAnchorRoute,
+  attachToShoppingRoute,
+  createAnchorRoute,
+  createShoppingRoute,
+  deleteAnchorRoute,
+  deleteShoppingRoute,
+  detachFromAnchorRoute,
+  detachFromShoppingRoute,
+  getAnchorRoute,
+  getShoppingRoute,
+  listAnchorsRoute,
+  listShoppingsRoute,
+  productionBudgetRoute,
+  setShoppingItemsRoute,
+  updateAnchorRoute,
+  updateShoppingRoute,
+} from "./production-budget.ts"
 import {
   changeItemStatusRoute,
   createCharacterRoute,
@@ -587,6 +610,7 @@ export const routes: readonly RegisteredRoute[] = [
   // El documento comercial y su enlace público. Ver `pdf-documents`.
   quoteDocumentRoute,
   workPlanDocumentRoute,
+  budgetDocumentRoute,
   publicDocumentRoute,
 
   // Pedidos de almacén: la bandeja del operador. Aceptar genera la cotización.
@@ -698,6 +722,28 @@ export const routes: readonly RegisteredRoute[] = [
   // El calendario: jornadas, planes y tareas en un solo flujo fechado.
   productionCalendarRoute,
   plansWithTasksRoute,
+
+  // El presupuesto. La lectura derivada y su documento van **antes** que las dos colecciones por lo
+  // mismo que el panel: no filtran ni ordenan nada, y su camino no lleva parámetro que confundir.
+  productionBudgetRoute,
+  budgetDocumentRoute,
+
+  listAnchorsRoute,
+  createAnchorRoute,
+  getAnchorRoute,
+  updateAnchorRoute,
+  deleteAnchorRoute,
+  attachToAnchorRoute,
+  detachFromAnchorRoute,
+
+  listShoppingsRoute,
+  createShoppingRoute,
+  getShoppingRoute,
+  updateShoppingRoute,
+  setShoppingItemsRoute,
+  deleteShoppingRoute,
+  attachToShoppingRoute,
+  detachFromShoppingRoute,
 
   // Los catálogos del rodaje: quién aparece, con qué se viste un decorado y cómo debía verse algo.
   listCharactersRoute,

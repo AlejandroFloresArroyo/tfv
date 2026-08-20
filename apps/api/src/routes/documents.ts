@@ -6,7 +6,7 @@
  * Son de dos clases, y la diferencia entre ellas es todo lo que hay que entender de esta
  * superficie:
  *
- * - La del **panel** exige el permiso de ver la cotización y devuelve, además del documento, la
+ * - La del **panel** exige el permiso de ver la entidad y devuelve, además del documento, la
  *   referencia con la que se comparte. Quien mira el documento es quien lo va a mandar.
  * - La **pública** no exige nada, porque el cliente no tiene cuenta. Lo que la protege es la firma
  *   de la referencia, verificada antes de tocar la base — igual que en los eventos de cobro, donde
@@ -21,12 +21,15 @@ import { z } from "@hono/zod-openapi"
 import {
   DOCUMENT_KINDS,
   RENT_FREQUENCIES,
+  SHOPPING_KINDS,
+  SHOPPING_METHODS,
   TASK_STATUSES,
   TRADE_TYPES,
   WORK_PLAN_STATUSES,
 } from "@tfv/contracts"
 import { requireSession } from "../auth/middleware.ts"
 import type { Actor } from "../companies/companies.ts"
+import { budgetDocument } from "../documents/budgets.ts"
 import { publicDocument } from "../documents/documents.ts"
 import { quoteDocument } from "../documents/quotes.ts"
 import { workPlanDocument } from "../documents/work-plans.ts"
@@ -171,6 +174,75 @@ const workPlanDocumentSchema = z.object({
   }),
 })
 
+// ─── El presupuesto ──────────────────────────────────────────────────────────
+
+const budgetAmountsSchema = z.object({
+  totalPresupuestado: z.string(),
+  totalGastado: z.string(),
+  diferencia: z.string(),
+  /** Se gastó más de lo previsto: la hoja lo señala con la palabra, no sólo con el signo. */
+  isUnfavorable: z.boolean(),
+})
+
+const budgetDocumentSchema = z.object({
+  kind: z.literal(DOCUMENT_KINDS[2]),
+  identity: z.object({
+    productionName: z.string(),
+    startsOn: z.string().nullable(),
+    endsOn: z.string().nullable(),
+    generatedAt: z.string(),
+  }),
+  issuer: z.object({ name: z.string() }),
+  production: z.object({ id: z.string(), name: z.string() }),
+  anchors: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        description: z.string(),
+        amount: z.string(),
+        categoryId: z.string().nullable(),
+        categoryName: z.string().nullable(),
+        responsibleName: z.string().nullable(),
+      }),
+    )
+    .readonly(),
+  shoppings: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        observations: z.string(),
+        amount: z.string(),
+        kind: z.enum(SHOPPING_KINDS),
+        method: z.enum(SHOPPING_METHODS),
+        /** Identificación **parcial**. El número completo no llega hasta aquí ni podría. */
+        cardLast4: z.string().nullable(),
+        isDeductible: z.boolean(),
+        occurredOn: z.string().nullable(),
+        providerName: z.string().nullable(),
+        categoryId: z.string().nullable(),
+        categoryName: z.string().nullable(),
+        responsibleName: z.string().nullable(),
+        itemCount: z.number().int(),
+      }),
+    )
+    .readonly(),
+  amounts: budgetAmountsSchema,
+  categories: z
+    .array(
+      z.object({
+        categoryId: z.string().nullable(),
+        categoryName: z.string().nullable(),
+        budgeted: z.string(),
+        spent: z.string(),
+        difference: z.string(),
+        isUnfavorable: z.boolean(),
+      }),
+    )
+    .readonly(),
+})
+
 /**
  * Lo que puede salir por el enlace público, discriminado por familia.
  *
@@ -182,6 +254,7 @@ const publicDocumentSchema = z.discriminatedUnion("kind", [
   quoteDocumentSchema,
   deliveryNoteDocumentSchema,
   workPlanDocumentSchema,
+  budgetDocumentSchema,
 ])
 
 const quoteParams = z.object({
@@ -195,6 +268,8 @@ const workPlanParams = z.object({
   productionId: z.string(),
   workflowId: z.string(),
 })
+
+const budgetParams = z.object({ companyId: z.string(), productionId: z.string() })
 
 function actorOf(c: Parameters<Parameters<typeof defineRoute>[0]["handler"]>[0]): Actor {
   const session = requireSession(c)
@@ -268,6 +343,42 @@ export const workPlanDocumentRoute = defineRoute({
   handler: async (c) => {
     const { companyId, productionId, workflowId } = c.req.valid("param")
     const result = await workPlanDocument(actorOf(c), companyId, productionId, workflowId)
+    return c.json(result, 200)
+  },
+})
+
+/**
+ * El presupuesto de una producción como documento, con su enlace.
+ *
+ * Va con `productions.budgets.view`, que es **la clave del recurso que el documento imprime**. Es
+ * la misma reserva de siempre: el catálogo cerrado no tiene ninguna clave para «compartir un
+ * documento», así que añadir una sería decisión de producto (`HALLAZGOS.md` H-61).
+ *
+ * No hay parámetro de documento en el camino porque **no hay documento que señalar**: el
+ * presupuesto es una lectura derivada de la producción entera. Ver `documents/budgets.ts`.
+ */
+export const budgetDocumentRoute = defineRoute({
+  access: REQUIRES("productions.budgets.view"),
+  config: {
+    method: "get",
+    path: "/companies/{companyId}/productions/{productionId}/budget/document",
+    summary: "Componer el documento del presupuesto de una producción",
+    tags: ["Documentos"],
+    request: { params: budgetParams },
+    responses: {
+      200: {
+        description: "El documento y la referencia con la que se comparte",
+        content: {
+          "application/json": {
+            schema: z.object({ document: budgetDocumentSchema, reference: z.string() }),
+          },
+        },
+      },
+    },
+  },
+  handler: async (c) => {
+    const { companyId, productionId } = c.req.valid("param")
+    const result = await budgetDocument(actorOf(c), companyId, productionId)
     return c.json(result, 200)
   },
 })

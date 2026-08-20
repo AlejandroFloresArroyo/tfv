@@ -44,20 +44,20 @@
 
 ## Presupuesto
 
-- [ ] Anclas con importe, categoría y comprobantes
-- [ ] Compras con importe, tipo, método, proveedor y facturas
-- [ ] Identificación parcial del pago con tarjeta, sin el número completo
-- [ ] Reconciliación de artículos por compra; uno pertenece como máximo a una
-- [ ] Eliminar una compra libera sus artículos
-- [ ] **Lectura derivada, sin total persistido**
-- [ ] Totales filtrados junto a los generales
-- [ ] Documento y presentación gráfica
+- [x] Anclas con importe, categoría y comprobantes — clasificarlas va con la clave gruesa: el catálogo no tiene `anchors.select_category` (`HALLAZGOS.md` H-230)
+- [x] Compras con importe, tipo, método, proveedor y facturas — la referencia al pedido de almacén se lee y se devuelve; escribirla es de la 23
+- [x] Identificación parcial del pago con tarjeta, sin el número completo — `PartialCardId` es una marca de tipo: el número completo **no se puede convertir**
+- [x] Reconciliación de artículos por compra; uno pertenece como máximo a una — el movimiento entre dos compras va en transacción, comprobado por mutación
+- [x] Eliminar una compra libera sus artículos — escrito a mano: la baja es lógica y ninguna cascada declarada se dispara (H-172, H-203)
+- [x] **Lectura derivada, sin total persistido** — se suma al consultar, con la misma función pura que usa el navegador
+- [x] Totales filtrados junto a los generales — los generales salen de dos sumas del motor, no de recorrer las filas filtradas
+- [x] Documento y presentación gráfica — cuarta familia del enlace público; las gráficas son SVG en línea, sin librería, y la hoja va sin ellas porque el papel no tiene color
 
 ## Verificación
 
 - [x] Prueba: no se cierra la nota con pendientes
 - [x] Prueba: el cierre es atómico — comprobada además por mutación: separando las escrituras en transacciones propias, la prueba se pone roja
 - [x] Prueba: eliminar la nota devuelve los artículos
-- [ ] Prueba: un artículo cambia de compra y sale de la anterior
-- [ ] Prueba: el presupuesto refleja un gasto nuevo de inmediato
+- [x] Prueba: un artículo cambia de compra y sale de la anterior
+- [x] Prueba: el presupuesto refleja un gasto nuevo de inmediato
 - [x] Prueba: una semana del calendario se comparte por enlace — dos sesiones distintas de la misma empresa abren la misma dirección y obtienen el mismo rango y los mismos sucesos
