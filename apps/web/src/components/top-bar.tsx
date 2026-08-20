@@ -2,6 +2,7 @@ import { Badge } from "@tfv/ui"
 import { Bell } from "lucide-react"
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
+import { CompanySwitcher } from "~/components/company-switcher.tsx"
 import { Logo } from "~/components/logo.tsx"
 import { PreferencesMenu } from "~/components/preferences-menu.tsx"
 import { UserMenu } from "~/components/user-menu.tsx"
@@ -25,6 +26,11 @@ export async function TopBar({ profile, theme }: { profile: Profile; theme: Them
         <Link href="/dashboard" className="rounded-sm">
           <Logo />
         </Link>
+
+        {/* El selector decide por sí mismo si hay empresa que mostrar: deriva la activa de la
+            ruta viva en cliente, porque este armazón persiste entre navegaciones y lo que el
+            servidor leyera aquí se congelaría en la primera pantalla. */}
+        <CompanySwitcher companies={profile.companies} />
 
         {profile.isPlatformAdmin ? (
           <Badge tone="accent" className="hidden tablet:inline-flex">

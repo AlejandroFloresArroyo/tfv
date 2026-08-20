@@ -23,13 +23,16 @@ export default async function CompanyLayout({
   const company = requireCompany(profile, companyId)
 
   return (
-    <div className="empuje-pizarra mx-auto flex w-full max-w-(--breakpoint-desktop) flex-1 flex-col">
+    <div className="mx-auto flex w-full max-w-(--breakpoint-desktop) flex-1 flex-col">
       {/* La navegación es la pizarra flotante: no ocupa columna ni fila. El contenido tiene el
           ancho completo en todos los tamaños, que es la razón de ser del cajón. */}
-      <CompanyNav company={company} companies={profile.companies} />
+      <CompanyNav company={company} />
       {/* El rincón del asa se reserva abajo: sin esto, el final de una lista larga queda
           escondido debajo de la pastilla. */}
-      <div className="flex min-w-0 flex-1 flex-col pb-20">{children}</div>
+      {/* El empuje va aquí —el contenido— y no en el padre común: un ancestro con `translate` se
+          vuelve el marco de referencia de todo `fixed` descendiente, y el asa de la pizarra se iba
+          con el empuje en vez de quedarse anclada al borde de la pantalla. */}
+      <div className="empuje-pizarra flex min-w-0 flex-1 flex-col pb-20">{children}</div>
     </div>
   )
 }

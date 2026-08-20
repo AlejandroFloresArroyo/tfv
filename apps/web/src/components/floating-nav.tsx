@@ -1,7 +1,7 @@
 "use client"
 
 import { cn, Drawer, DrawerContent, DrawerTrigger } from "@tfv/ui"
-import { ChevronUp, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { type ReactNode, useEffect, useRef, useState } from "react"
@@ -51,6 +51,7 @@ export function FloatingNav({
   // En escritorio con puntero fino la pizarra es **persistente**: no-modal, se trabaja con ella
   // abierta, elegir no la cierra, y la elección se recuerda. En tacto sigue modal y autoescondida.
   const [persistent, setPersistent] = useState(false)
+  const asa = useRef<HTMLButtonElement>(null)
   const pathname = usePathname()
 
   useEffect(() => {
@@ -101,41 +102,26 @@ export function FloatingNav({
     // No-modal en persistente: la página sigue viva al lado —sin trampa de foco ni velo—, que es
     // la diferencia entre un panel con el que se trabaja y un diálogo que interrumpe.
     <Drawer open={open} onOpenChange={cambiar} modal={!persistent}>
+      {/* Sólo icono: el nombre de la empresa vive ahora en la barra superior, que es cromo que
+          siempre está. El nombre accesible dice la acción —abrir o cerrar—, que es lo que un botón
+          de icono debe decir. */}
       <DrawerTrigger
-        aria-label={label}
-        title={t("shell.openMenu")}
+        ref={asa}
+        aria-label={open ? t("shell.closeMenu") : t("shell.openMenu")}
+        title={open ? t("shell.closeMenu") : t("shell.openMenu")}
         className={cn(
-          // Vidrio sobre el lienzo, como la barra superior: la misma familia de cromo. Lleva el
-          // nombre de la empresa por dos razones que convergen: cerrado el cajón, en ningún otro
-          // sitio se ve en qué empresa estás —y hay cuentas con varias—; y una claqueta sola es
-          // un icono críptico, mientras que una pastilla con nombre dice qué abre.
-          "fixed bottom-4 left-4 z-(--z-nav) flex h-12 items-center gap-2.5 rounded-2xl",
-          "px-3.5 tablet:pr-4",
+          "fixed bottom-4 left-4 z-(--z-nav) grid size-12 place-items-center rounded-2xl",
           "border border-edge bg-panel/85 text-content backdrop-blur-sm",
           "shadow-[0_8px_24px_-12px_rgb(0_0_0/0.4)]",
           "transition-colors duration-200 ease-[--ease-out-soft]",
           "hover:bg-panel-hover data-[state=open]:border-accent data-[state=open]:text-tinta-aparta",
         )}
       >
-        {/* El icono dice lo que el botón hace —abrir o cerrar el panel lateral—, no lo que la
-            marca es: una claqueta sola era críptica. El estado lo refuerzan el intercambio del
-            icono y el giro de la flecha. */}
         {open ? (
-          <PanelLeftClose className="size-5 shrink-0" aria-hidden="true" />
+          <PanelLeftClose className="size-5" aria-hidden="true" />
         ) : (
-          <PanelLeftOpen className="size-5 shrink-0" aria-hidden="true" />
+          <PanelLeftOpen className="size-5" aria-hidden="true" />
         )}
-        {/* En teléfono el nombre cede el sitio: la pastilla entera taparía la esquina de trabajo. */}
-        <span className="hidden max-w-[13rem] truncate text-body2 font-semibold tablet:block">
-          {label}
-        </span>
-        <ChevronUp
-          aria-hidden="true"
-          className={cn(
-            "hidden size-4 shrink-0 text-content-faint transition-transform duration-200 ease-[--ease-out-soft] tablet:block",
-            open && "rotate-180",
-          )}
-        />
       </DrawerTrigger>
 
       <DrawerContent
@@ -144,6 +130,13 @@ export function FloatingNav({
         header={header}
         // Persistente: tocar fuera no cierra —se está trabajando al lado— y el foco no se roba al
         // abrir, porque abrir es el estado de reposo del escritorio, no una interrupción.
+        // El foco vuelve al asa al cerrar —es lo accesible—, pero lo devolvemos nosotros con
+        // `preventScroll`: el retorno por defecto deja que el navegador acomode el scroll para
+        // revelar el foco, y eso saltaba la página cientos de píxeles al cerrar.
+        onCloseAutoFocus={(event: Event) => {
+          event.preventDefault()
+          asa.current?.focus({ preventScroll: true })
+        }}
         {...(persistent
           ? {
               onInteractOutside: (event: Event) => event.preventDefault(),

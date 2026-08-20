@@ -926,13 +926,6 @@
     color-scheme: dark;
   }
 
-  /* Con la pizarra abierta, lo que el empuje saca por el borde se recorta en vez de generar una
-     barra de desplazamiento horizontal: el contenido corrido es un cuerpo fuera de cuadro, no una
-     página más ancha. */
-  :root[data-pizarra="abierta"] {
-    overflow-x: clip;
-  }
-
   body {
     background-color: var(--color-canvas);
     color: var(--color-content);

@@ -22,8 +22,15 @@ export default async function PanelLayout({ children }: { children: ReactNode })
   const chosen = (await cookies()).get(THEME_COOKIE)?.value
   const theme = isTheme(chosen) ? chosen : DEFAULT_THEME
 
+  /*
+   * `overflow-x: clip`, permanente y aquí, por tres hechos que se encadenan: el empuje de la
+   * pizarra saca contenido por el borde derecho y hay que recortarlo; alternar overflow en la raíz
+   * al abrir rompía el sticky de la barra y reseteaba el scroll al cerrar; y `clip` —a diferencia
+   * de `hidden`— no crea contenedor de desplazamiento, así que el sticky sigue funcionando.
+   * Permanente no cuesta nada: sin empuje, nada desborda.
+   */
   return (
-    <div className="flex min-h-dvh flex-col bg-canvas">
+    <div className="flex min-h-dvh flex-col overflow-x-clip bg-canvas">
       {/* Primer elemento enfocable de la página: quien navega con teclado no tiene que recorrer
           toda la navegación en cada pantalla para llegar al contenido. */}
       <a

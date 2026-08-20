@@ -29,7 +29,13 @@ if (!new URL(p.url()).pathname.startsWith("/c/")) {
    donde en el dispositivo real (puntero grueso) nace cerrada. La sonda no supone: comprueba. */
 const abrir = async () => {
   if ((await p.locator("[role=dialog]").count()) === 0) {
-    await p.getByRole("button", { name: /renta fílmica/i }).click()
+    await p.getByRole("button", { name: /abrir el menú/i }).click()
+    await p.waitForTimeout(400)
+  }
+}
+const cerrar = async () => {
+  if ((await p.locator("[role=dialog]").count()) > 0) {
+    await p.keyboard.press("Escape")
     await p.waitForTimeout(400)
   }
 }
@@ -57,6 +63,21 @@ await p.reload({ waitUntil: "networkidle" })
 await abrir()
 await foto("vertical-abierta-claro")
 
+// El scroll sobrevive al ciclo abrir/cerrar, y la barra fija sigue arriba con el menú abierto.
+await cerrar()
+await p.evaluate(() => window.scrollTo(0, 600))
+await p.waitForTimeout(300)
+await abrir()
+const barraVisible = await p.evaluate(() => {
+  const barra = document.querySelector("header")
+  return barra
+    ? barra.getBoundingClientRect().top >= 0 && barra.getBoundingClientRect().bottom > 0
+    : false
+})
+await cerrar()
+const scrollTras = await p.evaluate(() => window.scrollY)
+log(`  scroll: antes=600 después=${scrollTras} · barra visible con menú abierto=${barraVisible}`)
+
 // Escritorio con puntero fino: la pizarra nace abierta, elegir NO la cierra, y el empuje es
 // rígido (el contenido conserva su ancho: se mide antes y después).
 await p.setViewportSize({ width: 1440, height: 900 })
@@ -78,7 +99,10 @@ const sigueAbierta = await p.evaluate(() => document.documentElement.getAttribut
 log(
   `  persistente: nace=${naceAbierta === "abierta"} · sigue tras elegir=${sigueAbierta === "abierta"}`,
 )
-await p.getByRole("button", { name: /renta fílmica/i }).click()
+await p
+  .getByRole("button", { name: /cerrar el menú/i })
+  .first()
+  .click()
 await p.waitForTimeout(600)
 const anchoCerrada = await p.evaluate(
   () => document.querySelector("main")?.getBoundingClientRect().width,

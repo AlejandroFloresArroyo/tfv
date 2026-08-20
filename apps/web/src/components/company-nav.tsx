@@ -1,17 +1,8 @@
 "use client"
 
-import {
-  cn,
-  Menu,
-  MenuContent,
-  MenuLabel,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuTrigger,
-} from "@tfv/ui"
+import { cn } from "@tfv/ui"
 import {
   Building2,
-  ChevronsUpDown,
   CreditCard,
   Handshake,
   History,
@@ -25,7 +16,7 @@ import {
   Users,
 } from "lucide-react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { FloatingNav } from "~/components/floating-nav.tsx"
 import { can } from "~/lib/can.ts"
@@ -43,15 +34,8 @@ import type { ProfileCompany } from "~/lib/session.ts"
  * portada cuando no. Es el requisito «Cambio de empresa», y es la razón de que este componente
  * necesite conocer todas las empresas y no sólo la activa.
  */
-export function CompanyNav({
-  company,
-  companies,
-}: {
-  company: ProfileCompany
-  companies: readonly ProfileCompany[]
-}) {
+export function CompanyNav({ company }: { company: ProfileCompany }) {
   const t = useTranslations()
-  const router = useRouter()
   const pathname = usePathname()
 
   /** La sección dentro de la empresa: `/c/<id>/warehouses/x` → `warehouses/x`. */
@@ -148,62 +132,13 @@ export function CompanyNav({
     },
   ].filter((entry) => can(company, entry.permission))
 
-  /**
-   * Cambiar de empresa conserva la sección **cuando la destino también la tiene**.
-   *
-   * Hay dos maneras de tenerla. Las secciones de servicio dependen de lo contratado, así que se
-   * comprueba; el directorio y la configuración existen en toda empresa, así que se conservan sin
-   * preguntar. Antes caían a la portada por no ser un servicio, y cambiar de empresa desde
-   * «Miembros» dejaba a la persona en otro sitio sin haber pedido moverse.
-   */
-  function switchTo(targetId: string) {
-    const target = companies.find((candidate) => candidate.id === targetId)
-    if (!target) return
-
-    const keycode = section.split("/")[0]
-    const universal = keycode === "directory" || keycode === "settings"
-    const equivalent =
-      universal || (keycode && target.services.some((service) => service.keycode === keycode))
-        ? `/c/${target.id}/${section}`
-        : `/c/${target.id}`
-
-    router.push(equivalent)
-  }
-
   return (
     <FloatingNav
       label={company.name}
       header={
-        companies.length > 1 ? (
-          <Menu>
-            <MenuTrigger
-              className={cn(
-                "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left",
-                "transition-colors hover:bg-panel-hover",
-              )}
-            >
-              <span className="display min-w-0 flex-1 text-h4 text-content [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
-                {company.name}
-              </span>
-              <ChevronsUpDown className="size-4 shrink-0 text-content-faint" aria-hidden="true" />
-            </MenuTrigger>
-
-            <MenuContent align="start" className="w-64">
-              <MenuLabel>{t("shell.switchCompany")}</MenuLabel>
-              <MenuRadioGroup value={company.id} onValueChange={switchTo}>
-                {companies.map((candidate) => (
-                  <MenuRadioItem key={candidate.id} value={candidate.id}>
-                    {candidate.name}
-                  </MenuRadioItem>
-                ))}
-              </MenuRadioGroup>
-            </MenuContent>
-          </Menu>
-        ) : (
-          <p className="display px-2 py-1.5 text-h4 text-content [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
-            {company.name}
-          </p>
-        )
+        <p className="display px-2 py-1.5 text-h4 text-content [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
+          {company.name}
+        </p>
       }
     >
       <ul className="flex flex-col gap-1">
