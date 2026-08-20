@@ -104,11 +104,11 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 - [ ] Personajes, sets y videos
 - [ ] Jornadas con asignación de reparto y continuidad
 - [x] Inventario de utilería con estados y etiquetas
-- [x] Entregas con verificación pieza por pieza y **firma** — falta la hoja del documento, que es de `HALLAZGOS.md` H-201
+- [x] Entregas con verificación pieza por pieza y **firma** — con la hoja del documento y su enlace público, que faltaban: cierra `HALLAZGOS.md` H-201
 - [x] **Calendario de planes de trabajo con sus cuatro vistas** — bajo la pestaña de planes que ya existía, sin pestaña nueva. Pinta jornadas, planes y tareas; por debajo de tableta cambia la rejilla por una agenda de los días con algo. **Comprobado con `pnpm check`, `pnpm lint:ci` y la suite, no en un navegador**
 - [x] Tareas, actividades, comentarios y adjuntos — con el documento del plan y su enlace público, que faltaba por dibujar. **Igual: sin comprobación en navegador**
-- [ ] Anclas y compras
-- [ ] Presupuesto con gráficas y documento
+- [x] Anclas y compras — bajo el presupuesto, que es una pestaña de la producción y tres pantallas por dentro. Las anclas en tabla porque se comparan importes; las compras en tarjetas porque llevan ocho datos y ocho columnas no caben en una tableta
+- [x] Presupuesto con gráficas y documento — barras de SVG en línea, sin librería nueva; una diferencia negativa se señala **con la palabra** y no sólo con el color; la hoja reutiliza `print-rules.tsx`. **Comprobado además en el navegador**: las cinco pantallas y las dos hojas públicas servidas contra una base sembrada
 - [ ] Tienda interna y órdenes de compra
 
 ## 29d · Pixit

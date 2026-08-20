@@ -4751,3 +4751,185 @@ y sólo le queda el presupuesto.
 
 **Hallazgos**: H-220 a H-223, **ninguno cerrado**: tres piden migración y el cuarto es una decisión
 de producto sobre el catálogo de permisos, que está cerrado.
+
+### 2026-08-20 · Lo que se pensaba gastar, y lo que se gastó
+
+La 22 llegaba a esta rebanada con 34 de 44 casillas y **el presupuesto era lo único que le
+quedaba**. Las dos tablas llevaban puestas desde la `0002`, con su columna de referencia al pedido
+de almacén incluida; lo que no existía era ni una línea que las leyera. Esto es esa línea, sus dos
+colecciones, la resta, el documento y las cinco pantallas. **Ninguna migración.**
+
+**El presupuesto no es una entidad, y eso decide casi todo lo demás**
+
+«No SHALL existir un total persistido que pueda quedar desincronizado», dice la spec, y es un
+requisito con consecuencias en cuatro capas. No hay tabla de presupuesto, no hay columna de total,
+no hay disparador y no hay nada que recalcular al registrar un gasto: `readBudget` suma las dos
+colecciones en el momento con `budgetAmounts`, que es una función pura de los contratos y **la misma
+que usa el navegador**. Registrar una compra mueve la diferencia porque la diferencia *es* la resta.
+
+La consecuencia que no se ve venir está en el enlace público. La referencia firmada lleva tres
+identificadores —empresa, ámbito, documento— y aquí **no hay fila que señalar**: el presupuesto es
+una lectura derivada de una producción entera. El ámbito y el documento son los dos la producción,
+que es exactamente lo que este documento es. Queda anotado (H-231) porque el formato supone que toda
+familia tiene una fila detrás, y la siguiente familia derivada se va a encontrar lo mismo.
+
+**La tarjeta no cabe entera en su tipo**
+
+«Se conserva sin almacenar el número completo.» Eso se puede escribir como un comentario sobre la
+columna y confiar en que todos los caminos de escritura se acuerden, o se puede hacer imposible.
+`PartialCardId` es una marca de tipo cuyo único constructor rechaza cualquier cosa que no sean
+cuatro dígitos o menos: **el número completo no se puede convertir**, así que no compila el camino
+que lo guardaría. Mandar dieciséis dígitos falla ruidosamente en vez de truncar, porque truncar
+sería aceptar que llegaron.
+
+La misma regla se dice tres veces, a propósito: el tipo del dominio, el esquema de entrada —que
+devuelve `400` nombrando el campo, antes de tocar el servicio— y el campo del formulario, que mide
+cuatro caracteres. La tercera es la que importa de verdad: un campo de dieciséis invita a
+escribirlos, y entonces las otras dos protecciones son un mensaje de error después de que el número
+ya viajó por la red.
+
+**Mover un artículo entre dos compras es una escritura, no dos**
+
+«Un artículo SHALL pertenecer como máximo a una compra: asignarlo a otra SHALL retirarlo de la
+anterior.» No lo sujeta ninguna restricción del motor: lo sujeta la **forma** de la relación, que es
+uno a muchos vista del lado equivocado. La columna es una sola, así que asignarlo a B lo saca de A
+sin que nadie lo pida.
+
+Lo que sí exige cuidado es establecer el conjunto de una vez: se sueltan los que salen y se toman
+los que entran, y entre las dos escrituras hay un instante en el que un artículo no figura en
+ninguna de las dos compras. Dentro de la transacción ese instante no existe para nadie; fuera, un
+fallo lo dejaría permanente. **Comprobado por mutación**: sacando la suelta a su propia transacción,
+la prueba que dice que una composición fallida no deja la lista a medias se pone roja.
+
+**La baja de una compra, escrita a mano y con el motivo encima**
+
+`production_items.shopping_id` declara `ON DELETE set null` y `production_attachments.shopping_id`
+declara `ON DELETE cascade`. **Ninguna de las dos corre nunca**, porque la baja es lógica y lo que
+ocurre es un `UPDATE` que escribe `deleted_at`. Es H-172 y H-203 otra vez, y la lección que dejaron
+—toda cascada declarada sobre una tabla con borrado lógico es decorativa— ahorró aquí la media hora
+de descubrirlo. Las dos escrituras están puestas a mano, con el orden que importa: primero se
+sueltan los artículos y se borran las facturas, y **después** se da de baja la compra; al revés, un
+fallo a media transacción dejaría artículos apuntando a una compra que ya nadie puede abrir.
+Comprobado por mutación las dos: quitando cualquiera de ellas, su prueba se pone roja.
+
+**Los totales del filtro y los del conjunto, en la misma respuesta**
+
+«Así puede verse el peso de una categoría sin perder de vista el conjunto.» La lectura devuelve dos
+juegos de importes. Devolver sólo los del filtro obligaría a la pantalla a pedir una segunda vez sin
+filtros para poder decir «de cuánto», y las dos peticiones pueden ver estados distintos de la base.
+
+Los generales **no** se calculan recorriendo filas: son dos sumas del motor. Una producción con
+miles de compras no necesita ninguna de ellas para decir su total. Mutar la lectura para que el
+general copie al filtrado también pone roja su prueba.
+
+**Las gráficas se dibujan, no se importan**
+
+No hay librería de gráficas en el repositorio y no entra ninguna: una barra es un rectángulo cuyo
+ancho es una fracción, y traer una dependencia para eso costaría más que todo el sistema de diseño y
+llegaría con su propio tema, su propia tipografía y sus propios colores — tres cosas ya decididas.
+
+La aritmética vive aparte, en `packages/ui/src/lib/chart.ts`, por lo mismo que la de días civiles
+vive en los contratos: **lo que decide si una barra miente no es el `rect`, es la proporción**, y eso
+se prueba sin navegador. De ahí sale la única decisión de fondo del primitivo, el **suelo de barra**:
+sin él, cien pesos al lado de un millón se dibujan como no haber gastado nada, que es lo contrario de
+lo que el dato dice. Distorsiona la proporción de lo diminuto a propósito, y la cifra exacta va
+escrita al lado, siempre.
+
+Y el color nunca viaja solo. Una diferencia negativa **se dice con la palabra** —«Desfavorable»—
+además de con el tono: pintar la cifra de rojo no llega a quien no distingue los tonos, y no
+sobrevive a la fotocopiadora de la oficina de producción, que es por donde pasa el papel que se manda
+a contabilidad. Por eso la hoja impresa lleva el desglose como **tabla y no como barras**: una barra
+sin color es un rectángulo gris.
+
+**Una pestaña, tres pantallas, y la que decide a dónde lleva**
+
+El presupuesto entra en la barra de la producción como una sola pestaña, y por dentro hay una segunda
+barra con resumen, partidas y gastos. Subir las tres arriba dejaría una barra de ocho, que ya no se
+lee de un vistazo; y ni las anclas ni las compras por separado explican el número.
+
+La pestaña recibe **los tres permisos y no uno ya resuelto**. Quien lleva las compras y no ve el
+conjunto tiene que entrar igual, y aterrizar donde puede: apuntar siempre al resumen lo mandaría a un
+`403`, y un enlace que lleva a una puerta cerrada enseña a desconfiar de los demás. Resolverlo fuera
+dejaría a cada pantalla decidiendo a dónde lleva la misma pestaña.
+
+Las partidas van en tabla y los gastos en tarjetas, y la diferencia sale del contenido y no del
+gusto: un ancla lleva tres datos y cabe en columnas —que es donde los importes se alinean, que es
+como se comparan—; una compra lleva ocho, y ocho columnas no caben en una tableta sin desplazamiento
+horizontal, que es lo que `DESIGN.md` prohíbe para las tablas.
+
+**H-201, cerrado, y de paso la cuarta familia**
+
+El servidor componía la hoja de la nota de entrega y firmaba su enlace desde la rebanada pasada
+—probado de extremo a extremo— y no había nada que la dibujara, así que la ficha **no enseñaba el
+enlace** para no mandar a un `404`. Ya existe: la hoja, su pantalla en el panel, su sitio en la unión
+pública, y el enlace de vuelta en la ficha. Reutiliza `print-rules.tsx` entera, que es lo que el
+hallazgo pedía.
+
+Con el presupuesto, `d/[reference]` pasa a dibujar **cuatro familias**, con un caso por familia y el
+mismo reparto que el `switch` del servidor: se lee entero y se ve exactamente qué se sabe dibujar.
+
+Y los adjuntos dejan de vivir dentro de la pantalla de tareas. Son los mismos en una tarea, en una
+partida y en un gasto —se sube el archivo, se le dice a la entidad que existe, se retira por su
+identificador— y lo único que cambia es el camino. Dos copias son dos copias que alguien corrige por
+separado hasta que una de las dos deja de barrer el archivo que quedó suelto.
+
+**Lo que se encontró**
+
+- **H-230: el catálogo no tiene con qué clasificar un ancla ni con qué elegir responsable.** Las
+  compras tienen `shoppings.select_category` y las anclas no tienen equivalente, aunque llevan
+  categoría desde la `0002`; y **ninguna** de las dos colecciones tiene clave de responsable, aunque
+  las dos llevan la columna. No se inventa ninguna, por lo mismo que en H-223 y H-112: van con la
+  clave gruesa y queda anotado lo que eso concede de más.
+- **H-231: el sobre firmado supone que todo documento es una fila**, y el presupuesto no lo es. Se
+  firma la producción como ámbito y como documento, que es lo que el documento es.
+- **H-232: `production_attachments` tiene cuatro columnas nulables y nada que las excluya.** Misma
+  familia que H-222 con dos columnas más. Lo ata la aplicación con un tipo que no puede expresar «las
+  dos» ni «ninguna»; sujetarlo en el motor es migración.
+- **H-233: no hay índice por `anchor_id`** donde sí lo hay por tarea y por compra. Migración también,
+  anotada con su forma exacta para que no haya que volver a razonarla.
+- **H-234: la prueba de claves de traducción no ve las que se piden con otro nombre.** `common.add`
+  no existía en ningún idioma y llevaba una rebanada pintándose cruda; se vio al mover el bloque de
+  adjuntos. La clave está puesta; el hueco de la guarda queda anotado, porque taparlo con una
+  expresión regular más ancha convertiría en falso positivo cualquier función de un carácter.
+
+**Verificación**
+
+Cada comando por separado, en su propio árbol de trabajo y contra una base de pruebas suya:
+`pnpm check` en cero, `pnpm lint:ci` en cero —con las dos mismas incidencias informativas de partida,
+las dos en `amount-input.test.ts`, que no son de esta rebanada— y `pnpm test` entero en verde:
+**1833 pruebas**, 65 más que las 1768 de partida. El reparto: 448 contratos (+15), 128 interfaz (+9),
+95 datos, 109 web y **1053 de API (+41)**. Las del presupuesto corren **contra un servidor de
+verdad** en un puerto efímero, con su serialización, su cookie, su enrutado y su guardián.
+
+Y no sólo verde: **cinco mutaciones deliberadas, las cinco cazadas**. Quitando la suelta de artículos
+al recomponer; sacando esa suelta a su propia transacción; quitando la suelta de artículos al dar de
+baja la compra; quitando el borrado de sus facturas; y haciendo que el total general copie al
+filtrado. Las cinco ponen roja su prueba, y una de ellas —la de la transacción— es la que demuestra
+que la atomicidad está donde se dice que está.
+
+Además, **comprobado en el navegador**, que las dos entradas anteriores no pudieron hacer: API y web
+levantados en un par de puertos propios contra una base sembrada, y las cinco pantallas nuevas más
+las dos hojas públicas servidas y leídas. Con el filtro de una categoría puesto, la pantalla enseña
+`100.000,00` presupuestados contra `121.500,50` gastados, la diferencia `−21.500,50` marcada como
+desfavorable, y debajo la producción completa con sus `140.000,00` — que es, palabra por palabra, lo
+que el requisito de los totales filtrados pide.
+
+**Lo que queda fuera**
+
+- **La liquidación de una compra a un almacén no se implementa aquí.** El requisito «una liquidación
+  mueve el presupuesto sola» es de `production-procurement`, rebanada 23, y su columna
+  —`warehouse_order_id`— se lee y se devuelve pero **no se escribe desde ninguna ruta de este
+  módulo**. Cuando la 23 la escriba, el presupuesto se moverá solo sin tocar nada de aquí: es la
+  propiedad que se compra al no persistir el total.
+- **Las anclas y las compras no tienen ficha propia con adjuntos.** Los comprobantes de un ancla se
+  cuelgan por la API y se cuentan en su fila, pero la pantalla que los sube es la del gasto; el ancla
+  se edita en un diálogo. Es la asimetría razonable —una compra tiene ocho datos y una factura que
+  enseñar, un ancla tiene tres— y se puede deshacer el día que alguien pida la ficha.
+- **Sin prueba de navegador automatizada.** La comprobación descrita arriba fue manual sobre los dos
+  servicios levantados; no se añadió nada a `pnpm test:e2e`.
+
+**Rebanadas**: las ocho casillas del bloque **Presupuesto** de la **22** y sus dos pruebas sueltas,
+que la cierran en **44/44**; y dos de la **29c**, con la de entregas reescrita porque ya no le falta
+la hoja.
+
+**Hallazgos**: H-230 a H-234. **Cerrado H-201**, que era la deuda que caía en este mismo terreno.
