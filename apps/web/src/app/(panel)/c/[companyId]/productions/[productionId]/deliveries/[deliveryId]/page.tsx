@@ -58,7 +58,7 @@ export async function generateMetadata({
  *
  * El servidor ya compone la hoja de la nota y firma su enlace público —está probado de extremo a
  * extremo—, pero **la pantalla que la dibuja no existe todavía**. No se pone aquí un enlace a una
- * ruta que responde 404: un enlace roto enseña a desconfiar de los demás. Ver `HALLAZGOS.md` H-202.
+ * ruta que responde 404: un enlace roto enseña a desconfiar de los demás. Ver `HALLAZGOS.md` H-201.
  */
 export default async function DeliveryPage({
   params,
