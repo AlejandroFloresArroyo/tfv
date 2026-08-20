@@ -118,11 +118,18 @@ await p.evaluate(() => localStorage.removeItem("tfv_pizarra"))
 await p.reload({ waitUntil: "networkidle" })
 await p.waitForTimeout(1200)
 const siempreAbierta = (await p.locator("[role=dialog]").count()) > 0
-const equis = await p.locator("[role=dialog]").getByRole("button", { name: /cerrar el menú/i }).count()
+const equis = await p
+  .locator("[role=dialog]")
+  .getByRole("button", { name: /cerrar el menú/i })
+  .count()
 const asaVisible = await p.getByRole("button", { name: /abrir el menú/i }).count()
-const corrimiento = await p.evaluate(() => getComputedStyle(document.querySelector(".empuje-pizarra")).translate)
+const corrimiento = await p.evaluate(
+  () => getComputedStyle(document.querySelector(".empuje-pizarra")).translate,
+)
 await foto("siempre-2560")
-log(`  siempre: abierta=${siempreAbierta} · equis=${equis} (debe 0) · asa=${asaVisible} (debe 0) · translate=${corrimiento} (debe none/0)`)
+log(
+  `  siempre: abierta=${siempreAbierta} · equis=${equis} (debe 0) · asa=${asaVisible} (debe 0) · translate=${corrimiento} (debe none/0)`,
+)
 
 await navegador.close()
 log("listo")
