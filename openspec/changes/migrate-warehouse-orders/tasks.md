@@ -30,8 +30,20 @@
 
 - [x] Motivo obligatorio, con autor e instante
 - [x] Comprobación de hermanos con bloqueo, para evitar la carrera
-- [x] Cancelación de la orden de compra al rechazarse el último
-- [ ] Cancelación descendente desde la orden de compra — espera al servicio de producciones
+- [x] Cancelación de la orden de compra al rechazarse el último — **estaba escrita y no funcionaba
+      entre empresas**, que es el único caso en que sirve: la escritura cae en la empresa de la
+      producción y el operador del almacén no es miembro, así que afectaba a cero filas en
+      silencio. Su prueba estaba en verde porque en ella el almacén y la producción compartían
+      empresa. Corregido en la rebanada 23: `rejectOrder` resuelve su alcance antes de abrir la
+      transacción y declara también la empresa de la producción, que le responde
+      `app.purchase_order_buyer` (migración `0031`). Ver `HALLAZGOS.md` H-280 y la prueba
+      `productions/compras-recorrido.test.ts`, «el último rechazo cierra la orden y uno parcial no»
+- [x] Cancelación descendente desde la orden de compra — **la trajo la rebanada 23**, que es de
+      donde tenía que venir: `cancelPurchaseOrder` cancela los pedidos vigentes de la orden en
+      todas las empresas implicadas, libera su inventario con `releaseOrderStock` —la misma función
+      que suelta el rechazo, exportada para que no haya dos comportamientos— y respeta los ya
+      liquidados. Prueba: «cancelar la orden cancela sus pedidos vigentes, libera el inventario y
+      respeta lo liquidado»
 - [x] Liberación del inventario apartado al cancelar
 
 ## Compra pública
