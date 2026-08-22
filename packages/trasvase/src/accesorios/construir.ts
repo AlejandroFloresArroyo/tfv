@@ -28,7 +28,10 @@ export function reiniciarOids(): void {
 
 /** Marca un `Decimal128`: en la exportación sale como `$numberDecimal`. */
 export class Decimal {
-  constructor(readonly valor: string) {}
+  readonly valor: string
+  constructor(valor: string) {
+    this.valor = valor
+  }
 }
 
 export const decimal = (valor: string): Decimal => new Decimal(valor)

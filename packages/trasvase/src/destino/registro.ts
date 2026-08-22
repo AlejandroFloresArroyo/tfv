@@ -79,10 +79,13 @@ interface FilaIncidencia {
 }
 
 export class Registro {
-  private constructor(
-    private readonly correspondencia: Map<string, string>,
-    private readonly cuarentenados: Set<string>,
-  ) {}
+  private readonly correspondencia: Map<string, string>
+  private readonly cuarentenados: Set<string>
+
+  private constructor(correspondencia: Map<string, string>, cuarentenados: Set<string>) {
+    this.correspondencia = correspondencia
+    this.cuarentenados = cuarentenados
+  }
 
   private readonly paresNuevos: Array<{ coleccion: string; idViejo: string; idNuevo: string }> = []
   private readonly cuarentenaNueva: FilaCuarentena[] = []

@@ -70,13 +70,17 @@ function anotar(entrada: { filas: number; ejemplos: string[] }, ejemplo: string)
 class Unicidad {
   private readonly vistas = new Set<string>()
   private violacion: Violacion | undefined
+  private readonly coleccion: string
+  private readonly regla: string
+  private readonly restriccion: string
+  private readonly destino: Violacion[]
 
-  constructor(
-    private readonly coleccion: string,
-    private readonly regla: string,
-    private readonly restriccion: string,
-    private readonly destino: Violacion[],
-  ) {}
+  constructor(coleccion: string, regla: string, restriccion: string, destino: Violacion[]) {
+    this.coleccion = coleccion
+    this.regla = regla
+    this.restriccion = restriccion
+    this.destino = destino
+  }
 
   observar(clave: string | undefined, id: string): void {
     if (clave === undefined || clave === "") return
