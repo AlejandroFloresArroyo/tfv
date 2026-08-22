@@ -832,14 +832,29 @@
 }
 
 /* La leyenda: el nombre de campo de una hoja de llamado. Nombra columnas, estados y metadatos.
-   **No** se usa para etiquetas de formulario: en español son largas y en versalitas apretadas
-   dejan de leerse. El mundo manda en la leyenda; la tarea manda en el formulario. */
+   **No** se usa para etiquetas de formulario: en español son largas y dejan de leerse.
+   El mundo manda en la leyenda; la tarea manda en el formulario.
+
+   ## Por qué ya no va en versalitas
+
+   Iba, y se midió. En español las cadenas del sistema son largas —«Por completar», «No publicado»,
+   «Disponible para renta»— y la caja alta les cuesta cerca de un tercio de ancho justo donde el
+   ancho ya faltaba: cuatro insignias sumaban 462 px dentro de una caja de 363 px en la tablet, así
+   que envolvían, y como la fila de una rejilla se estira a su hermana más alta, dos productos
+   envolviendo engordaban seis tarjetas.
+
+   El costo de lectura es peor que el de ancho. Quien barre en español reconoce la **forma de la
+   palabra** —las ascendentes y descendentes—, y la caja alta la aplana entera: todas las palabras
+   pasan a ser el mismo rectángulo. A doce píxeles eso convierte un vistazo en una lectura.
+
+   Se conserva el resto de la voz: el peso, el ancho al 108% y un vestigio de espaciado, que es lo
+   que la distingue del cuerpo sin gritar. */
 @utility legend {
   font-size: var(--text-body4);
   font-weight: 600;
   font-stretch: 108%;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  /* Vestigio del espaciado de versalita: a 0.09em en caja baja las palabras se desarman. */
+  letter-spacing: 0.01em;
   line-height: 1.2;
 }
 

@@ -220,9 +220,26 @@ producto: confundir `0` con `O` o `1` con `l` en un código de unidad es un erro
 
 ### Named Rules
 
-**La regla de la leyenda.** Las versalitas espaciadas nombran columnas, estados y metadatos. **No**
-se usan para etiquetas de formulario: en español son largas y en versalitas dejan de leerse. El
-mundo manda en la leyenda; la tarea manda en el formulario.
+**La regla de la leyenda.** La leyenda nombra columnas, estados y metadatos: peso 600, ancho al
+108% y un vestigio de espaciado. **No** se usa para etiquetas de formulario: en español son largas
+y dejan de leerse. El mundo manda en la leyenda; la tarea manda en el formulario.
+
+**La leyenda ya no va en versalitas, y esto es una corrección.** Iba, y se midió en la pantalla que
+peor la trataba. Dos cosas la tumbaron. Una es de ancho: en español las cadenas del sistema son
+largas —«Por completar», «No publicado»— y la caja alta les cuesta cerca de un tercio justo donde
+el ancho ya faltaba; cuatro insignias sumaban 462 px dentro de una caja de 363 px en la tablet, y
+como la fila de una rejilla se estira a su hermana más alta, dos productos envolviendo engordaban
+seis tarjetas. La otra es de lectura, y pesa más: quien barre en español reconoce la **forma de la
+palabra**, y la caja alta la aplana entera. A doce píxeles eso convierte un vistazo en una lectura.
+
+La justificación vieja ya contenía su propia refutación —«en español son largas y en versalitas
+dejan de leerse»— y la usaba sólo para prohibirlas en formularios. Vale igual para una insignia de
+trece caracteres.
+
+**La regla del valor y la casilla.** Una leyenda nombra **la casilla**; una insignia es **el valor
+que va dentro**. Vestir un valor con la voz de un nombre de campo es un error de categoría, y era
+lo que hacía `Badge`. Todo otro uso de la leyenda en el sistema —`<th>`, `<dt>`, etiquetas de
+`Fact` y de `StatCard`, secciones de menú— nombra un campo, y ahí la voz es correcta.
 
 **La regla de las cifras tabulares.** Todo número comparable en columna va tabular.
 

@@ -5,7 +5,7 @@ import type { ReactNode } from "react"
 import { cn } from "../lib/cn.ts"
 import { Button } from "./button.tsx"
 import { Spinner } from "./spinner.tsx"
-import { Panel, Skeleton } from "./surfaces.tsx"
+import { Panel, Skeleton, type Tint } from "./surfaces.tsx"
 
 /**
  * Primitivos de exploración de colecciones.
@@ -368,7 +368,23 @@ export function CollectionSkeleton({
 
 export type CollectionView = "grid" | "list"
 
+/**
+ * Las dos retículas, y por qué son dos.
+ *
+ * La densidad de una rejilla no la decide el gusto: la decide qué manda dentro de la celda.
+ *
+ * En `text`, la celda es un nombre con algo de metadato — un papel, una factura, una contraparte —,
+ * y el ancho es lo que la hace legible: pocas columnas y anchas, porque un nombre partido en tres
+ * renglones cuesta más que una fila de más.
+ *
+ * En `cover`, la celda es **una fotografía de algo que existe**, y ahí el ancho de más no compra
+ * nada: compra hueco. Con la retícula de texto, veinticuatro productos con portada medían 9.886 px
+ * de alto en la tablet —dos y media veces la página anterior— para enseñar lo mismo. Una columna
+ * más recorta esa altura casi un tercio y la portada sigue midiendo más de 150 px, que es de sobra
+ * para reconocer un objeto.
+ */
 const GRID_CLASS = "grid gap-3 grid-cols-1 tablet:grid-cols-2 laptop:grid-cols-3"
+const GRID_COVER_CLASS = "grid gap-3 grid-cols-2 tablet:grid-cols-3 laptop:grid-cols-4"
 
 /**
  * El mismo conjunto, con la misma acción por elemento, en dos disposiciones.
@@ -385,6 +401,7 @@ const GRID_CLASS = "grid gap-3 grid-cols-1 tablet:grid-cols-2 laptop:grid-cols-3
 export function CollectionLayout({
   view,
   label,
+  grid = "text",
   className,
   children,
 }: {
@@ -396,13 +413,22 @@ export function CollectionLayout({
    * sin nombre las tres son «lista» y no hay forma de decir en cuál se está.
    */
   label: string
+  /** Qué manda dentro de la celda, que es lo que decide cuántas columnas caben. */
+  grid?: "text" | "cover"
   className?: string
   children: ReactNode
 }) {
   return (
     <ul
       aria-label={label}
-      className={cn(view === "grid" ? GRID_CLASS : "flex flex-col gap-2", className)}
+      className={cn(
+        view === "grid"
+          ? grid === "cover"
+            ? GRID_COVER_CLASS
+            : GRID_CLASS
+          : "flex flex-col gap-2",
+        className,
+      )}
     >
       {children}
     </ul>
@@ -418,16 +444,49 @@ export function CollectionLayout({
  * El nombre va en un encabezado, no en un párrafo con letra gorda. Es lo que permite saltar de
  * elemento en elemento con el teclado de un lector de pantalla en lugar de recorrer la rejilla
  * entera; y es la diferencia entre «parece un título» y «es un título».
+ *
+ * ## `media` y `cover` no son lo mismo
+ *
+ * `media` es una **marca**: un ícono de tipo, unas iniciales, un glifo. Identifica la *clase* del
+ * elemento y con 36 px le sobra, porque no hay más que mirar.
+ *
+ * `cover` es una **fotografía de algo que existe**: el objeto que alguien va a ir a buscar a un
+ * estante. Ahí el tamaño no es estética, es si se reconoce o no. Durante un tiempo las dos cosas
+ * compartieron ranura, y el resultado medido fue que la foto del producto ocupaba el 3.2% de su
+ * tarjeta en rejilla y el 2.4% en lista — la misma ficha de 36 px que lleva un ícono. Una rejilla
+ * cuyas celdas no son más grandes que sus filas no es una rejilla: es la lista apilada.
+ *
+ * Por eso `cover` trae su propia caja y cambia de forma con la disposición: a sangre y en 4:3 en
+ * rejilla, en ficha de 48 px en lista. **Quien la llena decide qué va dentro**, y ya tiene la
+ * disposición a mano —la recibe en la función de pintado de `Collection`—, así que puede poner una
+ * cosa en rejilla y otra en lista sin que esta tarjeta tenga que adivinarlo.
+ *
+ * ## La tarjeta entera lleva a donde lleva el título
+ *
+ * `card-live` pone el cursor de mano y enciende el degradado sobre la superficie completa. Si sólo
+ * el renglón del título es enlace, la tarjeta promete un blanco de 387×104 y entrega uno de 18 px
+ * —y en tacto, que es el dispositivo de referencia, no hay encendido que avise del engaño—. El
+ * `::after` extendido del enlace hace verdadera la promesa sin envolver la tarjeta en un ancla, que
+ * es lo que metería el nombre completo, las insignias y las acciones dentro del nombre accesible
+ * del enlace.
  */
 export function ItemCard({
   view,
+  cover,
   media,
   title,
   subtitle,
   meta,
   actions,
+  tint = "neutral",
 }: {
   view: CollectionView
+  /**
+   * La fotografía del elemento, o lo que se enseña cuando no la hay. Llena la caja que recibe.
+   *
+   * Sustituye a `media` en rejilla: dos marcas de identificación en la misma tarjeta compiten.
+   */
+  cover?: ReactNode
   media?: ReactNode
   title: ReactNode
   subtitle?: ReactNode
@@ -435,22 +494,76 @@ export function ItemCard({
   meta?: ReactNode
   /** Agrupadas en un único punto de acceso, no repartidas por la tarjeta. */
   actions?: ReactNode
+  /**
+   * La temperatura de la tarjeta.
+   *
+   * Por omisión neutra: un elemento de una colección no está en ningún estado por el hecho de
+   * existir. Se pasa una temperatura sólo cuando el elemento **está** en ese estado, que es lo que
+   * hace que teñir signifique algo cuando ocurre.
+   */
+  tint?: Tint
 }) {
+  const conPortada = cover !== undefined
+
   return (
     <li className="min-w-0">
       <Panel
-        tint="reposo"
+        tint={tint}
         live
         className={cn(
           "flex h-full min-w-0 gap-3 p-3",
           view === "grid" ? "flex-col" : "flex-row items-center",
+          // El blanco real de la tarjeta. `.card` ya es `position: relative`.
+          "[&_h2_a]:after:absolute [&_h2_a]:after:inset-0 [&_h2_a]:after:content-['']",
         )}
       >
+        {conPortada ? (
+          <div
+            className={cn(
+              "grid shrink-0 place-items-center overflow-hidden bg-panel-sunken text-content-faint",
+              view === "grid"
+                ? // A sangre. El radio descuenta el borde de 1 px para que la esquina de la foto
+                  // siga la de la tarjeta en vez de asomar por fuera.
+                  //
+                  // 3:2 y no 4:3: se probaron las dos con datos reales. En 4:3 la banda mide 290 px
+                  // en la tablet y, como hoy la mayoría de los productos no tiene fotografía, la
+                  // página se convertía en una columna de cajones vacíos y el desplazamiento se
+                  // triplicaba. En 3:2 la fotografía sigue leyéndose de sobra y el hueco vacío
+                  // cuesta un tercio menos.
+                  "-mx-3 -mt-3 aspect-[3/2] rounded-t-[calc(var(--radius-lg)-1px)]"
+                : "size-12 rounded-md",
+            )}
+          >
+            {cover}
+          </div>
+        ) : null}
+
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          {media}
+          {conPortada && view === "grid" ? null : media}
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-body1 font-semibold text-content">{title}</h2>
-            {subtitle ? <p className="truncate text-body3 text-content-faint">{subtitle}</p> : null}
+            <h2
+              className={cn(
+                "text-body1 font-semibold text-content",
+                // En rejilla hay ancho para dos renglones, y un nombre de equipo se distingue de
+                // otro por el final —«Lente Sigma 18-35» contra «Lente Sigma 24-70»—, que es justo
+                // lo que se lleva el corte.
+                view === "grid" ? "line-clamp-2" : "truncate",
+              )}
+            >
+              {title}
+            </h2>
+            {subtitle ? (
+              <p
+                className={cn(
+                  "text-body3 text-content-faint",
+                  // En rejilla la celda es estrecha y el subtítulo lleva el código, que es lo que
+                  // se coteja contra una etiqueta: cortarlo a media cadena lo vuelve inservible.
+                  view === "grid" ? "line-clamp-2" : "truncate",
+                )}
+              >
+                {subtitle}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -461,7 +574,8 @@ export function ItemCard({
           )}
         >
           {meta ? <div className="flex flex-wrap items-center gap-1.5">{meta}</div> : null}
-          {actions}
+          {/* Por encima del `::after` del título, o el punto de acciones deja de ser pulsable. */}
+          {actions ? <div className="relative z-10">{actions}</div> : null}
         </div>
       </Panel>
     </li>

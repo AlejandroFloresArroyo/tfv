@@ -160,49 +160,98 @@ export default async function WarehouseCatalogPage({
         searchPlaceholder={t("warehouses.products.searchPlaceholder")}
         emptyTitle={t("warehouses.products.empty")}
         emptyBody={t("warehouses.products.emptyBody")}
+        // Aquí la celda es la fotografía del equipo, no un nombre con metadato: cabe una columna
+        // más y la página deja de medir dos veces y media lo que enseña.
+        grid="cover"
+        // Un almacén recién hecho enseñaba «Todavía no hay productos» y ningún camino desde ahí.
+        // La entrada al asistente existe arriba, pero el panel vacío es donde se está mirando.
+        {...(canCreateProducts
+          ? {
+              emptyAction: (
+                <Button asChild>
+                  <Link href={`/c/${companyId}/warehouses/${warehouseId}/products/new`}>
+                    <Plus className="size-4" aria-hidden="true" />
+                    {t("warehouses.products.create")}
+                  </Link>
+                </Button>
+              ),
+            }
+          : {})}
         defaultView="grid"
       >
         {(items, view) =>
-          items.map((product) => (
-            <ItemCard
-              key={product.id}
-              view={view}
-              media={
-                <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-sm bg-panel-hover text-content-muted">
-                  {/* La portada de su galería. El nombre está a la derecha en texto: repetirlo
-                      aquí lo haría sonar dos veces a quien la escucha. */}
-                  {product.coverUrl ? (
+          items.map((product) => {
+            /*
+             * Renta y venta **no son estados**: son lo que el producto siempre ha sido, y en un
+             * almacén de renta «disponible para renta» es cierto de casi todo el catálogo. Como
+             * insignias costaban el oro de marca y el verde —las dos temperaturas que en el resto
+             * del sistema significan «unidad comprometida» y «entregado»— para no decir nada, y
+             * dejaban toda tarjeta normal vestida de dos marcas de color. Un producto corriente
+             * pasa a no llevar ninguna insignia, que es lo que hace que llevar una signifique algo.
+             */
+            const canales = [
+              product.availableForRent ? t("warehouses.rent") : null,
+              product.availableForSale ? t("warehouses.sale") : null,
+            ].filter((canal): canal is string => canal !== null)
+
+            return (
+              <ItemCard
+                key={product.id}
+                view={view}
+                /*
+                 * Lo único que de verdad está pasando en un producto del catálogo es que se dio de
+                 * alta a la carrera y sigue sin completarse. Es el único que tiñe su tarjeta, así
+                 * que en una página de veinticuatro la temperatura vuelve a señalar.
+                 */
+                tint={product.isProvisional ? "curso" : "neutral"}
+                cover={
+                  product.coverUrl ? (
+                    /* El nombre va debajo en texto: repetirlo en el `alt` lo diría dos veces. */
                     <Photo src={product.coverUrl} className="size-full object-cover" />
                   ) : (
-                    <Box className="size-4" aria-hidden="true" />
-                  )}
-                </span>
-              }
-              title={
-                <Link
-                  href={`/c/${companyId}/warehouses/${warehouseId}/products/${product.id}`}
-                  className="rounded-xs hover:underline"
-                >
-                  {product.name}
-                </Link>
-              }
-              subtitle={product.code}
-              meta={
-                <>
-                  {product.availableForRent ? (
-                    <Badge tone="accent">{t("warehouses.rent")}</Badge>
-                  ) : null}
-                  {product.availableForSale ? (
-                    <Badge tone="success">{t("warehouses.sale")}</Badge>
-                  ) : null}
-                  {product.isProvisional ? (
-                    <Badge tone="warning">{t("warehouses.quotes.provisional")}</Badge>
-                  ) : null}
-                  {!product.isPublished ? <Badge>{t("warehouses.unpublished")}</Badge> : null}
-                </>
-              }
-            />
-          ))
+                    /*
+                     * Un hueco de fotografía vacío se ve como lo que es, y calla.
+                     *
+                     * Se probó llenarlo con el código en grande, para que las tarjetas sin foto no
+                     * fueran veinticuatro cuadros idénticos. Con datos reales salió peor: el código
+                     * le ganaba en tamaño al nombre del producto, que es la jerarquía al revés, y
+                     * repetía en la casilla lo que ya está dos renglones más abajo. Lo que resolvía
+                     * de verdad el problema original —«veinticuatro cuadros que devuelven cero»— no
+                     * era decorar el hueco, sino que el código de abajo pasara a monoespaciada
+                     * tabular y el nombre a dos renglones. La identificación vive en el texto.
+                     */
+                    <Box className={view === "grid" ? "size-7" : "size-5"} aria-hidden="true" />
+                  )
+                }
+                title={
+                  <Link
+                    href={`/c/${companyId}/warehouses/${warehouseId}/products/${product.id}`}
+                    className="rounded-xs hover:underline"
+                  >
+                    {product.name}
+                  </Link>
+                }
+                subtitle={
+                  /*
+                   * El código en monoespaciada y tabular, como en la referencia del sistema: se lee
+                   * de una etiqueta impresa, y confundir `0` con `O` es un error de operación.
+                   */
+                  <>
+                    <span className="font-mono text-content-muted tnum">{product.code}</span>
+                    {canales.length > 0 ? ` · ${canales.join(" · ")}` : null}
+                  </>
+                }
+                meta={
+                  <>
+                    {product.isProvisional ? (
+                      <Badge tone="curso">{t("warehouses.quotes.provisional")}</Badge>
+                    ) : null}
+                    {!product.isPublished ? <Badge>{t("warehouses.unpublished")}</Badge> : null}
+                  </>
+                }
+              />
+            )
+          })
         }
       </Collection>
     </PageShell>

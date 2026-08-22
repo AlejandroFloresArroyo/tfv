@@ -566,7 +566,7 @@
     "added": "Added",
     "all": "All warehouses",
     "catalog": "Catalog",
-    "catalogSubtitle": "Products, measurements and stock in this warehouse.",
+    "catalogSubtitle": "The equipment registered in this warehouse.",
     "category": "Warehouse category",
     "completeOnly": "Only complete ones",
     "empty": "No warehouses yet",

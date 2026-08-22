@@ -28,6 +28,8 @@ export interface CollectionProps<T> {
   filters?: readonly FilterSpec[]
   /** Ausente: el recurso no admite búsqueda y no se ofrece el campo. */
   searchPlaceholder?: string
+  /** Qué manda dentro de la celda en rejilla. `cover` da una columna más: la portada manda. */
+  grid?: "text" | "cover"
   views?: boolean
   /** Disposición inicial cuando la dirección todavía no contiene una preferencia explícita. */
   defaultView?: CollectionView
@@ -65,6 +67,7 @@ export async function Collection<T>({
   result,
   filters = [],
   searchPlaceholder,
+  grid = "text",
   views = true,
   defaultView = "list",
   emptyTitle,
@@ -126,7 +129,7 @@ export async function Collection<T>({
   return (
     <>
       {toolbar}
-      <CollectionLayout view={view} label={t("collection.results")}>
+      <CollectionLayout view={view} grid={grid} label={t("collection.results")}>
         {children(page.items, view)}
       </CollectionLayout>
       <Pager page={page.page} totalPages={page.totalPages} totalItems={page.totalItems} />

@@ -106,6 +106,22 @@ export function Separator({ className, ...rest }: HTMLAttributes<HTMLHRElement>)
  * lectura de quien ya conoce el sistema; el nombre es lo que lo hace utilizable por quien no, y
  * por quien no distingue el ámbar del verde. Once estados de unidad y cuatro tipos de pedido no
  * caben en una paleta que alguien pueda memorizar.
+ *
+ * ## Una insignia es un valor, no el nombre de una casilla
+ *
+ * Llevaba la voz de leyenda, que es la de un encabezado de columna. Era un error de categoría: la
+ * leyenda nombra **la casilla** —`<th>`, `<dt>`, la etiqueta de un `Fact`— y la insignia es **lo
+ * que va dentro**. Vestida de nombre de campo, la insignia se leía como un rótulo administrativo
+ * pegado al elemento, y una fila de rótulos administrativos se lee como una lista de reparos.
+ *
+ * Va en cuerpo con peso, un punto más grande que la leyenda: es contenido, y se lee como tal.
+ *
+ * ## Una insignia se gana estando
+ *
+ * El color y el borde son un costo que paga toda la pantalla, así que el nodo tiene que traer
+ * noticia. Lo que siempre es cierto de un elemento —que se renta, que se vende— **no es una
+ * insignia**: es un dato, y va en texto. Reservar la insignia para la excepción es lo que hace que
+ * ver una signifique algo.
  */
 export function Badge({
   tone = "neutral",
@@ -124,7 +140,8 @@ export function Badge({
         // `w-fit` y no sólo `inline-flex`: dentro de una columna flexible los hijos se estiran en
         // el eje transversal, y una insignia estirada de borde a borde deja de leerse como marca y
         // se lee como barra de relleno.
-        "inline-flex w-fit items-center gap-1.5 rounded-md border border-edge px-2 py-1 legend",
+        "inline-flex w-fit items-center gap-1.5 rounded-md border border-edge px-2 py-1",
+        "text-body3 font-semibold",
         "bg-[color-mix(in_oklab,var(--luz)_14%,var(--panel))]",
         tint,
         ink,
