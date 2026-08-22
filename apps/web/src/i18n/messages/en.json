@@ -41,6 +41,12 @@
       "unknownDevice": "Unknown device",
       "closeAll": "Close all sessions",
       "empty": "No active sessions."
+    },
+    "activity": {
+      "title": "My activity",
+      "subtitle": "What you did, across every company you belong to. Entries cannot be edited or deleted.",
+      "empty": "You haven't done anything that gets logged yet",
+      "emptyBody": "Whatever you create, edit or remove in any of your companies will show up here."
     }
   },
   "activity": {

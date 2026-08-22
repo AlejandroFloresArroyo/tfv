@@ -1,7 +1,7 @@
 "use client"
 
 import { Avatar, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from "@tfv/ui"
-import { Building2, KeyRound, LogOut, ShieldCheck, UserRound } from "lucide-react"
+import { Building2, History, KeyRound, LogOut, ShieldCheck, UserRound } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
@@ -84,6 +84,16 @@ export function UserMenu({ profile }: { profile: Profile }) {
           onSelect={() => router.push("/account/sessions")}
         >
           {t("shell.sessions")}
+        </MenuItem>
+        {/*
+          La bitácora personal atraviesa empresas, así que no cabe en la navegación de ninguna: éste
+          y la ficha de la cuenta son sus dos puertas.
+        */}
+        <MenuItem
+          icon={<History className="size-4" aria-hidden="true" />}
+          onSelect={() => router.push("/account/activity")}
+        >
+          {t("account.activity.title")}
         </MenuItem>
 
         {/*
