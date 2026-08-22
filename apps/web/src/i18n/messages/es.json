@@ -41,6 +41,12 @@
       "unknownDevice": "Dispositivo desconocido",
       "closeAll": "Cerrar todas las sesiones",
       "empty": "No hay ninguna sesión activa."
+    },
+    "activity": {
+      "title": "Mi actividad",
+      "subtitle": "Lo que has hecho tú, en todas tus empresas. Los asientos no se pueden modificar ni borrar.",
+      "empty": "Todavía no has hecho nada que quede anotado",
+      "emptyBody": "Aquí aparecerá lo que crees, edites o des de baja en cualquiera de tus empresas."
     }
   },
   "activity": {
