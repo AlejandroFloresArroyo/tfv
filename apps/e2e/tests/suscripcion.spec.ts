@@ -30,6 +30,7 @@
  */
 
 import { expect, test, WAREHOUSE_COMPANY } from "../setup/fixtures.ts"
+import { apartarLaPizarra } from "../setup/pizarra.ts"
 
 /** Marca de lo que crea este recorrido, para reconocerlo y retirarlo. */
 const PREFIJO = "Contratación e2e "
@@ -87,6 +88,9 @@ test("el ciclo entero: contratar, pagar, cambiar, cancelar y reactivar", async (
 
   // ─── 1 · El catálogo se ofrece ─────────────────────────────────────────────
   await page.goto(plan)
+  // Con la pizarra abierta el contenido se desplaza y su borde derecho queda recortado: los botones
+  // de esta pantalla caen fuera del lienzo. Ver `setup/pizarra.ts` y `HALLAZGOS.md` H-300.
+  await apartarLaPizarra(page)
   await expect(page.getByText("Esta empresa no tiene ningún plan contratado")).toBeVisible()
   // Los tres que siembra la instalación, cada uno con su botón. Es lo contrario de lo que esta
   // prueba afirmaba antes.
@@ -192,6 +196,7 @@ test("el alta de un perfil de facturación se recorre entera y resume lo escrito
   const alias = `Perfil e2e ${Date.now().toString(36).slice(-5)}`
 
   await page.goto(listado)
+  await apartarLaPizarra(page)
   await page.getByRole("link", { name: "Añadir perfil" }).click()
   await page.waitForURL(/\/billing\/new$/)
 

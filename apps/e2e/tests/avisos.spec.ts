@@ -15,6 +15,7 @@
  */
 
 import { expect, test, WAREHOUSE_COMPANY } from "../setup/fixtures.ts"
+import { apartarLaPizarra } from "../setup/pizarra.ts"
 
 /** Lo que la bandeja del propietario tenga sin leer de pasadas anteriores, marcado como visto. */
 async function limpiarBandeja(context: import("@playwright/test").BrowserContext): Promise<void> {
@@ -40,6 +41,9 @@ async function dejarAsiento(
   companyId: string,
 ): Promise<void> {
   await page.goto(`/c/${companyId}/settings/company`)
+  // Con la pizarra abierta el contenido se desplaza y «Acciones» queda fuera del lienzo, sin
+  // desplazamiento que lo alcance. Ver `setup/pizarra.ts` y `HALLAZGOS.md` H-300.
+  await apartarLaPizarra(page)
   await page.getByRole("button", { name: "Acciones" }).first().click()
   await page.getByRole("menuitem", { name: "Editar" }).click()
 
@@ -68,6 +72,7 @@ test("lo que uno guarda aparece en la bitácora y en la bandeja del otro", async
   // ─── El hecho: la administración edita la empresa desde su pantalla ─────────
   const actuando = await administracion.newPage()
   await actuando.goto(`/c/${companyId}/settings/company`)
+  await apartarLaPizarra(actuando)
 
   await actuando.getByRole("button", { name: "Acciones" }).first().click()
   await actuando.getByRole("menuitem", { name: "Editar" }).click()

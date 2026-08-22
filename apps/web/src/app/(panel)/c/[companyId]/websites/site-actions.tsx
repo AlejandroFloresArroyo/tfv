@@ -105,7 +105,7 @@ export function CreateWebsite({
  * publicar», que la pinta el servidor. Sin volver a resolver, el interruptor se movía y la insignia
  * seguía diciendo lo contrario hasta que alguien recargara — dos controles contiguos afirmando
  * cosas distintas sobre el mismo sitio, que es peor que no tener insignia. Ver `HALLAZGOS.md`
- * H-300.
+ * H-302.
  */
 export function PublishSwitch({
   companyId,
