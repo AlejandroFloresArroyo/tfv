@@ -806,7 +806,7 @@
    en hover queda intacta; con movimiento reducido colapsa a un fotograma. En teléfono no hay
    empuje: correr 21rem en una pantalla de 24 no deja nada. */
 @utility empuje-pizarra {
-  transition: translate 280ms var(--ease-out-soft);
+  transition: padding-inline-start 280ms var(--ease-out-soft);
 
   :root[data-pizarra="abierta"] & {
     @media (min-width: 48rem) {
@@ -814,8 +814,14 @@
          margen libre del contenido centrado cuenta primero. En una pantalla ancha el margen ya
          alcanza y el empuje es cero — el contenido no se mueve un píxel; en una estrecha, el
          empuje es la diferencia exacta. Es lo que hace que se sienta «hacerle sitio» y no «lanzar
-         el contenido una cantidad fija». */
-      translate: clamp(0rem, calc(21rem - (100vw - min(100vw, 80rem)) / 2), 21rem) 0;
+         el contenido una cantidad fija».
+
+         Es relleno y no `translate` a propósito, y la diferencia es un defecto que costó veinte
+         pruebas de navegador (H-300): `translate` mueve la caja sin encogerla, así que en una
+         pantalla de 80rem el contenido corría 21rem hacia un borde que no existe — los últimos
+         336px quedaban cortados sin scroll que los alcanzara. El relleno reduce el área útil y el
+         contenido refluye: no se corta nada, que es lo que «hacerle sitio» significa. */
+      padding-inline-start: clamp(0rem, calc(21rem - (100vw - min(100vw, 80rem)) / 2), 21rem);
     }
   }
 }

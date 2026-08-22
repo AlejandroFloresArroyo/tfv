@@ -157,7 +157,9 @@ test.describe("capítulos y escenas", () => {
 
     await page.getByRole("link", { name: "Escena uno" }).click()
     await expect(page.getByRole("heading", { name: "1.1", level: 1 })).toBeVisible()
-    await expect(page.getByRole("link", { name: "Capítulo uno" })).toBeVisible()
+    // `exact`: en esta página hay dos enlaces al capítulo —la fila del árbol, que anuncia también
+    // su estado, y la miga—. Sin él, el modo estricto se niega a elegir, con razón.
+    await expect(page.getByRole("link", { name: "Capítulo uno", exact: true })).toBeVisible()
 
     await deleteProduction(context, companyId, production.id)
   })

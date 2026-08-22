@@ -159,6 +159,10 @@ export function FloatingNav({
           ? {
               onInteractOutside: (event: Event) => event.preventDefault(),
               onOpenAutoFocus: (event: Event) => event.preventDefault(),
+              // Abierta en reposo no es un diálogo: es un panel al lado del que se trabaja. Sin
+              // esto, un lector anuncia un diálogo perpetuo — y `getByRole("dialog")` deja de
+              // designar los diálogos de verdad en toda la suite de navegador (H-300).
+              role: "complementary" as const,
             }
           : {})}
         {...(always ? { onEscapeKeyDown: (event: KeyboardEvent) => event.preventDefault() } : {})}
