@@ -40,9 +40,10 @@ export async function generateMetadata(): Promise<Metadata> {
  * Exactamente lo que `production-management` enumera: capítulos y escenas, jornadas por estado,
  * planes por estado, y lo previsto contra lo gastado. Ni un indicador inventado.
  *
- * **Sólo los planes de trabajo son enlace**, porque son lo único que ya tiene pantalla. Guion,
- * jornadas y presupuesto llegan con las rebanadas 21 y 22; hasta entonces sus cifras se leen y no
- * llevan a ninguna parte, que es más honesto que un enlace a una página que no existe.
+ * **Capítulos, escenas y planes de trabajo son enlace**; jornadas y presupuesto todavía no, porque
+ * son de las rebanadas 21 y 22 y sus pantallas no existen — enlazar ahí sería peor que no enlazar.
+ * Capítulos y escenas llegan a la misma pantalla —`script/chapters`—, que es donde vive la
+ * estructura completa; separarlos habría sido dos enlaces a un solo sitio.
  */
 export default async function ProductionPage({
   params,
@@ -59,6 +60,7 @@ export default async function ProductionPage({
   const canViewProductions = can(company, "productions.productions.view")
   const canViewWorkflows = can(company, "productions.workflows.view")
   const canViewPanel = can(company, "productions.budgets.view")
+  const canViewChapters = can(company, "productions.chapters.view")
 
   const base = `/companies/${companyId}/productions/${productionId}`
   const screen = `/c/${companyId}/productions/${productionId}`
@@ -83,6 +85,8 @@ export default async function ProductionPage({
       canViewBudget={can(company, "productions.budgets.view")}
       canViewAnchors={can(company, "productions.anchors.view")}
       canViewShoppings={can(company, "productions.shoppings.view")}
+      canViewScript={canViewChapters}
+      canViewRodaje={can(company, "productions.recordings.view")}
     />
   )
 
@@ -158,8 +162,18 @@ export default async function ProductionPage({
       {panel ? (
         <>
           <div className="grid gap-3 tablet:grid-cols-2 laptop:grid-cols-4">
-            <Stat icon={Film} label={t("panel.chapters")} value={panel.chapters} />
-            <Stat icon={Layers} label={t("panel.scenes")} value={panel.scenes} />
+            <Stat
+              icon={Film}
+              label={t("panel.chapters")}
+              value={panel.chapters}
+              href={canViewChapters ? `${screen}/script/chapters` : undefined}
+            />
+            <Stat
+              icon={Layers}
+              label={t("panel.scenes")}
+              value={panel.scenes}
+              href={canViewChapters ? `${screen}/script/chapters` : undefined}
+            />
             <Stat
               icon={CalendarDays}
               label={t("panel.recordings")}

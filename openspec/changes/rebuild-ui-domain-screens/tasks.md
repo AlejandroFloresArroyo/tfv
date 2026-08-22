@@ -98,9 +98,21 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 
 ## 29c · Producciones
 
-- [ ] Producción y su panel
-- [ ] Guiones con extracción y visor
-- [ ] Capítulos y escenas
+- [~] Producción y su panel — el panel ya existía; sus recuentos de **capítulos y escenas** ahora
+      enlazan a `script/chapters`, que es donde por fin tienen destino. **Falta** el de **jornadas**:
+      es la pestaña Rodaje, de la rama en paralelo
+- [x] **Guiones con extracción y visor** — `script/`, tarjetas con el archivo, la insignia de estado
+      de extracción (`syncStatus`, cinco valores; `completed` toma `leido` de `DESIGN.md`, «extraído
+      por el modelo, sin revisar», que es exactamente lo que significa) y el enlace al documento. La
+      extracción por IA es la rebanada 21 y no existe: la pantalla lo dice con una nota, no con un
+      hueco. Alta, edición —sustituir el archivo— y baja con la cascada de capítulos huérfanos.
+      Comprobado en el navegador, con un archivo real subido de extremo a extremo, y a 375 px
+- [x] **Capítulos y escenas** — `script/chapters/`, un árbol de dos niveles fijos sobre `TreeBrowser`
+      (el mismo primitivo de las ubicaciones y las categorías), resuelto **en memoria** desde una
+      sola llamada a `/breakdown` — no una petición por capítulo — con su función pura probada
+      (`chapter-scene-data.test.ts`, 9 casos). Alta, edición y baja de las dos entidades, con el
+      índice siguiente propuesto sin pedirlo aparte y la etiqueta compuesta que calcula el servidor.
+      Comprobado en el navegador y a 375 px
 - [ ] Personajes, sets y videos
 - [ ] Jornadas con asignación de reparto y continuidad
 - [x] Inventario de utilería con estados y etiquetas
