@@ -1,6 +1,7 @@
 "use client"
 
 import { Button, DialogTrigger, Field, Input, Switch, Textarea } from "@tfv/ui"
+import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { FormDialog } from "~/components/form-dialog.tsx"
@@ -97,6 +98,14 @@ export function CreateWebsite({
  * No es un verbo aparte: es la marca del sitio, y por eso el control es un interruptor y no dos
  * botones. Despublicar retira la tienda de su subdominio **sin borrar nada**: quien la vuelva a
  * publicar recupera lo que tenía.
+ *
+ * ## Por qué vuelve a resolver el árbol de servidor
+ *
+ * Porque en la misma fila hay **otra cosa que dice lo mismo**: la insignia «Publicado / Sin
+ * publicar», que la pinta el servidor. Sin volver a resolver, el interruptor se movía y la insignia
+ * seguía diciendo lo contrario hasta que alguien recargara — dos controles contiguos afirmando
+ * cosas distintas sobre el mismo sitio, que es peor que no tener insignia. Ver `HALLAZGOS.md`
+ * H-300.
  */
 export function PublishSwitch({
   companyId,
@@ -109,6 +118,7 @@ export function PublishSwitch({
   isPublished: boolean
   label: string
 }) {
+  const router = useRouter()
   const [checked, setChecked] = useState(isPublished)
   const [pending, setPending] = useState(false)
 
@@ -125,6 +135,7 @@ export function PublishSwitch({
             method: "PATCH",
             body: { isPublished: next },
           })
+          router.refresh()
         } catch {
           // Devolver el interruptor a donde estaba: dejarlo puesto diría que el sitio se publicó.
           setChecked(!next)
