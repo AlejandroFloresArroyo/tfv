@@ -179,6 +179,15 @@ export function apiEnv(): Record<string, string> {
      * porque hasta ahora nadie podía completar un pago (`HALLAZGOS.md` H-167).
      */
     BILLING_RETURN_ORIGIN: BASE_URL,
+    /**
+     * Y a dónde vuelve desde el cobro de **una compra de tienda**, que es otra variable.
+     *
+     * Faltaba, y su valor por defecto es `http://localhost:3000`: quien pulsaba «Pagar» en el
+     * resumen de su compra aterrizaba en un puerto donde no escucha nada. Es H-167 otra vez, en el
+     * otro camino de pago — el de la tienda pública, que nadie había recorrido con un navegador
+     * hasta ahora (`HALLAZGOS.md` H-303).
+     */
+    STOREFRONT_ORIGIN: BASE_URL,
     // Un suplente en memoria que no mueve dinero. Sin él, toda pantalla de cobro falla al abrirse
     // y las suscripciones no se pueden recorrer.
     PAYMENTS_PROVIDER: "local",
