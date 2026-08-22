@@ -73,6 +73,103 @@ export interface ProductionCategoryRow {
   updatedAt: string
 }
 
+// ─── El desglose del guion ────────────────────────────────────────────────────
+
+/**
+ * Los cinco estados de la extracción, en el orden en que el modelo los enumera.
+ *
+ * Rebanada 20: este módulo no extrae, sólo enseña el estado. `not_extracted` es el único que se
+ * alcanza hoy escribiendo desde la pantalla — los otros cuatro los escribe `script-ai-sync`,
+ * rebanada 21, que todavía no existe. Se declaran los cinco de todos modos: la pantalla tiene que
+ * saber leerlos el día que la extracción llegue, y ese día no debería tocar esta lista.
+ */
+export const SYNC_STATUSES = ["not_extracted", "queued", "running", "completed", "failed"] as const
+
+export type SyncStatus = (typeof SYNC_STATUSES)[number]
+
+/** Un guion de la producción: su archivo, y el estado de su extracción. */
+export interface ScriptRow {
+  id: string
+  productionId: string
+  name: string
+  index: number
+  documentUploadId: string | null
+  documentUrl: string | null
+  documentFileName: string | null
+  responsibleId: string | null
+  responsibleName: string | null
+  syncStatus: SyncStatus
+  syncError: string | null
+  syncedAt: string | null
+  scenesWithoutBody: number
+  chapterCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** Lo que se queda sin guion al dar de baja uno. Los capítulos sobreviven, no se llevan. */
+export interface ScriptScope {
+  chapters: number
+}
+
+/** Un capítulo: índice único en la producción, y cuántas escenas tiene dentro. */
+export interface ChapterRow {
+  id: string
+  productionId: string
+  scriptId: string | null
+  name: string
+  synopsis: string
+  index: number
+  responsibleId: string | null
+  responsibleName: string | null
+  sceneCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** Lo que se lleva por delante dar de baja un capítulo. Las jornadas y los planes sobreviven. */
+export interface ChapterScope {
+  scenes: number
+  recordings: number
+  workflows: number
+}
+
+/** Una escena: índice único en su capítulo, y la etiqueta compuesta que sale de los dos números. */
+export interface SceneRow {
+  id: string
+  chapterId: string
+  chapterIndex: number
+  name: string
+  synopsis: string
+  index: number
+  /** `{capítulo}.{escena}`, compuesta por el servidor. No se recalcula aquí. */
+  label: string
+  workflowCount: number
+  synopsisEditedAt: string | null
+  /** Existía en una extracción anterior y la última ya no la encontró. No la borra: la marca. */
+  missingFromLastSync: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+/** Lo que se lleva por delante dar de baja una escena. Jornadas y planes sobreviven, sin escena. */
+export interface SceneScope {
+  recordings: number
+  workflows: number
+}
+
+/** La estructura completa de la producción: capítulos por índice, cada uno con sus escenas. */
+export interface ProductionBreakdown {
+  chapters: (ChapterRow & { scenes: SceneRow[] })[]
+}
+
+/** El último índice usado y el que se propone. Los huecos que deja borrar no se rellenan solos. */
+export interface IndexHint {
+  lastIndex: number | null
+  nextIndex: number
+  available: boolean | null
+}
+
 /** Los cinco estados de un plan de trabajo, en el orden en que la spec los enumera. */
 export const WORKFLOW_STATUSES = [
   "pending",
