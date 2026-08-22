@@ -784,6 +784,85 @@ export async function deleteItem(
   })
 }
 
+// ─── Acuñación desde otra operación ──────────────────────────────────────────
+
+/** Lo que hace falta para que un artículo nazca. Ni identificador ni código: se acuñan aquí. */
+export interface MintSpec {
+  readonly name: string
+  readonly description: string
+  readonly shoppingId: string
+  /** Las imágenes que hereda de su origen, en orden. */
+  readonly uploadIds: readonly string[]
+}
+
+/** Un artículo recién acuñado, con lo que quien lo pidió necesita para nombrarlo. */
+export interface MintedItem {
+  readonly id: string
+  readonly name: string
+  readonly code: string
+}
+
+/**
+ * Acuña artículos **dentro de una transacción que ya está abierta**.
+ *
+ * La llama la liquidación de una compra a un almacén (rebanada 23), que materializa **un artículo
+ * por cada unidad física** adquirida. Vive aquí y no allí porque «cómo nace un artículo» es de este
+ * módulo: el código se acuña, nunca se recibe, y el primer paso del historial se firma sin estado
+ * de origen. Escrito en el otro lado, la segunda vía de alta habría acabado divergiendo de la
+ * primera justo en eso.
+ *
+ * Sin `Actor` ni `withRequester`: quien llama trae su transacción y su alcance, y aquí no se abre
+ * ninguna — un alta que se confirmara aparte dejaría artículos de una liquidación revertida.
+ */
+export async function mintItems(
+  tx: Transaction,
+  productionId: string,
+  actorId: string,
+  specs: readonly MintSpec[],
+): Promise<readonly MintedItem[]> {
+  if (specs.length === 0) return []
+
+  const rows = specs.map((spec) => ({
+    id: newId(),
+    productionId,
+    name: spec.name.slice(0, 250),
+    description: spec.description,
+    // Acuñado, nunca recibido: el código del almacén es del almacén.
+    code: itemCode(),
+    shoppingId: spec.shoppingId,
+  }))
+
+  const created = await tx.insert(productionItems).values(rows).returning({
+    id: productionItems.id,
+    name: productionItems.name,
+    code: productionItems.code,
+    status: productionItems.status,
+  })
+
+  for (const item of created) {
+    // El primer paso, **sin estado de origen**: antes de existir no estaba en ninguno.
+    await recordItemEvent(tx, {
+      itemId: item.id,
+      fromStatus: null,
+      toStatus: item.status,
+      reason: "created",
+      actorId,
+    })
+  }
+
+  const images = created.flatMap((item, index) =>
+    (specs[index]?.uploadIds ?? []).map((uploadId, position) => ({
+      id: newId(),
+      itemId: item.id,
+      uploadId,
+      position,
+    })),
+  )
+  if (images.length > 0) await tx.insert(productionItemImages).values(images).onConflictDoNothing()
+
+  return created.map((item) => ({ id: item.id, name: item.name, code: item.code }))
+}
+
 // ─── Ayuda ───────────────────────────────────────────────────────────────────
 
 /**

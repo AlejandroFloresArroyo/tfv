@@ -3362,6 +3362,293 @@ export interface ApiEndpoints {
     }
   }
 
+  "GET /companies/{companyId}/productions/{productionId}/procurement/warehouses": {
+    /** El escaparate: los almacenes publicados a los que se puede comprar */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    response: {
+      items: Array<{
+        warehouseId: string
+        companyId: string
+        companyName: string
+        name: string
+        description: string
+      }>
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/procurement/warehouses/{warehouseId}/products": {
+    /** El catálogo publicado de un almacén del escaparate */
+    params: {
+      companyId: string
+      productionId: string
+      warehouseId: string
+    }
+    response: {
+      items: Array<{
+        productId: string
+        name: string
+        description: string
+        code: string
+        availableForSale: boolean
+        availableForRent: boolean
+        measurements: Array<{
+          id: string
+          name: string
+          available: number
+        }>
+      }>
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/purchase-orders": {
+    /** Las órdenes de compra de una producción, con el resumen de sus pedidos */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    query?: {
+      page?: string | Array<string>
+      limit?: string | Array<string>
+      offset?: string | Array<string>
+      search?: string | Array<string>
+      sort_createdAt?: string | Array<string>
+      sort_name?: string | Array<string>
+      sort_code?: string | Array<string>
+      status?: string | Array<string>
+      type?: string | Array<string>
+      categoryId?: string | Array<string>
+      responsibleId?: string | Array<string>
+      createdAt?: string | Array<string>
+    }
+    response: {
+      items: Array<{
+        id: string
+        productionId: string
+        code: string
+        name: string
+        type: "rent" | "sale"
+        status: "open" | "settled" | "canceled"
+        categoryId: string | null
+        deliveryAddressId: string | null
+        responsibleId: string | null
+        canceledAt: string | null
+        cancelReason: string | null
+        orders: Array<{
+          id: string
+          warehouseId: string
+          code: string
+          status: "pending" | "accepted" | "delivered" | "finished" | "canceled"
+          quoteId: string | null
+          lines: number
+          cancelReason: string | null
+        }>
+        createdAt: string
+        updatedAt: string
+      }>
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+      hasPrevious: boolean
+      hasNext: boolean
+      previousPage: number | null
+      nextPage: number | null
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/purchase-orders": {
+    /** Crear una orden de compra y abrir un pedido por almacén, en una transacción */
+    params: {
+      companyId: string
+      productionId: string
+    }
+    headers?: {
+      "idempotency-key"?: string
+    }
+    body: {
+      name: string
+      type: "rent" | "sale"
+      categoryId?: string | null
+      deliveryAddressId?: string | null
+      responsibleId?: string | null
+      lines: Array<{
+        measurementId: string
+        quantity: number
+      }>
+    }
+    response: {
+      id: string
+      productionId: string
+      code: string
+      name: string
+      type: "rent" | "sale"
+      status: "open" | "settled" | "canceled"
+      categoryId: string | null
+      deliveryAddressId: string | null
+      responsibleId: string | null
+      canceledAt: string | null
+      cancelReason: string | null
+      orders: Array<{
+        id: string
+        warehouseId: string
+        code: string
+        status: "pending" | "accepted" | "delivered" | "finished" | "canceled"
+        quoteId: string | null
+        lines: number
+        cancelReason: string | null
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/purchase-orders/{purchaseOrderId}": {
+    /** Consultar una orden de compra y el estado de sus pedidos */
+    params: {
+      companyId: string
+      productionId: string
+      purchaseOrderId: string
+    }
+    response: {
+      id: string
+      productionId: string
+      code: string
+      name: string
+      type: "rent" | "sale"
+      status: "open" | "settled" | "canceled"
+      categoryId: string | null
+      deliveryAddressId: string | null
+      responsibleId: string | null
+      canceledAt: string | null
+      cancelReason: string | null
+      orders: Array<{
+        id: string
+        warehouseId: string
+        code: string
+        status: "pending" | "accepted" | "delivered" | "finished" | "canceled"
+        quoteId: string | null
+        lines: number
+        cancelReason: string | null
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/purchase-orders/{purchaseOrderId}/cancellation": {
+    /** Cancelar una orden de compra y con ella sus pedidos vigentes */
+    params: {
+      companyId: string
+      productionId: string
+      purchaseOrderId: string
+    }
+    body: {
+      reason: string
+    }
+    response: {
+      id: string
+      productionId: string
+      code: string
+      name: string
+      type: "rent" | "sale"
+      status: "open" | "settled" | "canceled"
+      categoryId: string | null
+      deliveryAddressId: string | null
+      responsibleId: string | null
+      canceledAt: string | null
+      cancelReason: string | null
+      orders: Array<{
+        id: string
+        warehouseId: string
+        code: string
+        status: "pending" | "accepted" | "delivered" | "finished" | "canceled"
+        quoteId: string | null
+        lines: number
+        cancelReason: string | null
+      }>
+      createdAt: string
+      updatedAt: string
+    }
+  }
+
+  "GET /companies/{companyId}/productions/{productionId}/purchase-orders/{purchaseOrderId}/lines": {
+    /** Las líneas de una orden de compra, con a qué pedido fue cada una */
+    params: {
+      companyId: string
+      productionId: string
+      purchaseOrderId: string
+    }
+    response: {
+      items: Array<{
+        id: string
+        purchaseOrderId: string
+        measurementId: string
+        measurementName: string | null
+        productId: string | null
+        productName: string | null
+        quantity: number
+        warehouseId: string | null
+        warehouseOrderId: string | null
+      }>
+    }
+  }
+
+  "POST /companies/{companyId}/productions/{productionId}/purchase-orders/{purchaseOrderId}/orders/{warehouseOrderId}/settlement": {
+    /** Liquidar un pedido de almacén: sus seis efectos, o ninguno */
+    params: {
+      companyId: string
+      productionId: string
+      purchaseOrderId: string
+      warehouseOrderId: string
+    }
+    headers?: {
+      "idempotency-key"?: string
+    }
+    body: {
+      amount: string
+      method: "card" | "cash" | "transfer"
+      description?: string
+    }
+    response: {
+      purchaseOrder: {
+        id: string
+        productionId: string
+        code: string
+        name: string
+        type: "rent" | "sale"
+        status: "open" | "settled" | "canceled"
+        categoryId: string | null
+        deliveryAddressId: string | null
+        responsibleId: string | null
+        canceledAt: string | null
+        cancelReason: string | null
+        orders: Array<{
+          id: string
+          warehouseId: string
+          code: string
+          status: "pending" | "accepted" | "delivered" | "finished" | "canceled"
+          quoteId: string | null
+          lines: number
+          cancelReason: string | null
+        }>
+        createdAt: string
+        updatedAt: string
+      }
+      warehouseOrderId: string
+      quoteId: string
+      shoppingId: string
+      amount: string
+      items: Array<{
+        id: string
+        name: string
+        code: string
+      }>
+    }
+  }
+
   "GET /companies/{companyId}/productions/{productionId}/recordings": {
     /** Listar las jornadas de rodaje de una producción */
     params: {

@@ -243,6 +243,16 @@ import {
   verifyDeliveryLineRoute,
 } from "./production-deliveries.ts"
 import {
+  cancelPurchaseOrderRoute,
+  createPurchaseOrderRoute,
+  getPurchaseOrderRoute,
+  listPurchaseOrdersRoute,
+  purchaseOrderLinesRoute,
+  settleWarehouseOrderRoute,
+  shopProductsRoute,
+  shopWarehousesRoute,
+} from "./production-procurement.ts"
+import {
   attachToActivityRoute,
   attachToTaskRoute,
   createActivityRoute,
@@ -746,6 +756,19 @@ export const routes: readonly RegisteredRoute[] = [
   deleteShoppingRoute,
   attachToShoppingRoute,
   detachFromShoppingRoute,
+
+  // Las compras a los almacenes de otras empresas: la tienda interna, la orden con su abanico y
+  // la liquidación que cierra el circuito. La tienda va antes porque es de donde sale la orden, y
+  // su camino no lleva ningún parámetro que se pueda confundir con el de una orden.
+  shopWarehousesRoute,
+  shopProductsRoute,
+
+  listPurchaseOrdersRoute,
+  createPurchaseOrderRoute,
+  getPurchaseOrderRoute,
+  purchaseOrderLinesRoute,
+  cancelPurchaseOrderRoute,
+  settleWarehouseOrderRoute,
 
   // Los catálogos del rodaje: quién aparece, con qué se viste un decorado y cómo debía verse algo.
   listCharactersRoute,

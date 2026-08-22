@@ -99,9 +99,28 @@ export const productionPurchaseOrderLines = pgTable(
       .notNull()
       .references(() => warehouseMeasurements.id, { onDelete: "restrict" }),
     quantity: integer("quantity").notNull().default(1),
+
+    /**
+     * El pedido de almacén en el que esta línea acabó.
+     *
+     * Sin clave foránea, como `production_shoppings.warehouse_order_id` y por lo mismo: el pedido
+     * pertenece a otra empresa y a un módulo que importa a éste.
+     *
+     * Lo escribe el abanico, en la misma transacción que abre el pedido, y **no es redundante con
+     * mirar las líneas del pedido**: es lo único que permite a la producción decir cuántas líneas
+     * fueron a cada almacén sin salir de su propio arrendatario. `warehouse_order_lines` atraviesa
+     * hasta el almacén en su política, así que contarlas desde aquí exigiría declarar alcance sobre
+     * empresas ajenas para responder a un listado — que es abrir de par en par lo que esta rebanada
+     * existe para mantener cerrado.
+     */
+    warehouseOrderId: reference("warehouse_order_id"),
+
     ...timestamps,
   },
-  (table) => [index("production_purchase_order_lines_order_idx").on(table.purchaseOrderId)],
+  (table) => [
+    index("production_purchase_order_lines_order_idx").on(table.purchaseOrderId),
+    index("production_purchase_order_lines_warehouse_order_idx").on(table.warehouseOrderId),
+  ],
 )
 
 // ─── Presupuesto ─────────────────────────────────────────────────────────────
@@ -183,6 +202,18 @@ export const productionShoppings = pgTable(
   },
   (table) => [
     index("production_shoppings_production_idx").on(table.productionId, table.occurredOn),
+    /**
+     * Un pedido de almacén genera **una** compra, y lo garantiza el motor.
+     *
+     * La liquidación comprueba antes si ya se liquidó y responde `409`; esto es la red de debajo,
+     * para las dos que entran a la vez. Sin ella, dos peticiones simultáneas pasan las dos la
+     * comprobación —cada una en su instantánea— y la producción acaba con el gasto contado dos
+     * veces y el doble de artículos. Es la misma forma que hace idempotente el alta de una
+     * contraparte: índice único parcial, no comprobación previa.
+     */
+    uniqueIndex("production_shoppings_warehouse_order_unique")
+      .on(table.warehouseOrderId)
+      .where(sql`warehouse_order_id IS NOT NULL AND deleted_at IS NULL`),
   ],
 )
 

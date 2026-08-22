@@ -203,6 +203,13 @@
       "when": 1787181100000,
       "tag": "0030_notas_de_salida_y_devolucion",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1787424629439,
+      "tag": "0031_compras_entre_arrendatarios",
+      "breakpoints": true
     }
   ]
 }
