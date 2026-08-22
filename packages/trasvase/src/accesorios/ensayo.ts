@@ -30,13 +30,10 @@ import {
   usuario,
 } from "./construir.ts"
 
-export interface Ensayo {
-  readonly colecciones: Record<string, Documento[]>
-  /** Identificadores con nombre, para que las pruebas afirmen sobre filas concretas. */
-  readonly ids: Record<string, string>
-}
+/** El tipo se infiere del literal: cada identificador con nombre sale como `string`, no opcional. */
+export type Ensayo = ReturnType<typeof ensayo>
 
-export function ensayo(): Ensayo {
+export function ensayo() {
   reiniciarOids()
 
   // ─── Archivos sanos ────────────────────────────────────────────────────────
@@ -192,7 +189,11 @@ export function ensayo(): Ensayo {
   })
   // El aprovisionamiento corría dos veces y creaba la pareja repetida; la restricción parcial
   // nueva (`counterparties_user_pair_unique`) rechaza la segunda.
-  const clienteRepetido = cliente({ alias: "Carla otra vez", companyId: filmadora._id, userId: carla._id })
+  const clienteRepetido = cliente({
+    alias: "Carla otra vez",
+    companyId: filmadora._id,
+    userId: carla._id,
+  })
   const proveedorExterno = proveedor({
     alias: "Luz y Sonido",
     companyId: filmadora._id,
@@ -235,6 +236,10 @@ export function ensayo(): Ensayo {
     stripe_subscriptionId: "sub_doble",
   })
 
+  // La empresa apunta a su suscripción vigente, como en el origen real: es el desempate honesto
+  // cuando hay dos vigentes y el índice parcial nuevo sólo admite una.
+  filmadora.companySubscriptionId = suscripcionFilmadora._id
+
   const pagoJunio = pagoSuscripcion({
     companyId: filmadora._id,
     companySubscriptionId: suscripcionFilmadora._id,
@@ -265,25 +270,27 @@ export function ensayo(): Ensayo {
     amount: 19900,
   })
 
+  const colecciones: Record<string, Documento[]> = {
+    core_user: [ana, benito, carla, duplicadoViejo, duplicadoNuevo, sinCorreo],
+    core_companies: [filmadora, sinDueño],
+    core_companies_user: [membresiaAna, membresiaBenito, membresiaRepetida, membresiaRota],
+    core_role: [rolVentas, rolHuerfano],
+    core_addresses: [dirAna, dirAnaSecundaria, dirBenitoPrimera, dirBenitoSegunda, dirHuerfana],
+    core_companies_address: [dirFilmadora],
+    core_client: [clienteCarla, clienteRepetido],
+    core_provider: [proveedorExterno],
+    core_categories: [catSectores, catCine, catSlugRepetido, catPadreRoto],
+    core_service: [servicioAlmacenes],
+    core_companies_service: [habilitacionFilmadora, habilitacionRota],
+    core_upload: [subidaAvatar, subidaLogo, subidaPendiente, subidaSinMeta],
+    core_meta: [metaAvatar, metaLogo],
+    core_subscription: [planPro],
+    core_companies_subscription: [suscripcionFilmadora, suscripcionDoble],
+    core_companies_subscriptions_payment: [pagoJunio, pagoJulio, pagoFallido, pagoColgado],
+  }
+
   return {
-    colecciones: {
-      core_user: [ana, benito, carla, duplicadoViejo, duplicadoNuevo, sinCorreo],
-      core_companies: [filmadora, sinDueño],
-      core_companies_user: [membresiaAna, membresiaBenito, membresiaRepetida, membresiaRota],
-      core_role: [rolVentas, rolHuerfano],
-      core_addresses: [dirAna, dirAnaSecundaria, dirBenitoPrimera, dirBenitoSegunda, dirHuerfana],
-      core_companies_address: [dirFilmadora],
-      core_client: [clienteCarla, clienteRepetido],
-      core_provider: [proveedorExterno],
-      core_categories: [catSectores, catCine, catSlugRepetido, catPadreRoto],
-      core_service: [servicioAlmacenes],
-      core_companies_service: [habilitacionFilmadora, habilitacionRota],
-      core_upload: [subidaAvatar, subidaLogo, subidaPendiente, subidaSinMeta],
-      core_meta: [metaAvatar, metaLogo],
-      core_subscription: [planPro],
-      core_companies_subscription: [suscripcionFilmadora, suscripcionDoble],
-      core_companies_subscriptions_payment: [pagoJunio, pagoJulio, pagoFallido, pagoColgado],
-    },
+    colecciones,
     ids: {
       ana: ana._id as string,
       benito: benito._id as string,
