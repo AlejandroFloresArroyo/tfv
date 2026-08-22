@@ -114,7 +114,7 @@ test("un sitio se da de alta, se publica y se abre desde su listado", async ({ a
   await limpiar(context, companyId, PREFIJO_LISTA)
 })
 
-test("el constructor compone la página: editores por tipo, arrastre y vista previa", async ({
+test("el constructor compone la página: editores por tipo, reordenación y vista previa", async ({
   as,
   companies,
 }) => {
@@ -206,17 +206,30 @@ test("el constructor compone la página: editores por tipo, arrastre y vista pre
     .evaluateAll((nodes) => nodes.map((node) => node.id))
   expect(ordenAntes.slice(0, 2)).toEqual(["seccion-hero", "seccion-categories"])
 
-  // ─── Y mover la portada la mueve de verdad ─────────────────────────────────
-  // El asa es un botón: recibe foco y las flechas mueven su fila. Es la misma llamada a `move` que
-  // dispara el arrastre —`ReorderList` no tiene dos caminos—, y la única que se puede conducir sin
-  // depender de la simulación de arrastre del navegador.
+  /**
+   * ─── Mover la portada la mueve de verdad ───────────────────────────────────
+   *
+   * Por el asa y con el teclado, que es **uno de los dos disparadores** de la misma máquina de
+   * reordenación: las flechas llaman a `move` y el arrastre a `grab`/`drag`/`drop`, y las cuatro
+   * están probadas sin navegador en `packages/ui/src/lib/reorder.test.ts`. Lo que este tramo añade
+   * es que el asa de esta pantalla está conectada a ella y que **la vista previa se reordena con
+   * la lista**.
+   *
+   * El gesto de arrastre con puntero **no se conduce aquí, y no por pereza**: se intentaron las dos
+   * formas —`dragTo` y `mouse.down`/`move` por pasos— y en este Chromium el arrastre nativo de
+   * HTML5 no llega a disparar `dragstart`, así que la lista no se movía y la prueba habría afirmado
+   * lo contrario de lo que ocurre. Queda anotado en la tarea, sin marcar.
+   */
   await portada.getByRole("button", { name: /^Mover la sección de Portada/ }).focus()
   await page.keyboard.press("ArrowDown")
 
-  const ordenDespues = await page
-    .locator("section[id^='seccion-']")
-    .evaluateAll((nodes) => nodes.map((node) => node.id))
-  expect(ordenDespues.slice(0, 2)).toEqual(["seccion-categories", "seccion-hero"])
+  await expect
+    .poll(async () =>
+      (
+        await page.locator("section[id^='seccion-']").evaluateAll((nodes) => nodes.map((n) => n.id))
+      ).slice(0, 2),
+    )
+    .toEqual(["seccion-categories", "seccion-hero"])
 
   // ─── Se guarda a mano, y lo guardado sobrevive a la recarga ────────────────
   // El constructor **no autoguarda**, a propósito: lo que se edita es una página pública.
