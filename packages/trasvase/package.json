@@ -1,0 +1,26 @@
+{
+  "name": "@tfv/trasvase",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "analizar": "node --experimental-strip-types src/cli.ts analizar"
+  },
+  "dependencies": {
+    "@tfv/contracts": "workspace:*",
+    "@tfv/db": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
