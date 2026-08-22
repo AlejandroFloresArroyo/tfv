@@ -16,8 +16,14 @@
  */
 
 import { newId } from "@tfv/contracts"
+import { type SQL, sql as consulta } from "drizzle-orm"
 import type { Sql } from "postgres"
 import type { Documento } from "../volcado/ejson.ts"
+
+/** Lo mínimo que `guardar` necesita: la base o la transacción de drizzle lo cumplen igual. */
+export interface EjecutorSql {
+  execute(sentencia: SQL): Promise<unknown>
+}
 
 /** Crea el esquema y sus tablas si no existen. Seguro de repetir. */
 export async function prepararEsquemaTrasvase(sql: Sql): Promise<void> {
@@ -155,36 +161,38 @@ export class Registro {
    * Persiste lo acumulado. Se llama dentro de la transacción de la rutina, para que la
    * correspondencia y las filas destino se escriban juntas o no se escriba ninguna.
    */
-  async guardar(sql: Sql): Promise<void> {
+  async guardar(ejecutor: EjecutorSql): Promise<void> {
     for (const coleccion of this.coleccionesLimpiadas) {
-      await sql`delete from trasvase.cuarentena where coleccion = ${coleccion}`
-      await sql`delete from trasvase.incidencias where coleccion = ${coleccion}`
+      await ejecutor.execute(consulta`delete from trasvase.cuarentena where coleccion = ${coleccion}`)
+      await ejecutor.execute(
+        consulta`delete from trasvase.incidencias where coleccion = ${coleccion}`,
+      )
     }
     this.coleccionesLimpiadas.clear()
 
     for (const par of this.paresNuevos) {
-      await sql`
+      await ejecutor.execute(consulta`
         insert into trasvase.correspondencia (coleccion, id_viejo, id_nuevo)
         values (${par.coleccion}, ${par.idViejo}, ${par.idNuevo})
         on conflict (coleccion, id_viejo) do nothing
-      `
+      `)
     }
     this.paresNuevos.length = 0
 
     for (const fila of this.cuarentenaNueva) {
-      await sql`
+      await ejecutor.execute(consulta`
         insert into trasvase.cuarentena (coleccion, id_viejo, regla, motivo, documento)
         values (${fila.coleccion}, ${fila.idViejo}, ${fila.regla}, ${fila.motivo},
-                ${sql.json(JSON.parse(JSON.stringify(fila.documento)))})
-      `
+                ${JSON.stringify(fila.documento)}::jsonb)
+      `)
     }
     this.cuarentenaNueva.length = 0
 
     for (const fila of this.incidenciasNuevas) {
-      await sql`
+      await ejecutor.execute(consulta`
         insert into trasvase.incidencias (coleccion, id_viejo, campo, detalle)
         values (${fila.coleccion}, ${fila.idViejo}, ${fila.campo}, ${fila.detalle})
-      `
+      `)
     }
     this.incidenciasNuevas.length = 0
   }

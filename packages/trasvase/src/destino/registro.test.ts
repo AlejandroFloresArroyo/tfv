@@ -8,11 +8,14 @@
  * corrida en lugar de acumular duplicados.
  */
 
+import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 import { afterAll, beforeEach, describe, expect, it } from "vitest"
 import { prepararEsquemaTrasvase, Registro } from "./registro.ts"
 
 const sql = postgres(process.env.DATABASE_URL as string, { max: 2 })
+/** `guardar` habla drizzle: en producción corre dentro de la transacción de la rutina. */
+const db = drizzle(sql)
 
 afterAll(async () => {
   await sql.end()
@@ -45,7 +48,7 @@ describe("Registro", () => {
     expect(idAna).not.toBe(idBenito)
     // Dentro de la corrida también es estable.
     expect(primero.idPara("core_user", "64a000000000000000000001")).toBe(idAna)
-    await primero.guardar(sql)
+    await primero.guardar(db)
 
     const segundo = await Registro.abrir(sql)
     expect(segundo.idPara("core_user", "64a000000000000000000001")).toBe(idAna)
@@ -60,7 +63,7 @@ describe("Registro", () => {
     primero.cuarentena("core_user", "64a000000000000000000001", "correo-ausente", "Sin correo", {
       username: "sin_correo",
     })
-    await primero.guardar(sql)
+    await primero.guardar(db)
 
     // La segunda corrida vuelve a encontrar lo mismo: no debe duplicar la fila.
     const segundo = await Registro.abrir(sql)
@@ -70,7 +73,7 @@ describe("Registro", () => {
     segundo.cuarentena("core_user", "64a000000000000000000001", "correo-ausente", "Sin correo", {
       username: "sin_correo",
     })
-    await segundo.guardar(sql)
+    await segundo.guardar(db)
 
     const filas = await sql<{ total: string }[]>`
       select count(*)::text as total from trasvase.cuarentena
@@ -89,7 +92,7 @@ describe("Registro", () => {
       "imageId",
       "El avatar apuntaba a una subida inexistente; queda sin avatar",
     )
-    await registro.guardar(sql)
+    await registro.guardar(db)
 
     const filas = await sql<{ campo: string; detalle: string }[]>`
       select campo, detalle from trasvase.incidencias
