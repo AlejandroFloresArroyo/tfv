@@ -625,6 +625,45 @@ export async function returnUnits(
   })
 }
 
+/**
+ * Cierra una cotización como **vendida**, dentro de una transacción que ya está abierta.
+ *
+ * La llama la liquidación de una compra de producción (rebanada 23), que hace esto y otras cinco
+ * cosas más en la misma transacción. Existe para que esa liquidación **no copie** el cierre: son
+ * tres pasos que van juntos y que ya estaban escritos en `changeQuoteStatus`, y dos copias del
+ * mismo cierre acaban divergiendo justo en el que congela.
+ *
+ * Los tres pasos, en este orden y no en otro:
+ *
+ * 1. **Congelar la composición antes de proyectar.** Cerrar suelta el vínculo de lo vendido, y la
+ *    cantidad de una línea es cuántas unidades tiene apartadas: calcular después congelaría ceros.
+ * 2. Escribir el estado.
+ * 3. Proyectar el inventario, que deja las unidades vendidas y suelta sus reservas.
+ *
+ * No comprueba la transición contra la máquina de estados y es deliberado: quien llama ya
+ * comprobó que el pedido está abierto y sin liquidar, que es la misma pregunta hecha del lado que
+ * la sabe contestar. Lo que sí se comprueba aquí es que la cotización no estuviera **ya cerrada**,
+ * porque eso es lo que distingue una liquidación de una repetición.
+ */
+export async function sellQuote(
+  tx: Transaction,
+  quote: typeof warehouseQuotes.$inferSelect,
+  actorId: string,
+): Promise<typeof warehouseQuotes.$inferSelect> {
+  if (isClosed(quote.status)) {
+    throw new ConflictError("Una cotización cerrada no se vuelve a vender")
+  }
+
+  const frozen = quote.computed
+    ? {}
+    : { computed: await computeOf(tx, quote), computedAt: new Date() }
+
+  const updated = await patch(tx, quote.id, { status: "sold", ...frozen })
+  await projectQuote(tx, quote.id, "sold", quote.type, actorId)
+
+  return updated
+}
+
 /** La verificación de coherencia entre las reservas y el inventario de un almacén. */
 export async function reservationCoherence(
   actor: Actor,

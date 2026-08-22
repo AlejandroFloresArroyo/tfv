@@ -165,7 +165,10 @@ async function enableService(companyId: string, keycode: string) {
   const serviceId = existing?.id ?? newId()
   if (!existing) await db.insert(services).values({ id: serviceId, keycode, name: keycode })
 
-  await db.insert(companyServices).values({ id: newId(), companyId, serviceId }).onConflictDoNothing()
+  await db
+    .insert(companyServices)
+    .values({ id: newId(), companyId, serviceId })
+    .onConflictDoNothing()
 }
 
 interface Identificado {
@@ -377,7 +380,9 @@ describe("el abanico ocurre al crear la orden", () => {
     ])
     expect(respuesta.status).toBe(422)
 
-    const ordenes = await db.select({ id: productionPurchaseOrders.id }).from(productionPurchaseOrders)
+    const ordenes = await db
+      .select({ id: productionPurchaseOrders.id })
+      .from(productionPurchaseOrders)
     expect(ordenes).toEqual([])
 
     const pedidos = await db.select({ id: warehouseOrders.id }).from(warehouseOrders)
@@ -419,14 +424,20 @@ describe("el alta comercial ocurre en ambos sentidos", () => {
     await ok(await crearOrden(compra, [{ measurementId: camara.measurementId, quantity: 1 }]), 201)
 
     const clientes = await db
-      .select({ id: counterparties.id, counterpartyCompanyId: counterparties.counterpartyCompanyId })
+      .select({
+        id: counterparties.id,
+        counterpartyCompanyId: counterparties.counterpartyCompanyId,
+      })
       .from(counterparties)
       .where(eq(counterparties.companyId, bajio.companyId))
     expect(clientes).toHaveLength(1)
     expect(clientes[0]?.counterpartyCompanyId).toBe(compra.companyId)
 
     const proveedores = await db
-      .select({ id: counterparties.id, counterpartyCompanyId: counterparties.counterpartyCompanyId })
+      .select({
+        id: counterparties.id,
+        counterpartyCompanyId: counterparties.counterpartyCompanyId,
+      })
       .from(counterparties)
       .where(eq(counterparties.companyId, compra.companyId))
     expect(proveedores).toHaveLength(1)
@@ -451,9 +462,7 @@ describe("el alta comercial ocurre en ambos sentidos", () => {
 
     await ok(await crearOrden(compra, [{ measurementId: camara.measurementId, quantity: 1 }]), 201)
 
-    const [pedido] = await db
-      .select({ clientId: warehouseOrders.clientId })
-      .from(warehouseOrders)
+    const [pedido] = await db.select({ clientId: warehouseOrders.clientId }).from(warehouseOrders)
     const [cliente] = await db
       .select({ counterpartyCompanyId: counterparties.counterpartyCompanyId })
       .from(counterparties)
@@ -487,7 +496,9 @@ describe("el alta entre empresas requiere autorización", () => {
     )
     expect(respuesta.status).toBe(403)
 
-    expect(await db.select({ id: productionPurchaseOrders.id }).from(productionPurchaseOrders)).toEqual([])
+    expect(
+      await db.select({ id: productionPurchaseOrders.id }).from(productionPurchaseOrders),
+    ).toEqual([])
     expect(await db.select({ id: warehouseOrders.id }).from(warehouseOrders)).toEqual([])
     expect(await db.select({ id: counterparties.id }).from(counterparties)).toEqual([])
   })
@@ -638,7 +649,12 @@ describe("la liquidación cierra el circuito", () => {
 
     // El pago quedó registrado contra esa cotización.
     const pagos = await ok<{ items: { amount: string; method: string }[] }>(
-      await call("GET", `${bajio.base}/quotes/${aceptado.quoteId}/payments`, undefined, almacenista),
+      await call(
+        "GET",
+        `${bajio.base}/quotes/${aceptado.quoteId}/payments`,
+        undefined,
+        almacenista,
+      ),
       200,
     )
     expect(pagos.items).toHaveLength(1)
@@ -675,7 +691,9 @@ describe("la liquidación cierra el circuito", () => {
     expect(segunda.status).toBe(409)
 
     expect(await db.select({ id: productionItems.id }).from(productionItems)).toHaveLength(3)
-    expect(await db.select({ id: productionShoppings.id }).from(productionShoppings)).toHaveLength(1)
+    expect(await db.select({ id: productionShoppings.id }).from(productionShoppings)).toHaveLength(
+      1,
+    )
     expect(
       await db.select({ id: warehouseQuotePayments.id }).from(warehouseQuotePayments),
     ).toHaveLength(1)

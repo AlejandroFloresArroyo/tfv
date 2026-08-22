@@ -343,22 +343,62 @@ function describe(live: { quotes: number; orders: number }): string {
 export async function provisionPair(
   seller: { readonly companyId: string; readonly name: string },
   buyer: { readonly companyId: string; readonly name: string },
-): Promise<void> {
-  await withSystem("aprovisionar_contrapartes", [seller.companyId, buyer.companyId], async (tx) => {
-    // Un cliente en la vendedora que representa a la compradora…
-    await upsertPair(tx, seller.companyId, "client", buyer)
-    // …y un proveedor en la compradora que representa a la vendedora.
-    await upsertPair(tx, buyer.companyId, "provider", seller)
-  })
+): Promise<CounterpartyPair> {
+  return withSystem("aprovisionar_contrapartes", [seller.companyId, buyer.companyId], async (tx) =>
+    provisionPairIn(tx, seller, buyer),
+  )
 }
 
+/** Las dos contrapartes de una relación, del lado de cada quien. */
+export interface CounterpartyPair {
+  /** El cliente en la empresa vendedora, que representa a la compradora. */
+  readonly clientId: string
+  /** El proveedor en la empresa compradora, que representa a la vendedora. */
+  readonly providerId: string
+}
+
+/**
+ * El mismo alta, **dentro de una transacción que ya está abierta**.
+ *
+ * La usa el abanico de compra, y por eso existe. El abanico tiene que ser atómico —o la orden y
+ * todos sus pedidos, o nada—, y una función que abriera su propia transacción dejaría las
+ * contrapartes dadas de alta después de que el resto se revirtiera: dos empresas figurarían
+ * comerciando por una compra que nunca ocurrió.
+ *
+ * Quien llame tiene que traer una transacción con **las dos empresas en el alcance**. Si no las
+ * trae, las políticas rechazan la escritura, que es exactamente lo que debe pasar.
+ */
+export async function provisionPairIn(
+  tx: Transaction,
+  seller: { readonly companyId: string; readonly name: string },
+  buyer: { readonly companyId: string; readonly name: string },
+): Promise<CounterpartyPair> {
+  // Un cliente en la vendedora que representa a la compradora…
+  const clientId = await upsertPair(tx, seller.companyId, "client", buyer)
+  // …y un proveedor en la compradora que representa a la vendedora.
+  const providerId = await upsertPair(tx, buyer.companyId, "provider", seller)
+
+  return { clientId, providerId }
+}
+
+/**
+ * Deja puesta una contraparte y devuelve la suya, exista ya o no.
+ *
+ * La idempotencia la garantiza el índice único parcial, no una comprobación previa: comprobar y
+ * luego insertar deja una ventana entre las dos cosas, y dos compras simultáneas —que es lo que
+ * pasa cuando alguien pulsa dos veces— crearían dos parejas.
+ *
+ * Con `on conflict do nothing`, la inserción que pierde la carrera **no devuelve fila**, así que
+ * hace falta la lectura de después. No es la comprobación previa disfrazada: ocurre cuando ya se
+ * sabe que la fila existe, y lo único que resuelve es cuál es su identificador.
+ */
 async function upsertPair(
   tx: Transaction,
   ownerCompanyId: string,
   role: CounterpartyRole,
   other: { readonly companyId: string; readonly name: string },
-): Promise<void> {
-  await tx
+): Promise<string> {
+  const [inserted] = await tx
     .insert(counterparties)
     .values({
       id: newId(),
@@ -368,9 +408,26 @@ async function upsertPair(
       counterpartyCompanyId: other.companyId,
       snapshot: { companyName: other.name },
     })
-    // La idempotencia la garantiza el índice único parcial, no una comprobación previa. Repetir la
-    // compra reutiliza la contraparte sin tocarla.
     .onConflictDoNothing()
+    .returning({ id: counterparties.id })
+
+  if (inserted) return inserted.id
+
+  const [existing] = await tx
+    .select({ id: counterparties.id })
+    .from(counterparties)
+    .where(
+      and(
+        eq(counterparties.companyId, ownerCompanyId),
+        eq(counterparties.role, role),
+        eq(counterparties.counterpartyCompanyId, other.companyId),
+        isNull(counterparties.deletedAt),
+      ),
+    )
+    .limit(1)
+
+  if (!existing) throw new Error("la contraparte ni se insertó ni se encontró")
+  return existing.id
 }
 
 /**

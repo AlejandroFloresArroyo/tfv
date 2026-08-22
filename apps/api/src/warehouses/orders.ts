@@ -42,7 +42,7 @@ import {
   type TradeType,
   UnprocessableError,
 } from "@tfv/contracts"
-import { type Transaction, withRequester } from "@tfv/db"
+import { type Transaction, withRequester, withSystem } from "@tfv/db"
 import {
   productionPurchaseOrders,
   warehouseMeasurements,
@@ -368,11 +368,52 @@ export async function acceptOrder(
 // ─── Rechazo y cambio de estado ──────────────────────────────────────────────
 
 /**
+ * Qué empresas declara el rechazo de un pedido.
+ *
+ * La suya siempre, y la de la producción **cuando el pedido vino de una orden de compra**. Es lo
+ * que faltaba: rechazar el último pedido de una orden la cancela, y esa escritura cae en la empresa
+ * de la producción, a la que el operador del almacén no pertenece. Sin el alcance declarado, la
+ * actualización afectaba a cero filas en silencio y la orden quedaba abierta para siempre
+ * (`HALLAZGOS.md` H-280).
+ *
+ * Corre **como el solicitante**, y por eso es una transacción aparte: es donde se comprueba que
+ * quien rechaza es miembro de la empresa del almacén, que es la comprobación que `withSystem` no
+ * hace. La segunda capa dice que sí antes de que la primera se ensanche, no después.
+ *
+ * `app.purchase_order_buyer` es `security definer` y comprueba por dentro que quien pregunta surte
+ * uno de los pedidos de esa orden. Devuelve **una** empresa: la del comprador, que el almacén ya
+ * tiene en su cartera como cliente desde que el abanico le abrió el pedido.
+ */
+async function rejectionScope(
+  actor: Actor,
+  companyId: string,
+  warehouseId: string,
+  orderId: string,
+): Promise<readonly string[]> {
+  return withRequester(actor, async (tx) => {
+    await loadWarehouse(tx, companyId, warehouseId)
+    const order = await loadOrder(tx, warehouseId, orderId)
+    if (!order.purchaseOrderId) return [companyId]
+
+    const rows = await tx.execute<{ company_id: string | null }>(
+      sql`select app.purchase_order_buyer(${order.purchaseOrderId}) as company_id`,
+    )
+    const buyer = rows[0]?.company_id ?? null
+
+    return buyer ? [companyId, buyer] : [companyId]
+  })
+}
+
+/**
  * Rechaza un pedido.
  *
  * El motivo es obligatorio porque **lo lee quien hizo la solicitud desde otra empresa**: un pedido
  * que aparece cancelado sin explicación obliga a llamar por teléfono, que es lo que este sistema
  * existe para evitar.
+ *
+ * Corre con alcance declarado y no con la vía del solicitante porque **puede escribir en dos
+ * empresas**: el último rechazo cancela la orden de compra, que vive en la de la producción. La
+ * membresía la comprueba `rejectionScope` antes de abrir esta transacción.
  */
 export async function rejectOrder(
   actor: Actor,
@@ -381,7 +422,9 @@ export async function rejectOrder(
   orderId: string,
   reason: string,
 ): Promise<OrderRecord> {
-  return withRequester(actor, async (tx) => {
+  const scope = await rejectionScope(actor, companyId, warehouseId, orderId)
+
+  return withSystem("rechazar_pedido", scope, async (tx) => {
     await loadWarehouse(tx, companyId, warehouseId)
     const order = await loadOrder(tx, warehouseId, orderId)
     assertTransition(order.status, "canceled")
@@ -524,8 +567,15 @@ function assertTransition(current: OrderStatus, next: OrderStatus): void {
   }
 }
 
-/** Suelta lo que la cotización del pedido tuviera apartado dentro de la nave. */
-async function releaseOrderStock(
+/**
+ * Suelta lo que la cotización del pedido tuviera apartado dentro de la nave.
+ *
+ * Exportada porque la cancelación de una orden de compra de producción (rebanada 23) cancela sus
+ * pedidos **desde el otro lado de la frontera** y tiene que liberar exactamente lo mismo que
+ * libera un rechazo. Dos copias de esto acabarían dejando equipo comprometido con nadie en una de
+ * las dos vías.
+ */
+export async function releaseOrderStock(
   tx: Transaction,
   order: { readonly quoteId: string | null },
   actorId: string,
