@@ -117,7 +117,10 @@ const ESTADOS_SUSCRIPCION = new Set([
 ])
 
 /** Reglas de forma y de unicidad por colección, derivadas de las restricciones del destino. */
-function reglasDe(coleccion: string, violaciones: Violacion[]): (doc: Documento, id: string) => void {
+function reglasDe(
+  coleccion: string,
+  violaciones: Violacion[],
+): (doc: Documento, id: string) => void {
   const simple = (regla: string, restriccion: string): Violacion => {
     const entrada: Violacion = { coleccion, regla, restriccion, filas: 0, ejemplos: [] }
     // Se registra sólo cuando anota su primera fila, para no llenar el informe de ceros.
@@ -335,9 +338,7 @@ export async function comprobarVolcado(volcado: Volcado): Promise<Analisis> {
         if (!destino) continue
 
         const crudo = documento[referencia.campo]
-        const valores = referencia.multiple
-          ? (Array.isArray(crudo) ? crudo : [])
-          : [crudo]
+        const valores = referencia.multiple ? (Array.isArray(crudo) ? crudo : []) : [crudo]
 
         for (const valor of valores) {
           if (typeof valor !== "string" || valor === "" || destino.has(valor)) continue
@@ -359,7 +360,12 @@ export async function comprobarVolcado(volcado: Volcado): Promise<Analisis> {
           if (referencia.dueño) {
             let huerfano = huerfanosPorCampo.get(referencia.campo)
             if (!huerfano) {
-              huerfano = { coleccion: declaracion.nombre, campo: referencia.campo, filas: 0, ejemplos: [] }
+              huerfano = {
+                coleccion: declaracion.nombre,
+                campo: referencia.campo,
+                filas: 0,
+                ejemplos: [],
+              }
               huerfanosPorCampo.set(referencia.campo, huerfano)
               huerfanos.push(huerfano)
             }
@@ -388,12 +394,9 @@ export async function comprobarVolcado(volcado: Volcado): Promise<Analisis> {
 function tabla(encabezados: string[], filas: string[][]): string {
   if (filas.length === 0) return "_Nada que señalar._\n"
   const linea = (celdas: string[]) => `| ${celdas.join(" | ")} |`
-  return [
-    linea(encabezados),
-    linea(encabezados.map(() => "---")),
-    ...filas.map(linea),
-    "",
-  ].join("\n")
+  return [linea(encabezados), linea(encabezados.map(() => "---")), ...filas.map(linea), ""].join(
+    "\n",
+  )
 }
 
 /** El análisis, como texto que negocio puede leer sin abrir una consola. */

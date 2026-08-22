@@ -6,7 +6,7 @@
  * negocio propuestas.
  */
 
-export { comprobarVolcado, informeAnalisis, type Analisis } from "./analisis/comprobar.ts"
+export { type Analisis, comprobarVolcado, informeAnalisis } from "./analisis/comprobar.ts"
 export { prepararEsquemaTrasvase, Registro } from "./destino/registro.ts"
 export { COLECCIONES, NOMBRES_CONOCIDOS } from "./modelo/colecciones.ts"
 export { trasvasarArchivos } from "./trasvase/archivos.ts"

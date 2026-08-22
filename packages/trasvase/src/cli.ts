@@ -16,11 +16,7 @@ import postgres from "postgres"
 import { comprobarVolcado, informeAnalisis } from "./analisis/comprobar.ts"
 import { abrirContexto } from "./trasvase/contexto.ts"
 import { correrTrasvase } from "./trasvase/correr.ts"
-import {
-  cuadrarImportes,
-  informeCuarentena,
-  verificarRecuentos,
-} from "./verificacion/verificar.ts"
+import { cuadrarImportes, informeCuarentena, verificarRecuentos } from "./verificacion/verificar.ts"
 import { abrirVolcado } from "./volcado/leer.ts"
 
 function salida(texto: string): void {
@@ -75,7 +71,9 @@ async function principal(): Promise<void> {
         salida("| tabla destino | filas | esperadas | cuadra |")
         salida("| --- | --- | --- | --- |")
         for (const fila of destinos) {
-          salida(`| ${fila.tabla} | ${fila.filas} | ${fila.esperadas} | ${fila.cuadra ? "sí" : "NO"} |`)
+          salida(
+            `| ${fila.tabla} | ${fila.filas} | ${fila.esperadas} | ${fila.cuadra ? "sí" : "NO"} |`,
+          )
         }
         salida("")
         for (const cuadre of await cuadrarImportes(contexto)) {

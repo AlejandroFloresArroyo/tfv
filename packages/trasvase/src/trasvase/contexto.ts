@@ -13,8 +13,8 @@
 import * as esquema from "@tfv/db/schema"
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { Sql } from "postgres"
-import type { Volcado } from "../volcado/leer.ts"
 import { prepararEsquemaTrasvase, Registro } from "../destino/registro.ts"
+import type { Volcado } from "../volcado/leer.ts"
 
 export type BaseDestino = PostgresJsDatabase<typeof esquema>
 

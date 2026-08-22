@@ -16,7 +16,7 @@
  */
 
 import { newId } from "@tfv/contracts"
-import { type SQL, sql as consulta } from "drizzle-orm"
+import { sql as consulta, type SQL } from "drizzle-orm"
 import type { Sql } from "postgres"
 import type { Documento } from "../volcado/ejson.ts"
 
@@ -166,7 +166,9 @@ export class Registro {
    */
   async guardar(ejecutor: EjecutorSql): Promise<void> {
     for (const coleccion of this.coleccionesLimpiadas) {
-      await ejecutor.execute(consulta`delete from trasvase.cuarentena where coleccion = ${coleccion}`)
+      await ejecutor.execute(
+        consulta`delete from trasvase.cuarentena where coleccion = ${coleccion}`,
+      )
       await ejecutor.execute(
         consulta`delete from trasvase.incidencias where coleccion = ${coleccion}`,
       )

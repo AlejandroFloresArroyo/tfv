@@ -13,9 +13,9 @@
  *   ojo sea repetible y dos personas miren las mismas filas.
  */
 
-import type { Documento } from "../volcado/ejson.ts"
 import type { Contexto } from "../trasvase/contexto.ts"
 import { idDe, texto } from "../trasvase/contexto.ts"
+import type { Documento } from "../volcado/ejson.ts"
 
 /** Colección vieja → tabla destino. `null`: se absorbe en otra (la meta dentro de `uploads`). */
 export const TABLA_DESTINO: Record<string, string | null> = {

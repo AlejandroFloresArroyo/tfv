@@ -16,12 +16,12 @@
  */
 
 import {
+  type CounterpartySnapshot,
   companies,
   companyAddresses,
   companyMembers,
   companyServices,
   counterparties,
-  type CounterpartySnapshot,
   globalCategories,
   roles,
   services,
@@ -145,13 +145,23 @@ export async function trasvasarNucleo(contexto: Contexto): Promise<void> {
           description: texto(doc.description),
           color: texto(doc.color) || null,
           icon: texto(doc.icon) || null,
-          imageUploadId: suave(contexto, "core_service", idViejo, "imageId", "core_upload", doc.imageId),
+          imageUploadId: suave(
+            contexto,
+            "core_service",
+            idViejo,
+            "imageId",
+            "core_upload",
+            doc.imageId,
+          ),
           isDisabled: doc.disabled === true,
           isAdminOnly: doc.admin === true,
           isOnLanding: doc.landing === true,
           ...marcasDe(doc),
         }
-        await db.insert(services).values(fila).onConflictDoUpdate({ target: services.id, set: fila })
+        await db
+          .insert(services)
+          .values(fila)
+          .onConflictDoUpdate({ target: services.id, set: fila })
       }
     }
 
@@ -230,7 +240,14 @@ export async function trasvasarNucleo(contexto: Contexto): Promise<void> {
           // SUPUESTO (ver DECISIONES.md, credenciales): el hash bcrypt viaja tal cual; la
           // verificación nueva no lo reconoce todavía, pero anularlo destruiría información.
           passwordHash: texto(doc.password) || null,
-          avatarUploadId: suave(contexto, "core_user", idViejo, "imageId", "core_upload", doc.imageId),
+          avatarUploadId: suave(
+            contexto,
+            "core_user",
+            idViejo,
+            "imageId",
+            "core_upload",
+            doc.imageId,
+          ),
           // Decisión 2026-08-19: las verificadas sin verificación real (S-15) migran verificadas.
           emailVerifiedAt: doc.valid === true ? marcas.createdAt : null,
           isActive: doc.active !== false,
@@ -288,12 +305,22 @@ export async function trasvasarNucleo(contexto: Contexto): Promise<void> {
         name: recortar(contexto, "core_companies", idViejo, "name", nombre, 200),
         description: texto(doc.description),
         email: texto(doc.email) || null,
-        logoUploadId: suave(contexto, "core_companies", idViejo, "imageId", "core_upload", doc.imageId),
+        logoUploadId: suave(
+          contexto,
+          "core_companies",
+          idViejo,
+          "imageId",
+          "core_upload",
+          doc.imageId,
+        ),
         commissionRate: comision,
         priority: prioridad,
         ...marcasDe(doc),
       }
-      await db.insert(companies).values(fila).onConflictDoUpdate({ target: companies.id, set: fila })
+      await db
+        .insert(companies)
+        .values(fila)
+        .onConflictDoUpdate({ target: companies.id, set: fila })
     }
 
     // ── Taxonomía global ─────────────────────────────────────────────────────
@@ -380,14 +407,28 @@ export async function trasvasarNucleo(contexto: Contexto): Promise<void> {
         const fila = {
           id: registro.idPara("core_categories", idViejo),
           parentId,
-          serviceId: suave(contexto, "core_categories", idViejo, "serviceId", "core_service", doc.serviceId),
+          serviceId: suave(
+            contexto,
+            "core_categories",
+            idViejo,
+            "serviceId",
+            "core_service",
+            doc.serviceId,
+          ),
           keyname,
           name: recortar(contexto, "core_categories", idViejo, "name", nombre, 160),
           description: texto(doc.description),
           slug,
           color: texto(doc.color) || null,
           icon: texto(doc.icon) || null,
-          imageUploadId: suave(contexto, "core_categories", idViejo, "imageId", "core_upload", doc.imageId),
+          imageUploadId: suave(
+            contexto,
+            "core_categories",
+            idViejo,
+            "imageId",
+            "core_upload",
+            doc.imageId,
+          ),
           ...marcasDe(doc),
         }
         await db
@@ -496,9 +537,7 @@ export async function trasvasarNucleo(contexto: Contexto): Promise<void> {
             "core_role",
             doc.roleId,
           ),
-          isOwner:
-            doc.isOwner === true ||
-            dueños.get(texto(doc.companyId)) === texto(doc.userId),
+          isOwner: doc.isOwner === true || dueños.get(texto(doc.companyId)) === texto(doc.userId),
           isActive: doc.isActive !== false,
           ...marcasDe(doc),
         }
@@ -612,7 +651,14 @@ export async function trasvasarNucleo(contexto: Contexto): Promise<void> {
           colony: recortar(contexto, libreta.coleccion, idViejo, "colony", texto(doc.colony), 120),
           city: recortar(contexto, libreta.coleccion, idViejo, "city", texto(doc.city), 120),
           state: recortar(contexto, libreta.coleccion, idViejo, "state", texto(doc.state), 120),
-          country: recortar(contexto, libreta.coleccion, idViejo, "country", texto(doc.country), 120),
+          country: recortar(
+            contexto,
+            libreta.coleccion,
+            idViejo,
+            "country",
+            texto(doc.country),
+            120,
+          ),
           countryCode: recortar(
             contexto,
             libreta.coleccion,
@@ -621,7 +667,14 @@ export async function trasvasarNucleo(contexto: Contexto): Promise<void> {
             texto(doc.countryCode),
             2,
           ),
-          postalCode: recortar(contexto, libreta.coleccion, idViejo, "zipcode", texto(doc.zipcode), 16),
+          postalCode: recortar(
+            contexto,
+            libreta.coleccion,
+            idViejo,
+            "zipcode",
+            texto(doc.zipcode),
+            16,
+          ),
           latitude: typeof doc.latitude === "number" ? doc.latitude.toFixed(7) : null,
           longitude: typeof doc.longitude === "number" ? doc.longitude.toFixed(7) : null,
           isPrimary: esPrimaria,
@@ -676,7 +729,14 @@ export async function trasvasarNucleo(contexto: Contexto): Promise<void> {
           "core_companies",
           doc.userCompanyId,
         )
-        const contraparteUsuario = suave(contexto, coleccion, idViejo, "userId", "core_user", doc.userId)
+        const contraparteUsuario = suave(
+          contexto,
+          coleccion,
+          idViejo,
+          "userId",
+          "core_user",
+          doc.userId,
+        )
 
         if (contraparteEmpresa) {
           const clave = `${dueña}|${papel}|${contraparteEmpresa}`

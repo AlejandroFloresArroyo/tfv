@@ -8,6 +8,9 @@
  * corriendo dos veces y afirmando que la segunda no duplica nada.
  */
 
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import {
   companies,
   companyMembers,
@@ -20,9 +23,6 @@ import {
   users,
 } from "@tfv/db/schema"
 import { eq } from "drizzle-orm"
-import { mkdtempSync, rmSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
 import postgres from "postgres"
 import { afterAll, beforeEach, describe, expect, it } from "vitest"
 import { escribirVolcado } from "../accesorios/construir.ts"
@@ -135,9 +135,7 @@ describe("trasvasarNucleo", () => {
 
     expect(migradas).toHaveLength(2) // ana y benito; ni la repetida ni la rota
 
-    const deAna = migradas.find(
-      (fila) => fila.userId === idNuevo("core_user", escenario.ids.ana),
-    )
+    const deAna = migradas.find((fila) => fila.userId === idNuevo("core_user", escenario.ids.ana))
     expect(deAna?.isOwner).toBe(true)
 
     const deBenito = migradas.find(
@@ -163,9 +161,7 @@ describe("trasvasarNucleo", () => {
     ])
 
     const filas = await cuarentenaDe("core_role")
-    expect(filas).toEqual([
-      { id_viejo: escenario.ids.rolHuerfano, regla: "empresa-inexistente" },
-    ])
+    expect(filas).toEqual([{ id_viejo: escenario.ids.rolHuerfano, regla: "empresa-inexistente" }])
   })
 
   it("direcciones: queda exactamente una primaria por libreta, y la huérfana en cuarentena", async () => {
@@ -252,10 +248,7 @@ describe("trasvasarNucleo", () => {
         `select count(*)::text as total from ${tabla}`,
       )
       const cuarentena = await cuarentenaDe(coleccion)
-      expect(
-        Number(destino?.total) + cuarentena.length,
-        `${coleccion} no cuadra`,
-      ).toBe(origen)
+      expect(Number(destino?.total) + cuarentena.length, `${coleccion} no cuadra`).toBe(origen)
     }
     // Las contrapartes suman de dos colecciones hacia una tabla.
     const contrapartes = await contexto.db.select().from(counterparties)

@@ -244,9 +244,10 @@ export async function trasvasarFacturacion(contexto: Contexto): Promise<void> {
         }
 
         const intervalo = texto(doc.interval)
-        const asientos = typeof doc.quantity === "number" && Number.isInteger(doc.quantity)
-          ? Math.max(1, doc.quantity)
-          : 1
+        const asientos =
+          typeof doc.quantity === "number" && Number.isInteger(doc.quantity)
+            ? Math.max(1, doc.quantity)
+            : 1
 
         const fila = {
           id: registro.idPara("core_companies_subscription", idViejo),
@@ -314,7 +315,7 @@ export async function trasvasarFacturacion(contexto: Contexto): Promise<void> {
           continue
         }
 
-        let factura: string | null = texto(doc.stripe_invoiceId) || null
+        const factura: string | null = texto(doc.stripe_invoiceId) || null
         if (factura !== null) {
           if (facturas.has(factura)) {
             registro.cuarentena(

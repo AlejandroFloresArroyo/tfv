@@ -13,7 +13,7 @@
 import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { basename, extname, join } from "node:path"
 import { createInterface } from "node:readline"
-import { analizarLinea, desenvolver, type Documento } from "./ejson.ts"
+import { analizarLinea, type Documento, desenvolver } from "./ejson.ts"
 
 export type { Documento } from "./ejson.ts"
 

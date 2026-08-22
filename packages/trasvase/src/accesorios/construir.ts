@@ -69,7 +69,10 @@ function envolver(valor: unknown): unknown {
 }
 
 /** Escribe el volcado: una colección por archivo, un documento por línea. */
-export function escribirVolcado(directorio: string, colecciones: Record<string, Documento[]>): void {
+export function escribirVolcado(
+  directorio: string,
+  colecciones: Record<string, Documento[]>,
+): void {
   mkdirSync(directorio, { recursive: true })
   for (const [nombre, documentos] of Object.entries(colecciones)) {
     const lineas = documentos.map((documento) => JSON.stringify(envolver(documento)))

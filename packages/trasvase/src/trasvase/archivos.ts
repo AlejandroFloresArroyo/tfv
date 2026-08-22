@@ -110,7 +110,12 @@ export async function trasvasarArchivos(contexto: Contexto): Promise<void> {
       let kind = TIPOS[tipoViejo]
       if (!kind) {
         kind = "file"
-        registro.incidencia(COLECCION, idViejo, "type", `Tipo «${tipoViejo}» desconocido; queda como archivo genérico`)
+        registro.incidencia(
+          COLECCION,
+          idViejo,
+          "type",
+          `Tipo «${tipoViejo}» desconocido; queda como archivo genérico`,
+        )
       }
 
       const metaId = texto(doc.metaId)
@@ -127,7 +132,9 @@ export async function trasvasarArchivos(contexto: Contexto): Promise<void> {
       const nombre = meta ? texto(meta.fileName, nombreDesdeUrl(url)) : nombreDesdeUrl(url)
       const extension = meta
         ? texto(meta.ext)
-        : (nombre.includes(".") ? (nombre.split(".").at(-1) ?? "") : "")
+        : nombre.includes(".")
+          ? (nombre.split(".").at(-1) ?? "")
+          : ""
 
       let esMarcador = doc.default === true
       if (esMarcador) {
@@ -160,18 +167,16 @@ export async function trasvasarArchivos(contexto: Contexto): Promise<void> {
           meta ? texto(meta.contentType, "application/octet-stream") : "application/octet-stream",
           128,
         ),
-        byteSize: meta && typeof meta.size === "number" && Number.isFinite(meta.size)
-          ? Math.max(0, Math.trunc(meta.size))
-          : 0,
+        byteSize:
+          meta && typeof meta.size === "number" && Number.isFinite(meta.size)
+            ? Math.max(0, Math.trunc(meta.size))
+            : 0,
         storagePath: meta ? texto(meta.path) : nombreDesdeUrl(url),
         isPlaceholder: esMarcador,
         ...marcasDe(doc),
       }
 
-      await db
-        .insert(uploads)
-        .values(fila)
-        .onConflictDoUpdate({ target: uploads.id, set: fila })
+      await db.insert(uploads).values(fila).onConflictDoUpdate({ target: uploads.id, set: fila })
     }
   })
 }
