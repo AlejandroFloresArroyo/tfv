@@ -1,5 +1,5 @@
 {
-  "id": "59655190-ad4b-401f-8a81-9916b391e5fa",
+  "id": "a5ce378e-20fa-4ad9-ab12-c4110cc2e541",
   "prevId": "9903be88-e8c3-4a49-a37c-1710f680feb9",
   "version": "7",
   "dialect": "postgresql",
@@ -10251,6 +10251,12 @@
           "notNull": true,
           "default": 1
         },
+        "warehouse_order_id": {
+          "name": "warehouse_order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -10272,6 +10278,21 @@
           "columns": [
             {
               "expression": "purchase_order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "production_purchase_order_lines_warehouse_order_idx": {
+          "name": "production_purchase_order_lines_warehouse_order_idx",
+          "columns": [
+            {
+              "expression": "warehouse_order_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

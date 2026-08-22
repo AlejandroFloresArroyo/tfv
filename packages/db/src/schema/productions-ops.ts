@@ -99,9 +99,28 @@ export const productionPurchaseOrderLines = pgTable(
       .notNull()
       .references(() => warehouseMeasurements.id, { onDelete: "restrict" }),
     quantity: integer("quantity").notNull().default(1),
+
+    /**
+     * El pedido de almacén en el que esta línea acabó.
+     *
+     * Sin clave foránea, como `production_shoppings.warehouse_order_id` y por lo mismo: el pedido
+     * pertenece a otra empresa y a un módulo que importa a éste.
+     *
+     * Lo escribe el abanico, en la misma transacción que abre el pedido, y **no es redundante con
+     * mirar las líneas del pedido**: es lo único que permite a la producción decir cuántas líneas
+     * fueron a cada almacén sin salir de su propio arrendatario. `warehouse_order_lines` atraviesa
+     * hasta el almacén en su política, así que contarlas desde aquí exigiría declarar alcance sobre
+     * empresas ajenas para responder a un listado — que es abrir de par en par lo que esta rebanada
+     * existe para mantener cerrado.
+     */
+    warehouseOrderId: reference("warehouse_order_id"),
+
     ...timestamps,
   },
-  (table) => [index("production_purchase_order_lines_order_idx").on(table.purchaseOrderId)],
+  (table) => [
+    index("production_purchase_order_lines_order_idx").on(table.purchaseOrderId),
+    index("production_purchase_order_lines_warehouse_order_idx").on(table.warehouseOrderId),
+  ],
 )
 
 // ─── Presupuesto ─────────────────────────────────────────────────────────────

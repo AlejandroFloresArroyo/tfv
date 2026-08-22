@@ -2,9 +2,23 @@
 --
 -- Ver `openspec/specs/production-procurement/spec.md`. Rebanada 23.
 --
--- No trae tablas: `production_purchase_orders` y sus líneas existen desde la `0002`. Trae **un
--- índice** y **dos funciones**, y las tres piezas existen por el mismo motivo de fondo: esta es la
+-- No trae tablas: `production_purchase_orders` y sus líneas existen desde la `0002`. Trae **una
+-- columna, dos índices y cuatro funciones**, y todas existen por el mismo motivo de fondo: ésta es la
 -- única operación del sistema que escribe en dos arrendatarios a la vez.
+
+-- ─── En qué pedido acabó cada línea ──────────────────────────────────────────
+--
+-- Lo escribe el abanico, en la misma transacción que abre el pedido. Sin clave foránea, como
+-- `production_shoppings.warehouse_order_id` y por lo mismo: el pedido pertenece a otra empresa y a
+-- un módulo que importa a éste.
+--
+-- **No es redundante con mirar las líneas del pedido.** Es lo único que permite a la producción
+-- decir cuántas líneas fueron a cada almacén sin salir de su propio arrendatario:
+-- `warehouse_order_lines` atraviesa hasta el almacén en su política, así que contarlas desde aquí
+-- exigiría declarar alcance sobre empresas ajenas **para responder a un listado** — que es abrir de
+-- par en par lo que esta rebanada existe para mantener cerrado.
+ALTER TABLE "production_purchase_order_lines" ADD COLUMN "warehouse_order_id" uuid;--> statement-breakpoint
+CREATE INDEX "production_purchase_order_lines_warehouse_order_idx" ON "production_purchase_order_lines" USING btree ("warehouse_order_id");--> statement-breakpoint
 
 -- ─── Una liquidación por pedido, garantizada por el motor ────────────────────
 --
@@ -98,14 +112,97 @@ as $$
     and w.is_published
 $$;--> statement-breakpoint
 
+-- Qué empresas toca una orden de compra que ya existe.
+--
+-- Las dos de arriba resuelven el alcance de lo que **va a nacer**. Ésta resuelve el de lo que ya
+-- nació: leer las líneas de una orden, cancelarla o liquidar uno de sus pedidos exige alcanzar los
+-- almacenes que la orden repartió, y el vínculo con ellos no lo dice ninguna tabla que la
+-- producción pueda leer — `warehouse_orders` sí, pero `warehouses`, que es donde está la empresa,
+-- no.
+--
+-- **Comprueba por dentro que quien pregunta alcanza la orden**, con la misma función que usa la
+-- política de `warehouse_orders`. Por eso no revela nada: sólo responde a quien ya podía ver esos
+-- pedidos, y sólo con las empresas de los pedidos de **su** orden. A quien no la alcanza le
+-- responde el conjunto vacío, que es indistinguible de una orden inexistente.
+--
+-- El sentido es de ida y no de vuelta: el almacén **no** obtiene por aquí las empresas de los
+-- demás almacenes de la orden, porque `app.reaches_purchase_order` mira el lado de la producción.
+create or replace function app.purchase_order_scope(purchase_order uuid)
+returns uuid[]
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select coalesce(array_agg(distinct empresa), '{}'::uuid[])
+  from (
+    select pr.company_id as empresa
+      from production_purchase_orders po
+      join productions pr on pr.id = po.production_id
+     where po.id = purchase_order
+       and app.reaches_purchase_order(purchase_order)
+    union
+    select w.company_id
+      from warehouse_orders o
+      join warehouses w on w.id = o.warehouse_id
+     where o.purchase_order_id = purchase_order
+       and app.reaches_purchase_order(purchase_order)
+  ) alcanzadas
+$$;--> statement-breakpoint
+
+-- Y la de vuelta, que es de una sola empresa y por un solo motivo.
+--
+-- **La propagación del rechazo hacia arriba nunca funcionó entre empresas.** La rebanada 15 cancela
+-- la orden de compra cuando su último pedido se rechaza, y lo hace dentro de la transacción del
+-- almacén que rechaza — que no es miembro de la empresa de la producción. La política de
+-- `production_purchase_orders` exige serlo para escribir, así que la actualización afectaba a cero
+-- filas **en silencio** y la orden se quedaba abierta para siempre. Su prueba estaba en verde
+-- porque el almacén y la producción vivían en la misma empresa. Ver `HALLAZGOS.md` H-280.
+--
+-- Para arreglarlo, el rechazo tiene que declarar alcance sobre la empresa de la producción, y para
+-- declararlo tiene que saber cuál es — que es otra vez la misma pregunta que no se puede hacer con
+-- las políticas puestas.
+--
+-- Devuelve **una** empresa y sólo a quien surte uno de los pedidos de esa orden. No es una
+-- revelación: el almacén ya tiene en su propia cartera al cliente que representa a esa empresa,
+-- dado de alta por el abanico al abrirle el pedido. Y no da lo que la de arriba da: el almacén no
+-- obtiene por aquí las empresas de los **demás** almacenes de la orden.
+create or replace function app.purchase_order_buyer(purchase_order uuid)
+returns uuid
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select pr.company_id
+  from production_purchase_orders po
+  join productions pr on pr.id = po.production_id
+  where po.id = purchase_order
+    and exists (
+      select 1
+        from warehouse_orders o
+        join warehouses w on w.id = o.warehouse_id
+       where o.purchase_order_id = purchase_order
+         and w.company_id = any(app.current_companies())
+    )
+$$;--> statement-breakpoint
+
 -- Al alcance de quien atiende peticiones, y de nadie más. El rol `public` incluye a cualquiera que
 -- llegue a hablar con la base.
 revoke execute on function app.procurement_source(uuid[]) from public;--> statement-breakpoint
+revoke execute on function app.purchase_order_buyer(uuid) from public;--> statement-breakpoint
+grant execute on function app.purchase_order_buyer(uuid) to authenticated, service_role;--> statement-breakpoint
 revoke execute on function app.published_warehouses() from public;--> statement-breakpoint
+revoke execute on function app.purchase_order_scope(uuid) from public;--> statement-breakpoint
 grant execute on function app.procurement_source(uuid[]) to authenticated, service_role;--> statement-breakpoint
 grant execute on function app.published_warehouses() to authenticated, service_role;--> statement-breakpoint
+grant execute on function app.purchase_order_scope(uuid) to authenticated, service_role;--> statement-breakpoint
 
 comment on function app.procurement_source(uuid[]) is
   'De qué almacén y de qué empresa es cada medida, entre las publicadas. Resuelve el alcance del abanico de compra antes de que se pueda declarar. Rebanada 23.';--> statement-breakpoint
 comment on function app.published_warehouses() is
-  'Los almacenes publicados y su empresa. Escaparate de la tienda interna. Rebanada 23.';
+  'Los almacenes publicados y su empresa. Escaparate de la tienda interna. Rebanada 23.';--> statement-breakpoint
+comment on function app.purchase_order_scope(uuid) is
+  'Las empresas que toca una orden de compra, para quien ya la alcanza. Alcance de la lectura de sus lineas, de su cancelacion y de su liquidacion. Rebanada 23.';--> statement-breakpoint
+comment on function app.purchase_order_buyer(uuid) is
+  'La empresa de la produccion que abrio una orden de compra, para el almacen que surte uno de sus pedidos. Alcance de la propagacion del rechazo hacia arriba. Rebanada 23, H-280.';
