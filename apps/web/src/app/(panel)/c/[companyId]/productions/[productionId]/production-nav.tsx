@@ -7,6 +7,8 @@ import {
   FolderTree,
   Gauge,
   PackageCheck,
+  ScrollText,
+  Video,
   Wallet,
 } from "lucide-react"
 import Link from "next/link"
@@ -34,10 +36,20 @@ import { useTranslations } from "next-intl"
  *
  * ## El orden de las pestañas es el del trabajo, no el del catálogo
  *
- * Panel, categorías, utilería, entregas, planes, presupuesto. Las dos del medio van seguidas porque
- * son **el mismo objeto físico visto dos veces**: la utilería dice qué hay y las entregas dicen por
- * dónde sale y cómo vuelve. Separarlas obligaría a cruzar la barra entera para pasar de una silla a
- * la nota que se la llevó.
+ * Panel, guion, categorías, rodaje, utilería, entregas, planes, presupuesto. El guion va justo
+ * después del panel porque es lo primero que existe: capítulos y escenas son lo que el rodaje, las
+ * categorías y los planes acaban referenciando. Categorías y rodaje van seguidos por lo mismo que
+ * utilería y entregas: **el mismo trabajo visto dos veces**, cómo se reparte y con quién y qué se
+ * graba. Separarlas obligaría a cruzar la barra entera para pasar de un departamento al reparto que
+ * lo compone.
+ *
+ * ## Guion y rodaje llevan **un solo permiso**, no tres como el presupuesto
+ *
+ * A diferencia del presupuesto, ninguna de las dos pestañas resuelve un aterrizaje entre varias
+ * pantallas posibles: la de guion siempre entra por los guiones —`productions.pdfs.*`— y la
+ * comprueba con la clave de capítulos porque es la que gobierna la estructura que arrastra a la
+ * otra; la de rodaje entra siempre por las jornadas. Quien tenga la vista de guiones pero no la de
+ * capítulos entra igual y ve el hueco explicado, no una pestaña que desaparece.
  *
  * ## El presupuesto es **una** pestaña, y por dentro son tres pantallas
  *
@@ -53,7 +65,9 @@ export function ProductionNav({
   companyId,
   productionId,
   canViewProductions,
+  canViewScript,
   canViewCategories,
+  canViewRodaje,
   canViewItems,
   canViewDeliveries,
   canViewWorkflows,
@@ -64,7 +78,9 @@ export function ProductionNav({
   companyId: string
   productionId: string
   canViewProductions: boolean
+  canViewScript: boolean
   canViewCategories: boolean
+  canViewRodaje: boolean
   canViewItems: boolean
   canViewDeliveries: boolean
   canViewWorkflows: boolean
@@ -93,6 +109,16 @@ export function ProductionNav({
 
   const entries = [
     { href: base, label: t("panel.tab"), icon: Gauge, active: pathname === base },
+    ...(canViewScript
+      ? [
+          {
+            href: `${base}/script`,
+            label: t("script.tab"),
+            icon: ScrollText,
+            active: pathname.startsWith(`${base}/script`),
+          },
+        ]
+      : []),
     ...(canViewCategories
       ? [
           {
@@ -100,6 +126,16 @@ export function ProductionNav({
             label: t("categories.title"),
             icon: FolderTree,
             active: pathname.startsWith(`${base}/categories`),
+          },
+        ]
+      : []),
+    ...(canViewRodaje
+      ? [
+          {
+            href: `${base}/rodaje`,
+            label: t("rodaje.tab"),
+            icon: Video,
+            active: pathname.startsWith(`${base}/rodaje`),
           },
         ]
       : []),

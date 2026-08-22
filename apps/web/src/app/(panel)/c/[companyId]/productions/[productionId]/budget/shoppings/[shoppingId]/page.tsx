@@ -109,6 +109,8 @@ export default async function ShoppingPage({
         canViewBudget={can(company, "productions.budgets.view")}
         canViewAnchors={can(company, "productions.anchors.view")}
         canViewShoppings={can(company, "productions.shoppings.view")}
+        canViewScript={can(company, "productions.chapters.view")}
+        canViewRodaje={can(company, "productions.recordings.view")}
       />
       <BudgetNav
         companyId={companyId}
