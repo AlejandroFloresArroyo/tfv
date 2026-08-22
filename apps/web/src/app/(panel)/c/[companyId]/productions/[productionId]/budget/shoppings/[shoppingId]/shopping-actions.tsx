@@ -1,6 +1,6 @@
 "use client"
 
-import { Button, Callout, Checkbox } from "@tfv/ui"
+import { Button, Callout, Checkbox, DialogTrigger } from "@tfv/ui"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
@@ -44,7 +44,11 @@ export function EditShopping({
 
   return (
     <FormDialog
-      trigger={<Button variant="secondary">{t("edit")}</Button>}
+      trigger={
+        <DialogTrigger asChild>
+          <Button variant="secondary">{t("edit")}</Button>
+        </DialogTrigger>
+      }
       title={t("editShoppingTitle")}
       submitLabel={t("save")}
       action={async (data) => {
@@ -114,7 +118,11 @@ export function ComposeShopping({
 
   return (
     <FormDialog
-      trigger={<Button variant="secondary">{t("composeItems")}</Button>}
+      trigger={
+        <DialogTrigger asChild>
+          <Button variant="secondary">{t("composeItems")}</Button>
+        </DialogTrigger>
+      }
       title={t("composeItemsTitle")}
       description={t("composeItemsBody")}
       submitLabel={t("composeItemsConfirm")}
@@ -237,9 +245,11 @@ export function DeleteShopping({
   return (
     <ConfirmDestructive
       trigger={
-        <Button variant="ghost" className="text-tinta-alto">
-          {t("delete")}
-        </Button>
+        <DialogTrigger asChild>
+          <Button variant="ghost" className="text-tinta-alto">
+            {t("delete")}
+          </Button>
+        </DialogTrigger>
       }
       title={t("deleteShoppingTitle")}
       entity={shopping.name}

@@ -1,6 +1,6 @@
 "use client"
 
-import { Button, Callout, Checkbox, Field, Input, Select, Textarea } from "@tfv/ui"
+import { Button, Callout, Checkbox, DialogTrigger, Field, Input, Select, Textarea } from "@tfv/ui"
 import { Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
@@ -238,10 +238,12 @@ export function CreateShopping({
   return (
     <FormDialog
       trigger={
-        <Button>
-          <Plus className="size-4" aria-hidden="true" />
-          {t("newShopping")}
-        </Button>
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="size-4" aria-hidden="true" />
+            {t("newShopping")}
+          </Button>
+        </DialogTrigger>
       }
       title={t("newShoppingTitle")}
       description={t("newShoppingBody")}

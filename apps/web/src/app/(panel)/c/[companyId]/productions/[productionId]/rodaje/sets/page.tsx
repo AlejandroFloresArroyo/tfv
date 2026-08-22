@@ -58,6 +58,8 @@ export default async function SetsPage({
         companyId={companyId}
         productionId={productionId}
         canViewProductions={can(company, "productions.productions.view")}
+        canViewScript={can(company, "productions.chapters.view")}
+        canViewRodaje={can(company, "productions.recordings.view")}
         canViewCategories={can(company, "productions.categories.view")}
         canViewItems={can(company, "productions.products.view")}
         canViewDeliveries={can(company, "productions.deliveries.view")}

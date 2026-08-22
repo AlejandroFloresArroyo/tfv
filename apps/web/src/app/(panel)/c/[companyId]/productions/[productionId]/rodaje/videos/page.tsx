@@ -73,6 +73,8 @@ export default async function VideosPage({
         companyId={companyId}
         productionId={productionId}
         canViewProductions={can(company, "productions.productions.view")}
+        canViewScript={can(company, "productions.chapters.view")}
+        canViewRodaje={can(company, "productions.recordings.view")}
         canViewCategories={canViewCategories}
         canViewItems={can(company, "productions.products.view")}
         canViewDeliveries={can(company, "productions.deliveries.view")}

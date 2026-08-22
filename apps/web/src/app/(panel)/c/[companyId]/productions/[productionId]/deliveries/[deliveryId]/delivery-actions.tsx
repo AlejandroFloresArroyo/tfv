@@ -7,10 +7,11 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogTrigger,
   Field,
   Input,
-  type PickedFile,
   SignaturePad,
+  type PickedFile,
   type SignaturePadHandle,
 } from "@tfv/ui"
 import { useRouter } from "next/navigation"
@@ -85,7 +86,11 @@ export function ComposeDelivery({
 
   return (
     <FormDialog
-      trigger={<Button variant="secondary">{t("compose")}</Button>}
+      trigger={
+        <DialogTrigger asChild>
+          <Button variant="secondary">{t("compose")}</Button>
+        </DialogTrigger>
+      }
       title={t("composeTitle")}
       description={t("composeBody")}
       submitLabel={t("composeConfirm")}
@@ -149,7 +154,11 @@ export function CompleteDelivery({
 
   return (
     <FormDialog
-      trigger={<Button disabled={!ready}>{t("complete")}</Button>}
+      trigger={
+        <DialogTrigger asChild>
+          <Button disabled={!ready}>{t("complete")}</Button>
+        </DialogTrigger>
+      }
       title={t("completeTitle")}
       description={
         delivery.direction === "outbound"
@@ -182,7 +191,11 @@ export function CancelDelivery({
 
   return (
     <FormDialog
-      trigger={<Button variant="secondary">{t("cancel")}</Button>}
+      trigger={
+        <DialogTrigger asChild>
+          <Button variant="secondary">{t("cancel")}</Button>
+        </DialogTrigger>
+      }
       title={t("cancelTitle")}
       description={t("cancelBody", { name: delivery.name })}
       submitLabel={t("cancelConfirm")}
@@ -219,9 +232,11 @@ export function DeleteDelivery({
   return (
     <ConfirmDestructive
       trigger={
-        <Button variant="ghost" className="text-tinta-alto">
-          {t("delete")}
-        </Button>
+        <DialogTrigger asChild>
+          <Button variant="ghost" className="text-tinta-alto">
+            {t("delete")}
+          </Button>
+        </DialogTrigger>
       }
       title={t("deleteTitle")}
       entity={delivery.name}

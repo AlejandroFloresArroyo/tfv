@@ -1,6 +1,6 @@
 "use client"
 
-import { Badge, Button, Callout, Field, Input, Select, Textarea } from "@tfv/ui"
+import { Badge, Button, Callout, DialogTrigger, Field, Input, Select, Textarea } from "@tfv/ui"
 import { Plus } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { type ItemAction, ItemActions } from "~/components/collection/item-actions.tsx"
@@ -49,10 +49,12 @@ export function CreateItem({
   return (
     <FormDialog
       trigger={
-        <Button>
-          <Plus className="size-4" aria-hidden="true" />
-          {t("create")}
-        </Button>
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="size-4" aria-hidden="true" />
+            {t("create")}
+          </Button>
+        </DialogTrigger>
       }
       title={t("createTitle")}
       description={t("createBody")}

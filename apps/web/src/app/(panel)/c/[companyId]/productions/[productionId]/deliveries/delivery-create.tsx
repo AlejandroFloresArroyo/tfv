@@ -1,6 +1,6 @@
 "use client"
 
-import { Button, Callout, Field, Input, Select, Textarea } from "@tfv/ui"
+import { Button, Callout, DialogTrigger, Field, Input, Select, Textarea } from "@tfv/ui"
 import { Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
@@ -34,10 +34,12 @@ export function CreateDelivery({
   return (
     <FormDialog
       trigger={
-        <Button>
-          <Plus className="size-4" aria-hidden="true" />
-          {t("create")}
-        </Button>
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="size-4" aria-hidden="true" />
+            {t("create")}
+          </Button>
+        </DialogTrigger>
       }
       title={t("createTitle")}
       description={t("createBody")}

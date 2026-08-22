@@ -1,6 +1,6 @@
 "use client"
 
-import { Button, Field, Input, Select, Textarea } from "@tfv/ui"
+import { Button, DialogTrigger, Field, Input, Select, Textarea } from "@tfv/ui"
 import { Pencil, Plus } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { ConfirmDestructive } from "~/components/confirm-destructive.tsx"
@@ -118,10 +118,12 @@ export function CreateAnchor({
   return (
     <FormDialog
       trigger={
-        <Button>
-          <Plus className="size-4" aria-hidden="true" />
-          {t("newAnchor")}
-        </Button>
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="size-4" aria-hidden="true" />
+            {t("newAnchor")}
+          </Button>
+        </DialogTrigger>
       }
       title={t("newAnchorTitle")}
       description={t("newAnchorBody")}
@@ -156,9 +158,11 @@ export function EditAnchor({
   return (
     <FormDialog
       trigger={
-        <Button variant="ghost" size="sm" aria-label={t("editAnchorOf", { name: anchor.name })}>
-          <Pencil className="size-4" aria-hidden="true" />
-        </Button>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="sm" aria-label={t("editAnchorOf", { name: anchor.name })}>
+            <Pencil className="size-4" aria-hidden="true" />
+          </Button>
+        </DialogTrigger>
       }
       title={t("editAnchorTitle")}
       submitLabel={t("save")}
@@ -197,14 +201,16 @@ export function DeleteAnchor({
   return (
     <ConfirmDestructive
       trigger={
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-tinta-alto"
-          aria-label={t("deleteAnchorOf", { name: anchor.name })}
-        >
-          {t("delete")}
-        </Button>
+        <DialogTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-tinta-alto"
+            aria-label={t("deleteAnchorOf", { name: anchor.name })}
+          >
+            {t("delete")}
+          </Button>
+        </DialogTrigger>
       }
       title={t("deleteAnchorTitle")}
       entity={anchor.name}
