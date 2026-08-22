@@ -183,6 +183,18 @@ export const productionShoppings = pgTable(
   },
   (table) => [
     index("production_shoppings_production_idx").on(table.productionId, table.occurredOn),
+    /**
+     * Un pedido de almacén genera **una** compra, y lo garantiza el motor.
+     *
+     * La liquidación comprueba antes si ya se liquidó y responde `409`; esto es la red de debajo,
+     * para las dos que entran a la vez. Sin ella, dos peticiones simultáneas pasan las dos la
+     * comprobación —cada una en su instantánea— y la producción acaba con el gasto contado dos
+     * veces y el doble de artículos. Es la misma forma que hace idempotente el alta de una
+     * contraparte: índice único parcial, no comprobación previa.
+     */
+    uniqueIndex("production_shoppings_warehouse_order_unique")
+      .on(table.warehouseOrderId)
+      .where(sql`warehouse_order_id IS NOT NULL AND deleted_at IS NULL`),
   ],
 )
 
