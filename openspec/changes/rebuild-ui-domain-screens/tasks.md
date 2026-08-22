@@ -33,19 +33,24 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 - [x] Perfiles de facturación, con su asistente — la pantalla en `settings/billing/` y el
       asistente de alta en `settings/billing/new/profile-wizard.tsx`. La prueba de extremo a
       extremo lo recorre entero y comprueba que resume lo escrito
-      (`apps/e2e/tests/suscripcion.spec.ts:70`), que es lo que la distingue de las otras tres de
-      este bloque: en ellas la prueba sólo llega a la pantalla. Ver H-151
-- [ ] Planes: selección, cambio, cancelación, reactivación — **escrita entera y sin recorrer**:
-      las cuatro acciones están en `settings/plan/plan-actions.tsx`, y la única prueba afirma que
-      **sin plan contratado** no hay nada que pulsar (`apps/e2e/tests/suscripcion.spec.ts:47`),
-      porque la siembra no deja ningún plan (H-141). Ver H-151
-- [ ] Historial de cobros — **escrita y comprobada sólo por su encabezado**:
-      `settings/payments/page.tsx` sobre la colección paginada, y de ella
-      `apps/e2e/tests/suscripcion.spec.ts:26` afirma que se llega y que el título está. Que liste
-      un cobro no lo comprueba nadie, y con H-141 tampoco habría cobro que listar. Ver H-151
-- [ ] Bitácora personal y de empresa — **falta la personal**. La de empresa está y bien probada:
-      `settings/activity/page.tsx`, con `apps/e2e/tests/avisos.spec.ts:52`, `:143` y `:161`. La
-      personal no tiene pantalla: `GET /me/activity` existe en el servicio y no la consume nadie
+      (`apps/e2e/tests/suscripcion.spec.ts:175`). Las otras tres de este bloque —planes, cobros y
+      bitácora— ya no se distinguen de ésta: desde el 2026-08-22 también se recorren
+- [x] Planes: selección, cambio, cancelación, reactivación — **recorrida entera**. Un solo
+      recorrido conduce los cinco estados sucesivos de la misma suscripción en
+      `apps/e2e/tests/suscripcion.spec.ts:59`: el catálogo con sus tres botones, abandonar el pago
+      sin dejar suscripción, contratar y pagar en la página del suplente, cambiar de plan
+      conservando los asientos, cancelar al vencimiento sin que el estado deje de operar, y
+      reactivar. Sobre una empresa que la propia prueba crea y borra
+- [x] Historial de cobros — **lista el cobro que la contratación produjo**: el paso 5 de
+      `apps/e2e/tests/suscripcion.spec.ts` va a `settings/payments` y encuentra allí el importe
+      —1745,00 MXN— y los asientos del periodo que se acaba de pagar, que es el cobro que emitió el
+      segundo evento del suplente
+- [x] Bitácora personal y de empresa. La personal se construyó: `account/activity/page.tsx`
+      sobre `GET /me/activity`, con el retrato de la empresa —el eje que ahí varía— y la empresa
+      nombrada en cada asiento. Se llega desde la ficha de la cuenta y desde el menú del retrato.
+      Su prueba (`apps/e2e/tests/bitacora-personal.spec.ts`) afirma lo único que la distingue de la
+      de empresa: que enseña lo mío y **no lo del vecino**, con dos personas dejando asiento en la
+      misma empresa. No se ofrece filtrar por empresa porque el recurso no lo acepta
 - [~] Consola de administración de plataforma. **Existe desde el 2026-08-19** bajo `/platform`, con
       su propia navegación, la guarda de `app-shell` en el armazón —sin la marca se va al panel— y
       cuatro pantallas: la bandeja de prospectos con su flujo de aprobación, el padrón de empresas,
@@ -123,21 +128,34 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 
 ## 29e · Sitios y portada
 
-- [ ] Sitios por empresa — **escrita y comprobada sólo por su encabezado**:
-      `c/[companyId]/websites/page.tsx` con sus acciones, y `apps/e2e/tests/tienda.spec.ts:95`
-      afirma a propósito «que se llega, que la pantalla se identifica», no qué hay dentro.
-      Ver H-151
-- [ ] **Constructor con reordenación por arrastre y vista previa** — **escrito entero y sin
-      recorrer**: `c/[companyId]/websites/[websiteId]/builder.tsx`, con `ReorderList` y la vista
-      previa que monta el mismo componente que sirve la tienda. Probados por debajo están la
-      reordenación (`packages/ui/src/lib/reorder.test.ts`) y la equivalencia de la previsualización
-      (`api/websites/customizations.test.ts:531`); la pantalla, no. Ver H-151
-- [ ] Editores de campo por tipo de sección — escritos, en el `SectionEditor` del mismo
-      constructor (`builder.tsx:383`), y sin prueba que los conduzca. Ver H-151
-- [ ] Tienda pública de almacén — **escrita entera y no recorrible**: catálogo, ficha, carrito y
-      página de compra están en `apps/web/src/app/s/[slug]/`, y servir una tienda exige
-      suscripción vigente, que hoy no se puede contratar porque no hay ningún plan (H-141, H-140).
-      Su prueba de extremo a extremo recorre a propósito las dos salidas que sí se alcanzan
+- [x] Sitios por empresa — **recorrida**: `apps/e2e/tests/sitios.spec.ts:47` da de alta un sitio
+      desde el diálogo de la pantalla eligiendo su almacén de origen, comprueba que aparece con su
+      dirección pública y sin publicar, lo publica con el interruptor —y la insignia lo dice, que
+      antes no (H-302)—, recarga para ver que no era optimismo del navegador, y entra al
+      constructor por el nombre
+- [~] **Constructor con reordenación y vista previa** — recorrido en
+      `apps/e2e/tests/sitios.spec.ts:117`: se crea el tema, se escribe en un editor y la vista
+      previa lo enseña, se mueve una sección por su asa y la vista previa cambia de orden, se
+      guarda a mano y lo guardado sobrevive a la recarga. **Falta el gesto de arrastre con
+      puntero**: se mueve con las flechas del asa —el otro disparador de la misma máquina— porque
+      el arrastre nativo de HTML5 no se dispara bajo Playwright en este Chromium, ni con `dragTo`
+      ni con `mouse.down` por pasos. La aritmética de las cuatro operaciones sigue probada sin
+      navegador en `packages/ui/src/lib/reorder.test.ts`
+- [x] Editores de campo por tipo de sección — conducidos en `apps/e2e/tests/sitios.spec.ts:117`,
+      y por las tres formas que el catálogo declara: la portada ofrece título, descripción y
+      botones y **no** elementos; las preguntas frecuentes, elementos y **no** botones; y una
+      sección de catálogo —categorías— no ofrece ninguno de los dos, que es lo que impide enseñar
+      ahí un producto que el almacén tiene despublicado
+- [~] Tienda pública de almacén — **recorrida hasta el cobro**. `apps/e2e/tests/tienda.spec.ts:95`
+      conduce el camino entero de un visitante: se contrata el plan por la pantalla, la tienda pasa
+      a servirse, el catálogo se busca y filtra, la ficha ofrece añadir al carrito sin cuenta, el
+      carrito se valora contra el catálogo publicado y la compra aparta el equipo con su desglose.
+      **Falta el último paso, y no es de la pantalla**: el suplente del procesador no tiene página
+      de cobro para una compra de tienda —devuelve la dirección de vuelta— así que nadie emite el
+      evento que la confirmaría y «Compra confirmada» no se puede alcanzar desde un navegador
+      (H-304). Dos cosas más salieron de aquí: la siembra no deja la categoría que declara la
+      vertical, sin la cual ningún sitio es tienda de almacén (H-301), y `STOREFRONT_ORIGIN` no
+      estaba puesta en el arnés (H-303)
 - [ ] Tienda pública de mosaicos
 - [ ] **Configurador público de mosaicos**
 - [ ] Cuenta del comprador y carrito
