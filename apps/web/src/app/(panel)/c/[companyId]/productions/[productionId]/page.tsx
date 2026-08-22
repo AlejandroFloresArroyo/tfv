@@ -61,6 +61,7 @@ export default async function ProductionPage({
   const canViewWorkflows = can(company, "productions.workflows.view")
   const canViewPanel = can(company, "productions.budgets.view")
   const canViewChapters = can(company, "productions.chapters.view")
+  const canViewRodaje = can(company, "productions.recordings.view")
 
   const base = `/companies/${companyId}/productions/${productionId}`
   const screen = `/c/${companyId}/productions/${productionId}`
@@ -86,7 +87,7 @@ export default async function ProductionPage({
       canViewAnchors={can(company, "productions.anchors.view")}
       canViewShoppings={can(company, "productions.shoppings.view")}
       canViewScript={canViewChapters}
-      canViewRodaje={can(company, "productions.recordings.view")}
+      canViewRodaje={canViewRodaje}
     />
   )
 
@@ -178,6 +179,7 @@ export default async function ProductionPage({
               icon={CalendarDays}
               label={t("panel.recordings")}
               value={total(panel.recordings)}
+              href={canViewRodaje ? `${screen}/rodaje` : undefined}
             />
             <Stat
               icon={CalendarDays}

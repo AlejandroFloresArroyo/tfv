@@ -4,7 +4,17 @@
  * Rebanada 20. Los tipos se declaran aquí y no en cada pantalla por lo mismo que en el almacén: dos
  * pantallas que describen la misma forma acaban describiéndola distinto, y la que se quede vieja no
  * falla — pinta un hueco.
+ *
+ * ## Personajes, sets, videos y continuidad: derivados del contrato, no transcritos
+ *
+ * `account/sessions` (`HALLAZGOS.md` H-128) es la única pantalla que consume el cliente tipado
+ * hasta la 29c, y demuestra por qué: una interfaz escrita a mano se desincroniza del servidor sin
+ * que nada lo note. Los tipos de esta sección salen de `ApiOutput`, sobre las claves del contrato
+ * publicado, así que un campo que cambie de nombre en el servidor deja de compilar aquí en vez de
+ * pintar un hueco en producción.
  */
+
+import type { ApiOutput } from "@tfv/contracts/api-client"
 
 /** La imagen única de una entidad, tal y como llega de la API. */
 export interface ImageFields {
@@ -514,11 +524,77 @@ export interface CalendarData {
   events: CalendarEventRow[]
 }
 
-/** Un personaje de la producción, para el filtro del calendario. */
-export interface CharacterRow {
-  id: string
-  name: string
-}
+/**
+ * Un personaje de la producción.
+ *
+ * Era `{id, name}`, sólo lo que pedía el filtro del calendario. Ensancharlo aquí no rompe a quien
+ * ya lo usaba así —lee dos campos de un objeto que ahora trae más— y evita una segunda interfaz
+ * para la misma fila el día que un personaje necesita pantalla propia, que es lo que pasa en la
+ * 29c.
+ */
+export type CharacterRow =
+  ApiOutput<"GET /companies/{companyId}/productions/{productionId}/characters/{characterId}">
+
+// ─── Rodaje: sets, videos y continuidad ───────────────────────────────────────
+
+/** Un artículo del inventario dentro de la composición de un set. */
+export type SetItemRow = NonNullable<
+  ApiOutput<"GET /companies/{companyId}/productions/{productionId}/sets/{setId}">["items"]
+>[number]
+
+/** Un set (decorado). `items` sólo viaja en la ficha; el listado sólo trae el recuento. */
+export type SetRow = ApiOutput<"GET /companies/{companyId}/productions/{productionId}/sets/{setId}">
+
+/** Un video de referencia de la biblioteca. */
+export type VideoRow =
+  ApiOutput<"GET /companies/{companyId}/productions/{productionId}/videos/{videoId}">
+
+/** Los dos tipos de jornada, en el orden del enumerado del motor. */
+export const RECORDING_KINDS = ["record", "re_record"] as const
+export type RecordingKind = (typeof RECORDING_KINDS)[number]
+
+/** Una jornada de rodaje, tal y como la trae el listado. */
+export type RecordingRow =
+  ApiOutput<"GET /companies/{companyId}/productions/{productionId}/recordings">["items"][number]
+
+/** La misma jornada, con su reparto, su utilería y sus notas. */
+export type RecordingDetailRow =
+  ApiOutput<"GET /companies/{companyId}/productions/{productionId}/recordings/{recordingId}">
+
+/** La escena de la que cuelga una jornada, tal y como viaja dentro de su ficha. */
+export type RecordingSceneRow = NonNullable<RecordingDetailRow["scene"]>
+
+/** Una continuidad: un personaje —o ninguno— con su utilería. */
+export type ContinuityRow = RecordingDetailRow["continuities"][number]
+
+/**
+ * Una pieza de utilería.
+ *
+ * `kind` dice de cuál de las dos rutas salió — `item` de colgar un artículo, `video` de colgar un
+ * video—. Nunca las dos referencias a la vez: es la forma que `productions/continuity.ts` no deja
+ * escribir de otra manera.
+ */
+export type PropRow = ContinuityRow["props"][number]
+
+/** Una nota de jornada: el cuaderno del script. */
+export type RecordingNoteRow = RecordingDetailRow["notes"][number]
+
+/** Cómo apareció un personaje a lo largo del rodaje: sus jornadas, con la utilería de cada una. */
+export type CharacterHistoryRow =
+  ApiOutput<"GET /companies/{companyId}/productions/{productionId}/characters/{characterId}/continuity">
+
+export type CharacterHistoryEntryRow = CharacterHistoryRow["recordings"][number]
+
+/**
+ * Una escena, para elegirla al programar una jornada.
+ *
+ * No es la pantalla de escenas —eso es de quien construye el desglose—, es sólo la opción de un
+ * selector: a qué escena pertenece el día que se está programando. `label` es la numeración
+ * compuesta («1.1») con la que un set nombra una escena, y es lo único que hace falta para
+ * reconocerla en una lista sin repetir el nombre del capítulo al lado de cada una.
+ */
+export type SceneOptionRow =
+  ApiOutput<"GET /companies/{companyId}/productions/{productionId}/scenes">["items"][number]
 
 // ─── Presupuesto ─────────────────────────────────────────────────────────────
 

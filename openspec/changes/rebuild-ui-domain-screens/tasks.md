@@ -98,9 +98,9 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
 
 ## 29c · Producciones
 
-- [~] Producción y su panel — el panel ya existía; sus recuentos de **capítulos y escenas** ahora
-      enlazan a `script/chapters`, que es donde por fin tienen destino. **Falta** el de **jornadas**:
-      es la pestaña Rodaje, de la rama en paralelo
+- [x] Producción y su panel — el panel ya existía; sus recuentos de capítulos y escenas
+      enlazan a `script/chapters`, y el de jornadas a `rodaje`, cerrado al integrar las dos
+      ramas que traían cada destino
 - [x] **Guiones con extracción y visor** — `script/`, tarjetas con el archivo, la insignia de estado
       de extracción (`syncStatus`, cinco valores; `completed` toma `leido` de `DESIGN.md`, «extraído
       por el modelo, sin revisar», que es exactamente lo que significa) y el enlace al documento. La
@@ -113,8 +113,31 @@ Leyenda: `[x]` hecho y comprobado · `[~]` hecho en parte, con la parte que falt
       (`chapter-scene-data.test.ts`, 9 casos). Alta, edición y baja de las dos entidades, con el
       índice siguiente propuesto sin pedirlo aparte y la etiqueta compuesta que calcula el servidor.
       Comprobado en el navegador y a 375 px
-- [ ] Personajes, sets y videos
-- [ ] Jornadas con asignación de reparto y continuidad
+- [x] Personajes, sets y videos — bajo `rodaje/`, la base exacta que la pestaña del encargo del
+      guion apunta (`production-nav.tsx` no se tocó). Personajes con foto de referencia y su
+      propio historial —`characters/[characterId]/page.tsx`, el extremo de personaje del
+      recorrido «¿qué llevaba puesto?»—; sets con su composición de artículos —un artículo puede
+      estar en varios—, con el mismo patrón de selector que `ComposeDelivery`; biblioteca de
+      videos con subida directa (hasta 300 MB, `~/components/video-picker.tsx`, nuevo y sin tocar
+      `photo-picker.tsx`) y reproducción en diálogo. `productions.videos.select_category` deja de
+      estar sin ejercer (H-173): es la primera pantalla que la consume. **Comprobado en el
+      navegador**: producción propia sembrada, las siete pantallas recorridas con Playwright en
+      tableta, celular y escritorio, oscuro y claro, con clics de verdad —no sólo capturas—, tras
+      encontrar y corregir H-260 (los diálogos no abrían: faltaba `DialogTrigger`).
+- [x] Jornadas con asignación de reparto y continuidad — `rodaje/page.tsx` (aterrizaje de la
+      pestaña) y `rodaje/[recordingId]/page.tsx`. Asignar reparto abre una continuidad por
+      personaje y pone la jornada en curso, sin quitar a quien ya está asignado —`assignCharacters`
+      es aditiva—; la utilería de cada continuidad son dos selectores, uno por tipo, así que
+      «artículo o video, nunca los dos» no es una comprobación de pantalla, es una forma que no se
+      puede escribir. Cerrar no exige continuidad completa; asignar reparto sobre una jornada
+      cerrada la reabre —lo hace el servidor sin comprobar el estado— y el diálogo lo avisa antes
+      en vez de esconder el botón. El cuaderno del script son notas libres con autor y fecha.
+      **Comprobado en el navegador** con el mismo recorrido que `rodaje-recorrido.test.ts`, y
+      además con una prueba de extremo a extremo propia:
+      `apps/e2e/tests/rodaje.spec.ts` recorre del catálogo a la continuidad con clics —crea
+      personaje, set y su composición, video, jornada, asigna reparto, cuelga utilería, anota y
+      cierra— y cierra comprobando el historial del personaje. Pasa dos veces seguidas contra la
+      base y los puertos propios de este encargo.
 - [x] Inventario de utilería con estados y etiquetas
 - [x] Entregas con verificación pieza por pieza y **firma** — con la hoja del documento y su enlace público, que faltaban: cierra `HALLAZGOS.md` H-201
 - [x] **Calendario de planes de trabajo con sus cuatro vistas** — bajo la pestaña de planes que ya existía, sin pestaña nueva. Pinta jornadas, planes y tareas; por debajo de tableta cambia la rejilla por una agenda de los días con algo. **Comprobado con `pnpm check`, `pnpm lint:ci` y la suite, no en un navegador**

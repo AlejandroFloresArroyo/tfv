@@ -16,6 +16,7 @@ import {
   readSearch,
   readView,
   toApiQuery,
+  toApiQueryRecord,
   toSearchParams,
   withParam,
 } from "./params.ts"
@@ -100,6 +101,25 @@ describe("lo que se le manda a la API", () => {
     const query = toApiQuery(params("createdAt=2026-01-01&createdAt=2026-12-31"))
 
     expect(new URLSearchParams(query).getAll("createdAt")).toEqual(["2026-01-01", "2026-12-31"])
+  })
+})
+
+describe("lo que se le manda al cliente tipado", () => {
+  it("es la misma regla de descarte, como objeto y no como cadena", () => {
+    const query = toApiQueryRecord(params("_view=grid&search=nunez&page=3"))
+
+    expect(query).toEqual({ search: "nunez", page: "3" })
+  })
+
+  it("una clave repetida viaja como lista, y una sola como cadena suelta", () => {
+    const query = toApiQueryRecord(params("status=lost&status=robbed&search=x"))
+
+    expect(query.status).toEqual(["lost", "robbed"])
+    expect(query.search).toBe("x")
+  })
+
+  it("sin parámetros no hay nada que mandar", () => {
+    expect(toApiQueryRecord(params(""))).toEqual({})
   })
 })
 

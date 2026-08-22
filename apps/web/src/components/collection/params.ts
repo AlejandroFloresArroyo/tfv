@@ -97,6 +97,29 @@ export function toApiQuery(params: URLSearchParams): string {
   return forwarded.toString()
 }
 
+/**
+ * Lo mismo que `toApiQuery`, como objeto y no como cadena.
+ *
+ * Lo pide el cliente tipado (`apiCall`, `apiTyped`): su `query` es un `Record`, no una cadena ya
+ * compuesta. La regla de descarte es la misma —todo menos las claves internas— y una clave repetida
+ * viaja como lista, que es como el analizador de consulta del servidor la espera.
+ */
+export function toApiQueryRecord(
+  params: URLSearchParams,
+): Record<string, string | readonly string[]> {
+  const query: Record<string, string | readonly string[]> = {}
+
+  for (const key of new Set(params.keys())) {
+    if (key.startsWith(INTERNAL)) continue
+    const values = params.getAll(key)
+    const first = values[0]
+    if (first === undefined) continue
+    query[key] = values.length > 1 ? values : first
+  }
+
+  return query
+}
+
 // ─── Escritura ───────────────────────────────────────────────────────────────
 
 /**
